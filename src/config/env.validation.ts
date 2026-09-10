@@ -7,6 +7,13 @@ const required = (config: Record<string, unknown>, key: string): string => {
 };
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {
+  if (
+    config.LOG_LEVEL !== undefined &&
+    (typeof config.LOG_LEVEL !== 'string' ||
+      !['fatal', 'error', 'warn', 'log', 'debug', 'verbose'].includes(config.LOG_LEVEL))
+  ) {
+    throw new Error('LOG_LEVEL must be fatal, error, warn, log, debug or verbose');
+  }
   required(config, 'DATABASE_URL');
   const jwtSecret = required(config, 'JWT_ACCESS_SECRET');
   if (jwtSecret.length < 32 || jwtSecret === 'replace-with-at-least-32-random-characters') {

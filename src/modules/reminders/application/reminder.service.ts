@@ -17,7 +17,11 @@ export class ReminderService {
       try {
         await this.refreshShop(shop.id, shop.timezone);
       } catch (error) {
-        this.logger.error(`Reminder refresh failed for shop=${shop.id}: ${error instanceof Error ? error.message : String(error)}`);
+        this.logger.error({
+          event: 'reminders.refresh.failed',
+          shopId: shop.id,
+          error: error instanceof Error ? error : new Error('Unknown exception'),
+        });
       }
     }
   }
@@ -45,29 +49,104 @@ export class ReminderService {
     const candidates = await this.repository.candidates(shopId);
     const activeKeys: string[] = [];
 
-    const add = async (order: (typeof candidates)[number], type: string, priority: number, title: string, content: string, scheduledFor: Date) => {
+    const add = async (
+      order: (typeof candidates)[number],
+      type: string,
+      priority: number,
+      title: string,
+      content: string,
+      scheduledFor: Date,
+    ) => {
       const key = `${type}:${order.id}:${day.start.toISOString().slice(0, 10)}`;
       activeKeys.push(key);
-      await this.repository.upsert({ shopId, orderId: order.id, customerId: order.customerId, dedupeKey: key, type, scheduledFor, priority, title, content });
+      await this.repository.upsert({
+        shopId,
+        orderId: order.id,
+        customerId: order.customerId,
+        dedupeKey: key,
+        type,
+        scheduledFor,
+        priority,
+        title,
+        content,
+      });
     };
 
     for (const order of candidates) {
-      if (['RESERVED', 'CONFIRMED'].includes(order.status) && order.rentalStartAt >= day.start && order.rentalStartAt < day.end) {
-        await add(order, 'PICKUP_TODAY', 50, `Nhận đồ hôm nay · ${order.orderNumber}`, `${order.customerName} · ${order.customerPhone}`, order.rentalStartAt);
+      if (
+        ['RESERVED', 'CONFIRMED'].includes(order.status) &&
+        order.rentalStartAt >= day.start &&
+        order.rentalStartAt < day.end
+      ) {
+        await add(
+          order,
+          'PICKUP_TODAY',
+          50,
+          `Nhận đồ hôm nay · ${order.orderNumber}`,
+          `${order.customerName} · ${order.customerPhone}`,
+          order.rentalStartAt,
+        );
       }
-      if (['CONFIRMED', 'ACTIVE'].includes(order.status) && order.rentalEndAt >= day.start && order.rentalEndAt < day.end) {
-        await add(order, 'RETURN_TODAY', 60, `Trả đồ hôm nay · ${order.orderNumber}`, `${order.customerName} · ${order.customerPhone}`, order.rentalEndAt);
-      } else if (['CONFIRMED', 'ACTIVE'].includes(order.status) && order.rentalEndAt > now && order.rentalEndAt <= returnSoonEnd) {
-        await add(order, 'RETURN_SOON', 40, `Sắp tới hạn trả · ${order.orderNumber}`, `${order.customerName} · ${order.customerPhone}`, order.rentalEndAt);
+      if (
+        ['CONFIRMED', 'ACTIVE'].includes(order.status) &&
+        order.rentalEndAt >= day.start &&
+        order.rentalEndAt < day.end
+      ) {
+        await add(
+          order,
+          'RETURN_TODAY',
+          60,
+          `Trả đồ hôm nay · ${order.orderNumber}`,
+          `${order.customerName} · ${order.customerPhone}`,
+          order.rentalEndAt,
+        );
+      } else if (
+        ['CONFIRMED', 'ACTIVE'].includes(order.status) &&
+        order.rentalEndAt > now &&
+        order.rentalEndAt <= returnSoonEnd
+      ) {
+        await add(
+          order,
+          'RETURN_SOON',
+          40,
+          `Sắp tới hạn trả · ${order.orderNumber}`,
+          `${order.customerName} · ${order.customerPhone}`,
+          order.rentalEndAt,
+        );
       }
       if (['CONFIRMED', 'ACTIVE'].includes(order.status) && order.rentalEndAt < now) {
-        await add(order, 'OVERDUE', 100, `Quá hạn · ${order.orderNumber}`, `${order.customerName} · ${order.customerPhone}`, now);
+        await add(
+          order,
+          'OVERDUE',
+          100,
+          `Quá hạn · ${order.orderNumber}`,
+          `${order.customerName} · ${order.customerPhone}`,
+          now,
+        );
       }
       if (order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED') {
-        await add(order, 'PAYMENT_DUE', 70, `Còn thiếu tiền · ${order.orderNumber}`, `${order.customerName} · ${order.customerPhone}`, now);
+        await add(
+          order,
+          'PAYMENT_DUE',
+          70,
+          `Còn thiếu tiền · ${order.orderNumber}`,
+          `${order.customerName} · ${order.customerPhone}`,
+          now,
+        );
       }
-      if (order.depositRequired > 0 && ['PENDING', 'PARTIALLY_HELD'].includes(order.depositStatus) && ['RESERVED', 'CONFIRMED'].includes(order.status)) {
-        await add(order, 'DEPOSIT_DUE', 80, `Chưa đủ cọc · ${order.orderNumber}`, `${order.customerName} · ${order.customerPhone}`, now);
+      if (
+        order.depositRequired > 0 &&
+        ['PENDING', 'PARTIALLY_HELD'].includes(order.depositStatus) &&
+        ['RESERVED', 'CONFIRMED'].includes(order.status)
+      ) {
+        await add(
+          order,
+          'DEPOSIT_DUE',
+          80,
+          `Chưa đủ cọc · ${order.orderNumber}`,
+          `${order.customerName} · ${order.customerPhone}`,
+          now,
+        );
       }
     }
 

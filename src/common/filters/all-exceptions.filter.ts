@@ -51,12 +51,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    if (status >= 500) {
-      this.logger.error(
-        `${request.method} ${request.url} requestId=${request.requestId ?? '-'}: ${
-          exception instanceof Error ? exception.stack ?? exception.message : String(exception)
-        }`,
-      );
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error({
+        event: 'http.request.failed',
+        requestId: request.requestId,
+        method: request.method,
+        statusCode: status,
+        code,
+        error: exception instanceof Error ? exception : new Error('Unknown exception'),
+      });
     }
 
     response.status(status).json({

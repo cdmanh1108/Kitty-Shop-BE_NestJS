@@ -4,21 +4,26 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import type { Application } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import type { AppConfiguration } from './config/configuration';
 import { createOpenApiDocument } from './common/swagger/openapi';
+import { ApplicationLogger } from './common/logging/application-logger';
 
 export async function createApplication() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    logger: new ApplicationLogger(),
+  });
   const config = app.get(ConfigService<AppConfiguration, true>);
 
-  app.useLogger(new Logger());
+  app.useLogger(new ApplicationLogger());
   app.use(helmet());
   app.setGlobalPrefix(config.get('apiPrefix', { infer: true }));
 
   if (config.get('trustProxy', { infer: true })) {
-    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+    (app.getHttpAdapter().getInstance() as Application).set('trust proxy', 1);
   }
 
   const origins = config.get('corsOrigins', { infer: true });
@@ -57,8 +62,14 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService<AppConfiguration, true>);
   const port = config.get('port', { infer: true });
   await app.listen(port, '0.0.0.0');
-  Logger.log(`API listening at ${await app.getUrl()}`, 'Bootstrap');
-  Logger.log(`Swagger available at ${await app.getUrl()}/docs`, 'Bootstrap');
+  Logger.log(
+    {
+      event: 'application.started',
+      port,
+      swaggerEnabled: config.get('swaggerEnabled', { infer: true }),
+    },
+    'Bootstrap',
+  );
 }
 
 if (require.main === module) {

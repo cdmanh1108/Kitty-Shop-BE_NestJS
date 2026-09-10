@@ -1,5 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { AUDIT_REPOSITORY, type AuditRepository, type CreateAuditLogData } from '../domain/audit.repository';
+import {
+  AUDIT_REPOSITORY,
+  type AuditRepository,
+  type CreateAuditLogData,
+} from '../domain/audit.repository';
 
 export type AuditContext = Pick<
   CreateAuditLogData,
@@ -20,11 +24,20 @@ export class AuditService {
     try {
       await this.repository.create(input);
     } catch (error) {
-      this.logger.error('Failed to persist audit log', error instanceof Error ? error.stack : String(error));
+      this.logger.error({
+        event: 'audit.persist.failed',
+        error: error instanceof Error ? error : new Error('Unknown exception'),
+      });
     }
   }
 
-  list(input: { shopId: string; page: number; limit: number; entityType?: string; entityId?: string }) {
+  list(input: {
+    shopId: string;
+    page: number;
+    limit: number;
+    entityType?: string;
+    entityId?: string;
+  }) {
     return this.repository.list(input);
   }
 }

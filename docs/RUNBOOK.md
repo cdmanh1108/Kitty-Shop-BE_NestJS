@@ -24,6 +24,7 @@ If Docker is not available, run PostgreSQL yourself, update `DATABASE_URL`, set 
 - run `npm run db:migrate` before rolling out application instances.
 - run `npm run quality` in CI.
 - collect structured application/container logs and PostgreSQL metrics.
+- keep `LOG_LEVEL=log` to retain request/auth outcomes; configure log retention and access controls. See [Logging](LOGGING.md) for fields and redaction rules.
 - alert on 5xx rate, DB connection exhaustion, migration failures and disk/storage growth.
 
 ## Backup and restore
