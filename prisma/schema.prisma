@@ -1,0 +1,933 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String   @unique @db.VarChar(50)
+  name         String   @db.VarChar(255)
+  legalName    String?  @map("legal_name") @db.VarChar(255)
+  phone        String?  @db.VarChar(30)
+  email        String?  @db.VarChar(255)
+  currency     String   @default("VND") @db.Char(3)
+  timezone     String   @default("Asia/Ho_Chi_Minh") @db.VarChar(50)
+  logoUrl      String?  @map("logo_url") @db.Text
+  primaryColor String?  @map("primary_color") @db.VarChar(20)
+  status       String   @default("ACTIVE") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  locations              ShopLocation[]
+  members                ShopMember[]
+  roles                  Role[]
+  customers              Customer[]
+  tags                   Tag[]
+  categories             Category[]
+  sizes                  Size[]
+  colors                 Color[]
+  products               Product[]
+  variants               ProductVariant[]
+  media                  ProductMedia[]
+  inventoryItems         InventoryItem[]
+  rentalRates            RentalRate[]
+  rentalOrders           RentalOrder[]
+  rentalOrderItems       RentalOrderItem[]
+  rentalAllocations      RentalItemAllocation[]
+  rentalCharges          RentalOrderCharge[]
+  orderStatusHistory     RentalOrderStatusHistory[]
+  inventoryStatusHistory InventoryStatusHistory[]
+  inventoryServices      InventoryServiceRecord[]
+  paymentTransactions    PaymentTransaction[]
+  expenseCategories      ExpenseCategory[]
+  expenses               Expense[]
+  deliveries             DeliveryJob[]
+  reminders              Reminder[]
+  notificationLogs       NotificationLog[]
+  settings               AppSetting[]
+  auditLogs              AuditLog[]
+  outboxEvents           OutboxEvent[]
+  idempotencyRecords     IdempotencyRecord[]
+
+  @@map("shops")
+}
+
+model ShopLocation {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId      String   @map("shop_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  phone       String?  @db.VarChar(30)
+  addressLine String?  @map("address_line") @db.Text
+  ward        String?  @db.VarChar(100)
+  district    String?  @db.VarChar(100)
+  city        String?  @db.VarChar(100)
+  province    String?  @db.VarChar(100)
+  country     String   @default("VN") @db.Char(2)
+  latitude    Decimal? @db.Decimal(10, 7)
+  longitude   Decimal? @db.Decimal(10, 7)
+  isPrimary   Boolean  @default(false) @map("is_primary")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop           Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  inventoryItems InventoryItem[]
+  rentalOrders   RentalOrder[]
+
+  @@unique([shopId, code])
+  @@index([shopId, isActive])
+  @@map("shop_locations")
+}
+
+model User {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String?   @unique @db.VarChar(255)
+  phone        String?   @db.VarChar(30)
+  passwordHash String?   @map("password_hash") @db.Text
+  fullName     String    @map("full_name") @db.VarChar(255)
+  avatarUrl    String?   @map("avatar_url") @db.Text
+  status       String    @default("ACTIVE") @db.VarChar(20)
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  memberships   ShopMember[]
+  refreshTokens RefreshToken[]
+
+  @@index([phone])
+  @@map("users")
+}
+
+model ShopMember {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId       String   @map("shop_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  employeeCode String?  @map("employee_code") @db.VarChar(50)
+  displayName  String   @map("display_name") @db.VarChar(255)
+  status       String   @default("ACTIVE") @db.VarChar(20)
+  joinedAt     DateTime @default(now()) @map("joined_at") @db.Timestamptz(6)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memberRoles   MemberRole[]
+  refreshTokens RefreshToken[]
+
+  @@unique([shopId, userId])
+  @@unique([shopId, employeeCode])
+  @@index([userId, status])
+  @@map("shop_members")
+}
+
+model Role {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId      String?  @map("shop_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop            Shop?            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  memberRoles     MemberRole[]
+  rolePermissions RolePermission[]
+
+  @@unique([shopId, code])
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String   @unique @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model MemberRole {
+  memberId  String   @map("member_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz(6)
+
+  member ShopMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role   Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, roleId])
+  @@map("member_roles")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  memberId  String    @map("member_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+  userAgent String?   @map("user_agent") @db.Text
+  ipAddress String?   @map("ip_address") @db.Inet
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  member ShopMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Customer {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId          String    @map("shop_id") @db.Uuid
+  customerCode    String    @map("customer_code") @db.VarChar(50)
+  fullName        String    @map("full_name") @db.VarChar(255)
+  phone           String    @db.VarChar(30)
+  normalizedPhone String    @map("normalized_phone") @db.VarChar(30)
+  email           String?   @db.VarChar(255)
+  facebook        String?   @db.Text
+  zalo            String?   @db.Text
+  birthday        DateTime? @db.Date
+  gender          String?   @db.VarChar(30)
+  customerType    String    @default("NORMAL") @map("customer_type") @db.VarChar(30)
+  status          String    @default("ACTIVE") @db.VarChar(20)
+  source          String?   @db.VarChar(50)
+  metadata        Json?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz(6)
+
+  shop                Shop                 @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  addresses           CustomerAddress[]
+  notes               CustomerNote[]
+  tags                CustomerTag[]
+  rentalOrders        RentalOrder[]
+  paymentTransactions PaymentTransaction[]
+  reminders           Reminder[]
+  notificationLogs    NotificationLog[]
+
+  @@unique([shopId, customerCode])
+  @@index([shopId, normalizedPhone])
+  @@index([shopId, fullName])
+  @@index([shopId, status])
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId    String   @map("customer_id") @db.Uuid
+  label         String?  @db.VarChar(100)
+  recipientName String?  @map("recipient_name") @db.VarChar(255)
+  phone         String?  @db.VarChar(30)
+  addressLine   String   @map("address_line") @db.Text
+  ward          String?  @db.VarChar(100)
+  district      String?  @db.VarChar(100)
+  city          String?  @db.VarChar(100)
+  province      String?  @db.VarChar(100)
+  country       String   @default("VN") @db.Char(2)
+  latitude      Decimal? @db.Decimal(10, 7)
+  longitude     Decimal? @db.Decimal(10, 7)
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, isDefault])
+  @@map("customer_addresses")
+}
+
+model CustomerNote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId String  @map("customer_id") @db.Uuid
+  content   String   @db.Text
+  isPinned  Boolean  @default(false) @map("is_pinned")
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, isPinned])
+  @@map("customer_notes")
+}
+
+model Tag {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId    String   @map("shop_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  color     String?  @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop      Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customers CustomerTag[]
+
+  @@unique([shopId, name])
+  @@map("tags")
+}
+
+model CustomerTag {
+  customerId String @map("customer_id") @db.Uuid
+  tagId      String @map("tag_id") @db.Uuid
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, tagId])
+  @@map("customer_tags")
+}
+
+model Category {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId      String    @map("shop_id") @db.Uuid
+  parentId    String?   @map("parent_id") @db.Uuid
+  code        String    @db.VarChar(50)
+  name        String    @db.VarChar(255)
+  slug        String?   @db.VarChar(255)
+  description String?   @db.Text
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop     Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+
+  @@unique([shopId, code])
+  @@index([shopId, isActive, sortOrder])
+  @@map("categories")
+}
+
+model Size {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId    String   @map("shop_id") @db.Uuid
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop     Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  variants ProductVariant[]
+
+  @@unique([shopId, code])
+  @@map("sizes")
+}
+
+model Color {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId    String   @map("shop_id") @db.Uuid
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  hexColor  String?  @map("hex_color") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop     Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  variants ProductVariant[]
+
+  @@unique([shopId, code])
+  @@map("colors")
+}
+
+model Product {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId               String    @map("shop_id") @db.Uuid
+  categoryId           String    @map("category_id") @db.Uuid
+  code                 String    @db.VarChar(50)
+  name                 String    @db.VarChar(255)
+  slug                 String?   @db.VarChar(255)
+  description          String?   @db.Text
+  defaultDepositAmount Decimal   @default(0) @map("default_deposit_amount") @db.Decimal(18, 2)
+  currency             String    @default("VND") @db.Char(3)
+  status               String    @default("ACTIVE") @db.VarChar(20)
+  isRentable           Boolean   @default(true) @map("is_rentable")
+  isPublic             Boolean   @default(false) @map("is_public")
+  metadata             Json?
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt           DateTime? @map("archived_at") @db.Timestamptz(6)
+
+  shop       Shop              @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  category   Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  variants   ProductVariant[]
+  media      ProductMedia[]
+  rentalRates RentalRate[]
+  orderItems RentalOrderItem[]
+
+  @@unique([shopId, code])
+  @@index([shopId, categoryId, status])
+  @@index([shopId, name])
+  @@map("products")
+}
+
+model ProductVariant {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId                String    @map("shop_id") @db.Uuid
+  productId             String    @map("product_id") @db.Uuid
+  variantCode           String    @map("variant_code") @db.VarChar(100)
+  sizeId                String?   @map("size_id") @db.Uuid
+  colorId               String?   @map("color_id") @db.Uuid
+  depositAmountOverride Decimal?  @map("deposit_amount_override") @db.Decimal(18, 2)
+  status                String    @default("ACTIVE") @db.VarChar(20)
+  metadata              Json?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt            DateTime? @map("archived_at") @db.Timestamptz(6)
+
+  shop           Shop               @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  product        Product            @relation(fields: [productId], references: [id], onDelete: Restrict)
+  size           Size?              @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+  color          Color?             @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  inventoryItems InventoryItem[]
+  rentalRates    RentalRate[]
+  media          ProductMedia[]
+  orderItems     RentalOrderItem[]
+
+  @@unique([shopId, variantCode])
+  @@index([productId, status])
+  @@map("product_variants")
+}
+
+model ProductMedia {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId    String   @map("shop_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  variantId String?  @map("variant_id") @db.Uuid
+  mediaType String   @default("IMAGE") @map("media_type") @db.VarChar(20)
+  storageKey String? @map("storage_key") @db.Text
+  url       String   @db.Text
+  altText   String?  @map("alt_text") @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop    Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@map("product_media")
+}
+
+model InventoryItem {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId           String    @map("shop_id") @db.Uuid
+  variantId        String    @map("variant_id") @db.Uuid
+  locationId       String?   @map("location_id") @db.Uuid
+  sku              String    @db.VarChar(100)
+  barcode          String?   @db.VarChar(100)
+  currentStatus    String    @default("AVAILABLE") @map("current_status") @db.VarChar(30)
+  condition        String    @default("GOOD") @db.VarChar(30)
+  purchasePrice    Decimal?  @map("purchase_price") @db.Decimal(18, 2)
+  purchaseDate     DateTime? @map("purchase_date") @db.Date
+  acquiredFrom     String?   @map("acquired_from") @db.VarChar(255)
+  totalRentalCount Int       @default(0) @map("total_rental_count")
+  lastRentedAt     DateTime? @map("last_rented_at") @db.Timestamptz(6)
+  notes            String?   @db.Text
+  metadata         Json?
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt       DateTime? @map("archived_at") @db.Timestamptz(6)
+
+  shop           Shop                     @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  variant        ProductVariant           @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  location       ShopLocation?            @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  allocations    RentalItemAllocation[]
+  statusHistory  InventoryStatusHistory[]
+  serviceRecords InventoryServiceRecord[]
+  expenses       Expense[]
+
+  @@unique([shopId, sku])
+  @@unique([shopId, barcode])
+  @@index([shopId, currentStatus])
+  @@index([variantId, isActive])
+  @@map("inventory_items")
+}
+
+model RentalRate {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId       String    @map("shop_id") @db.Uuid
+  productId    String    @map("product_id") @db.Uuid
+  variantId    String?   @map("variant_id") @db.Uuid
+  durationDays Int       @map("duration_days")
+  price        Decimal   @db.Decimal(18, 2)
+  currency     String    @default("VND") @db.Char(3)
+  validFrom    DateTime? @map("valid_from") @db.Date
+  validUntil   DateTime? @map("valid_until") @db.Date
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop    Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([productId, variantId, durationDays, isActive])
+  @@map("rental_rates")
+}
+
+model RentalOrder {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId            String    @map("shop_id") @db.Uuid
+  orderNumber       String    @map("order_number") @db.VarChar(50)
+  customerId        String    @map("customer_id") @db.Uuid
+  locationId        String?   @map("location_id") @db.Uuid
+  rentalStartAt     DateTime  @map("rental_start_at") @db.Timestamptz(6)
+  rentalEndAt       DateTime  @map("rental_end_at") @db.Timestamptz(6)
+  actualStartedAt   DateTime? @map("actual_started_at") @db.Timestamptz(6)
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz(6)
+  cancelledAt       DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  status            String    @default("RESERVED") @db.VarChar(30)
+  paymentStatus     String    @default("UNPAID") @map("payment_status") @db.VarChar(30)
+  depositStatus     String    @default("PENDING") @map("deposit_status") @db.VarChar(30)
+  currency          String    @default("VND") @db.Char(3)
+  rentalSubtotal    Decimal   @default(0) @map("rental_subtotal") @db.Decimal(18, 2)
+  chargesTotal      Decimal   @default(0) @map("charges_total") @db.Decimal(18, 2)
+  discountTotal     Decimal   @default(0) @map("discount_total") @db.Decimal(18, 2)
+  depositRequired   Decimal   @default(0) @map("deposit_required") @db.Decimal(18, 2)
+  grandTotal        Decimal   @default(0) @map("grand_total") @db.Decimal(18, 2)
+  note              String?   @db.Text
+  internalNote      String?   @map("internal_note") @db.Text
+  metadata          Json?
+  createdBy         String?   @map("created_by") @db.Uuid
+  updatedBy         String?   @map("updated_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop             Shop                       @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  customer         Customer                   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  location         ShopLocation?              @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  items            RentalOrderItem[]
+  allocations      RentalItemAllocation[]
+  charges          RentalOrderCharge[]
+  statusHistory    RentalOrderStatusHistory[]
+  payments         PaymentTransaction[]
+  deliveries       DeliveryJob[]
+  reminders        Reminder[]
+  notificationLogs NotificationLog[]
+  serviceRecords   InventoryServiceRecord[]
+  inventoryStatusHistory InventoryStatusHistory[]
+  expenses         Expense[]
+
+  @@unique([shopId, orderNumber])
+  @@index([shopId, rentalStartAt, rentalEndAt])
+  @@index([shopId, status])
+  @@index([customerId, createdAt])
+  @@map("rental_orders")
+}
+
+model RentalOrderItem {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId              String   @map("shop_id") @db.Uuid
+  orderId             String   @map("order_id") @db.Uuid
+  productId           String   @map("product_id") @db.Uuid
+  variantId           String   @map("variant_id") @db.Uuid
+  quantity            Int      @default(1)
+  rentalStartAt       DateTime @map("rental_start_at") @db.Timestamptz(6)
+  rentalEndAt         DateTime @map("rental_end_at") @db.Timestamptz(6)
+  productNameSnapshot String   @map("product_name_snapshot") @db.VarChar(255)
+  variantNameSnapshot String   @map("variant_name_snapshot") @db.VarChar(255)
+  skuSnapshot         String?  @map("sku_snapshot") @db.VarChar(100)
+  unitRentalPrice     Decimal  @map("unit_rental_price") @db.Decimal(18, 2)
+  depositAmount       Decimal  @default(0) @map("deposit_amount") @db.Decimal(18, 2)
+  discountAmount      Decimal  @default(0) @map("discount_amount") @db.Decimal(18, 2)
+  lineTotal           Decimal  @map("line_total") @db.Decimal(18, 2)
+  pricingSnapshot     Json?    @map("pricing_snapshot")
+  status              String   @default("RESERVED") @db.VarChar(30)
+  notes               String?  @db.Text
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop        Shop                   @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  order       RentalOrder            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product                @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variant     ProductVariant         @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  allocations RentalItemAllocation[]
+  charges     RentalOrderCharge[]
+
+  @@index([orderId])
+  @@index([variantId, rentalStartAt, rentalEndAt])
+  @@map("rental_order_items")
+}
+
+model RentalItemAllocation {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId          String    @map("shop_id") @db.Uuid
+  orderId         String    @map("order_id") @db.Uuid
+  orderItemId     String    @map("order_item_id") @db.Uuid
+  inventoryItemId String    @map("inventory_item_id") @db.Uuid
+  reservedFrom    DateTime  @map("reserved_from") @db.Timestamptz(6)
+  reservedUntil   DateTime  @map("reserved_until") @db.Timestamptz(6)
+  status          String    @default("HELD") @db.VarChar(30)
+  allocatedAt     DateTime  @default(now()) @map("allocated_at") @db.Timestamptz(6)
+  releasedAt      DateTime? @map("released_at") @db.Timestamptz(6)
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop          Shop            @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  order         RentalOrder     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem     RentalOrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+
+  @@index([inventoryItemId, reservedFrom, reservedUntil])
+  @@index([orderId, status])
+  @@map("rental_item_allocations")
+}
+
+model RentalOrderCharge {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId      String    @map("shop_id") @db.Uuid
+  orderId     String    @map("order_id") @db.Uuid
+  orderItemId String?   @map("order_item_id") @db.Uuid
+  chargeType  String    @map("charge_type") @db.VarChar(30)
+  description String?   @db.Text
+  amount      Decimal   @db.Decimal(18, 2)
+  currency    String    @default("VND") @db.Char(3)
+  quantity    Int       @default(1)
+  metadata    Json?
+  createdBy   String?   @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  voidedAt    DateTime? @map("voided_at") @db.Timestamptz(6)
+  voidedBy    String?   @map("voided_by") @db.Uuid
+
+  shop      Shop             @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  order     RentalOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem RentalOrderItem? @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, chargeType])
+  @@map("rental_order_charges")
+}
+
+model RentalOrderStatusHistory {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId     String   @map("shop_id") @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  fromStatus String?  @map("from_status") @db.VarChar(30)
+  toStatus   String   @map("to_status") @db.VarChar(30)
+  reason     String?  @db.VarChar(100)
+  note       String?  @db.Text
+  changedBy  String?  @map("changed_by") @db.Uuid
+  changedAt  DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  shop  Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  order RentalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, changedAt])
+  @@map("rental_order_status_history")
+}
+
+model InventoryStatusHistory {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId          String   @map("shop_id") @db.Uuid
+  inventoryItemId String   @map("inventory_item_id") @db.Uuid
+  fromStatus      String?  @map("from_status") @db.VarChar(30)
+  toStatus        String   @map("to_status") @db.VarChar(30)
+  reason          String?  @db.VarChar(100)
+  orderId         String?  @map("order_id") @db.Uuid
+  serviceRecordId String?  @map("service_record_id") @db.Uuid
+  notes           String?  @db.Text
+  changedBy       String?  @map("changed_by") @db.Uuid
+  changedAt       DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  shop          Shop                    @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  inventoryItem InventoryItem           @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  order         RentalOrder?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  serviceRecord InventoryServiceRecord? @relation(fields: [serviceRecordId], references: [id], onDelete: SetNull)
+
+  @@index([inventoryItemId, changedAt])
+  @@map("inventory_status_history")
+}
+
+model InventoryServiceRecord {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId          String    @map("shop_id") @db.Uuid
+  inventoryItemId String    @map("inventory_item_id") @db.Uuid
+  orderId         String?   @map("order_id") @db.Uuid
+  serviceType     String    @map("service_type") @db.VarChar(30)
+  status          String    @default("OPEN") @db.VarChar(30)
+  description     String?   @db.Text
+  vendorName      String?   @map("vendor_name") @db.VarChar(255)
+  cost            Decimal   @default(0) @db.Decimal(18, 2)
+  currency        String    @default("VND") @db.Char(3)
+  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop           Shop                     @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  inventoryItem  InventoryItem            @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  order          RentalOrder?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  statusHistories InventoryStatusHistory[]
+
+  @@index([inventoryItemId, status])
+  @@map("inventory_service_records")
+}
+
+model PaymentTransaction {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId            String    @map("shop_id") @db.Uuid
+  orderId           String    @map("order_id") @db.Uuid
+  customerId        String    @map("customer_id") @db.Uuid
+  transactionNumber String    @map("transaction_number") @db.VarChar(50)
+  direction         String    @db.VarChar(10)
+  purpose           String    @db.VarChar(30)
+  paymentMethod     String    @map("payment_method") @db.VarChar(30)
+  amount            Decimal   @db.Decimal(18, 2)
+  currency          String    @default("VND") @db.Char(3)
+  status            String    @default("COMPLETED") @db.VarChar(20)
+  externalReference String?   @map("external_reference") @db.VarChar(255)
+  bankReference     String?   @map("bank_reference") @db.VarChar(255)
+  note              String?   @db.Text
+  paidAt            DateTime  @default(now()) @map("paid_at") @db.Timestamptz(6)
+  createdBy         String?   @map("created_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  voidedAt          DateTime? @map("voided_at") @db.Timestamptz(6)
+  voidedBy          String?   @map("voided_by") @db.Uuid
+
+  shop     Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  order    RentalOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  @@unique([shopId, transactionNumber])
+  @@index([orderId, paidAt])
+  @@index([shopId, paidAt, status])
+  @@map("payment_transactions")
+}
+
+model ExpenseCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId      String   @map("shop_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop     Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@unique([shopId, code])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId          String    @map("shop_id") @db.Uuid
+  expenseNumber   String    @map("expense_number") @db.VarChar(50)
+  categoryId      String    @map("category_id") @db.Uuid
+  orderId         String?   @map("order_id") @db.Uuid
+  inventoryItemId String?   @map("inventory_item_id") @db.Uuid
+  description     String    @db.Text
+  amount          Decimal   @db.Decimal(18, 2)
+  currency        String    @default("VND") @db.Char(3)
+  paymentMethod   String?   @map("payment_method") @db.VarChar(30)
+  vendorName      String?   @map("vendor_name") @db.VarChar(255)
+  expenseDate     DateTime  @map("expense_date") @db.Date
+  paidAt          DateTime? @map("paid_at") @db.Timestamptz(6)
+  receiptUrl      String?   @map("receipt_url") @db.Text
+  status          String    @default("PAID") @db.VarChar(20)
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  voidedAt        DateTime? @map("voided_at") @db.Timestamptz(6)
+
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  order         RentalOrder?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  @@unique([shopId, expenseNumber])
+  @@index([shopId, expenseDate, status])
+  @@index([orderId])
+  @@map("expenses")
+}
+
+model DeliveryJob {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId         String    @map("shop_id") @db.Uuid
+  orderId        String    @map("order_id") @db.Uuid
+  direction      String    @db.VarChar(20)
+  method         String    @db.VarChar(30)
+  status         String    @default("PENDING") @db.VarChar(30)
+  scheduledAt    DateTime? @map("scheduled_at") @db.Timestamptz(6)
+  pickedUpAt     DateTime? @map("picked_up_at") @db.Timestamptz(6)
+  deliveredAt    DateTime? @map("delivered_at") @db.Timestamptz(6)
+  recipientName  String?   @map("recipient_name") @db.VarChar(255)
+  recipientPhone String?   @map("recipient_phone") @db.VarChar(30)
+  addressLine    String?   @map("address_line") @db.Text
+  ward           String?   @db.VarChar(100)
+  district       String?   @db.VarChar(100)
+  city           String?   @db.VarChar(100)
+  province       String?   @db.VarChar(100)
+  shipperName    String?   @map("shipper_name") @db.VarChar(255)
+  shipperPhone   String?   @map("shipper_phone") @db.VarChar(30)
+  shippingFee    Decimal   @default(0) @map("shipping_fee") @db.Decimal(18, 2)
+  trackingCode   String?   @map("tracking_code") @db.VarChar(255)
+  notes          String?   @db.Text
+  metadata       Json?
+  createdBy      String?   @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop  Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  order RentalOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, direction])
+  @@index([shopId, status, scheduledAt])
+  @@map("delivery_jobs")
+}
+
+model Reminder {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId       String    @map("shop_id") @db.Uuid
+  orderId      String?   @map("order_id") @db.Uuid
+  customerId   String?   @map("customer_id") @db.Uuid
+  dedupeKey    String    @map("dedupe_key") @db.VarChar(255)
+  type         String    @db.VarChar(30)
+  scheduledFor DateTime  @map("scheduled_for") @db.Timestamptz(6)
+  status       String    @default("PENDING") @db.VarChar(20)
+  priority     Int       @default(0)
+  title        String    @db.VarChar(255)
+  content      String?   @db.Text
+  metadata     Json?
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  processedAt  DateTime? @map("processed_at") @db.Timestamptz(6)
+  dismissedAt  DateTime? @map("dismissed_at") @db.Timestamptz(6)
+  dismissedBy  String?   @map("dismissed_by") @db.Uuid
+
+  shop             Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  order            RentalOrder?      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  notificationLogs NotificationLog[]
+
+  @@unique([shopId, dedupeKey])
+  @@index([shopId, status, scheduledFor])
+  @@map("reminders")
+}
+
+model NotificationLog {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId            String    @map("shop_id") @db.Uuid
+  reminderId        String?   @map("reminder_id") @db.Uuid
+  customerId        String?   @map("customer_id") @db.Uuid
+  orderId           String?   @map("order_id") @db.Uuid
+  channel           String    @db.VarChar(20)
+  recipient         String?   @db.VarChar(255)
+  templateCode      String?   @map("template_code") @db.VarChar(100)
+  content           String    @db.Text
+  status            String    @default("PENDING") @db.VarChar(20)
+  provider          String?   @db.VarChar(50)
+  providerMessageId String?   @map("provider_message_id") @db.VarChar(255)
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz(6)
+  deliveredAt       DateTime? @map("delivered_at") @db.Timestamptz(6)
+  failedAt          DateTime? @map("failed_at") @db.Timestamptz(6)
+  failureReason     String?   @map("failure_reason") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop     Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  reminder Reminder?    @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+  customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order    RentalOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, status, createdAt])
+  @@map("notification_logs")
+}
+
+model AppSetting {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId      String   @map("shop_id") @db.Uuid
+  key         String   @db.VarChar(150)
+  value       Json
+  description String?  @db.Text
+  updatedBy   String?  @map("updated_by") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, key])
+  @@map("app_settings")
+}
+
+model AuditLog {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId        String   @map("shop_id") @db.Uuid
+  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  actorMemberId String?  @map("actor_member_id") @db.Uuid
+  action        String   @db.VarChar(50)
+  entityType    String   @map("entity_type") @db.VarChar(100)
+  entityId      String?  @map("entity_id") @db.Uuid
+  oldValues     Json?    @map("old_values")
+  newValues     Json?    @map("new_values")
+  ipAddress     String?  @map("ip_address") @db.Inet
+  userAgent     String?  @map("user_agent") @db.Text
+  requestId     String?  @map("request_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}
+
+model OutboxEvent {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId        String    @map("shop_id") @db.Uuid
+  eventType     String    @map("event_type") @db.VarChar(100)
+  aggregateType String    @map("aggregate_type") @db.VarChar(100)
+  aggregateId   String    @map("aggregate_id") @db.Uuid
+  payload       Json
+  status        String    @default("PENDING") @db.VarChar(20)
+  availableAt   DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  attemptCount  Int       @default(0) @map("attempt_count")
+  lastError     String?   @map("last_error") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  processedAt   DateTime? @map("processed_at") @db.Timestamptz(6)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@map("outbox_events")
+}
+
+model IdempotencyRecord {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId       String    @map("shop_id") @db.Uuid
+  key          String    @db.VarChar(255)
+  scope        String    @db.VarChar(100)
+  requestHash  String?   @map("request_hash") @db.VarChar(128)
+  responseCode Int?      @map("response_code")
+  responseBody Json?     @map("response_body")
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, scope, key])
+  @@index([expiresAt])
+  @@map("idempotency_records")
+}
