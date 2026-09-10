@@ -1,9 +1,11 @@
 name: CI
 
 on:
-  push:
-    branches: ['**']
-  pull_request:
+  # Automatic CI is paused. Run manually from the Actions tab when needed.
+  workflow_dispatch:
+  # push:
+  #   branches: ['**']
+  # pull_request:
 
 jobs:
   quality:

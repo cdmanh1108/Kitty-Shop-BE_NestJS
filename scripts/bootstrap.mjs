@@ -73,7 +73,7 @@ for (let attempt = 1; attempt <= 15; attempt += 1) {
   }
 }
 if (!migrated) {
-  console.error('Could not apply migrations. Check DATABASE_URL / PostgreSQL and rerun npm run i.');
+  console.error('Could not apply migrations. Check DATABASE_URL / PostgreSQL and rerun npm run bootstrap.');
   process.exit(1);
 }
 

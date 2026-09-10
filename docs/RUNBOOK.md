@@ -4,10 +4,13 @@
 
 ```bash
 npm run i
+npm run bootstrap
 npm run start:dev
 ```
 
-If Docker is not available, run PostgreSQL yourself, update `DATABASE_URL`, set `DB_AUTO_START=false`, then rerun `npm run i`.
+`npm run i` only installs dependencies. Run `npm run bootstrap` separately to prepare the environment, apply migrations, seed data and export OpenAPI.
+
+If Docker is not available, run PostgreSQL yourself, update `DATABASE_URL`, set `DB_AUTO_START=false`, then rerun `npm run bootstrap`.
 
 ## Production checklist
 

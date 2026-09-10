@@ -9,7 +9,7 @@
     "npm": ">=10"
   },
   "scripts": {
-    "i": "npm install --no-audit --no-fund && node scripts/bootstrap.mjs",
+    "i": "npm install --no-audit --no-fund",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"prisma/**/*.ts\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

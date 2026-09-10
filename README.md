@@ -20,12 +20,15 @@ Requirements: Node.js 22+, npm 10+, and Docker Desktop/Engine if you want the au
 
 ```bash
 npm run i
+npm run bootstrap
 npm run start:dev
 ```
 
-`npm run i` installs dependencies, creates `.env` from `.env.example` when absent, generates a random local JWT secret, starts PostgreSQL with Docker when `DB_AUTO_START=true`, applies migrations, seeds RBAC/lookups/admin, and exports OpenAPI.
+`npm run i` only installs dependencies.
 
-If you use an existing PostgreSQL instance, copy `.env.example` to `.env`, edit `DATABASE_URL`, set `DB_AUTO_START=false`, then run `npm run i`.
+`npm run bootstrap` creates `.env` from `.env.example` when absent, generates a random local JWT secret, starts PostgreSQL with Docker when `DB_AUTO_START=true`, applies migrations, seeds RBAC/lookups/admin, and exports OpenAPI.
+
+If you use an existing PostgreSQL instance, install dependencies, copy `.env.example` to `.env`, edit `DATABASE_URL`, set `DB_AUTO_START=false`, then run `npm run bootstrap`.
 
 Default local login after seed:
 
@@ -57,7 +60,8 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DATABASE.md](docs/DA
 ## Commands
 
 ```bash
-npm run i                 # install + bootstrap local project
+npm run i                 # install dependencies only
+npm run bootstrap         # prepare env, database, seed and OpenAPI
 npm run start:dev         # watch mode
 npm run quality           # lint + tests + production build
 npm run db:up             # start local PostgreSQL only
