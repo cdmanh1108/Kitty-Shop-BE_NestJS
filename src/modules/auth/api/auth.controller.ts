@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Headers, Ip, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
@@ -13,6 +13,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @ApiHeader({ name: 'user-agent', required: false })
   @ApiOperation({ summary: 'Admin login' })
   @ApiOkResponse({ type: LoginResDto })
   login(
@@ -25,6 +26,7 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @ApiHeader({ name: 'user-agent', required: false })
   @ApiOperation({ summary: 'Rotate refresh token and issue a new access token' })
   @ApiOkResponse({ type: LoginResDto })
   refresh(

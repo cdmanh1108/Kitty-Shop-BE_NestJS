@@ -28,7 +28,7 @@ export class AuthUserResDto {
   @ApiProperty() userId!: string;
   @ApiProperty() memberId!: string;
   @ApiProperty() shopId!: string;
-  @ApiProperty({ nullable: true }) email!: string | null;
+  @ApiProperty({ type: String, nullable: true }) email!: string | null;
   @ApiProperty() fullName!: string;
   @ApiProperty({ type: [String] }) permissions!: string[];
 }
