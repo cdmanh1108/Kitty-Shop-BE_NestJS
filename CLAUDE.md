@@ -18,3 +18,14 @@ This repository's canonical AI instructions are in `AGENTS.md` and `.ai/`. Treat
 - Prisma errors must be translated to safe domain/HTTP errors or sanitized to generic 500 responses.
 - Swagger HTTP exposure is configuration-controlled and disabled by default in production.
 - Never log tokens, passwords, Authorization headers, database URLs with credentials, or secret configuration.
+
+## Testing invariants
+
+- Use unit tests for pure/application behavior.
+- Use PostgreSQL integration tests for Prisma constraints, transactions, and concurrency.
+- Never use unsafe casts in test fixtures.
+- Time-dependent business tests must use Clock/fixed time.
+- Destructive test DB cleanup must refuse to run outside test environment.
+- Prefer critical behavior coverage over raw coverage percentage.
+
+Testing setup and actual suite boundaries: see docs/TESTING.md. Never use DATABASE_URL as fallback for destructive tests; use the owned, explicitly guarded TEST_DATABASE_URL client.

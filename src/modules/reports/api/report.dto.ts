@@ -8,7 +8,13 @@ export class ReportRangeQueryDto {
 }
 
 export class PerformanceQueryDto extends ReportRangeQueryDto {
-  @ApiPropertyOptional({ default: 20 }) @Type(() => Number) @IsInt() @Min(1) @Max(100) @IsOptional() limit = 20;
+  @ApiPropertyOptional({ default: 20 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  @IsOptional()
+  limit = 20;
 }
 
 export class RevenueReportRowResDto {

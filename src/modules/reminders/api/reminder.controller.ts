@@ -7,7 +7,9 @@ import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
 import { ReminderService } from '../application/reminder.service';
 
-class ReminderQueryDto { @ApiPropertyOptional() @IsString() @IsOptional() status?: string; }
+class ReminderQueryDto {
+  @ApiPropertyOptional() @IsString() @IsOptional() status?: string;
+}
 
 @ApiTags('Reminders')
 @ApiBearerAuth('access-token')
@@ -17,13 +19,19 @@ export class ReminderController {
 
   @Get()
   @Permissions(PERMISSIONS.REMINDERS_VIEW)
-  list(@CurrentUser() user: CurrentUserType, @Query() query: ReminderQueryDto) { return this.service.list(user, query.status); }
+  list(@CurrentUser() user: CurrentUserType, @Query() query: ReminderQueryDto) {
+    return this.service.list(user, query.status);
+  }
 
   @Post('refresh')
   @Permissions(PERMISSIONS.REMINDERS_MANAGE)
-  refresh(@CurrentUser() user: CurrentUserType) { return this.service.refreshForUser(user); }
+  refresh(@CurrentUser() user: CurrentUserType) {
+    return this.service.refreshForUser(user);
+  }
 
   @Post(':id/dismiss')
   @Permissions(PERMISSIONS.REMINDERS_MANAGE)
-  dismiss(@CurrentUser() user: CurrentUserType, @Param('id') id: string) { return this.service.dismiss(user, id); }
+  dismiss(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.dismiss(user, id);
+  }
 }

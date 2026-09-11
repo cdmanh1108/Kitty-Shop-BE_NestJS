@@ -6,6 +6,10 @@ import { PrismaMemberRepository } from './infrastructure/prisma-member.repositor
 
 @Module({
   controllers: [MemberController],
-  providers: [MemberService, PrismaMemberRepository, { provide: MEMBER_REPOSITORY, useExisting: PrismaMemberRepository }],
+  providers: [
+    MemberService,
+    PrismaMemberRepository,
+    { provide: MEMBER_REPOSITORY, useExisting: PrismaMemberRepository },
+  ],
 })
 export class MembersModule {}

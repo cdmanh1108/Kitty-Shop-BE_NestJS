@@ -7,7 +7,10 @@ export interface OpenApiOptions {
   appUrl?: string;
 }
 
-export function createOpenApiDocument(app: INestApplication, options: OpenApiOptions): OpenAPIObject {
+export function createOpenApiDocument(
+  app: INestApplication,
+  options: OpenApiOptions,
+): OpenAPIObject {
   const normalizedPrefix = options.apiPrefix.replace(/^\/+|\/+$/g, '');
   const serverPath = `/${normalizedPrefix}`;
   const builder = new DocumentBuilder()
@@ -17,10 +20,7 @@ export function createOpenApiDocument(app: INestApplication, options: OpenApiOpt
     )
     .setVersion('1.0.0')
     .addServer(serverPath, 'API prefix')
-    .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'access-token',
-    );
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token');
 
   if (options.appUrl) {
     const absolute = `${options.appUrl.replace(/\/$/, '')}${serverPath}`;
@@ -29,6 +29,7 @@ export function createOpenApiDocument(app: INestApplication, options: OpenApiOpt
 
   return SwaggerModule.createDocument(app, builder.build(), {
     ignoreGlobalPrefix: true,
-    operationIdFactory: (controllerKey: string, methodKey: string) => `${controllerKey}_${methodKey}`,
+    operationIdFactory: (controllerKey: string, methodKey: string) =>
+      `${controllerKey}_${methodKey}`,
   });
 }

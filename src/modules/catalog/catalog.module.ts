@@ -6,7 +6,11 @@ import { PrismaCatalogRepository } from './infrastructure/prisma-catalog.reposit
 
 @Module({
   controllers: [CatalogController],
-  providers: [CatalogService, PrismaCatalogRepository, { provide: CATALOG_REPOSITORY, useExisting: PrismaCatalogRepository }],
+  providers: [
+    CatalogService,
+    PrismaCatalogRepository,
+    { provide: CATALOG_REPOSITORY, useExisting: PrismaCatalogRepository },
+  ],
   exports: [CatalogService],
 })
 export class CatalogModule {}

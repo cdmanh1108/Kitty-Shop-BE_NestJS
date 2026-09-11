@@ -1,3 +1,4 @@
+import { fixedClock } from './fixtures/rental.fixture';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -77,7 +78,7 @@ describe('transport to application contracts', () => {
       page: '2',
       from: '2026-09-12T10:00:00+07:00',
     });
-    const service = new RentalService(repository, audit());
+    const service = new RentalService(repository, audit(), fixedClock);
     expect(await service.list(user, toRentalListQuery(query))).toBe(result);
     expect(repository.list.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
@@ -94,7 +95,7 @@ describe('transport to application contracts', () => {
     const repository = rentalRepository();
     repository.claimIdempotency.mockResolvedValue({ state: 'COMPLETED', responseBody: null });
     const dto = request();
-    const service = new RentalService(repository, audit());
+    const service = new RentalService(repository, audit(), fixedClock);
     await expect(service.create(user, toCreateRentalOrderInput(dto), 'retry')).resolves.toBeNull();
     expect(repository.claimIdempotency.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
@@ -110,7 +111,7 @@ describe('transport to application contracts', () => {
   it('keeps the existing missing-order and invalid schedule errors', async () => {
     const repository = rentalRepository();
     repository.get.mockResolvedValue(null);
-    const service = new RentalService(repository, audit());
+    const service = new RentalService(repository, audit(), fixedClock);
     await expect(service.get(user, 'missing')).rejects.toThrow('Rental order not found');
     const input = toCreateRentalOrderInput(request());
     input.rentalEndAt = input.rentalStartAt;

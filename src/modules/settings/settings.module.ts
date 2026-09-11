@@ -6,6 +6,10 @@ import { PrismaSettingsRepository } from './infrastructure/prisma-settings.repos
 
 @Module({
   controllers: [SettingsController],
-  providers: [SettingsService, PrismaSettingsRepository, { provide: SETTINGS_REPOSITORY, useExisting: PrismaSettingsRepository }],
+  providers: [
+    SettingsService,
+    PrismaSettingsRepository,
+    { provide: SETTINGS_REPOSITORY, useExisting: PrismaSettingsRepository },
+  ],
 })
 export class SettingsModule {}

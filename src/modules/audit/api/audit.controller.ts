@@ -31,5 +31,4 @@ export class AuditController {
       entityId: query.entityId,
     });
   }
-
 }

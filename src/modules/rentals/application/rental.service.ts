@@ -12,6 +12,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { CLOCK, type Clock } from '@common/clock/clock';
 import { createHash } from 'node:crypto';
 import {
   calculateRentalDurationDays,
@@ -40,6 +41,7 @@ export class RentalService {
   constructor(
     @Inject(RENTAL_REPOSITORY) private readonly repository: RentalRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   list(user: CurrentUser, query: RentalListQuery) {
@@ -101,7 +103,7 @@ export class RentalService {
         scope,
         key: idempotencyKey,
         requestHash,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(this.clock.now().getTime() + 24 * 60 * 60 * 1000),
       });
       if (claim.state === 'HASH_MISMATCH') {
         throw new ConflictException('Idempotency-Key was already used with a different request');

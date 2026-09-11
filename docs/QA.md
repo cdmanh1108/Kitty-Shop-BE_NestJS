@@ -20,6 +20,10 @@ npm run db:seed
 
 The repository includes a GitHub Actions workflow that provisions PostgreSQL 17 and executes these gates.
 
+## Test database & test suites
+
+See [TESTING.md](TESTING.md) for suite boundaries, explicit TEST_DATABASE_URL, guarded migration/reset, fixtures and PostgreSQL setup. `npm test` is database-free; run `npm run test:all` or the integration/E2E scripts to verify database guarantees.
+
 ## Invariants that require regression tests
 
 - booking intervals cannot overlap for the same physical inventory item while allocation status is HELD/CONFIRMED/ACTIVE;

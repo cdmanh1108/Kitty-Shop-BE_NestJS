@@ -36,7 +36,14 @@ function parts(date: Date, timeZone: string): DateParts {
 
 function offsetMs(date: Date, timeZone: string): number {
   const value = parts(date, timeZone);
-  const asUtc = Date.UTC(value.year, value.month - 1, value.day, value.hour, value.minute, value.second);
+  const asUtc = Date.UTC(
+    value.year,
+    value.month - 1,
+    value.day,
+    value.hour,
+    value.minute,
+    value.second,
+  );
   return asUtc - Math.floor(date.getTime() / 1000) * 1000;
 }
 
@@ -56,7 +63,12 @@ export function zonedDayRange(reference: Date, timeZone: string): { start: Date;
     month: tomorrowLocal.getUTCMonth() + 1,
     day: tomorrowLocal.getUTCDate(),
   };
-  const end = localMidnightUtc(tomorrowParts.year, tomorrowParts.month, tomorrowParts.day, timeZone);
+  const end = localMidnightUtc(
+    tomorrowParts.year,
+    tomorrowParts.month,
+    tomorrowParts.day,
+    timeZone,
+  );
   return { start, end };
 }
 

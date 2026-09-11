@@ -129,5 +129,6 @@ global guard order, 401/403, tenant spoofing, public health, distinct token type
 throttling, refresh concurrency and logout with an in-memory repository. The
 Prisma adapter tests exercise conditional consume and transactional call ordering,
 including insertion failure propagation. They mock delegates: they are NOT a proof
-of PostgreSQL locking or rollback. A separate isolated PostgreSQL integration harness
-is not present in this repository; no development DB is repurposed for destructive tests.
+of PostgreSQL locking or rollback. PostgreSQL integration and E2E suites now additionally
+verify actual rotation concurrency, rollback, expiry and logout against a dedicated test
+database. See [TESTING.md](TESTING.md); no development DB is repurposed for destructive tests.

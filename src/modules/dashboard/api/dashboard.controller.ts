@@ -17,5 +17,7 @@ export class DashboardController {
   @Permissions(PERMISSIONS.DASHBOARD_VIEW)
   @ApiOperation({ summary: 'Admin dashboard KPIs, inventory status and upcoming rentals' })
   @ApiOkResponse({ type: DashboardSummaryResDto })
-  summary(@CurrentUser() user: CurrentUserType) { return this.service.summary(user); }
+  summary(@CurrentUser() user: CurrentUserType) {
+    return this.service.summary(user);
+  }
 }

@@ -542,7 +542,10 @@ describe('application idempotent execution and audit', () => {
     };
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await expect(
-      new RentalService(repository, new AuditService(auditRepository)).create(user, requestInput()),
+      new RentalService(repository, new AuditService(auditRepository), clock).create(
+        user,
+        requestInput(),
+      ),
     ).resolves.toMatchObject({ id: 'order' });
     expect(repository.createOrder.mock.calls).toHaveLength(1);
     expect(auditRepository.create.mock.calls[0]?.[0]).toMatchObject(entry);
@@ -559,7 +562,7 @@ describe('application idempotent execution and audit', () => {
       return orderDetails();
     });
     const audit: jest.Mocked<AuditPort> = { log: jest.fn().mockResolvedValue(undefined) };
-    const service = new RentalService(repository, audit);
+    const service = new RentalService(repository, audit, clock);
     const outcomes = await Promise.allSettled([
       service.create(user, requestInput(), 'key'),
       service.create(user, requestInput(), 'key'),
@@ -580,7 +583,7 @@ describe('application idempotent execution and audit', () => {
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const audit: jest.Mocked<AuditPort> = { log: jest.fn() };
     await expect(
-      new RentalService(repository, audit).create(user, requestInput(), 'key'),
+      new RentalService(repository, audit, clock).create(user, requestInput(), 'key'),
     ).rejects.toMatchObject({ status: 409 });
     expect(repository.releaseIdempotency.mock.calls[0]).toEqual([
       'shop',

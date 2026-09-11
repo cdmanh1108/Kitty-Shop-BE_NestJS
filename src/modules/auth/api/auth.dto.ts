@@ -11,7 +11,10 @@ export class LoginReqDto {
   @MinLength(8)
   password!: string;
 
-  @ApiPropertyOptional({ example: 'MAIN', description: 'Optional when a user belongs to one shop.' })
+  @ApiPropertyOptional({
+    example: 'MAIN',
+    description: 'Optional when a user belongs to one shop.',
+  })
   @IsString()
   @IsOptional()
   shopCode?: string;
@@ -43,7 +46,6 @@ export class LoginResDto {
   @ApiProperty({ type: AuthUserResDto }) user!: AuthUserResDto;
   @ApiProperty({ type: AuthTokensResDto }) tokens!: AuthTokensResDto;
 }
-
 
 export class ChangePasswordReqDto {
   @ApiProperty()

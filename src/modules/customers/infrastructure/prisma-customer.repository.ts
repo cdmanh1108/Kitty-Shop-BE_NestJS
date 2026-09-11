@@ -9,6 +9,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(input: Parameters<CustomerRepository['list']>[0]) {
+    const phoneSearch = input.search?.replace(/\D/g, '');
     const where = {
       shopId: input.shopId,
       archivedAt: null,
@@ -18,7 +19,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
         ? {
             OR: [
               { fullName: { contains: input.search, mode: 'insensitive' as const } },
-              { normalizedPhone: { contains: input.search.replace(/\D/g, '') } },
+              ...(phoneSearch ? [{ normalizedPhone: { contains: phoneSearch } }] : []),
               { customerCode: { contains: input.search, mode: 'insensitive' as const } },
             ],
           }

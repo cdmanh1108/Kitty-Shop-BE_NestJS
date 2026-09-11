@@ -6,6 +6,10 @@ import { PrismaDeliveryRepository } from './infrastructure/prisma-delivery.repos
 
 @Module({
   controllers: [DeliveryController],
-  providers: [DeliveryService, PrismaDeliveryRepository, { provide: DELIVERY_REPOSITORY, useExisting: PrismaDeliveryRepository }],
+  providers: [
+    DeliveryService,
+    PrismaDeliveryRepository,
+    { provide: DELIVERY_REPOSITORY, useExisting: PrismaDeliveryRepository },
+  ],
 })
 export class DeliveriesModule {}

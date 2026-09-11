@@ -29,6 +29,7 @@ import { SettingsModule } from '@modules/settings/settings.module';
       isGlobal: true,
       cache: true,
       envFilePath: '.env',
+      ignoreEnvFile: process.env.NODE_ENV === 'test',
       load: [configuration],
       validate: validateEnvironment,
     }),

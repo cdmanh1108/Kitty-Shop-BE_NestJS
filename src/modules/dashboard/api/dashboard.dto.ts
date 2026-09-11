@@ -12,6 +12,9 @@ export class DashboardSummaryResDto {
   @ApiProperty() dueToday!: number;
   @ApiProperty() overdue!: number;
   @ApiProperty() pendingReminders!: number;
-  @ApiProperty({ type: Object, additionalProperties: { type: 'number' } }) inventory!: Record<string, number>;
+  @ApiProperty({ type: Object, additionalProperties: { type: 'number' } }) inventory!: Record<
+    string,
+    number
+  >;
   @ApiProperty({ type: [Object] }) upcoming!: object[];
 }

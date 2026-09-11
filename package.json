@@ -18,9 +18,12 @@
     "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,prisma,scripts,test}/**/*.ts\"",
     "lint:fix": "npm run lint -- --fix",
-    "test": "jest --runInBand",
+    "test": "npm run test:unit",
+    "test:unit": "jest --testPathIgnorePatterns=\"test/(integration|e2e)/\" --maxWorkers=2",
+    "test:integration": "jest --config jest.db.config.cjs test/integration --runInBand",
+    "test:e2e": "jest --config jest.db.config.cjs test/e2e --runInBand",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage --runInBand",
+    "test:cov": "jest --config jest.db.config.cjs --coverage --runInBand",
     "quality": "npm run lint && npm run test && npm run build && npm run openapi:export",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
@@ -31,7 +34,10 @@
     "db:studio": "prisma studio",
     "openapi:export": "ts-node -r tsconfig-paths/register scripts/export-openapi.ts",
     "bootstrap": "node scripts/bootstrap.mjs",
-    "format:check": "prettier --check \"src/**/*.ts\" \"prisma/**/*.ts\" \"scripts/**/*.ts\" \"test/**/*.ts\""
+    "format:check": "prettier --check \"src/**/*.ts\" \"prisma/**/*.ts\" \"scripts/**/*.ts\" \"test/**/*.ts\"",
+    "typecheck": "tsc --noEmit --pretty false",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
+    "test:db:migrate": "ts-node -r tsconfig-paths/register scripts/migrate-test-database.ts"
   },
   "prisma": {
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"

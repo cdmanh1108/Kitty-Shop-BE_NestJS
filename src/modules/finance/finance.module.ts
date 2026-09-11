@@ -6,7 +6,11 @@ import { PrismaFinanceRepository } from './infrastructure/prisma-finance.reposit
 
 @Module({
   controllers: [FinanceController],
-  providers: [FinanceService, PrismaFinanceRepository, { provide: FINANCE_REPOSITORY, useExisting: PrismaFinanceRepository }],
+  providers: [
+    FinanceService,
+    PrismaFinanceRepository,
+    { provide: FINANCE_REPOSITORY, useExisting: PrismaFinanceRepository },
+  ],
   exports: [FinanceService],
 })
 export class FinanceModule {}
