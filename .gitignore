@@ -6,5 +6,9 @@ coverage/
 !.env.example
 logs/
 .DS_Store
+Thumbs.db
 *.log
+*.tsbuildinfo
 openapi.json
+.vscode/
+.idea/

@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
+import { ErrorResDto } from '../dto/response.dto';
 
 export interface OpenApiOptions {
   appName: string;
@@ -31,5 +32,6 @@ export function createOpenApiDocument(
     ignoreGlobalPrefix: true,
     operationIdFactory: (controllerKey: string, methodKey: string) =>
       `${controllerKey}_${methodKey}`,
+    extraModels: [ErrorResDto],
   });
 }
