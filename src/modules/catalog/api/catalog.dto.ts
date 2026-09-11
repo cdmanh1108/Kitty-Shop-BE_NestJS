@@ -247,6 +247,7 @@ export class RentalRateResDto {
 export class ProductMediaResDto {
   @ApiProperty() id!: string;
   @ApiProperty() url!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) storageKey?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) altText!: string | null;
   @ApiProperty() isPrimary!: boolean;
   @ApiProperty() sortOrder!: number;

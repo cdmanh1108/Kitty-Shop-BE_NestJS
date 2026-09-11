@@ -1,3 +1,4 @@
+import { resolvePublicUrl } from '@common/storage/public-url.resolver';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 import type {
@@ -194,7 +195,7 @@ export async function addProductMedia(
     where: { id: productId, shopId, archivedAt: null },
   });
   if (!product) return null;
-  return prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     if (input.isPrimary) {
       await tx.productMedia.updateMany({
         where: { shopId, productId, isPrimary: true },
@@ -203,6 +204,13 @@ export async function addProductMedia(
     }
     return tx.productMedia.create({ data: { shopId, productId, ...input } });
   });
+
+  return {
+    ...created,
+    url: created.storageKey
+      ? resolvePublicUrl(process.env.OBJECT_STORAGE_PUBLIC_BASE_URL, created.storageKey)
+      : created.url,
+  };
 }
 export async function removeProductMedia(
   prisma: PrismaService,

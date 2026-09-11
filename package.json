@@ -38,12 +38,15 @@
     "typecheck": "tsc --noEmit --pretty false",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:db:migrate": "ts-node -r tsconfig-paths/register scripts/migrate-test-database.ts",
-    "import:legacy-catalog": "ts-node -r tsconfig-paths/register scripts/import-legacy-catalog.ts"
+    "import:legacy-catalog": "ts-node -r tsconfig-paths/register scripts/import-legacy-catalog.ts",
+    "media:sync-storage": "ts-node -r tsconfig-paths/register scripts/sync-product-media-storage.ts",
+    "object-storage:check": "ts-node -r tsconfig-paths/register scripts/check-object-storage.ts"
   },
   "prisma": {
     "seed": "ts-node -r tsconfig-paths/register prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1130.0",
     "@nestjs/common": "11.1.28",
     "@nestjs/config": "4.0.2",
     "@nestjs/core": "11.1.28",

@@ -22,6 +22,7 @@ import { RemindersModule } from '@modules/reminders/reminders.module';
 import { RentalsModule } from '@modules/rentals/rentals.module';
 import { ReportsModule } from '@modules/reports/reports.module';
 import { SettingsModule } from '@modules/settings/settings.module';
+import { StorageModule } from '@common/storage/storage.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SettingsModule } from '@modules/settings/settings.module';
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
+    StorageModule,
     AuditModule,
     AuthModule,
     HealthModule,
