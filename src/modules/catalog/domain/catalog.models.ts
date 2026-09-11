@@ -26,12 +26,16 @@ export type ProductPage = PaginatedResult<
     category: CategoryRecord;
     variants: Array<
       ProductVariantRecord & {
+        size: null | SizeRecord;
+        color: null | ColorRecord;
+        rentalRates: Array<RentalRateRecord>;
         _count: {
           inventoryItems: number;
         };
       }
     >;
     media: Array<ProductMediaRecord>;
+    rentalRates: Array<RentalRateRecord>;
   }
 >;
 

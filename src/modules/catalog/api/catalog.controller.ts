@@ -15,6 +15,7 @@ import {
   AddInventoryReqDto,
   AddVariantReqDto,
   AvailabilityQueryDto,
+  CatalogLookupsResDto,
   CreateCategoryReqDto,
   CreateColorReqDto,
   CreateProductReqDto,
@@ -55,6 +56,7 @@ export class CatalogController {
   @Get('catalog/lookups')
   @Permissions(PERMISSIONS.CATALOG_VIEW)
   @ApiOperation({ summary: 'Categories, sizes, colors and locations for admin forms' })
+  @ApiOkResponse({ type: CatalogLookupsResDto })
   lookups(@CurrentUser() user: CurrentUserType) {
     return this.service.lookups(user);
   }
@@ -129,6 +131,13 @@ export class CatalogController {
     @Body() body: UpdateProductReqDto,
   ) {
     return this.service.updateProduct(user, id, toUpdateProductInput(body));
+  }
+
+  @Delete('products/:id')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOperation({ summary: 'Safely archive a product if it has no active rental orders' })
+  archiveProduct(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.archiveProduct(user, id);
   }
 
   @Get('inventory')

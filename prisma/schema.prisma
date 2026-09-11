@@ -357,6 +357,8 @@ model Product {
   slug                 String?   @db.VarChar(255)
   description          String?   @db.Text
   defaultDepositAmount Decimal   @default(0) @map("default_deposit_amount") @db.Decimal(18, 2)
+  replacementValue     Decimal?  @map("replacement_value") @db.Decimal(18, 2)
+  facebookPostUrl      String?   @map("facebook_post_url") @db.Text
   currency             String    @default("VND") @db.Char(3)
   status               String    @default("ACTIVE") @db.VarChar(20)
   isRentable           Boolean   @default(true) @map("is_rentable")

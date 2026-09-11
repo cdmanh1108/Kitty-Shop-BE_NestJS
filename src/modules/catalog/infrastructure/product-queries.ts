@@ -30,17 +30,25 @@ export async function listProducts(
       : {}),
   };
   const [items, total] = await prisma.$transaction([
-    prisma.product.findMany({
-      where,
-      include: {
-        category: true,
-        media: { where: { isPrimary: true }, take: 1 },
-        variants: { include: { _count: { select: { inventoryItems: true } } } },
-      },
-      orderBy: { createdAt: 'desc' },
-      skip: (input.page - 1) * input.limit,
-      take: input.limit,
-    }),
+      prisma.product.findMany({
+        where,
+        include: {
+          category: true,
+          media: { where: { isPrimary: true }, take: 1 },
+          variants: {
+            include: {
+              size: true,
+              color: true,
+              rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
+              _count: { select: { inventoryItems: true } },
+            },
+          },
+          rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (input.page - 1) * input.limit,
+        take: input.limit,
+      }),
     prisma.product.count({ where }),
   ]);
   return { items, meta: paginateMeta(input.page, input.limit, total) };

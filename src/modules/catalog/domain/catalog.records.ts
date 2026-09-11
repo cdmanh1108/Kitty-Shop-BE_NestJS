@@ -42,6 +42,8 @@ export interface ProductRecord {
   slug: string | null;
   description: string | null;
   defaultDepositAmount: DecimalValue;
+  replacementValue: DecimalValue | null;
+  facebookPostUrl: string | null;
   currency: string;
   status: string;
   isRentable: boolean;

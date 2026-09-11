@@ -51,6 +51,7 @@ export interface CatalogRepository {
     input: { durationDays: number; price: number },
   ): Promise<UpsertRentalRateResult>;
   updateProduct(shopId: string, id: string, input: UpdateProductData): Promise<UpdateProductResult>;
+  archiveProduct(shopId: string, id: string): Promise<boolean>;
   addProductMedia(
     shopId: string,
     productId: string,
@@ -72,6 +73,8 @@ export interface CreateProductData {
   categoryId: string;
   description?: string;
   defaultDepositAmount: number;
+  replacementValue?: number | null;
+  facebookPostUrl?: string | null;
   isPublic: boolean;
   variants: Array<{
     variantCode: string;
@@ -90,6 +93,8 @@ export interface UpdateProductData {
   categoryId?: string;
   description?: string;
   defaultDepositAmount?: number;
+  replacementValue?: number | null;
+  facebookPostUrl?: string | null;
   isPublic?: boolean;
   isRentable?: boolean;
   status?: string;

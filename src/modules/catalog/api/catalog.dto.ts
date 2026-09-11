@@ -5,7 +5,7 @@ import {
 } from '@modules/catalog/domain/catalog-status';
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -20,6 +20,7 @@ import {
   IsUUID,
   Max,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
@@ -40,7 +41,7 @@ export class ProductVariantReqDto {
   @Min(0)
   @IsOptional()
   depositAmountOverride?: number;
-  @ApiPropertyOptional({ default: 1, minimum: 0 })
+  @ApiPropertyOptional({ type: Number, default: 1, minimum: 0 })
   @Type(() => Number)
   @IsInt()
   @Min(0)
@@ -58,8 +59,8 @@ export class ProductVariantReqDto {
 export class ProductMediaReqDto {
   @ApiProperty() @IsUrl() url!: string;
   @ApiPropertyOptional() @IsString() @IsOptional() altText?: string;
-  @ApiPropertyOptional({ default: false }) @IsBoolean() @IsOptional() isPrimary = false;
-  @ApiPropertyOptional({ default: 0 }) @Type(() => Number) @IsInt() @IsOptional() sortOrder = 0;
+  @ApiPropertyOptional({ type: Boolean, default: false }) @IsBoolean() @IsOptional() isPrimary = false;
+  @ApiPropertyOptional({ type: Number, default: 0 }) @Type(() => Number) @IsInt() @IsOptional() sortOrder = 0;
 }
 
 export class CreateProductReqDto {
@@ -67,13 +68,27 @@ export class CreateProductReqDto {
   @ApiProperty({ example: 'Váy Aurora Satin' }) @IsString() name!: string;
   @ApiProperty() @IsUUID() categoryId!: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional({ default: 0 })
+  @ApiPropertyOptional({ type: Number, default: 0, minimum: 0 })
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @IsOptional()
   defaultDepositAmount = 0;
-  @ApiPropertyOptional({ default: false }) @IsBoolean() @IsOptional() isPublic = false;
+  @ApiPropertyOptional({ nullable: true, type: Number, minimum: 0, example: 1500000 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  replacementValue?: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'https://www.facebook.com/share/p/123456/' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() === '' ? null : typeof value === 'string' ? value.trim() : value,
+  )
+  @ValidateIf((o: CreateProductReqDto) => o.facebookPostUrl != null)
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { message: 'facebookPostUrl must be a valid HTTP/HTTPS URL' })
+  @IsOptional()
+  facebookPostUrl?: string | null;
+  @ApiPropertyOptional({ type: Boolean, default: false }) @IsBoolean() @IsOptional() isPublic = false;
   @ApiProperty({ type: [ProductVariantReqDto] })
   @IsArray()
   @ArrayMinSize(1)
@@ -92,12 +107,26 @@ export class UpdateProductReqDto {
   @ApiPropertyOptional() @IsString() @IsOptional() name?: string;
   @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: Number, minimum: 0 })
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @IsOptional()
   defaultDepositAmount?: number;
+  @ApiPropertyOptional({ nullable: true, type: Number, minimum: 0, example: 1500000 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  replacementValue?: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'https://www.facebook.com/share/p/123456/' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' && value.trim() === '' ? null : typeof value === 'string' ? value.trim() : value,
+  )
+  @ValidateIf((o: UpdateProductReqDto) => o.facebookPostUrl != null)
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { message: 'facebookPostUrl must be a valid HTTP/HTTPS URL' })
+  @IsOptional()
+  facebookPostUrl?: string | null;
   @ApiPropertyOptional() @IsBoolean() @IsOptional() isPublic?: boolean;
   @ApiPropertyOptional() @IsBoolean() @IsOptional() isRentable?: boolean;
   @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
@@ -115,7 +144,7 @@ export class CreateCategoryReqDto {
 export class CreateSizeReqDto {
   @ApiProperty() @IsString() code!: string;
   @ApiProperty() @IsString() name!: string;
-  @ApiPropertyOptional({ default: 0 }) @Type(() => Number) @IsInt() @IsOptional() sortOrder = 0;
+  @ApiPropertyOptional({ type: Number, default: 0 }) @Type(() => Number) @IsInt() @IsOptional() sortOrder = 0;
 }
 
 export class CreateColorReqDto {
@@ -176,25 +205,86 @@ export class AvailabilityQueryDto {
   @ApiProperty() @IsDateString() until!: string;
 }
 
+export class CategorySummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
+}
+
+export class SizeSummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() sortOrder!: number;
+}
+
+export class ColorSummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) hexColor!: string | null;
+}
+
+export class RentalRateResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() durationDays!: number;
+  @ApiProperty({ type: String, example: '50000.00' }) price!: string;
+  @ApiProperty() currency!: string;
+  @ApiProperty() isActive!: boolean;
+}
+
+export class ProductMediaResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() url!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) altText!: string | null;
+  @ApiProperty() isPrimary!: boolean;
+  @ApiProperty() sortOrder!: number;
+}
+
+export class VariantInventoryCountDto {
+  @ApiProperty() inventoryItems!: number;
+}
+
+export class ProductVariantResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() variantCode!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) sizeId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) colorId!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: SizeSummaryResDto }) size!: SizeSummaryResDto | null;
+  @ApiPropertyOptional({ nullable: true, type: ColorSummaryResDto }) color!: ColorSummaryResDto | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) depositAmountOverride!: string | null;
+  @ApiProperty() status!: string;
+  @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
+  @ApiPropertyOptional({ type: VariantInventoryCountDto }) _count?: VariantInventoryCountDto;
+  @ApiPropertyOptional({ type: [Object] }) inventoryItems?: object[];
+}
+
 export class ProductResDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
   @ApiProperty() categoryId!: string;
+  @ApiPropertyOptional({ type: CategorySummaryResDto }) category?: CategorySummaryResDto;
   @ApiProperty() status!: string;
   @ApiProperty() isRentable!: boolean;
   @ApiProperty() isPublic!: boolean;
   @ApiProperty({ type: String, example: '500000.00' }) defaultDepositAmount!: string;
-  @ApiPropertyOptional({ nullable: true }) description!: string | null;
-  @ApiProperty({ type: [Object] }) variants!: object[];
-  @ApiProperty({ type: [Object] }) media!: object[];
+  @ApiPropertyOptional({ nullable: true, type: String, example: '1500000.00' }) replacementValue!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, example: 'https://www.facebook.com/share/p/...' }) facebookPostUrl!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
+  @ApiProperty({ type: [ProductVariantResDto] }) variants!: ProductVariantResDto[];
+  @ApiProperty({ type: [ProductMediaResDto] }) media!: ProductMediaResDto[];
+  @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
+  @ApiPropertyOptional() createdAt?: string;
+  @ApiPropertyOptional() updatedAt?: string;
 }
 
 export class InventoryItemResDto {
   @ApiProperty() id!: string;
   @ApiProperty() variantId!: string;
   @ApiProperty() sku!: string;
-  @ApiPropertyOptional({ nullable: true }) barcode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) barcode!: string | null;
   @ApiProperty() currentStatus!: string;
   @ApiProperty() condition!: string;
   @ApiProperty({ type: Object }) variant!: object;
@@ -209,7 +299,22 @@ export class ProductPageResDto {
   @ApiProperty({ type: PaginationMetaResDto }) meta!: PaginationMetaResDto;
 }
 
+export class ShopLocationSummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() isPrimary!: boolean;
+}
+
+export class CatalogLookupsResDto {
+  @ApiProperty({ type: [CategorySummaryResDto] }) categories!: CategorySummaryResDto[];
+  @ApiProperty({ type: [SizeSummaryResDto] }) sizes!: SizeSummaryResDto[];
+  @ApiProperty({ type: [ColorSummaryResDto] }) colors!: ColorSummaryResDto[];
+  @ApiProperty({ type: [ShopLocationSummaryResDto] }) locations!: ShopLocationSummaryResDto[];
+}
+
 export class InventoryPageResDto {
   @ApiProperty({ type: [InventoryItemResDto] }) items!: InventoryItemResDto[];
   @ApiProperty({ type: PaginationMetaResDto }) meta!: PaginationMetaResDto;
 }
+

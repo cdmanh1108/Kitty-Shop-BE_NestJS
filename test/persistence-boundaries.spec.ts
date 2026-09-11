@@ -1,4 +1,4 @@
-﻿import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../src/database/prisma/prisma.service';
 import { PrismaRentalRepository } from '../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { PrismaCatalogRepository } from '../src/modules/catalog/infrastructure/prisma-catalog.repository';
@@ -38,6 +38,8 @@ function variant(): NonNullable<Parameters<typeof toBookableVariant>[0]> {
       slug: null,
       description: null,
       defaultDepositAmount: new Prisma.Decimal(300000),
+      replacementValue: null,
+      facebookPostUrl: null,
       currency: 'VND',
       status: 'ACTIVE',
       isRentable: true,

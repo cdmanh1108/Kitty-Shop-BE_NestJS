@@ -8,6 +8,7 @@ import {
   addVariant,
   upsertRentalRate,
   updateProduct,
+  archiveProduct,
   addProductMedia,
   removeProductMedia,
 } from './product-commands';
@@ -81,6 +82,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
     ...args: Parameters<CatalogRepository['updateProduct']>
   ): ReturnType<CatalogRepository['updateProduct']> {
     return updateProduct(this.prisma, ...args);
+  }
+
+  archiveProduct(
+    ...args: Parameters<CatalogRepository['archiveProduct']>
+  ): ReturnType<CatalogRepository['archiveProduct']> {
+    return archiveProduct(this.prisma, ...args);
   }
 
   addProductMedia(

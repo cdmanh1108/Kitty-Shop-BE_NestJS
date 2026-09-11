@@ -1,7 +1,13 @@
 import { INVENTORY_STATUS } from '../domain/catalog-status';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   CATALOG_REPOSITORY,
   CatalogInvariantError,
@@ -61,7 +67,13 @@ export class CatalogService {
     if (new Set(duplicateVariantCodes).size !== duplicateVariantCodes.length) {
       throw new BadRequestException('Variant codes must be unique in the request');
     }
+    const seenCombinations = new Set<string>();
     for (const variant of input.variants) {
+      const key = `${variant.sizeId ?? 'null'}::${variant.colorId ?? 'null'}`;
+      if (seenCombinations.has(key)) {
+        throw new ConflictException('Duplicate variant combination for size and color in product');
+      }
+      seenCombinations.add(key);
       const durations = variant.rentalRates.map((rate) => rate.durationDays);
       if (new Set(durations).size !== durations.length) {
         throw new BadRequestException(
@@ -117,6 +129,8 @@ export class CatalogService {
         categoryId: input.categoryId,
         description: input.description,
         defaultDepositAmount: input.defaultDepositAmount,
+        replacementValue: input.replacementValue,
+        facebookPostUrl: input.facebookPostUrl,
         isPublic: input.isPublic,
         isRentable: input.isRentable,
         status: input.status,
@@ -133,6 +147,22 @@ export class CatalogService {
       newValues: { ...input },
     });
     return updated;
+  }
+
+  async archiveProduct(user: CurrentUser, id: string) {
+    const archived = await this.withInvariant(() =>
+      this.repository.archiveProduct(user.shopId, id),
+    );
+    if (!archived) throw new NotFoundException('Product not found');
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'ARCHIVE',
+      entityType: 'product',
+      entityId: id,
+    });
+    return { success: true as const };
   }
 
   async addProductMedia(user: CurrentUser, productId: string, input: ProductMediaInput) {
@@ -226,7 +256,15 @@ export class CatalogService {
     try {
       return await action();
     } catch (error) {
-      if (error instanceof CatalogInvariantError) throw new BadRequestException(error.message);
+      if (error instanceof CatalogInvariantError) {
+        if (
+          error.message.toLowerCase().includes('duplicate') ||
+          error.message.toLowerCase().includes('active rental')
+        ) {
+          throw new ConflictException(error.message);
+        }
+        throw new BadRequestException(error.message);
+      }
       throw error;
     }
   }

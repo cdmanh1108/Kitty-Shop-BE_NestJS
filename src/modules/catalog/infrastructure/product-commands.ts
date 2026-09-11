@@ -14,6 +14,17 @@ export function createProduct(
   input: CreateProductData,
 ): ReturnType<CatalogRepository['createProduct']> {
   return prisma.$transaction(async (tx) => {
+    const seenCombinations = new Set<string>();
+    for (const variant of input.variants) {
+      const key = `${variant.sizeId ?? 'null'}::${variant.colorId ?? 'null'}`;
+      if (seenCombinations.has(key)) {
+        throw new CatalogInvariantError('Duplicate variant combination for size and color in product');
+      }
+      seenCombinations.add(key);
+    }
+    if (input.media.filter((m) => m.isPrimary).length > 1) {
+      throw new CatalogInvariantError('Only one product image can be marked as primary');
+    }
     await assertCatalogReferences(tx, shopId, input.categoryId, input.variants);
     const product = await tx.product.create({
       data: {
@@ -23,6 +34,11 @@ export function createProduct(
         name: input.name,
         description: input.description,
         defaultDepositAmount: input.defaultDepositAmount,
+        replacementValue: input.replacementValue != null ? input.replacementValue : null,
+        facebookPostUrl:
+          input.facebookPostUrl != null && input.facebookPostUrl.trim() !== ''
+            ? input.facebookPostUrl.trim()
+            : null,
         isPublic: input.isPublic,
       },
     });
@@ -57,6 +73,15 @@ export async function addVariant(
   });
   if (!product) return null;
   return prisma.$transaction(async (tx) => {
+    const existingVariants = await tx.productVariant.findMany({
+      where: { productId, shopId, archivedAt: null },
+    });
+    const key = `${input.sizeId ?? 'null'}::${input.colorId ?? 'null'}`;
+    for (const v of existingVariants) {
+      if (`${v.sizeId ?? 'null'}::${v.colorId ?? 'null'}` === key) {
+        throw new CatalogInvariantError('Duplicate variant combination for size and color in product');
+      }
+    }
     await assertVariantReferences(tx, shopId, input);
     const variant = await createVariantWithInventory(tx, shopId, productId, input);
     return tx.productVariant.findUnique({
@@ -111,7 +136,53 @@ export async function updateProduct(
     if (!category)
       throw new CatalogInvariantError('Category does not belong to this shop or is inactive');
   }
-  return prisma.product.update({ where: { id }, data: input });
+  const data: Prisma.ProductUpdateInput = {};
+  if (input.name !== undefined) data.name = input.name;
+  if (input.categoryId !== undefined) data.category = { connect: { id: input.categoryId } };
+  if (input.description !== undefined) data.description = input.description;
+  if (input.defaultDepositAmount !== undefined) data.defaultDepositAmount = input.defaultDepositAmount;
+  if (input.replacementValue !== undefined) data.replacementValue = input.replacementValue;
+  if (input.facebookPostUrl !== undefined) {
+    data.facebookPostUrl =
+      input.facebookPostUrl != null && input.facebookPostUrl.trim() !== ''
+        ? input.facebookPostUrl.trim()
+        : null;
+  }
+  if (input.isPublic !== undefined) data.isPublic = input.isPublic;
+  if (input.isRentable !== undefined) data.isRentable = input.isRentable;
+  if (input.status !== undefined) data.status = input.status;
+
+  return prisma.product.update({ where: { id }, data });
+}
+export async function archiveProduct(
+  prisma: PrismaService,
+  shopId: string,
+  id: string,
+): Promise<boolean> {
+  const existing = await prisma.product.findFirst({
+    where: { id, shopId, archivedAt: null },
+    include: {
+      variants: {
+        include: {
+          orderItems: {
+            where: {
+              status: { in: ['RESERVED', 'RENTING', 'OVERDUE'] },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (!existing) return false;
+  const hasActiveRentals = existing.variants.some((v) => v.orderItems.length > 0);
+  if (hasActiveRentals) {
+    throw new CatalogInvariantError('Cannot archive product with active rental orders');
+  }
+  await prisma.product.update({
+    where: { id },
+    data: { archivedAt: new Date(), status: 'ARCHIVED' },
+  });
+  return true;
 }
 export async function addProductMedia(
   prisma: PrismaService,
