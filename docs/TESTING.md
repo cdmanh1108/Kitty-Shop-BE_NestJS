@@ -112,3 +112,31 @@ Prisma Client generation passed using the same schema with an isolated output pa
 The normal output command was blocked by Windows EPERM replacing the in-use engine
 DLL, including outside the sandbox; no development process was stopped. Only schema
 comments changed, so there is no generated-client type change in this task.
+
+## Catalog integrity audit (2026-09-11)
+
+Verified against an isolated PostgreSQL 17 database using all five migrations:
+322 unit/component tests, 61 integration tests, and 9 E2E tests passed.
+Lint, typecheck, build, quality, OpenAPI export, Prisma validate and diff-check
+passed. OpenAPI is unchanged. Formatting was run, retaining changes only in scope.
+
+`catalog-invariants.integration.spec.ts` adds real database regression coverage for:
+
+- Unreleased HELD/CONFIRMED/ACTIVE archive guards including overdue allocations;
+  cancelled/returned allocations permit archive without deleting history.
+- Booking versus product/inventory archive has one winner; stale selected inventory
+  cannot be booked after product archive. Cross-shop archive/rate writes are denied.
+- Concurrent rate creation and update both return one canonical active row.
+- Direct duplicate active rates are rejected for both NULL product-level scope and
+  variant scope; different durations, variants and inactive history coexist.
+- Variant override versus product fallback pricing, nullable variant combinations,
+  concurrent variant additions, and primary-media uniqueness under concurrent writes.
+- The actual new migration runs from the prior schema reconstructed in a rollback
+  transaction. Duplicate variant/product rates, variant combinations and primary
+  media fail its preflight with no partial migration or data rewrite.
+
+Archive correctness uses the repository Serializable protocol, not a cross-table
+SQL trigger. Direct/import uniqueness is enforced by SQL indexes. CLI imports retain
+their per-product transaction and may report conflict rather than silently merge
+competing prices or physical identities. Production duplicate data must be reconciled
+before deploying migration 202609110004; tests do not assert that production is clean.

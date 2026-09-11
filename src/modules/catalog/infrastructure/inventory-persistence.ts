@@ -206,6 +206,7 @@ export async function archiveInventoryItem(
 
     const activeAllocation = await tx.rentalItemAllocation.findFirst({
       where: {
+        shopId,
         inventoryItemId: id,
         ...activeOccupyingAllocationWhere(),
       },

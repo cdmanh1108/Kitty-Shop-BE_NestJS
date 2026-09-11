@@ -1,4 +1,4 @@
-import { INVENTORY_STATUS } from '@modules/catalog/domain/catalog-status';
+import { INVENTORY_STATUS, PRODUCT_STATUS } from '@modules/catalog/domain/catalog-status';
 import {
   ALLOCATION_STATUS,
   BLOCKING_ALLOCATION_STATUSES,
@@ -25,6 +25,11 @@ export function operationallyRentableInventoryWhere() {
     isActive: true,
     archivedAt: null,
     currentStatus: INVENTORY_STATUS.AVAILABLE,
+    variant: {
+      archivedAt: null,
+      status: PRODUCT_STATUS.ACTIVE,
+      product: { archivedAt: null, status: PRODUCT_STATUS.ACTIVE, isRentable: true },
+    },
   } satisfies Prisma.InventoryItemWhereInput;
 }
 

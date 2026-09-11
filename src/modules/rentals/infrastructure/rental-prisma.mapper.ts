@@ -30,7 +30,11 @@ type BookableVariantRecord = Prisma.ProductVariantGetPayload<{
 
 export function toBookableVariant(variant: BookableVariantRecord | null): BookableVariant | null {
   if (!variant) return null;
-  const rate = variant.rentalRates[0] ?? variant.product.rentalRates[0];
+  // Partial unique indexes guarantee one active row per duration in each scope.
+  // Variant-specific pricing takes precedence over the product fallback.
+  const [variantRate] = variant.rentalRates;
+  const [productRate] = variant.product.rentalRates;
+  const rate = variantRate ?? productRate;
   const deposit = variant.depositAmountOverride ?? variant.product.defaultDepositAmount;
   return {
     id: variant.id,

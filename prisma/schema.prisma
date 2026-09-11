@@ -381,6 +381,7 @@ model Product {
   @@map("products")
 }
 
+/// SQL partial unique index: unarchived (productId, sizeId, colorId), NULLS NOT DISTINCT.
 model ProductVariant {
   id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId                String    @map("shop_id") @db.Uuid
@@ -409,6 +410,7 @@ model ProductVariant {
   @@map("product_variants")
 }
 
+/// SQL partial unique index: at most one isPrimary row per product.
 model ProductMedia {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId    String   @map("shop_id") @db.Uuid
@@ -468,6 +470,8 @@ model InventoryItem {
   @@map("inventory_items")
 }
 
+/// SQL partial indexes in 202609110004: one active rate per shop/product/variant/duration.
+/// NULL variantId has its own product-level index; inactive history is unrestricted.
 model RentalRate {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId       String    @map("shop_id") @db.Uuid

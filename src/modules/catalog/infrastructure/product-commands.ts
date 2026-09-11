@@ -1,6 +1,8 @@
 import { resolvePublicUrl } from '@common/storage/public-url.resolver';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
+import { serializableTransaction } from '@database/prisma/transaction';
+import { activeOccupyingAllocationWhere } from '@database/prisma/inventory-availability';
 import type {
   CatalogRepository,
   CreateProductData,
@@ -19,9 +21,19 @@ export function createProduct(
     for (const variant of input.variants) {
       const key = `${variant.sizeId ?? 'null'}::${variant.colorId ?? 'null'}`;
       if (seenCombinations.has(key)) {
-        throw new CatalogInvariantError('Duplicate variant combination for size and color in product');
+        throw new CatalogInvariantError(
+          'Duplicate variant combination for size and color in product',
+        );
       }
       seenCombinations.add(key);
+
+      const seenDurations = new Set<number>();
+      for (const rate of variant.rentalRates) {
+        if (seenDurations.has(rate.durationDays)) {
+          throw new CatalogInvariantError('Duplicate rental rate duration for variant');
+        }
+        seenDurations.add(rate.durationDays);
+      }
     }
     if (input.media.filter((m) => m.isPrimary).length > 1) {
       throw new CatalogInvariantError('Only one product image can be marked as primary');
@@ -69,18 +81,20 @@ export async function addVariant(
   productId: string,
   input: CreateProductData['variants'][number],
 ): ReturnType<CatalogRepository['addVariant']> {
-  const product = await prisma.product.findFirst({
-    where: { id: productId, shopId, archivedAt: null },
-  });
-  if (!product) return null;
-  return prisma.$transaction(async (tx) => {
+  return serializableTransaction(prisma, async (tx) => {
+    const product = await tx.product.findFirst({
+      where: { id: productId, shopId, archivedAt: null, status: { not: 'ARCHIVED' } },
+    });
+    if (!product) return null;
     const existingVariants = await tx.productVariant.findMany({
       where: { productId, shopId, archivedAt: null },
     });
     const key = `${input.sizeId ?? 'null'}::${input.colorId ?? 'null'}`;
     for (const v of existingVariants) {
       if (`${v.sizeId ?? 'null'}::${v.colorId ?? 'null'}` === key) {
-        throw new CatalogInvariantError('Duplicate variant combination for size and color in product');
+        throw new CatalogInvariantError(
+          'Duplicate variant combination for size and color in product',
+        );
       }
     }
     await assertVariantReferences(tx, shopId, input);
@@ -97,105 +111,125 @@ export async function upsertRentalRate(
   variantId: string,
   input: { durationDays: number; price: number },
 ): ReturnType<CatalogRepository['upsertRentalRate']> {
-  const variant = await prisma.productVariant.findFirst({
-    where: { id: variantId, shopId, archivedAt: null },
-  });
-  if (!variant) return null;
-  const existing = await prisma.rentalRate.findFirst({
-    where: { shopId, variantId, durationDays: input.durationDays, isActive: true },
-  });
-  if (existing) {
-    return prisma.rentalRate.update({
-      where: { id: existing.id },
-      data: { price: input.price },
+  return prisma.$transaction(async (tx) => {
+    const variant = await tx.productVariant.findFirst({
+      where: {
+        id: variantId,
+        shopId,
+        archivedAt: null,
+        product: { shopId, archivedAt: null, status: { not: 'ARCHIVED' } },
+      },
+      select: { productId: true },
     });
-  }
-  return prisma.rentalRate.create({
-    data: {
-      shopId,
-      productId: variant.productId,
-      variantId,
-      durationDays: input.durationDays,
-      price: input.price,
-    },
+    if (!variant) return null;
+    // Partial uniqueness is SQL-owned: ON CONFLICT atomically inserts or updates
+    // the single active price without touching inactive historical rows.
+    const [saved] = await tx.$queryRaw<{ id: string }[]>`
+      INSERT INTO rental_rates (shop_id, product_id, variant_id, duration_days, price, updated_at)
+      VALUES (${shopId}::uuid, ${variant.productId}::uuid, ${variantId}::uuid,
+              ${input.durationDays}, ${input.price}, NOW())
+      ON CONFLICT (shop_id, product_id, variant_id, duration_days)
+        WHERE is_active = true AND variant_id IS NOT NULL
+      DO UPDATE SET price = EXCLUDED.price, updated_at = NOW()
+      RETURNING id
+    `;
+    if (!saved) throw new Error('Rental rate upsert did not return a row');
+    return tx.rentalRate.findUniqueOrThrow({ where: { id: saved.id } });
   });
 }
+
 export async function updateProduct(
   prisma: PrismaService,
   shopId: string,
   id: string,
   input: UpdateProductData,
 ): ReturnType<CatalogRepository['updateProduct']> {
-  const existing = await prisma.product.findFirst({
-    where: { id, shopId, archivedAt: null },
-  });
-  if (!existing) return null;
-  if (input.categoryId) {
-    const category = await prisma.category.count({
-      where: { id: input.categoryId, shopId, isActive: true },
+  return serializableTransaction(prisma, async (tx) => {
+    const existing = await tx.product.findFirst({
+      where: { id, shopId, archivedAt: null },
     });
-    if (!category)
-      throw new CatalogInvariantError('Category does not belong to this shop or is inactive');
-  }
-  const data: Prisma.ProductUpdateInput = {};
-  if (input.name !== undefined) data.name = input.name;
-  if (input.categoryId !== undefined) data.category = { connect: { id: input.categoryId } };
-  if (input.description !== undefined) data.description = input.description;
-  if (input.defaultDepositAmount !== undefined) data.defaultDepositAmount = input.defaultDepositAmount;
-  if (input.replacementValue !== undefined) data.replacementValue = input.replacementValue;
-  if (input.facebookPostUrl !== undefined) {
-    data.facebookPostUrl =
-      input.facebookPostUrl != null && input.facebookPostUrl.trim() !== ''
-        ? input.facebookPostUrl.trim()
-        : null;
-  }
-  if (input.isPublic !== undefined) data.isPublic = input.isPublic;
-  if (input.isRentable !== undefined) data.isRentable = input.isRentable;
-  if (input.status !== undefined) data.status = input.status;
+    if (!existing) return null;
+    if (input.categoryId) {
+      const category = await tx.category.count({
+        where: { id: input.categoryId, shopId, isActive: true },
+      });
+      if (!category)
+        throw new CatalogInvariantError('Category does not belong to this shop or is inactive');
+    }
+    const data: Prisma.ProductUpdateInput = {};
+    if (input.status === 'ARCHIVED') {
+      await assertProductCanArchive(tx, shopId, id);
+      data.archivedAt = new Date();
+    }
+    if (input.name !== undefined) data.name = input.name;
+    if (input.categoryId !== undefined) data.category = { connect: { id: input.categoryId } };
+    if (input.description !== undefined) data.description = input.description;
+    if (input.defaultDepositAmount !== undefined)
+      data.defaultDepositAmount = input.defaultDepositAmount;
+    if (input.replacementValue !== undefined) data.replacementValue = input.replacementValue;
+    if (input.facebookPostUrl !== undefined) {
+      data.facebookPostUrl =
+        input.facebookPostUrl != null && input.facebookPostUrl.trim() !== ''
+          ? input.facebookPostUrl.trim()
+          : null;
+    }
+    if (input.isPublic !== undefined) data.isPublic = input.isPublic;
+    if (input.isRentable !== undefined) data.isRentable = input.isRentable;
+    if (input.status !== undefined) data.status = input.status;
 
-  return prisma.product.update({ where: { id }, data });
+    return tx.product.update({ where: { id }, data });
+  });
 }
+
 export async function archiveProduct(
   prisma: PrismaService,
   shopId: string,
   id: string,
 ): Promise<boolean> {
-  const existing = await prisma.product.findFirst({
-    where: { id, shopId, archivedAt: null },
-    include: {
-      variants: {
-        include: {
-          orderItems: {
-            where: {
-              status: { in: ['RESERVED', 'RENTING', 'OVERDUE'] },
-            },
-          },
-        },
-      },
-    },
+  return serializableTransaction(prisma, async (tx) => {
+    const existing = await tx.product.findFirst({
+      where: { id, shopId, archivedAt: null },
+    });
+    if (!existing) return false;
+
+    await assertProductCanArchive(tx, shopId, id);
+
+    await tx.product.update({
+      where: { id },
+      data: { archivedAt: new Date(), status: 'ARCHIVED' },
+    });
+    return true;
   });
-  if (!existing) return false;
-  const hasActiveRentals = existing.variants.some((v) => v.orderItems.length > 0);
-  if (hasActiveRentals) {
-    throw new CatalogInvariantError('Cannot archive product with active rental orders');
-  }
-  await prisma.product.update({
-    where: { id },
-    data: { archivedAt: new Date(), status: 'ARCHIVED' },
-  });
-  return true;
 }
+async function assertProductCanArchive(
+  tx: Prisma.TransactionClient,
+  shopId: string,
+  productId: string,
+): Promise<void> {
+  const allocation = await tx.rentalItemAllocation.findFirst({
+    where: {
+      shopId,
+      inventoryItem: { variant: { productId, shopId } },
+      ...activeOccupyingAllocationWhere(),
+    },
+    select: { id: true },
+  });
+  if (allocation)
+    throw new CatalogInvariantError('Cannot archive product with active rental allocations');
+}
+
 export async function addProductMedia(
   prisma: PrismaService,
   shopId: string,
   productId: string,
   input: ProductMediaData,
 ): ReturnType<CatalogRepository['addProductMedia']> {
-  const product = await prisma.product.findFirst({
-    where: { id: productId, shopId, archivedAt: null },
-  });
-  if (!product) return null;
-  const created = await prisma.$transaction(async (tx) => {
+  const created = await serializableTransaction(prisma, async (tx) => {
+    const product = await tx.product.findFirst({
+      where: { id: productId, shopId, archivedAt: null },
+      select: { id: true },
+    });
+    if (!product) return null;
     if (input.isPrimary) {
       await tx.productMedia.updateMany({
         where: { shopId, productId, isPrimary: true },
@@ -204,6 +238,7 @@ export async function addProductMedia(
     }
     return tx.productMedia.create({ data: { shopId, productId, ...input } });
   });
+  if (!created) return null;
 
   return {
     ...created,

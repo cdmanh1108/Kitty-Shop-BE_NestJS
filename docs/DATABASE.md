@@ -124,3 +124,36 @@ values fail the CHECK rather than silently being rewritten.
 Deploy with rental/warehouse writers stopped, apply the migration, then start the
 new application version. Old instances that persist RENTED are incompatible with
 the new CHECK. Do not run old and new writers concurrently during deployment.
+
+### Catalog archive and pricing integrity
+
+Product and inventory archive use the shared unreleased HELD/CONFIRMED/ACTIVE
+allocation predicate, without a date cutoff. Product archive and booking both use
+Serializable transactions: booking reads the product/variant rentability through
+the selected inventory inside its transaction, and archive reads allocations
+before changing the product. PostgreSQL aborts concurrent stale decisions for retry.
+Raw external SQL writers must follow this protocol; archive is not a SQL trigger.
+
+`202609110004_harden_rental_rate_and_media_uniqueness` adds:
+
+- `rental_rates_variant_active_unique`: active (shop, product, variant, duration).
+- `rental_rates_product_active_unique`: active (shop, product, duration), NULL variant only.
+- `product_variants_unarchived_combination_unique`: unarchived (product, size, color),
+  with PostgreSQL NULLS NOT DISTINCT so absent size/color cannot bypass uniqueness.
+- `product_media_product_id_primary_unique`: one primary media row per product.
+
+Pricing lookup prefers the variant rate, then the product-level fallback, for the
+requested duration. Existing validFrom/validUntil fields are not part of pricing
+selection, so they do not create separate active scopes. Inactive rates remain
+unrestricted; the existing price command updates the active row in place.
+
+The migration locks the affected tables and checks duplicates before creating
+indexes, all in one transaction. It deliberately fails for duplicate active rates,
+unarchived variant combinations or primary media, without choosing a price,
+merging physical identities, or deleting history. Reconcile reported duplicate
+scopes before retrying deployment. This requires PostgreSQL 15+ (the repo uses 17).
+Plan a write maintenance window for index creation. If Prisma records a failed
+migration, resolve it as rolled back only after checking PostgreSQL rollback and
+reconciling duplicates, then redeploy. Dropping the new indexes is the schema
+rollback; it removes protection and must be coordinated with the application.
+There is no data rewrite to undo.

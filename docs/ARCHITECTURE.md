@@ -138,8 +138,7 @@ an organizational refactor, not a performance optimization.
 
 `test/persistence-boundaries.spec.ts` covers mapping, availability and selected
 adapter contracts using pure fixtures/delegate spies without connecting to a database.
-It does not establish PostgreSQL rollback or concurrent exclusion behavior; the
-repository currently has no integration/e2e database harness.
+It does not establish PostgreSQL rollback or concurrent exclusion behavior; real PostgreSQL coverage lives in test/integration and test/e2e (see TESTING.md).
 
 For a new feature `foo`:
 
@@ -173,3 +172,20 @@ rechecks rentability so a scheduled order cannot start while cleaning is unfinis
 Inventory responses keep separate operational and occupancy fields. Dashboard
 inventory totals count distinct physical items; ACTIVE takes precedence over future
 reservations. The top-level currentlyRented KPI continues to count active allocations.
+
+Catalog archive protection reuses `activeOccupyingAllocationWhere` for product and
+inventory. It depends on allocations, not a second order-item status definition.
+Rental transaction rentability includes the parent product and variant, closing
+booking versus product archive races even when candidates were selected earlier.
+The repository also guards internal updateProduct calls requesting ARCHIVED;
+transport DTOs retain their existing allowed statuses.
+
+Active rental-rate writes use a parameterized INSERT ON CONFLICT within the owning
+Prisma transaction, targeting the SQL partial unique index. Both concurrent
+upserts can succeed and return the same active row, with the last update winning.
+Prisma still loads the returned record to preserve Decimal/date mapping. Variant
+creation and primary-media replacement use Serializable transactions; unique
+indexes remain the final protection for direct/import writes. Unique conflicts
+use the existing sanitized 409 mapping. Legacy importer writes remain atomic per
+product and preserve existing prices; competing inserts can fail the aggregate
+transaction under these indexes rather than create duplicates.

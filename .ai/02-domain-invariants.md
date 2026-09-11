@@ -17,3 +17,7 @@
 - Rental create/reschedule/handover and warehouse mutations validate inside Serializable transactions.
 - Dates do not implicitly release warehouse occupancy; ACTIVE blocks booking until returned.
 - Future reservations allow finishing cleaning/repair to AVAILABLE; handover requires AVAILABLE.
+
+- Product and inventory archive are blocked by unreleased HELD/CONFIRMED/ACTIVE allocations, even after their planned end.
+- One active rental rate per shop/product/variant/duration; NULL variant means product fallback. SQL partial indexes preserve unrestricted inactive history.
+- Unarchived variant size/color combinations (including NULL) and primary product media have database uniqueness.
