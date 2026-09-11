@@ -80,6 +80,10 @@ Important create/update/transition actions write audit records. Do not store sec
 
 `outbox_events` is present so DB state changes and future side effects (Zalo/SMS/webhooks/search sync) can be committed atomically. Current admin logic does not depend on an external broker. When adding integrations, implement a retrying dispatcher rather than sending network requests inside the order transaction.
 
+Audit/request context, transactional side-effect inventory and fenced claim recovery are
+documented in [RELIABILITY.md](RELIABILITY.md). AuditPort remains best-effort; required
+business histories/outbox remain transactional.
+
 ## Extending the system
 
 Business vocabulary, money serialization, scoped Clock usage and reference-number
@@ -93,8 +97,8 @@ or providers are created.
 
 - Rentals: `rental-queries` owns reads and the shared transaction-aware detail loader;
   `rental-availability` owns bookable variant lookup; `rental-prisma.mapper` owns its
-  typed include and Decimal/nullable mapping. `rental-booking` owns creation and
-  idempotency persistence; `rental-lifecycle` owns transitions, rescheduling and charges.
+  typed include and Decimal/nullable mapping. `rental-booking` owns creation;
+  `rental-idempotency` owns claim/recovery/transactional completion; `rental-lifecycle` owns transitions, rescheduling and charges.
 - Catalog: `product-queries` owns product reads; `product-commands` owns product,
   variant/rate and media aggregate writes. Its variant creation helper receives the
   caller's transaction. `inventory-persistence` owns inventory reads/state/history;

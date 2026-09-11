@@ -1,3 +1,4 @@
+import type { RentalOutboxEvent } from '../domain/rental.events';
 import { INVENTORY_STATUS } from '@modules/catalog/domain/catalog-status';
 import {
   RENTAL_ITEM_STATUS,
@@ -150,7 +151,7 @@ export async function transition(
         aggregateType: 'rental_order',
         aggregateId: order.id,
         payload: { orderId: order.id, fromStatus: order.status, toStatus: input.toStatus },
-      },
+      } satisfies RentalOutboxEvent,
     });
     return getWithTx(tx, input.shopId, order.id);
   });
@@ -197,7 +198,7 @@ export async function reschedule(
             rentalStartAt: input.from.toISOString(),
             rentalEndAt: input.until.toISOString(),
           },
-        },
+        } satisfies RentalOutboxEvent,
       });
       return getWithTx(tx, input.shopId, order.id);
     });

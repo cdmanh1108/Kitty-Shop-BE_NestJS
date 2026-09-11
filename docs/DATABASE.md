@@ -88,6 +88,10 @@ Order monetary columns are immutable-ish snapshots used for operational speed an
 
 Each tenant-owned aggregate stores `shop_id`; application repositories scope queries using authenticated `shopId`. Cross-shop IDs from request bodies must be validated in the same shop. Before exposing this as a public multi-tenant SaaS, add PostgreSQL RLS or composite tenant foreign keys as a second isolation layer.
 
+Audit request IDs use VARCHAR(100), matching middleware correlation IDs, through
+202609110001_audit_request_id_text. Rental idempotency reuses row UUID as an ownership
+token and createdAt as acquisition time; see [RELIABILITY.md](RELIABILITY.md) before deployment.
+
 ## Migration rules
 
 1. Edit `prisma/schema.prisma`.

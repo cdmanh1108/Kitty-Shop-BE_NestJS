@@ -1,13 +1,15 @@
+import { RentalClaimLostError } from '../domain/rental-errors';
 import { generateDatedReference } from '@common/utils/reference-number';
 import { RENTAL_STATUS, type RentalStatus } from '@modules/rentals/domain/rental-status';
 import { CHARGE_TYPE } from '@modules/rentals/domain/charge-type';
 import type { CurrentUser } from '@common/types/current-user';
-import { AuditService } from '@modules/audit/application/audit.service';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import {
   BadRequestException,
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
@@ -34,9 +36,10 @@ const CHARGE_TYPES: ReadonlySet<string> = new Set(Object.values(CHARGE_TYPE));
 
 @Injectable()
 export class RentalService {
+  private readonly logger = new Logger(RentalService.name);
   constructor(
     @Inject(RENTAL_REPOSITORY) private readonly repository: RentalRepository,
-    private readonly audit: AuditService,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   list(user: CurrentUser, query: RentalListQuery) {
@@ -89,7 +92,7 @@ export class RentalService {
     const durationDays = calculateRentalDurationDays(start, end);
     const scope = 'rental-order.create';
     const requestHash = createHash('sha256').update(JSON.stringify(input)).digest('hex');
-    let idempotencyClaimed = false;
+    let claimId: string | undefined;
 
     if (idempotencyKey) {
       if (idempotencyKey.length > 255) throw new BadRequestException('Idempotency-Key is too long');
@@ -107,7 +110,7 @@ export class RentalService {
       if (claim.state === 'IN_PROGRESS') {
         throw new ConflictException('A request with this Idempotency-Key is already in progress');
       }
-      idempotencyClaimed = true;
+      claimId = claim.claimId;
     }
 
     try {
@@ -183,7 +186,8 @@ export class RentalService {
         note: input.note,
         internalNote: input.internalNote,
         createdBy: user.memberId,
-        idempotency: idempotencyKey ? { scope, key: idempotencyKey } : undefined,
+        idempotency:
+          idempotencyKey && claimId ? { scope, key: idempotencyKey, claimId } : undefined,
         lines,
         charges: input.charges,
         delivery: input.delivery
@@ -202,6 +206,7 @@ export class RentalService {
         actorMemberId: user.memberId,
         action: 'CREATE',
         entityType: 'rental_order',
+        entityId: order?.id,
         newValues: {
           rentalStartAt: input.rentalStartAt,
           rentalEndAt: input.rentalEndAt,
@@ -211,10 +216,19 @@ export class RentalService {
 
       return order;
     } catch (error) {
-      if (idempotencyKey && idempotencyClaimed) {
-        await this.repository.releaseIdempotency(user.shopId, scope, idempotencyKey);
+      if (idempotencyKey && claimId) {
+        try {
+          await this.repository.releaseIdempotency(user.shopId, scope, idempotencyKey, claimId);
+        } catch (releaseError) {
+          this.logger.error({
+            event: 'rental.idempotency.release.failed',
+            shopId: user.shopId,
+            error: releaseError instanceof Error ? releaseError : new Error('Unknown exception'),
+          });
+        }
       }
-      if (error instanceof RentalOverlapError) throw new ConflictException(error.message);
+      if (error instanceof RentalOverlapError || error instanceof RentalClaimLostError)
+        throw new ConflictException(error.message);
       throw error;
     }
   }

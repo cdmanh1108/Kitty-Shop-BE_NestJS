@@ -10,6 +10,6 @@ Client request IDs accept only 1–100 ASCII letters/digits/underscore/hyphen, o
 
 The logger redacts sensitive object keys recursively, bounds depth/array/string size, masks common credential URL/Bearer/JWT patterns, and suppresses Error message/stack text that may include SQL values or secrets. Application error events retain exception class, event and request ID. Free text redaction cannot detect arbitrary secrets: use fixed event names and explicitly selected fields; never log a request, DTO, token, environment or raw exception string. Detailed stack diagnostics require a separate reviewed, access-controlled error reporting policy.
 
-`http.request.failed`, `audit.persist.failed` and `reminders.refresh.failed` provide operational errors. Database audit history remains independent and unchanged. API response shapes and business/auth behavior are unchanged.
+`http.request.failed`, `audit.persist.failed` and `reminders.refresh.failed` provide operational errors. Database audit history remains independent; its best-effort writer now enriches request metadata and sanitizes snapshots. See [RELIABILITY.md](RELIABILITY.md). Recovery/cleanup events omit idempotency keys and payloads. API response shapes and business/auth behavior are unchanged.
 
 Deployment must collect stdout/stderr and configure retention, access controls and alerts (5xx, auth failures, audit persistence failures). This repository does not provision a log collector. No local log files/rotation are introduced. Browser/deployed collection has not been verified by unit tests.

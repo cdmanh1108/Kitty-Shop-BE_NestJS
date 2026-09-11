@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { plainToInstance } from 'class-transformer';
 import * as ts from 'typescript';
-import { AuditService } from '../src/modules/audit/application/audit.service';
+import type { AuditPort } from '../src/modules/audit/domain/audit.port';
 import type { CurrentUser } from '../src/common/types/current-user';
 import { paginateMeta } from '../src/common/types/pagination';
 import { CreateRentalOrderReqDto, RentalListQueryDto } from '../src/modules/rentals/api/rental.dto';
@@ -43,11 +43,7 @@ function rentalRepository(): jest.Mocked<RentalRepository> {
     releaseIdempotency: jest.fn(),
   };
 }
-const audit = () =>
-  new AuditService({
-    create: () => Promise.resolve(),
-    list: () => Promise.resolve({ items: [], meta: paginateMeta(1, 20, 0) }),
-  });
+const audit = (): AuditPort => ({ log: () => Promise.resolve() });
 
 describe('transport to application contracts', () => {
   const request = () =>
@@ -178,6 +174,8 @@ describe('inner-layer import guard', () => {
         }
         if (!file.endsWith('.ts') || !/[\\/](application|domain)[\\/]/.test(file)) continue;
         const source = readFileSync(file, 'utf8');
+        if (source.includes('@modules/audit/application/audit.service'))
+          violations.push(file + ': concrete audit dependency');
         const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
         const domain = /[\\/]domain[\\/]/.test(file);
         function visit(node: ts.Node) {

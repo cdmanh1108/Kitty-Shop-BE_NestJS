@@ -1,3 +1,4 @@
+import type { DeliveryCreatedEvent } from '../domain/delivery.events';
 import { DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
@@ -57,7 +58,7 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
           aggregateType: 'delivery_job',
           aggregateId: delivery.id,
           payload: { deliveryId: delivery.id, orderId: input.orderId },
-        },
+        } satisfies DeliveryCreatedEvent,
       });
       return delivery;
     });

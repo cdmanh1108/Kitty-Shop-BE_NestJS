@@ -1,5 +1,5 @@
 import type { CurrentUser } from '@common/types/current-user';
-import { AuditService } from '@modules/audit/application/audit.service';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import {
   BadRequestException,
   ConflictException,
@@ -15,7 +15,7 @@ import type { CreateMemberInput, UpdateMemberInput } from './member.contracts';
 export class MemberService {
   constructor(
     @Inject(MEMBER_REPOSITORY) private readonly repository: MemberRepository,
-    private readonly audit: AuditService,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   list(user: CurrentUser) {
@@ -45,6 +45,7 @@ export class MemberService {
       actorMemberId: user.memberId,
       action: 'CREATE',
       entityType: 'shop_member',
+      entityId: member?.id,
       newValues: { email: input.email, roleCodes: input.roleCodes },
     });
     return member;

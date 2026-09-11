@@ -21,7 +21,9 @@ export interface BookableVariant {
 }
 
 export type IdempotencyClaim =
-  | { state: 'CLAIMED' | 'IN_PROGRESS' | 'HASH_MISMATCH' }
+  | { state: 'CLAIMED'; claimId: string }
+  | { state: 'IN_PROGRESS' }
+  | { state: 'HASH_MISMATCH' }
   | { state: 'COMPLETED'; responseBody: JsonSerialized<RentalOrderDetails> };
 
 export interface CreateRentalOrderData {
@@ -35,7 +37,7 @@ export interface CreateRentalOrderData {
   note?: string;
   internalNote?: string;
   createdBy: string;
-  idempotency?: { scope: string; key: string };
+  idempotency?: { scope: string; key: string; claimId: string };
   lines: Array<{
     productId: string;
     variantId: string;
@@ -82,7 +84,7 @@ export interface RentalRepository {
   reschedule(input: RentalRescheduleData): Promise<RentalOrderDetails>;
   addCharge(input: RentalAddChargeData): Promise<RentalOrderDetails>;
   claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
-  releaseIdempotency(shopId: string, scope: string, key: string): Promise<void>;
+  releaseIdempotency(shopId: string, scope: string, key: string, claimId: string): Promise<void>;
 }
 
 export interface RentalGetBookableVariantData {

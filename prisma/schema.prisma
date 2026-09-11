@@ -883,7 +883,7 @@ model AuditLog {
   newValues     Json?    @map("new_values")
   ipAddress     String?  @map("ip_address") @db.Inet
   userAgent     String?  @map("user_agent") @db.Text
-  requestId     String?  @map("request_id") @db.Uuid
+  requestId     String?  @map("request_id") @db.VarChar(100)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)

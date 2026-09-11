@@ -1,6 +1,6 @@
 import { INVENTORY_STATUS } from '../domain/catalog-status';
 import type { CurrentUser } from '@common/types/current-user';
-import { AuditService } from '@modules/audit/application/audit.service';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   CATALOG_REPOSITORY,
@@ -27,7 +27,7 @@ import type {
 export class CatalogService {
   constructor(
     @Inject(CATALOG_REPOSITORY) private readonly repository: CatalogRepository,
-    private readonly audit: AuditService,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   lookups(user: CurrentUser) {
@@ -81,6 +81,7 @@ export class CatalogService {
       actorMemberId: user.memberId,
       action: 'CREATE',
       entityType: 'product',
+      entityId: product?.id,
       newValues: { code: input.code, name: input.name },
     });
     return product;
@@ -97,6 +98,7 @@ export class CatalogService {
       actorMemberId: user.memberId,
       action: 'CREATE',
       entityType: 'product_variant',
+      entityId: variant?.id,
       newValues: { productId, variantCode: input.variantCode },
     });
     return variant;
@@ -142,6 +144,7 @@ export class CatalogService {
       actorMemberId: user.memberId,
       action: 'CREATE',
       entityType: 'product_media',
+      entityId: media?.id,
       newValues: { productId, url: input.url },
     });
     return media;

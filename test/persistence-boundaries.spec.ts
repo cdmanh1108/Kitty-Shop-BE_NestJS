@@ -152,7 +152,9 @@ describe('repository persistence boundaries', () => {
     const product = jest.spyOn(prisma.product, 'findFirst').mockResolvedValue(null);
     const order = jest.spyOn(prisma.rentalOrder, 'findFirst').mockResolvedValue(null);
     expect(await new PrismaCatalogRepository(prisma).findProduct('shop', 'missing')).toBeNull();
-    expect(await new PrismaRentalRepository(prisma).get('shop', 'missing')).toBeNull();
+    expect(
+      await new PrismaRentalRepository(prisma, { now: () => new Date() }).get('shop', 'missing'),
+    ).toBeNull();
     expect(product.mock.calls[0]?.[0]?.where).toEqual({
       id: 'missing',
       shopId: 'shop',
@@ -188,7 +190,7 @@ describe('repository persistence boundaries', () => {
       .spyOn(prisma, '$transaction')
       .mockRejectedValue(new Error('rental_item_no_overlap'));
     await expect(
-      new PrismaRentalRepository(prisma).reschedule({
+      new PrismaRentalRepository(prisma, { now: () => new Date() }).reschedule({
         shopId: 'shop',
         orderId: 'order',
         from: now,
@@ -203,7 +205,7 @@ describe('repository persistence boundaries', () => {
     const failure = new Error('connection unavailable');
     jest.spyOn(prisma, '$transaction').mockRejectedValue(failure);
     await expect(
-      new PrismaRentalRepository(prisma).reschedule({
+      new PrismaRentalRepository(prisma, { now: () => new Date() }).reschedule({
         shopId: 'shop',
         orderId: 'order',
         from: now,
@@ -263,7 +265,7 @@ describe('repository persistence boundaries', () => {
     const outbox = jest.spyOn(tx.outboxEvent, 'create');
     jest.spyOn(prisma, '$transaction').mockImplementation((operation) => operation(tx));
     await expect(
-      new PrismaRentalRepository(prisma).createOrder({
+      new PrismaRentalRepository(prisma, { now: () => new Date() }).createOrder({
         shopId: 'shop',
         customerId: 'customer',
         orderNumber: 'R-01',

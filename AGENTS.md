@@ -19,6 +19,8 @@ Non-negotiable rules:
 - application/domain must not import API DTOs; controllers map validated transport DTOs into application-owned inputs.
 - repository ports use explicit typed results and inputs, with no `unknown` escape hatch or transport pagination dependency.
 - application/domain layers must not issue Prisma queries directly.
+- application audit calls depend on AUDIT_PORT, not concrete AuditService; preserve explicit best-effort semantics.
+- keep required outbox and idempotency completion inside the business transaction; never recover stale claims without ownership fencing. See docs/RELIABILITY.md for deployment constraints.
 - business statuses belong to their feature/domain; reuse canonical vocabularies instead of a generic common status type.
 - preserve existing Decimal/string versus computed-number API semantics and rounding; see `docs/BUSINESS_TYPES.md`.
 - use Clock for tested business-time decisions, not mechanically for all timestamps.

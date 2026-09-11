@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+import { withRequestContext } from '@common/request-context/request-context';
 import { Injectable, Logger, type NestMiddleware } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
@@ -50,6 +52,22 @@ export class RequestContextMiddleware implements NestMiddleware {
     };
     response.once('finish', record);
     response.once('close', record);
-    next();
+    const ip = request.ip;
+    const agent = request.header('user-agent');
+    withRequestContext(
+      {
+        requestId,
+        ipAddress: ip && isIP(ip) ? ip : undefined,
+        userAgent: agent
+          ? Array.from(agent)
+              .filter(
+                (character) => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127,
+              )
+              .join('')
+              .slice(0, 512)
+          : undefined,
+      },
+      next,
+    );
   }
 }

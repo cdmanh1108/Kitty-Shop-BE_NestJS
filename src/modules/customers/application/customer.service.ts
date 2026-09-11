@@ -1,6 +1,6 @@
 import { CUSTOMER_STATUS } from '../domain/customer-status';
 import type { CurrentUser } from '@common/types/current-user';
-import { AuditService } from '@modules/audit/application/audit.service';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { CUSTOMER_REPOSITORY, type CustomerRepository } from '../domain/customer.repository';
@@ -17,7 +17,7 @@ import type {
 export class CustomerService {
   constructor(
     @Inject(CUSTOMER_REPOSITORY) private readonly repository: CustomerRepository,
-    private readonly audit: AuditService,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   list(user: CurrentUser, query: CustomerListQuery) {

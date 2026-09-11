@@ -1,5 +1,6 @@
+import { CLOCK, type Clock } from '@common/clock/clock';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import type { RentalRepository } from '../domain/rental.repository';
 import {
   customerExists,
@@ -10,12 +11,16 @@ import {
   getSchedule,
 } from './rental-queries';
 import { getBookableVariant } from './rental-availability';
-import { createOrder, claimIdempotency, releaseIdempotency } from './rental-booking';
+import { createOrder } from './rental-booking';
+import { claimIdempotency, releaseIdempotency } from './rental-idempotency';
 import { transition, reschedule, addCharge } from './rental-lifecycle';
 
 @Injectable()
 export class PrismaRentalRepository implements RentalRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(CLOCK) private readonly clock: Clock,
+  ) {}
 
   customerExists(
     ...args: Parameters<RentalRepository['customerExists']>
@@ -82,7 +87,7 @@ export class PrismaRentalRepository implements RentalRepository {
   claimIdempotency(
     ...args: Parameters<RentalRepository['claimIdempotency']>
   ): ReturnType<RentalRepository['claimIdempotency']> {
-    return claimIdempotency(this.prisma, ...args);
+    return claimIdempotency(this.prisma, this.clock, ...args);
   }
 
   releaseIdempotency(

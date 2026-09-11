@@ -1,3 +1,4 @@
+import type { PaymentRecordedEvent } from '../domain/finance.events';
 import { TRANSACTION_STATUS, EXPENSE_STATUS } from '../domain/payment-status';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { paginateMeta } from '@common/types/pagination';
@@ -65,7 +66,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
           aggregateType: 'payment_transaction',
           aggregateId: payment.id,
           payload: { paymentId: payment.id, orderId: order.id },
-        },
+        } satisfies PaymentRecordedEvent,
       });
       return payment;
     });

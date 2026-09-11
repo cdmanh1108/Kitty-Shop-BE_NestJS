@@ -1,5 +1,13 @@
 # Runbook
 
+## Reliability update deployment
+
+Read [RELIABILITY.md](RELIABILITY.md) before enabling stale-claim recovery. Drain/stop all
+old backend instances and in-flight rentals first; mixed old/new idempotency writers are
+unsafe because old code does not fence claim ownership. Apply migration
+202609110001_audit_request_id_text before new audit enrichment. No migration has been
+applied automatically by this refactor.
+
 ## Local setup
 
 ```bash

@@ -1,3 +1,5 @@
+import type { RentalOutboxEvent } from '../domain/rental.events';
+import { lockRentalClaim, completeRentalClaim } from './rental-idempotency';
 import {
   ALLOCATION_STATUS,
   RENTAL_ITEM_STATUS,
@@ -6,11 +8,9 @@ import {
 
 import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
 
-import type { JsonSerialized } from '@common/types/json';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
-import { Prisma } from '@prisma/client';
-import type { RentalOrderDetails } from '../domain/rental.models';
+import type { Prisma } from '@prisma/client';
 import {
   RentalOverlapError,
   type CreateRentalOrderData,
@@ -25,6 +25,7 @@ export async function createOrder(
 ): ReturnType<RentalRepository['createOrder']> {
   try {
     return await serializableTransaction(prisma, async (tx) => {
+      if (data.idempotency) await lockRentalClaim(tx, data.shopId, data.idempotency);
       const rentalSubtotal = data.lines.reduce((sum, line) => sum + line.lineTotal, 0);
       const explicitChargesTotal = data.charges.reduce(
         (sum, charge) => sum + charge.amount * charge.quantity,
@@ -159,24 +160,11 @@ export async function createOrder(
           aggregateType: 'rental_order',
           aggregateId: order.id,
           payload: { orderId: order.id },
-        },
+        } satisfies RentalOutboxEvent,
       });
       const result = await getWithTx(tx, data.shopId, order.id);
       if (data.idempotency) {
-        await tx.idempotencyRecord.update({
-          where: {
-            shopId_scope_key: {
-              shopId: data.shopId,
-              scope: data.idempotency.scope,
-              key: data.idempotency.key,
-            },
-          },
-          data: {
-            responseCode: 201,
-            responseBody: JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue,
-            completedAt: new Date(),
-          },
-        });
+        await completeRentalClaim(tx, data.shopId, data.idempotency, result);
       }
       return result;
     });
@@ -184,49 +172,4 @@ export async function createOrder(
     if (isOverlapError(error)) throw new RentalOverlapError();
     throw error;
   }
-}
-export async function claimIdempotency(
-  prisma: PrismaService,
-  input: Parameters<RentalRepository['claimIdempotency']>[0],
-): ReturnType<RentalRepository['claimIdempotency']> {
-  await prisma.idempotencyRecord.deleteMany({
-    where: {
-      shopId: input.shopId,
-      scope: input.scope,
-      key: input.key,
-      expiresAt: { lte: new Date() },
-    },
-  });
-
-  try {
-    await prisma.idempotencyRecord.create({ data: input });
-    return { state: 'CLAIMED' as const };
-  } catch (error) {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
-      throw error;
-    const existing = await prisma.idempotencyRecord.findUnique({
-      where: { shopId_scope_key: { shopId: input.shopId, scope: input.scope, key: input.key } },
-      select: { requestHash: true, responseBody: true, completedAt: true },
-    });
-    if (!existing) return claimIdempotency(prisma, input);
-    if (existing.requestHash !== input.requestHash) return { state: 'HASH_MISMATCH' as const };
-    if (existing.completedAt)
-      return {
-        state: 'COMPLETED' as const,
-        // This scope persists only JSON.stringify(getWithTx(...)) in createOrder.
-        // The stored JSON is the serialized read model, not a live Prisma record.
-        responseBody: existing.responseBody as JsonSerialized<RentalOrderDetails>,
-      };
-    return { state: 'IN_PROGRESS' as const };
-  }
-}
-export async function releaseIdempotency(
-  prisma: PrismaService,
-  shopId: string,
-  scope: string,
-  key: string,
-): ReturnType<RentalRepository['releaseIdempotency']> {
-  await prisma.idempotencyRecord.deleteMany({
-    where: { shopId, scope, key, completedAt: null },
-  });
 }

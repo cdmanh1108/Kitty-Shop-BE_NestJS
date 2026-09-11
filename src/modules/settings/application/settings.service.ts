@@ -1,5 +1,5 @@
 import type { CurrentUser } from '@common/types/current-user';
-import { AuditService } from '@modules/audit/application/audit.service';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { SETTINGS_REPOSITORY, type SettingsRepository } from '../domain/settings.repository';
 import type { UpdateShopInput, UpsertSettingInput } from './settings.contracts';
@@ -8,7 +8,7 @@ import type { UpdateShopInput, UpsertSettingInput } from './settings.contracts';
 export class SettingsService {
   constructor(
     @Inject(SETTINGS_REPOSITORY) private readonly repository: SettingsRepository,
-    private readonly audit: AuditService,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   list(user: CurrentUser) {
@@ -35,7 +35,7 @@ export class SettingsService {
       actorMemberId: user.memberId,
       action: 'UPSERT',
       entityType: 'app_setting',
-      newValues: { key, value: input.value },
+      newValues: { key },
     });
     return setting;
   }

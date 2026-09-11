@@ -1,6 +1,6 @@
 import { DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 import type { CurrentUser } from '@common/types/current-user';
-import { AuditService } from '@modules/audit/application/audit.service';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DELIVERY_REPOSITORY, type DeliveryRepository } from '../domain/delivery.repository';
 import type { CreateDeliveryInput, UpdateDeliveryStatusInput } from './delivery.contracts';
@@ -9,7 +9,7 @@ import type { CreateDeliveryInput, UpdateDeliveryStatusInput } from './delivery.
 export class DeliveryService {
   constructor(
     @Inject(DELIVERY_REPOSITORY) private readonly repository: DeliveryRepository,
-    private readonly audit: AuditService,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   list(user: CurrentUser, orderId?: string) {

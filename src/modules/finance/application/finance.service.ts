@@ -2,7 +2,7 @@ import { generateDatedReference } from '@common/utils/reference-number';
 import { PAYMENT_PURPOSE, PAYMENT_DIRECTION } from '@modules/finance/domain/payment-types';
 
 import type { CurrentUser } from '@common/types/current-user';
-import { AuditService } from '@modules/audit/application/audit.service';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   FINANCE_REPOSITORY,
@@ -22,7 +22,7 @@ const PAYMENT_PURPOSES: ReadonlySet<string> = new Set(Object.values(PAYMENT_PURP
 export class FinanceService {
   constructor(
     @Inject(FINANCE_REPOSITORY) private readonly repository: FinanceRepository,
-    private readonly audit: AuditService,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   listPayments(user: CurrentUser, query: PaymentListQuery) {
@@ -81,6 +81,7 @@ export class FinanceService {
       actorMemberId: user.memberId,
       action: 'CREATE',
       entityType: 'payment_transaction',
+      entityId: payment?.id,
       newValues: {
         orderId,
         direction: input.direction,
@@ -153,6 +154,7 @@ export class FinanceService {
       actorMemberId: user.memberId,
       action: 'CREATE',
       entityType: 'expense',
+      entityId: expense?.id,
       newValues: { amount: input.amount, description: input.description },
     });
     return expense;
