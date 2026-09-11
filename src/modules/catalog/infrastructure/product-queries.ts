@@ -4,14 +4,7 @@ import type { CatalogRepository } from '../domain/catalog.repository';
 
 export async function listProducts(
   prisma: PrismaService,
-  input: {
-    shopId: string;
-    search?: string;
-    categoryId?: string;
-    status?: string;
-    page: number;
-    limit: number;
-  },
+  input: Parameters<CatalogRepository['listProducts']>[0],
 ): ReturnType<CatalogRepository['listProducts']> {
   const where = {
     shopId: input.shopId,

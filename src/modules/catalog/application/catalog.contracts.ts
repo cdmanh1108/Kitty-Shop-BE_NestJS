@@ -1,3 +1,4 @@
+import type { InventoryStatus } from '@modules/catalog/domain/catalog-status';
 import type { PaginationParams } from '@common/types/pagination';
 import type {
   CreateProductData,
@@ -64,7 +65,7 @@ export interface ProductListQuery extends PaginationParams {
 }
 
 export interface UpdateInventoryStatusInput {
-  status: string;
+  status: InventoryStatus;
   condition?: string;
   reason?: string;
   notes?: string;

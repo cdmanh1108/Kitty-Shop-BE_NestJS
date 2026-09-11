@@ -4,13 +4,7 @@ import { type RentalRepository } from '../domain/rental.repository';
 
 export async function getBookableVariant(
   prisma: PrismaService,
-  input: {
-    shopId: string;
-    variantId: string;
-    durationDays: number;
-    from: Date;
-    until: Date;
-  },
+  input: Parameters<RentalRepository['getBookableVariant']>[0],
 ): ReturnType<RentalRepository['getBookableVariant']> {
   const variant = await prisma.productVariant.findFirst({
     where: {

@@ -1,3 +1,4 @@
+import { CUSTOMER_STATUS } from '../domain/customer-status';
 import type { CurrentUser } from '@common/types/current-user';
 import { AuditService } from '@modules/audit/application/audit.service';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -41,7 +42,7 @@ export class CustomerService {
       birthday: input.birthday ? new Date(input.birthday) : null,
       gender: input.gender ?? null,
       customerType: input.customerType ?? 'NORMAL',
-      status: 'ACTIVE',
+      status: CUSTOMER_STATUS.ACTIVE,
       source: input.source ?? null,
     });
     await this.audit.log({

@@ -1,3 +1,8 @@
+import type {
+  PaymentDirection,
+  PaymentPurpose,
+  PaymentMethod,
+} from '@modules/finance/domain/payment-types';
 import type { PaginationParams } from '@common/types/pagination';
 export interface CreateExpenseInput {
   categoryId: string;
@@ -13,9 +18,9 @@ export interface CreateExpenseInput {
 }
 
 export interface CreatePaymentInput {
-  direction: string;
-  purpose: string;
-  paymentMethod: string;
+  direction: PaymentDirection;
+  purpose: PaymentPurpose;
+  paymentMethod: PaymentMethod;
   amount: number;
   externalReference?: string;
   bankReference?: string;

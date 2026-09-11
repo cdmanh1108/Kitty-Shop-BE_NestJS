@@ -1,6 +1,11 @@
+import type {
+  DeliveryDirection,
+  DeliveryMethod,
+  DeliveryStatus,
+} from '@modules/deliveries/domain/delivery-status';
 export interface CreateDeliveryInput {
-  direction: string;
-  method: string;
+  direction: DeliveryDirection;
+  method: DeliveryMethod;
   scheduledAt?: string;
   recipientName?: string;
   recipientPhone?: string;
@@ -17,7 +22,7 @@ export interface CreateDeliveryInput {
 }
 
 export interface UpdateDeliveryStatusInput {
-  status: string;
+  status: DeliveryStatus;
   shipperName?: string;
   shipperPhone?: string;
   trackingCode?: string;

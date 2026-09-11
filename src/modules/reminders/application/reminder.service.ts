@@ -1,3 +1,7 @@
+import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
+import { canRescheduleRental } from '@modules/rentals/domain/rental-policy';
+import { ORDER_PAYMENT_STATUS, DEPOSIT_STATUS } from '@modules/finance/domain/payment-status';
+import { CLOCK, type Clock } from '@common/clock/clock';
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { CurrentUser } from '@common/types/current-user';
@@ -8,7 +12,10 @@ import { REMINDER_REPOSITORY, type ReminderRepository } from '../domain/reminder
 export class ReminderService {
   private readonly logger = new Logger(ReminderService.name);
 
-  constructor(@Inject(REMINDER_REPOSITORY) private readonly repository: ReminderRepository) {}
+  constructor(
+    @Inject(REMINDER_REPOSITORY) private readonly repository: ReminderRepository,
+    @Inject(CLOCK) private readonly clock: Clock,
+  ) {}
 
   @Cron('0 */10 * * * *')
   async refreshAll(): Promise<void> {
@@ -43,7 +50,7 @@ export class ReminderService {
   }
 
   private async refreshShop(shopId: string, timezone: string): Promise<void> {
-    const now = new Date();
+    const now = this.clock.now();
     const day = zonedDayRange(now, timezone);
     const returnSoonEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const candidates = await this.repository.candidates(shopId);
@@ -74,7 +81,7 @@ export class ReminderService {
 
     for (const order of candidates) {
       if (
-        ['RESERVED', 'CONFIRMED'].includes(order.status) &&
+        canRescheduleRental(order.status) &&
         order.rentalStartAt >= day.start &&
         order.rentalStartAt < day.end
       ) {
@@ -88,7 +95,7 @@ export class ReminderService {
         );
       }
       if (
-        ['CONFIRMED', 'ACTIVE'].includes(order.status) &&
+        (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
         order.rentalEndAt >= day.start &&
         order.rentalEndAt < day.end
       ) {
@@ -101,7 +108,7 @@ export class ReminderService {
           order.rentalEndAt,
         );
       } else if (
-        ['CONFIRMED', 'ACTIVE'].includes(order.status) &&
+        (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
         order.rentalEndAt > now &&
         order.rentalEndAt <= returnSoonEnd
       ) {
@@ -114,7 +121,10 @@ export class ReminderService {
           order.rentalEndAt,
         );
       }
-      if (['CONFIRMED', 'ACTIVE'].includes(order.status) && order.rentalEndAt < now) {
+      if (
+        (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
+        order.rentalEndAt < now
+      ) {
         await add(
           order,
           'OVERDUE',
@@ -124,7 +134,10 @@ export class ReminderService {
           now,
         );
       }
-      if (order.paymentStatus !== 'PAID' && order.status !== 'CANCELLED') {
+      if (
+        order.paymentStatus !== ORDER_PAYMENT_STATUS.PAID &&
+        order.status !== RENTAL_STATUS.CANCELLED
+      ) {
         await add(
           order,
           'PAYMENT_DUE',
@@ -136,8 +149,9 @@ export class ReminderService {
       }
       if (
         order.depositRequired > 0 &&
-        ['PENDING', 'PARTIALLY_HELD'].includes(order.depositStatus) &&
-        ['RESERVED', 'CONFIRMED'].includes(order.status)
+        (order.depositStatus === DEPOSIT_STATUS.PENDING ||
+          order.depositStatus === DEPOSIT_STATUS.PARTIALLY_HELD) &&
+        canRescheduleRental(order.status)
       ) {
         await add(
           order,

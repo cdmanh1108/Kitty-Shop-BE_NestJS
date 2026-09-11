@@ -1,3 +1,6 @@
+import { generateDatedReference } from '@common/utils/reference-number';
+import { RENTAL_STATUS, type RentalStatus } from '@modules/rentals/domain/rental-status';
+import { CHARGE_TYPE } from '@modules/rentals/domain/charge-type';
 import type { CurrentUser } from '@common/types/current-user';
 import { AuditService } from '@modules/audit/application/audit.service';
 import {
@@ -7,8 +10,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { createHash, randomBytes } from 'node:crypto';
-import { calculateRentalDurationDays } from '../domain/rental-policy';
+import { createHash } from 'node:crypto';
+import {
+  calculateRentalDurationDays,
+  canRescheduleRental,
+  RENTAL_TRANSITION_FROM,
+} from '../domain/rental-policy';
 import {
   RENTAL_REPOSITORY,
   RentalOverlapError,
@@ -23,16 +30,7 @@ import type {
   TransitionRentalInput,
 } from './rental.contracts';
 
-const CHARGE_TYPES = new Set([
-  'RENTAL_EXTRA',
-  'ACCESSORY',
-  'SHIPPING',
-  'LATE',
-  'CLEANING',
-  'DAMAGE',
-  'LOST_ITEM',
-  'OTHER',
-]);
+const CHARGE_TYPES: ReadonlySet<string> = new Set(Object.values(CHARGE_TYPE));
 
 @Injectable()
 export class RentalService {
@@ -175,7 +173,7 @@ export class RentalService {
       }
 
       const order = await this.repository.createOrder({
-        orderNumber: this.createOrderNumber(),
+        orderNumber: generateDatedReference('RT'),
         shopId: user.shopId,
         customerId: input.customerId,
         locationId: input.locationId,
@@ -222,25 +220,49 @@ export class RentalService {
   }
 
   confirm(user: CurrentUser, id: string, input: TransitionRentalInput) {
-    return this.transition(user, id, ['RESERVED'], 'CONFIRMED', input.reason);
+    return this.transition(
+      user,
+      id,
+      RENTAL_TRANSITION_FROM.CONFIRMED,
+      RENTAL_STATUS.CONFIRMED,
+      input.reason,
+    );
   }
 
   start(user: CurrentUser, id: string, input: TransitionRentalInput) {
-    return this.transition(user, id, ['RESERVED', 'CONFIRMED'], 'ACTIVE', input.reason);
+    return this.transition(
+      user,
+      id,
+      RENTAL_TRANSITION_FROM.ACTIVE,
+      RENTAL_STATUS.ACTIVE,
+      input.reason,
+    );
   }
 
   complete(user: CurrentUser, id: string, input: TransitionRentalInput) {
-    return this.transition(user, id, ['ACTIVE'], 'COMPLETED', input.reason);
+    return this.transition(
+      user,
+      id,
+      RENTAL_TRANSITION_FROM.COMPLETED,
+      RENTAL_STATUS.COMPLETED,
+      input.reason,
+    );
   }
 
   cancel(user: CurrentUser, id: string, input: TransitionRentalInput) {
-    return this.transition(user, id, ['RESERVED', 'CONFIRMED'], 'CANCELLED', input.reason);
+    return this.transition(
+      user,
+      id,
+      RENTAL_TRANSITION_FROM.CANCELLED,
+      RENTAL_STATUS.CANCELLED,
+      input.reason,
+    );
   }
 
   async reschedule(user: CurrentUser, id: string, input: RescheduleRentalInput) {
     const current = await this.repository.getSchedule(user.shopId, id);
     if (!current) throw new NotFoundException('Rental order not found');
-    if (!['RESERVED', 'CONFIRMED'].includes(current.status)) {
+    if (!canRescheduleRental(current.status)) {
       throw new BadRequestException('Only reserved or confirmed orders can be rescheduled');
     }
     const start = new Date(input.rentalStartAt);
@@ -308,13 +330,13 @@ export class RentalService {
   private async transition(
     user: CurrentUser,
     id: string,
-    allowedFrom: string[],
-    toStatus: string,
+    allowedFrom: RentalStatus[],
+    toStatus: RentalStatus,
     reason?: string,
   ) {
     const currentStatus = await this.repository.getStatus(user.shopId, id);
     if (!currentStatus) throw new NotFoundException('Rental order not found');
-    if (!allowedFrom.includes(currentStatus)) {
+    if (!allowedFrom.some((status) => status === currentStatus)) {
       throw new BadRequestException(`Cannot change order from ${currentStatus} to ${toStatus}`);
     }
     const order = await this.repository.transition({
@@ -337,10 +359,5 @@ export class RentalService {
       newValues: { fromStatus: currentStatus, toStatus, reason },
     });
     return order;
-  }
-
-  private createOrderNumber(): string {
-    const date = new Date().toISOString().slice(0, 10).replaceAll('-', '');
-    return `RT-${date}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }
 }

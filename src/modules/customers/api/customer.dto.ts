@@ -1,3 +1,4 @@
+import { CUSTOMER_STATUS } from '@modules/customers/domain/customer-status';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -15,10 +16,16 @@ import { PaginationMetaResDto } from '@common/dto/response.dto';
 
 export class CreateCustomerReqDto {
   @ApiProperty({ example: 'Nguyễn Thị A' })
-  @IsString() @MinLength(1) @MaxLength(255) fullName!: string;
+  @IsString()
+  @MinLength(1)
+  @MaxLength(255)
+  fullName!: string;
 
   @ApiProperty({ example: '0901234567' })
-  @IsString() @MinLength(8) @MaxLength(30) phone!: string;
+  @IsString()
+  @MinLength(8)
+  @MaxLength(30)
+  phone!: string;
 
   @ApiPropertyOptional() @IsEmail() @IsOptional() email?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() facebook?: string;
@@ -30,8 +37,8 @@ export class CreateCustomerReqDto {
 }
 
 export class UpdateCustomerReqDto extends PartialType(CreateCustomerReqDto) {
-  @ApiPropertyOptional({ enum: ['ACTIVE', 'BLOCKED'] })
-  @IsIn(['ACTIVE', 'BLOCKED'])
+  @ApiPropertyOptional({ enum: Object.values(CUSTOMER_STATUS) })
+  @IsIn(Object.values(CUSTOMER_STATUS))
   @IsOptional()
   status?: string;
 }
@@ -44,7 +51,11 @@ export class CustomerListQueryDto extends PaginationQueryDto {
 
 export class AddCustomerNoteReqDto {
   @ApiProperty() @IsString() @MinLength(1) content!: string;
-  @ApiPropertyOptional({ default: false }) @Type(() => Boolean) @IsBoolean() @IsOptional() isPinned = false;
+  @ApiPropertyOptional({ default: false })
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  isPinned = false;
 }
 
 export class CustomerResDto {
@@ -60,7 +71,6 @@ export class CustomerResDto {
   @ApiProperty() createdAt!: Date;
 }
 
-
 export class CustomerAddressReqDto {
   @ApiPropertyOptional() @IsString() @IsOptional() label?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() recipientName?: string;
@@ -70,11 +80,14 @@ export class CustomerAddressReqDto {
   @ApiPropertyOptional() @IsString() @IsOptional() district?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() city?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() province?: string;
-  @ApiPropertyOptional({ default: false }) @Type(() => Boolean) @IsBoolean() @IsOptional() isDefault = false;
+  @ApiPropertyOptional({ default: false })
+  @Type(() => Boolean)
+  @IsBoolean()
+  @IsOptional()
+  isDefault = false;
 }
 
 export class UpdateCustomerAddressReqDto extends PartialType(CustomerAddressReqDto) {}
-
 
 export class CustomerStatsResDto {
   @ApiProperty() totalOrders!: number;

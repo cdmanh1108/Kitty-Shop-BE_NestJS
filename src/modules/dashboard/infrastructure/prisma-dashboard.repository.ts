@@ -1,3 +1,4 @@
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
 import type { DashboardRepository } from '../domain/dashboard.repository';
@@ -7,13 +8,35 @@ export class PrismaDashboardRepository implements DashboardRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async getShopTimezone(shopId: string): Promise<string> {
-    const shop = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { timezone: true } });
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { timezone: true },
+    });
     return shop?.timezone ?? 'Asia/Ho_Chi_Minh';
   }
 
-  async summary(input: { shopId: string; now: Date; dayStart: Date; dayEnd: Date; monthStart: Date; monthEnd: Date }) {
-    const revenuePurposes = ['RENTAL_PAYMENT', 'LATE_FEE', 'DAMAGE_FEE', 'SHIPPING', 'ORDER_REFUND', 'OTHER'];
-    const paymentWhere = { shopId: input.shopId, status: 'COMPLETED', voidedAt: null, purpose: { in: revenuePurposes } };
+  async summary(input: {
+    shopId: string;
+    now: Date;
+    dayStart: Date;
+    dayEnd: Date;
+    monthStart: Date;
+    monthEnd: Date;
+  }) {
+    const revenuePurposes = [
+      'RENTAL_PAYMENT',
+      'LATE_FEE',
+      'DAMAGE_FEE',
+      'SHIPPING',
+      'ORDER_REFUND',
+      'OTHER',
+    ];
+    const paymentWhere = {
+      shopId: input.shopId,
+      status: 'COMPLETED',
+      voidedAt: null,
+      purpose: { in: revenuePurposes },
+    };
     const inventorySummary = this.prisma.inventoryItem.groupBy({
       by: ['currentStatus'],
       where: { shopId: input.shopId, archivedAt: null },
@@ -33,14 +56,58 @@ export class PrismaDashboardRepository implements DashboardRepository {
       bookedAvailableInventory,
       upcoming,
     ] = await this.prisma.$transaction([
-      this.prisma.paymentTransaction.aggregate({ where: { ...paymentWhere, direction: 'IN', paidAt: { gte: input.dayStart, lt: input.dayEnd } }, _sum: { amount: true } }),
-      this.prisma.paymentTransaction.aggregate({ where: { ...paymentWhere, direction: 'OUT', paidAt: { gte: input.dayStart, lt: input.dayEnd } }, _sum: { amount: true } }),
-      this.prisma.paymentTransaction.aggregate({ where: { ...paymentWhere, direction: 'IN', paidAt: { gte: input.monthStart, lt: input.monthEnd } }, _sum: { amount: true } }),
-      this.prisma.paymentTransaction.aggregate({ where: { ...paymentWhere, direction: 'OUT', paidAt: { gte: input.monthStart, lt: input.monthEnd } }, _sum: { amount: true } }),
-      this.prisma.rentalOrder.count({ where: { shopId: input.shopId, createdAt: { gte: input.dayStart, lt: input.dayEnd } } }),
-      this.prisma.inventoryItem.count({ where: { shopId: input.shopId, currentStatus: 'RENTED', archivedAt: null } }),
-      this.prisma.rentalOrder.count({ where: { shopId: input.shopId, status: { in: ['CONFIRMED', 'ACTIVE'] }, rentalEndAt: { gte: input.dayStart, lt: input.dayEnd } } }),
-      this.prisma.rentalOrder.count({ where: { shopId: input.shopId, status: { in: ['CONFIRMED', 'ACTIVE'] }, rentalEndAt: { lt: input.now } } }),
+      this.prisma.paymentTransaction.aggregate({
+        where: {
+          ...paymentWhere,
+          direction: 'IN',
+          paidAt: { gte: input.dayStart, lt: input.dayEnd },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.paymentTransaction.aggregate({
+        where: {
+          ...paymentWhere,
+          direction: 'OUT',
+          paidAt: { gte: input.dayStart, lt: input.dayEnd },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.paymentTransaction.aggregate({
+        where: {
+          ...paymentWhere,
+          direction: 'IN',
+          paidAt: { gte: input.monthStart, lt: input.monthEnd },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.paymentTransaction.aggregate({
+        where: {
+          ...paymentWhere,
+          direction: 'OUT',
+          paidAt: { gte: input.monthStart, lt: input.monthEnd },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.rentalOrder.count({
+        where: { shopId: input.shopId, createdAt: { gte: input.dayStart, lt: input.dayEnd } },
+      }),
+      this.prisma.inventoryItem.count({
+        where: { shopId: input.shopId, currentStatus: 'RENTED', archivedAt: null },
+      }),
+      this.prisma.rentalOrder.count({
+        where: {
+          shopId: input.shopId,
+          status: { in: ['CONFIRMED', 'ACTIVE'] },
+          rentalEndAt: { gte: input.dayStart, lt: input.dayEnd },
+        },
+      }),
+      this.prisma.rentalOrder.count({
+        where: {
+          shopId: input.shopId,
+          status: { in: ['CONFIRMED', 'ACTIVE'] },
+          rentalEndAt: { lt: input.now },
+        },
+      }),
       this.prisma.reminder.count({ where: { shopId: input.shopId, status: 'PENDING' } }),
       inventorySummary,
       this.prisma.inventoryItem.count({
@@ -57,8 +124,17 @@ export class PrismaDashboardRepository implements DashboardRepository {
         },
       }),
       this.prisma.rentalOrder.findMany({
-        where: { shopId: input.shopId, status: { in: ['RESERVED', 'CONFIRMED', 'ACTIVE'] }, rentalStartAt: { gte: input.now, lt: new Date(input.now.getTime() + 7 * 86_400_000) } },
-        include: { customer: { select: { fullName: true, phone: true } }, items: { select: { productNameSnapshot: true, variantNameSnapshot: true, quantity: true } } },
+        where: {
+          shopId: input.shopId,
+          status: { in: ['RESERVED', 'CONFIRMED', 'ACTIVE'] },
+          rentalStartAt: { gte: input.now, lt: new Date(input.now.getTime() + 7 * 86_400_000) },
+        },
+        include: {
+          customer: { select: { fullName: true, phone: true } },
+          items: {
+            select: { productNameSnapshot: true, variantNameSnapshot: true, quantity: true },
+          },
+        },
         orderBy: { rentalStartAt: 'asc' },
         take: 10,
       }),
@@ -66,8 +142,10 @@ export class PrismaDashboardRepository implements DashboardRepository {
 
     return {
       revenue: {
-        today: Number(todayIn._sum.amount ?? 0) - Number(todayOut._sum.amount ?? 0),
-        month: Number(monthIn._sum.amount ?? 0) - Number(monthOut._sum.amount ?? 0),
+        today:
+          decimalToNumber(todayIn._sum.amount ?? 0) - decimalToNumber(todayOut._sum.amount ?? 0),
+        month:
+          decimalToNumber(monthIn._sum.amount ?? 0) - decimalToNumber(monthOut._sum.amount ?? 0),
       },
       ordersToday,
       currentlyRented,
@@ -75,7 +153,9 @@ export class PrismaDashboardRepository implements DashboardRepository {
       overdue,
       pendingReminders,
       inventory: (() => {
-        const counts = Object.fromEntries(inventoryGrouped.map((row) => [row.currentStatus, row._count._all]));
+        const counts = Object.fromEntries(
+          inventoryGrouped.map((row) => [row.currentStatus, row._count._all]),
+        );
         counts.AVAILABLE = Math.max(0, (counts.AVAILABLE ?? 0) - bookedAvailableInventory);
         counts.RESERVED = (counts.RESERVED ?? 0) + bookedAvailableInventory;
         counts.TOTAL = inventoryGrouped.reduce((sum, row) => sum + row._count._all, 0);

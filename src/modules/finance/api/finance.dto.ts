@@ -1,13 +1,38 @@
+import {
+  type PaymentDirection,
+  type PaymentPurpose,
+  type PaymentMethod,
+  PAYMENT_DIRECTION,
+  PAYMENT_PURPOSE,
+  PAYMENT_METHOD,
+} from '@modules/finance/domain/payment-types';
+
+import { EXPENSE_STATUS } from '@modules/finance/domain/payment-status';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUrl, IsUUID, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  IsUUID,
+  Min,
+} from 'class-validator';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { PaginationMetaResDto } from '@common/dto/response.dto';
 
 export class CreatePaymentReqDto {
-  @ApiProperty({ enum: ['IN', 'OUT'], default: 'IN' }) @IsIn(['IN', 'OUT']) direction = 'IN';
-  @ApiProperty({ enum: ['RENTAL_PAYMENT', 'DEPOSIT', 'LATE_FEE', 'DAMAGE_FEE', 'SHIPPING', 'DEPOSIT_REFUND', 'ORDER_REFUND', 'OTHER'], example: 'RENTAL_PAYMENT' }) @IsIn(['RENTAL_PAYMENT', 'DEPOSIT', 'LATE_FEE', 'DAMAGE_FEE', 'SHIPPING', 'DEPOSIT_REFUND', 'ORDER_REFUND', 'OTHER']) purpose!: string;
-  @ApiProperty({ enum: ['CASH', 'BANK_TRANSFER', 'QR', 'MOMO', 'ZALOPAY', 'CARD', 'OTHER'], example: 'BANK_TRANSFER' }) @IsIn(['CASH', 'BANK_TRANSFER', 'QR', 'MOMO', 'ZALOPAY', 'CARD', 'OTHER']) paymentMethod!: string;
+  @ApiProperty({ enum: Object.values(PAYMENT_DIRECTION), default: 'IN' })
+  @IsIn(Object.values(PAYMENT_DIRECTION))
+  direction: PaymentDirection = 'IN';
+  @ApiProperty({ enum: Object.values(PAYMENT_PURPOSE), example: 'RENTAL_PAYMENT' })
+  @IsIn(Object.values(PAYMENT_PURPOSE))
+  purpose!: PaymentPurpose;
+  @ApiProperty({ enum: Object.values(PAYMENT_METHOD), example: 'BANK_TRANSFER' })
+  @IsIn(Object.values(PAYMENT_METHOD))
+  paymentMethod!: PaymentMethod;
   @ApiProperty({ example: 500000 }) @Type(() => Number) @IsNumber() @Min(0.01) amount!: number;
   @ApiPropertyOptional() @IsString() @IsOptional() externalReference?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() bankReference?: string;
@@ -19,7 +44,10 @@ export class PaymentListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsUUID() @IsOptional() orderId?: string;
   @ApiPropertyOptional() @IsDateString() @IsOptional() from?: string;
   @ApiPropertyOptional() @IsDateString() @IsOptional() until?: string;
-  @ApiPropertyOptional({ enum: ['RENTAL_PAYMENT', 'DEPOSIT', 'LATE_FEE', 'DAMAGE_FEE', 'SHIPPING', 'DEPOSIT_REFUND', 'ORDER_REFUND', 'OTHER'] }) @IsIn(['RENTAL_PAYMENT', 'DEPOSIT', 'LATE_FEE', 'DAMAGE_FEE', 'SHIPPING', 'DEPOSIT_REFUND', 'ORDER_REFUND', 'OTHER']) @IsOptional() purpose?: string;
+  @ApiPropertyOptional({ enum: Object.values(PAYMENT_PURPOSE) })
+  @IsIn(Object.values(PAYMENT_PURPOSE))
+  @IsOptional()
+  purpose?: string;
 }
 
 export class CreateExpenseReqDto {
@@ -39,7 +67,10 @@ export class ExpenseListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
   @ApiPropertyOptional() @IsDateString() @IsOptional() from?: string;
   @ApiPropertyOptional() @IsDateString() @IsOptional() until?: string;
-  @ApiPropertyOptional({ enum: ['DRAFT', 'PAID', 'VOIDED'] }) @IsIn(['DRAFT', 'PAID', 'VOIDED']) @IsOptional() status?: string;
+  @ApiPropertyOptional({ enum: Object.values(EXPENSE_STATUS) })
+  @IsIn(Object.values(EXPENSE_STATUS))
+  @IsOptional()
+  status?: string;
 }
 
 export class PaymentResDto {

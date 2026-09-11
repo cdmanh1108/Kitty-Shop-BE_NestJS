@@ -1,6 +1,10 @@
-import type { ColorRecord } from '@modules/catalog/domain/catalog.records';
-import type { SizeRecord } from '@modules/catalog/domain/catalog.records';
-import type { CategoryRecord } from '@modules/catalog/domain/catalog.records';
+import type { InventoryStatus } from '@modules/catalog/domain/catalog-status';
+import {
+  type ColorRecord,
+  type SizeRecord,
+  type CategoryRecord,
+} from '@modules/catalog/domain/catalog.records';
+
 import type {
   AddInventoryItemResult,
   AddProductMediaResult,
@@ -120,7 +124,7 @@ export interface CatalogListProductsCriteria {
 export interface CatalogUpdateInventoryStatusData {
   shopId: string;
   id: string;
-  status: string;
+  status: InventoryStatus;
   condition?: string;
   reason?: string;
   notes?: string;

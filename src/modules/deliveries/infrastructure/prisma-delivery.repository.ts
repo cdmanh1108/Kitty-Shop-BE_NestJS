@@ -1,3 +1,4 @@
+import { DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
@@ -11,14 +12,20 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
   list(shopId: string, orderId?: string) {
     return this.prisma.deliveryJob.findMany({
       where: { shopId, ...(orderId ? { orderId } : {}) },
-      include: { order: { select: { orderNumber: true, customer: { select: { fullName: true, phone: true } } } } },
+      include: {
+        order: {
+          select: { orderNumber: true, customer: { select: { fullName: true, phone: true } } },
+        },
+      },
       orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }],
     });
   }
 
   async create(input: Parameters<DeliveryRepository['create']>[0]) {
     return serializableTransaction(this.prisma, async (tx) => {
-      const order = await tx.rentalOrder.findFirst({ where: { id: input.orderId, shopId: input.shopId } });
+      const order = await tx.rentalOrder.findFirst({
+        where: { id: input.orderId, shopId: input.shopId },
+      });
       if (!order) return null;
       const delivery = await tx.deliveryJob.create({ data: input });
       if (input.shippingFee > 0) {
@@ -57,7 +64,9 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
   }
 
   async updateStatus(input: Parameters<DeliveryRepository['updateStatus']>[0]) {
-    const existing = await this.prisma.deliveryJob.findFirst({ where: { id: input.id, shopId: input.shopId } });
+    const existing = await this.prisma.deliveryJob.findFirst({
+      where: { id: input.id, shopId: input.shopId },
+    });
     if (!existing) return null;
     const now = new Date();
     return this.prisma.deliveryJob.update({
@@ -67,8 +76,8 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
         shipperName: input.shipperName,
         shipperPhone: input.shipperPhone,
         trackingCode: input.trackingCode,
-        ...(input.status === 'PICKED_UP' ? { pickedUpAt: now } : {}),
-        ...(input.status === 'DELIVERED' ? { deliveredAt: now } : {}),
+        ...(input.status === DELIVERY_STATUS.PICKED_UP ? { pickedUpAt: now } : {}),
+        ...(input.status === DELIVERY_STATUS.DELIVERED ? { deliveredAt: now } : {}),
       },
     });
   }

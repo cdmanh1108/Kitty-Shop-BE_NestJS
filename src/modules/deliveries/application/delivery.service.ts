@@ -1,3 +1,4 @@
+import { DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 import type { CurrentUser } from '@common/types/current-user';
 import { AuditService } from '@modules/audit/application/audit.service';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -41,15 +42,7 @@ export class DeliveryService {
   }
 
   async updateStatus(user: CurrentUser, id: string, input: UpdateDeliveryStatusInput) {
-    const allowed = [
-      'PENDING',
-      'READY',
-      'PICKED_UP',
-      'DELIVERING',
-      'DELIVERED',
-      'FAILED',
-      'CANCELLED',
-    ];
+    const allowed: readonly string[] = Object.values(DELIVERY_STATUS);
     if (!allowed.includes(input.status))
       throw new BadRequestException('Unsupported delivery status');
     const delivery = await this.repository.updateStatus({ shopId: user.shopId, id, ...input });

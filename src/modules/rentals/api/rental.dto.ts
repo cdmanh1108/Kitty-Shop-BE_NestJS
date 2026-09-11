@@ -1,3 +1,8 @@
+import { CHARGE_TYPE } from '@modules/rentals/domain/charge-type';
+import { DELIVERY_DIRECTION, DELIVERY_METHOD } from '@modules/deliveries/domain/delivery-status';
+
+import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
+import { ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -19,22 +24,39 @@ import { PaginationMetaResDto } from '@common/dto/response.dto';
 
 export class CreateRentalItemReqDto {
   @ApiProperty() @IsUUID() variantId!: string;
-  @ApiProperty({ default: 1, minimum: 1, maximum: 20 }) @Type(() => Number) @IsInt() @Min(1) @Max(20) quantity = 1;
-  @ApiPropertyOptional({ type: [String], description: 'Optional physical item selection; otherwise backend auto-allocates.' })
-  @IsArray() @IsUUID('4', { each: true }) @IsOptional() inventoryItemIds?: string[];
+  @ApiProperty({ default: 1, minimum: 1, maximum: 20 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  quantity = 1;
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Optional physical item selection; otherwise backend auto-allocates.',
+  })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  @IsOptional()
+  inventoryItemIds?: string[];
 }
 
 export class RentalChargeReqDto {
-  @ApiProperty({ enum: ['RENTAL_EXTRA', 'ACCESSORY', 'SHIPPING', 'LATE', 'CLEANING', 'DAMAGE', 'LOST_ITEM', 'OTHER'], example: 'ACCESSORY' })
-  @IsIn(['RENTAL_EXTRA', 'ACCESSORY', 'SHIPPING', 'LATE', 'CLEANING', 'DAMAGE', 'LOST_ITEM', 'OTHER']) chargeType!: string;
+  @ApiProperty({ enum: Object.values(CHARGE_TYPE), example: 'ACCESSORY' })
+  @IsIn(Object.values(CHARGE_TYPE))
+  chargeType!: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
   @ApiProperty({ example: 50000 }) @Type(() => Number) @IsNumber() @Min(0) amount!: number;
-  @ApiPropertyOptional({ default: 1 }) @Type(() => Number) @IsInt() @Min(1) @IsOptional() quantity = 1;
+  @ApiPropertyOptional({ default: 1 }) @Type(() => Number) @IsInt() @Min(1) @IsOptional() quantity =
+    1;
 }
 
 export class RentalDeliveryReqDto {
-  @ApiProperty({ enum: ['OUTBOUND', 'RETURN'], default: 'OUTBOUND' }) @IsIn(['OUTBOUND', 'RETURN']) direction = 'OUTBOUND';
-  @ApiProperty({ enum: ['CUSTOMER_PICKUP', 'SHOP_DELIVERY', 'THIRD_PARTY_SHIPPER'] }) @IsIn(['CUSTOMER_PICKUP', 'SHOP_DELIVERY', 'THIRD_PARTY_SHIPPER']) method!: string;
+  @ApiProperty({ enum: Object.values(DELIVERY_DIRECTION), default: 'OUTBOUND' })
+  @IsIn(Object.values(DELIVERY_DIRECTION))
+  direction = 'OUTBOUND';
+  @ApiProperty({ enum: Object.values(DELIVERY_METHOD) })
+  @IsIn(Object.values(DELIVERY_METHOD))
+  method!: string;
   @ApiPropertyOptional() @IsDateString() @IsOptional() scheduledAt?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() recipientName?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() recipientPhone?: string;
@@ -43,7 +65,12 @@ export class RentalDeliveryReqDto {
   @ApiPropertyOptional() @IsString() @IsOptional() district?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() city?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() province?: string;
-  @ApiPropertyOptional({ default: 0 }) @Type(() => Number) @IsNumber() @Min(0) @IsOptional() shippingFee = 0;
+  @ApiPropertyOptional({ default: 0 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  shippingFee = 0;
 }
 
 export class CreateRentalOrderReqDto {
@@ -51,20 +78,43 @@ export class CreateRentalOrderReqDto {
   @ApiPropertyOptional() @IsUUID() @IsOptional() locationId?: string;
   @ApiProperty({ example: '2026-09-12T03:00:00.000Z' }) @IsDateString() rentalStartAt!: string;
   @ApiProperty({ example: '2026-09-14T03:00:00.000Z' }) @IsDateString() rentalEndAt!: string;
-  @ApiProperty({ type: [CreateRentalItemReqDto] }) @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => CreateRentalItemReqDto) items!: CreateRentalItemReqDto[];
-  @ApiPropertyOptional({ type: [RentalChargeReqDto] }) @IsArray() @ValidateNested({ each: true }) @Type(() => RentalChargeReqDto) @IsOptional() charges: RentalChargeReqDto[] = [];
-  @ApiPropertyOptional({ default: 0 }) @Type(() => Number) @IsNumber() @Min(0) @IsOptional() discountTotal = 0;
+  @ApiProperty({ type: [CreateRentalItemReqDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => CreateRentalItemReqDto)
+  items!: CreateRentalItemReqDto[];
+  @ApiPropertyOptional({ type: [RentalChargeReqDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RentalChargeReqDto)
+  @IsOptional()
+  charges: RentalChargeReqDto[] = [];
+  @ApiPropertyOptional({ default: 0 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  discountTotal = 0;
   @ApiPropertyOptional() @IsString() @IsOptional() note?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() internalNote?: string;
-  @ApiPropertyOptional({ type: RentalDeliveryReqDto }) @ValidateNested() @Type(() => RentalDeliveryReqDto) @IsOptional() delivery?: RentalDeliveryReqDto;
+  @ApiPropertyOptional({ type: RentalDeliveryReqDto })
+  @ValidateNested()
+  @Type(() => RentalDeliveryReqDto)
+  @IsOptional()
+  delivery?: RentalDeliveryReqDto;
 }
 
 export class RentalListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
-  @ApiPropertyOptional({ enum: ['DRAFT', 'RESERVED', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED'] })
-  @IsIn(['DRAFT', 'RESERVED', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED']) @IsOptional() status?: string;
-  @ApiPropertyOptional({ enum: ['UNPAID', 'PARTIALLY_PAID', 'PAID', 'REFUNDED', 'PARTIALLY_REFUNDED'] })
-  @IsIn(['UNPAID', 'PARTIALLY_PAID', 'PAID', 'REFUNDED', 'PARTIALLY_REFUNDED']) @IsOptional() paymentStatus?: string;
+  @ApiPropertyOptional({ enum: Object.values(RENTAL_STATUS) })
+  @IsIn(Object.values(RENTAL_STATUS))
+  @IsOptional()
+  status?: string;
+  @ApiPropertyOptional({ enum: Object.values(ORDER_PAYMENT_STATUS) })
+  @IsIn(Object.values(ORDER_PAYMENT_STATUS))
+  @IsOptional()
+  paymentStatus?: string;
   @ApiPropertyOptional() @IsDateString() @IsOptional() from?: string;
   @ApiPropertyOptional() @IsDateString() @IsOptional() until?: string;
 }

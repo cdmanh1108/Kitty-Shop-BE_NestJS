@@ -1,3 +1,5 @@
+import { TRANSACTION_STATUS, EXPENSE_STATUS } from '../domain/payment-status';
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { paginateMeta } from '@common/types/pagination';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import { PrismaService } from '@database/prisma/prisma.service';
@@ -9,20 +11,7 @@ import { FinanceInvariantError, type FinanceRepository } from '../domain/finance
 export class PrismaFinanceRepository implements FinanceRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createPayment(input: {
-    shopId: string;
-    orderId: string;
-    transactionNumber: string;
-    direction: string;
-    purpose: string;
-    paymentMethod: string;
-    amount: number;
-    externalReference?: string;
-    bankReference?: string;
-    note?: string;
-    paidAt: Date;
-    createdBy: string;
-  }) {
+  async createPayment(input: Parameters<FinanceRepository['createPayment']>[0]) {
     return serializableTransaction(this.prisma, async (tx) => {
       const order = await tx.rentalOrder.findFirst({
         where: { id: input.orderId, shopId: input.shopId },
@@ -31,7 +20,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
 
       if (input.direction === 'OUT' && ['DEPOSIT_REFUND', 'ORDER_REFUND'].includes(input.purpose)) {
         const existing = await tx.paymentTransaction.findMany({
-          where: { orderId: order.id, status: 'COMPLETED', voidedAt: null },
+          where: { orderId: order.id, status: TRANSACTION_STATUS.COMPLETED, voidedAt: null },
           select: { amount: true, direction: true, purpose: true },
         });
         const net = existing.reduce((sum, transaction) => {
@@ -39,7 +28,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
             transaction.purpose === 'DEPOSIT' || transaction.purpose === 'DEPOSIT_REFUND';
           const applies = input.purpose === 'DEPOSIT_REFUND' ? isDeposit : !isDeposit;
           if (!applies) return sum;
-          const amount = Number(transaction.amount);
+          const amount = decimalToNumber(transaction.amount);
           return sum + (transaction.direction === 'IN' ? amount : -amount);
         }, 0);
         if (input.amount > net) {
@@ -90,22 +79,14 @@ export class PrismaFinanceRepository implements FinanceRepository {
       if (!payment) return null;
       const updated = await tx.paymentTransaction.update({
         where: { id: payment.id },
-        data: { status: 'VOIDED', voidedAt: new Date(), voidedBy: input.voidedBy },
+        data: { status: TRANSACTION_STATUS.VOIDED, voidedAt: new Date(), voidedBy: input.voidedBy },
       });
       await recomputeOrderPaymentState(tx, payment.orderId);
       return updated;
     });
   }
 
-  async listPayments(input: {
-    shopId: string;
-    page: number;
-    limit: number;
-    orderId?: string;
-    from?: Date;
-    until?: Date;
-    purpose?: string;
-  }) {
+  async listPayments(input: Parameters<FinanceRepository['listPayments']>[0]) {
     const where = {
       shopId: input.shopId,
       ...(input.orderId ? { orderId: input.orderId } : {}),
@@ -135,21 +116,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
     return { items, meta: paginateMeta(input.page, input.limit, total) };
   }
 
-  async createExpense(input: {
-    shopId: string;
-    expenseNumber: string;
-    categoryId: string;
-    orderId?: string;
-    inventoryItemId?: string;
-    description: string;
-    amount: number;
-    paymentMethod?: string;
-    vendorName?: string;
-    expenseDate: Date;
-    paidAt?: Date;
-    receiptUrl?: string;
-    createdBy: string;
-  }) {
+  async createExpense(input: Parameters<FinanceRepository['createExpense']>[0]) {
     return this.prisma.$transaction(async (tx) => {
       const category = await tx.expenseCategory.findFirst({
         where: { id: input.categoryId, shopId: input.shopId, isActive: true },
@@ -179,15 +146,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
     });
   }
 
-  async listExpenses(input: {
-    shopId: string;
-    page: number;
-    limit: number;
-    categoryId?: string;
-    from?: Date;
-    until?: Date;
-    status?: string;
-  }) {
+  async listExpenses(input: Parameters<FinanceRepository['listExpenses']>[0]) {
     const where = {
       shopId: input.shopId,
       ...(input.categoryId ? { categoryId: input.categoryId } : {}),
@@ -221,7 +180,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
     if (!existing) return null;
     return this.prisma.expense.update({
       where: { id: existing.id },
-      data: { status: 'VOIDED', voidedAt: new Date() },
+      data: { status: EXPENSE_STATUS.VOIDED, voidedAt: new Date() },
     });
   }
 

@@ -1,3 +1,11 @@
+import {
+  ALLOCATION_STATUS,
+  RENTAL_ITEM_STATUS,
+  RENTAL_STATUS,
+} from '@modules/rentals/domain/rental-status';
+
+import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
+
 import type { JsonSerialized } from '@common/types/json';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
@@ -35,9 +43,10 @@ export async function createOrder(
           locationId: data.locationId,
           rentalStartAt: data.rentalStartAt,
           rentalEndAt: data.rentalEndAt,
-          status: 'RESERVED',
-          paymentStatus: grandTotal === 0 ? 'PAID' : 'UNPAID',
-          depositStatus: depositRequired === 0 ? 'NOT_REQUIRED' : 'PENDING',
+          status: RENTAL_STATUS.RESERVED,
+          paymentStatus: grandTotal === 0 ? ORDER_PAYMENT_STATUS.PAID : ORDER_PAYMENT_STATUS.UNPAID,
+          depositStatus:
+            depositRequired === 0 ? DEPOSIT_STATUS.NOT_REQUIRED : DEPOSIT_STATUS.PENDING,
           rentalSubtotal,
           chargesTotal,
           discountTotal: data.discountTotal,
@@ -67,7 +76,7 @@ export async function createOrder(
             depositAmount: line.depositAmount,
             lineTotal: line.lineTotal,
             pricingSnapshot: line.pricingSnapshot as Prisma.InputJsonValue,
-            status: 'RESERVED',
+            status: RENTAL_ITEM_STATUS.RESERVED,
           },
         });
 
@@ -80,7 +89,7 @@ export async function createOrder(
               inventoryItemId: inventory.id,
               reservedFrom: data.rentalStartAt,
               reservedUntil: data.rentalEndAt,
-              status: 'HELD',
+              status: ALLOCATION_STATUS.HELD,
               createdBy: data.createdBy,
             },
           });
@@ -139,7 +148,7 @@ export async function createOrder(
         data: {
           shopId: data.shopId,
           orderId: order.id,
-          toStatus: 'RESERVED',
+          toStatus: RENTAL_STATUS.RESERVED,
           changedBy: data.createdBy,
         },
       });
@@ -178,13 +187,7 @@ export async function createOrder(
 }
 export async function claimIdempotency(
   prisma: PrismaService,
-  input: {
-    shopId: string;
-    scope: string;
-    key: string;
-    requestHash: string;
-    expiresAt: Date;
-  },
+  input: Parameters<RentalRepository['claimIdempotency']>[0],
 ): ReturnType<RentalRepository['claimIdempotency']> {
   await prisma.idempotencyRecord.deleteMany({
     where: {

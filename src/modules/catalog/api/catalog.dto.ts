@@ -1,3 +1,9 @@
+import {
+  type InventoryStatus,
+  PRODUCT_STATUS,
+  INVENTORY_STATUS,
+} from '@modules/catalog/domain/catalog-status';
+
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -28,10 +34,25 @@ export class ProductVariantReqDto {
   @ApiProperty({ example: 'AURORA-S-RED' }) @IsString() variantCode!: string;
   @ApiPropertyOptional() @IsUUID() @IsOptional() sizeId?: string;
   @ApiPropertyOptional() @IsUUID() @IsOptional() colorId?: string;
-  @ApiPropertyOptional() @Type(() => Number) @IsNumber() @Min(0) @IsOptional() depositAmountOverride?: number;
-  @ApiPropertyOptional({ default: 1, minimum: 0 }) @Type(() => Number) @IsInt() @Min(0) @IsOptional() inventoryCount = 1;
+  @ApiPropertyOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  depositAmountOverride?: number;
+  @ApiPropertyOptional({ default: 1, minimum: 0 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  inventoryCount = 1;
   @ApiPropertyOptional({ example: 'AUR-S-R' }) @IsString() @IsOptional() skuPrefix?: string;
-  @ApiProperty({ type: [RentalRateReqDto] }) @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => RentalRateReqDto) rentalRates!: RentalRateReqDto[];
+  @ApiProperty({ type: [RentalRateReqDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => RentalRateReqDto)
+  rentalRates!: RentalRateReqDto[];
 }
 
 export class ProductMediaReqDto {
@@ -46,20 +67,43 @@ export class CreateProductReqDto {
   @ApiProperty({ example: 'Váy Aurora Satin' }) @IsString() name!: string;
   @ApiProperty() @IsUUID() categoryId!: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional({ default: 0 }) @Type(() => Number) @IsNumber() @Min(0) @IsOptional() defaultDepositAmount = 0;
+  @ApiPropertyOptional({ default: 0 })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  defaultDepositAmount = 0;
   @ApiPropertyOptional({ default: false }) @IsBoolean() @IsOptional() isPublic = false;
-  @ApiProperty({ type: [ProductVariantReqDto] }) @IsArray() @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => ProductVariantReqDto) variants!: ProductVariantReqDto[];
-  @ApiPropertyOptional({ type: [ProductMediaReqDto] }) @IsArray() @ValidateNested({ each: true }) @Type(() => ProductMediaReqDto) @IsOptional() media: ProductMediaReqDto[] = [];
+  @ApiProperty({ type: [ProductVariantReqDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ProductVariantReqDto)
+  variants!: ProductVariantReqDto[];
+  @ApiPropertyOptional({ type: [ProductMediaReqDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ProductMediaReqDto)
+  @IsOptional()
+  media: ProductMediaReqDto[] = [];
 }
 
 export class UpdateProductReqDto {
   @ApiPropertyOptional() @IsString() @IsOptional() name?: string;
   @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiPropertyOptional() @Type(() => Number) @IsNumber() @Min(0) @IsOptional() defaultDepositAmount?: number;
+  @ApiPropertyOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  defaultDepositAmount?: number;
   @ApiPropertyOptional() @IsBoolean() @IsOptional() isPublic?: boolean;
   @ApiPropertyOptional() @IsBoolean() @IsOptional() isRentable?: boolean;
-  @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] }) @IsIn(['ACTIVE', 'INACTIVE']) @IsOptional() status?: string;
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
+  @IsIn(Object.values(PRODUCT_STATUS))
+  @IsOptional()
+  status?: string;
 }
 
 export class CreateCategoryReqDto {
@@ -87,7 +131,10 @@ export class UpsertRentalRateReqDto extends RentalRateReqDto {}
 export class ProductListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
   @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
-  @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] }) @IsIn(['ACTIVE', 'INACTIVE']) @IsOptional() status?: string;
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
+  @IsIn(Object.values(PRODUCT_STATUS))
+  @IsOptional()
+  status?: string;
 }
 
 export class AddInventoryReqDto {
@@ -95,14 +142,20 @@ export class AddInventoryReqDto {
   @ApiPropertyOptional() @IsUUID() @IsOptional() locationId?: string;
   @ApiProperty({ example: 'AUR-S-R-001' }) @IsString() sku!: string;
   @ApiPropertyOptional() @IsString() @IsOptional() barcode?: string;
-  @ApiPropertyOptional() @Type(() => Number) @IsNumber() @Min(0) @IsOptional() purchasePrice?: number;
+  @ApiPropertyOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  purchasePrice?: number;
   @ApiPropertyOptional() @IsDateString() @IsOptional() purchaseDate?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() notes?: string;
 }
 
 export class UpdateInventoryStatusReqDto {
-  @ApiProperty({ enum: ['AVAILABLE', 'RESERVED', 'RENTED', 'CLEANING', 'REPAIRING', 'DAMAGED', 'LOST', 'RETIRED'] })
-  @IsIn(['AVAILABLE', 'RESERVED', 'RENTED', 'CLEANING', 'REPAIRING', 'DAMAGED', 'LOST', 'RETIRED']) status!: string;
+  @ApiProperty({ enum: Object.values(INVENTORY_STATUS) })
+  @IsIn(Object.values(INVENTORY_STATUS))
+  status!: InventoryStatus;
   @ApiPropertyOptional() @IsString() @IsOptional() condition?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() reason?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() notes?: string;
@@ -110,7 +163,10 @@ export class UpdateInventoryStatusReqDto {
 
 export class InventoryListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsUUID() @IsOptional() variantId?: string;
-  @ApiPropertyOptional({ enum: ['AVAILABLE', 'RESERVED', 'RENTED', 'CLEANING', 'REPAIRING', 'DAMAGED', 'LOST', 'RETIRED'] }) @IsIn(['AVAILABLE', 'RESERVED', 'RENTED', 'CLEANING', 'REPAIRING', 'DAMAGED', 'LOST', 'RETIRED']) @IsOptional() status?: string;
+  @ApiPropertyOptional({ enum: Object.values(INVENTORY_STATUS) })
+  @IsIn(Object.values(INVENTORY_STATUS))
+  @IsOptional()
+  status?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
 }
 

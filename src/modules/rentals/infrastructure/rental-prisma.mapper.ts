@@ -1,3 +1,4 @@
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { Prisma } from '@prisma/client';
 import type { BookableVariant, RentalRepository } from '../domain/rental.repository';
 import { availableInventoryWhere } from '../../catalog/infrastructure/inventory-availability';
@@ -38,8 +39,8 @@ export function toBookableVariant(variant: BookableVariantRecord | null): Bookab
     productName: variant.product.name,
     sizeName: variant.size?.name ?? null,
     colorName: variant.color?.name ?? null,
-    depositPerItem: Number(deposit),
-    ratePrice: rate ? Number(rate.price) : null,
+    depositPerItem: decimalToNumber(deposit),
+    ratePrice: rate ? decimalToNumber(rate.price) : null,
     availableInventory: variant.inventoryItems.map((item) => ({ id: item.id, sku: item.sku })),
   };
 }

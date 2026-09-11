@@ -19,6 +19,9 @@ Non-negotiable rules:
 - application/domain must not import API DTOs; controllers map validated transport DTOs into application-owned inputs.
 - repository ports use explicit typed results and inputs, with no `unknown` escape hatch or transport pagination dependency.
 - application/domain layers must not issue Prisma queries directly.
+- business statuses belong to their feature/domain; reuse canonical vocabularies instead of a generic common status type.
+- preserve existing Decimal/string versus computed-number API semantics and rounding; see `docs/BUSINESS_TYPES.md`.
+- use Clock for tested business-time decisions, not mechanically for all timestamps.
 - keep Prisma payload types inside infrastructure; extract meaningful persistence mapping, not identity wrappers.
 - split persistence by aggregate/responsibility, not mechanically by database table; pass the same transaction client into all helpers participating in an atomic write.
 - client-supplied `shopId` is never authorization; use authenticated membership.

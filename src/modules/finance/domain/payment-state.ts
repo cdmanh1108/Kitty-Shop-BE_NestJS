@@ -1,3 +1,8 @@
+import type { OrderPaymentStatus, DepositStatus } from './payment-status';
+import { ORDER_PAYMENT_STATUS, DEPOSIT_STATUS } from '@modules/finance/domain/payment-status';
+
+import { PAYMENT_DIRECTION, PAYMENT_PURPOSE } from '@modules/finance/domain/payment-types';
+
 export interface PaymentStateInput {
   grandTotal: number;
   depositRequired: number;
@@ -5,8 +10,8 @@ export interface PaymentStateInput {
 }
 
 export interface PaymentStateResult {
-  paymentStatus: string;
-  depositStatus: string;
+  paymentStatus: OrderPaymentStatus;
+  depositStatus: DepositStatus;
 }
 
 export function calculateOrderPaymentState(input: PaymentStateInput): PaymentStateResult {
@@ -16,11 +21,13 @@ export function calculateOrderPaymentState(input: PaymentStateInput): PaymentSta
   let depositOut = 0;
 
   for (const transaction of input.transactions) {
-    const isDeposit = ['DEPOSIT', 'DEPOSIT_REFUND'].includes(transaction.purpose);
+    const isDeposit =
+      transaction.purpose === PAYMENT_PURPOSE.DEPOSIT ||
+      transaction.purpose === PAYMENT_PURPOSE.DEPOSIT_REFUND;
     if (isDeposit) {
-      if (transaction.direction === 'IN') depositIn += transaction.amount;
+      if (transaction.direction === PAYMENT_DIRECTION.IN) depositIn += transaction.amount;
       else depositOut += transaction.amount;
-    } else if (transaction.direction === 'IN') {
+    } else if (transaction.direction === PAYMENT_DIRECTION.IN) {
       orderIn += transaction.amount;
     } else {
       orderOut += transaction.amount;
@@ -28,17 +35,22 @@ export function calculateOrderPaymentState(input: PaymentStateInput): PaymentSta
   }
 
   const netPaid = orderIn - orderOut;
-  let paymentStatus = 'UNPAID';
-  if (orderIn > 0 && orderOut > 0 && netPaid <= 0) paymentStatus = 'REFUNDED';
-  else if (input.grandTotal <= 0 || netPaid >= input.grandTotal) paymentStatus = 'PAID';
-  else if (netPaid > 0) paymentStatus = 'PARTIALLY_PAID';
+  let paymentStatus: OrderPaymentStatus = ORDER_PAYMENT_STATUS.UNPAID;
+  if (orderIn > 0 && orderOut > 0 && netPaid <= 0) paymentStatus = ORDER_PAYMENT_STATUS.REFUNDED;
+  else if (input.grandTotal <= 0 || netPaid >= input.grandTotal)
+    paymentStatus = ORDER_PAYMENT_STATUS.PAID;
+  else if (netPaid > 0) paymentStatus = ORDER_PAYMENT_STATUS.PARTIALLY_PAID;
 
   const held = depositIn - depositOut;
-  let depositStatus = input.depositRequired <= 0 ? 'NOT_REQUIRED' : 'PENDING';
-  if (input.depositRequired > 0 && depositIn > 0 && depositOut > 0 && held <= 0) depositStatus = 'REFUNDED';
-  else if (input.depositRequired > 0 && depositOut > 0) depositStatus = 'PARTIALLY_REFUNDED';
-  else if (input.depositRequired > 0 && held >= input.depositRequired) depositStatus = 'HELD';
-  else if (input.depositRequired > 0 && held > 0) depositStatus = 'PARTIALLY_HELD';
+  let depositStatus: DepositStatus =
+    input.depositRequired <= 0 ? DEPOSIT_STATUS.NOT_REQUIRED : DEPOSIT_STATUS.PENDING;
+  if (input.depositRequired > 0 && depositIn > 0 && depositOut > 0 && held <= 0)
+    depositStatus = DEPOSIT_STATUS.REFUNDED;
+  else if (input.depositRequired > 0 && depositOut > 0)
+    depositStatus = DEPOSIT_STATUS.PARTIALLY_REFUNDED;
+  else if (input.depositRequired > 0 && held >= input.depositRequired)
+    depositStatus = DEPOSIT_STATUS.HELD;
+  else if (input.depositRequired > 0 && held > 0) depositStatus = DEPOSIT_STATUS.PARTIALLY_HELD;
 
   return { paymentStatus, depositStatus };
 }

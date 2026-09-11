@@ -1,3 +1,4 @@
+import { INVENTORY_STATUS } from '../domain/catalog-status';
 import type { CurrentUser } from '@common/types/current-user';
 import { AuditService } from '@modules/audit/application/audit.service';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
@@ -183,16 +184,7 @@ export class CatalogService {
   }
 
   async updateInventoryStatus(user: CurrentUser, id: string, input: UpdateInventoryStatusInput) {
-    const allowed = new Set([
-      'AVAILABLE',
-      'RESERVED',
-      'RENTED',
-      'CLEANING',
-      'REPAIRING',
-      'DAMAGED',
-      'LOST',
-      'RETIRED',
-    ]);
+    const allowed: ReadonlySet<string> = new Set(Object.values(INVENTORY_STATUS));
     if (!allowed.has(input.status)) throw new BadRequestException('Unsupported inventory status');
     const item = await this.repository.updateInventoryStatus({
       shopId: user.shopId,

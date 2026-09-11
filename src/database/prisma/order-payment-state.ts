@@ -1,3 +1,5 @@
+import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { Prisma } from '@prisma/client';
 import { calculateOrderPaymentState } from '@modules/finance/domain/payment-state';
 
@@ -12,15 +14,15 @@ export async function recomputeOrderPaymentState(
 ): Promise<void> {
   const order = await tx.rentalOrder.findUniqueOrThrow({ where: { id: orderId } });
   const transactions = await tx.paymentTransaction.findMany({
-    where: { orderId, status: 'COMPLETED', voidedAt: null },
+    where: { orderId, status: TRANSACTION_STATUS.COMPLETED, voidedAt: null },
     select: { amount: true, direction: true, purpose: true },
   });
 
   const state = calculateOrderPaymentState({
-    grandTotal: Number(order.grandTotal),
-    depositRequired: Number(order.depositRequired),
+    grandTotal: decimalToNumber(order.grandTotal),
+    depositRequired: decimalToNumber(order.depositRequired),
     transactions: transactions.map((transaction) => ({
-      amount: Number(transaction.amount),
+      amount: decimalToNumber(transaction.amount),
       direction: transaction.direction,
       purpose: transaction.purpose,
     })),

@@ -1,3 +1,8 @@
+import type {
+  PaymentDirection,
+  PaymentPurpose,
+  PaymentMethod,
+} from '@modules/finance/domain/payment-types';
 import type { ExpenseRecord } from '@modules/finance/domain/finance.records';
 import type {
   CreatePaymentResult,
@@ -29,9 +34,9 @@ export interface FinanceCreatePaymentData {
   shopId: string;
   orderId: string;
   transactionNumber: string;
-  direction: string;
-  purpose: string;
-  paymentMethod: string;
+  direction: PaymentDirection;
+  purpose: PaymentPurpose;
+  paymentMethod: PaymentMethod;
   amount: number;
   externalReference?: string;
   bankReference?: string;

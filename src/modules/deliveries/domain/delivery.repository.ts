@@ -1,3 +1,8 @@
+import type {
+  DeliveryDirection,
+  DeliveryMethod,
+  DeliveryStatus,
+} from '@modules/deliveries/domain/delivery-status';
 import type { DeliveryList, DeliveryResult } from './delivery.models';
 export const DELIVERY_REPOSITORY = Symbol('DELIVERY_REPOSITORY');
 export interface DeliveryRepository {
@@ -9,8 +14,8 @@ export interface DeliveryRepository {
 export interface DeliveryCreateData {
   shopId: string;
   orderId: string;
-  direction: string;
-  method: string;
+  direction: DeliveryDirection;
+  method: DeliveryMethod;
   scheduledAt?: Date;
   recipientName?: string;
   recipientPhone?: string;
@@ -30,7 +35,7 @@ export interface DeliveryCreateData {
 export interface DeliveryUpdateStatusData {
   shopId: string;
   id: string;
-  status: string;
+  status: DeliveryStatus;
   shipperName?: string;
   shipperPhone?: string;
   trackingCode?: string;

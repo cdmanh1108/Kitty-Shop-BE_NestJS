@@ -82,6 +82,9 @@ Important create/update/transition actions write audit records. Do not store sec
 
 ## Extending the system
 
+Business vocabulary, money serialization, scoped Clock usage and reference-number
+compatibility are documented in [BUSINESS_TYPES.md](BUSINESS_TYPES.md).
+
 ### Prisma persistence responsibilities
 
 Rental and Catalog ports remain unchanged. Their injectable Prisma adapters forward to

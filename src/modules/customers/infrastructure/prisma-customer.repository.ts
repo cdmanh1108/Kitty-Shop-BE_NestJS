@@ -1,3 +1,4 @@
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { paginateMeta } from '@common/types/pagination';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
@@ -7,14 +8,7 @@ import type { CustomerRepository } from '../domain/customer.repository';
 export class PrismaCustomerRepository implements CustomerRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(input: {
-    shopId: string;
-    page: number;
-    limit: number;
-    search?: string;
-    status?: string;
-    customerType?: string;
-  }) {
+  async list(input: Parameters<CustomerRepository['list']>[0]) {
     const where = {
       shopId: input.shopId,
       archivedAt: null,
@@ -78,11 +72,21 @@ export class PrismaCustomerRepository implements CustomerRepository {
 
     const netNonDepositPaid = payments.reduce((sum, payment) => {
       if (['DEPOSIT', 'DEPOSIT_REFUND'].includes(payment.purpose)) return sum;
-      return sum + (payment.direction === 'IN' ? Number(payment.amount) : -Number(payment.amount));
+      return (
+        sum +
+        (payment.direction === 'IN'
+          ? decimalToNumber(payment.amount)
+          : -decimalToNumber(payment.amount))
+      );
     }, 0);
     const depositHeld = payments.reduce((sum, payment) => {
       if (!['DEPOSIT', 'DEPOSIT_REFUND'].includes(payment.purpose)) return sum;
-      return sum + (payment.direction === 'IN' ? Number(payment.amount) : -Number(payment.amount));
+      return (
+        sum +
+        (payment.direction === 'IN'
+          ? decimalToNumber(payment.amount)
+          : -decimalToNumber(payment.amount))
+      );
     }, 0);
 
     return {
@@ -105,13 +109,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
     return this.prisma.customer.update({ where: { id }, data: input });
   }
 
-  addNote(input: {
-    shopId: string;
-    customerId: string;
-    content: string;
-    isPinned: boolean;
-    createdBy: string;
-  }) {
+  addNote(input: Parameters<CustomerRepository['addNote']>[0]) {
     return this.prisma.customerNote.create({
       data: {
         customerId: input.customerId,

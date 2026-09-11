@@ -1,3 +1,4 @@
+import type { RentalStatus } from './rental-status';
 import type { JsonSerialized } from '@common/types/json';
 import type { RentalOrderDetails, RentalOrderPage } from './rental.models';
 
@@ -106,8 +107,8 @@ export interface RentalListCriteria {
 export interface RentalTransitionData {
   shopId: string;
   orderId: string;
-  fromStatuses: string[];
-  toStatus: string;
+  fromStatuses: RentalStatus[];
+  toStatus: RentalStatus;
   changedBy: string;
   reason?: string;
 }

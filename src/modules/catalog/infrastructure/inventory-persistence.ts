@@ -1,8 +1,11 @@
 import { availableInventoryWhere } from './inventory-availability';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
-import type { AddInventoryData, CatalogRepository } from '../domain/catalog.repository';
-import { CatalogInvariantError } from '../domain/catalog.repository';
+import {
+  type AddInventoryData,
+  type CatalogRepository,
+  CatalogInvariantError,
+} from '../domain/catalog.repository';
 
 export async function addInventoryItem(
   prisma: PrismaService,
@@ -26,15 +29,7 @@ export async function addInventoryItem(
 }
 export async function updateInventoryStatus(
   prisma: PrismaService,
-  input: {
-    shopId: string;
-    id: string;
-    status: string;
-    condition?: string;
-    reason?: string;
-    notes?: string;
-    changedBy: string;
-  },
+  input: Parameters<CatalogRepository['updateInventoryStatus']>[0],
 ): ReturnType<CatalogRepository['updateInventoryStatus']> {
   const existing = await prisma.inventoryItem.findFirst({
     where: { id: input.id, shopId: input.shopId, archivedAt: null },
@@ -65,14 +60,7 @@ export async function updateInventoryStatus(
 }
 export async function listInventory(
   prisma: PrismaService,
-  input: {
-    shopId: string;
-    variantId?: string;
-    status?: string;
-    search?: string;
-    page: number;
-    limit: number;
-  },
+  input: Parameters<CatalogRepository['listInventory']>[0],
 ): ReturnType<CatalogRepository['listInventory']> {
   const where = {
     shopId: input.shopId,
@@ -150,7 +138,7 @@ export function findInventoryItem(
 }
 export function findAvailableInventory(
   prisma: PrismaService,
-  input: { shopId: string; variantId: string; from: Date; until: Date },
+  input: Parameters<CatalogRepository['findAvailableInventory']>[0],
 ): ReturnType<CatalogRepository['findAvailableInventory']> {
   return prisma.inventoryItem.findMany({
     where: {

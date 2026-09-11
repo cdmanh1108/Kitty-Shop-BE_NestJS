@@ -137,10 +137,9 @@ describe('transport to application contracts', () => {
       until: '2026-09-02T00:00:00+07:00',
       limit: '3',
     });
-    const result = await new ReportService(repository).productPerformance(
-      user,
-      toPerformanceQuery(dto),
-    );
+    const result = await new ReportService(repository, {
+      now: () => new Date(),
+    }).productPerformance(user, toPerformanceQuery(dto));
     expect(result).toBe(rows);
     expect(repository.productPerformance.mock.calls[0]?.[0]).toEqual({
       shopId: 'shop',

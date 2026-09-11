@@ -1,3 +1,4 @@
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
 import type { ReminderRepository } from '../domain/reminder.repository';
@@ -7,7 +8,10 @@ export class PrismaReminderRepository implements ReminderRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   activeShops() {
-    return this.prisma.shop.findMany({ where: { status: 'ACTIVE' }, select: { id: true, timezone: true } });
+    return this.prisma.shop.findMany({
+      where: { status: 'ACTIVE' },
+      select: { id: true, timezone: true },
+    });
   }
 
   async candidates(shopId: string) {
@@ -22,7 +26,7 @@ export class PrismaReminderRepository implements ReminderRepository {
       status: order.status,
       paymentStatus: order.paymentStatus,
       depositStatus: order.depositStatus,
-      depositRequired: Number(order.depositRequired),
+      depositRequired: decimalToNumber(order.depositRequired),
       rentalStartAt: order.rentalStartAt,
       rentalEndAt: order.rentalEndAt,
       customerId: order.customerId,
@@ -53,7 +57,16 @@ export class PrismaReminderRepository implements ReminderRepository {
       where: {
         shopId,
         status: 'PENDING',
-        type: { in: ['PICKUP_TODAY', 'RETURN_TODAY', 'RETURN_SOON', 'OVERDUE', 'PAYMENT_DUE', 'DEPOSIT_DUE'] },
+        type: {
+          in: [
+            'PICKUP_TODAY',
+            'RETURN_TODAY',
+            'RETURN_SOON',
+            'OVERDUE',
+            'PAYMENT_DUE',
+            'DEPOSIT_DUE',
+          ],
+        },
         ...(activeKeys.length > 0 ? { dedupeKey: { notIn: activeKeys } } : {}),
       },
       data: { status: 'RESOLVED', processedAt: new Date() },
@@ -63,7 +76,10 @@ export class PrismaReminderRepository implements ReminderRepository {
   list(shopId: string, status?: string) {
     return this.prisma.reminder.findMany({
       where: { shopId, ...(status ? { status } : {}) },
-      include: { customer: { select: { fullName: true, phone: true } }, order: { select: { orderNumber: true, status: true } } },
+      include: {
+        customer: { select: { fullName: true, phone: true } },
+        order: { select: { orderNumber: true, status: true } },
+      },
       orderBy: [{ priority: 'desc' }, { scheduledFor: 'asc' }],
       take: 500,
     });
@@ -72,6 +88,9 @@ export class PrismaReminderRepository implements ReminderRepository {
   async dismiss(shopId: string, id: string, dismissedBy: string) {
     const existing = await this.prisma.reminder.findFirst({ where: { id, shopId } });
     if (!existing) return null;
-    return this.prisma.reminder.update({ where: { id }, data: { status: 'DISMISSED', dismissedAt: new Date(), dismissedBy } });
+    return this.prisma.reminder.update({
+      where: { id },
+      data: { status: 'DISMISSED', dismissedAt: new Date(), dismissedBy },
+    });
   }
 }

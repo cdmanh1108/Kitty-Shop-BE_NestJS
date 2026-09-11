@@ -1,7 +1,9 @@
+import { generateDatedReference } from '@common/utils/reference-number';
+import { PAYMENT_PURPOSE, PAYMENT_DIRECTION } from '@modules/finance/domain/payment-types';
+
 import type { CurrentUser } from '@common/types/current-user';
 import { AuditService } from '@modules/audit/application/audit.service';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
 import {
   FINANCE_REPOSITORY,
   FinanceInvariantError,
@@ -14,16 +16,7 @@ import type {
   PaymentListQuery,
 } from './finance.contracts';
 
-const PAYMENT_PURPOSES = new Set([
-  'RENTAL_PAYMENT',
-  'DEPOSIT',
-  'LATE_FEE',
-  'DAMAGE_FEE',
-  'SHIPPING',
-  'DEPOSIT_REFUND',
-  'ORDER_REFUND',
-  'OTHER',
-]);
+const PAYMENT_PURPOSES: ReadonlySet<string> = new Set(Object.values(PAYMENT_PURPOSE));
 
 @Injectable()
 export class FinanceService {
@@ -48,11 +41,17 @@ export class FinanceService {
     if (!PAYMENT_PURPOSES.has(input.purpose)) {
       throw new BadRequestException('Unsupported payment purpose');
     }
-    const refundPurpose = ['DEPOSIT_REFUND', 'ORDER_REFUND'].includes(input.purpose);
-    if (refundPurpose && input.direction !== 'OUT') {
+    const refundPurpose =
+      input.purpose === PAYMENT_PURPOSE.DEPOSIT_REFUND ||
+      input.purpose === PAYMENT_PURPOSE.ORDER_REFUND;
+    if (refundPurpose && input.direction !== PAYMENT_DIRECTION.OUT) {
       throw new BadRequestException(`${input.purpose} must use direction OUT`);
     }
-    if (!refundPurpose && input.direction === 'OUT' && input.purpose !== 'OTHER') {
+    if (
+      !refundPurpose &&
+      input.direction === PAYMENT_DIRECTION.OUT &&
+      input.purpose !== PAYMENT_PURPOSE.OTHER
+    ) {
       throw new BadRequestException('OUT transactions must use a refund purpose or OTHER');
     }
     let payment: Awaited<ReturnType<FinanceRepository['createPayment']>>;
@@ -60,7 +59,7 @@ export class FinanceService {
       payment = await this.repository.createPayment({
         shopId: user.shopId,
         orderId,
-        transactionNumber: this.number('PAY'),
+        transactionNumber: generateDatedReference('PAY'),
         direction: input.direction,
         purpose: input.purpose,
         paymentMethod: input.paymentMethod,
@@ -131,7 +130,7 @@ export class FinanceService {
     try {
       expense = await this.repository.createExpense({
         shopId: user.shopId,
-        expenseNumber: this.number('EXP'),
+        expenseNumber: generateDatedReference('EXP'),
         categoryId: input.categoryId,
         orderId: input.orderId,
         inventoryItemId: input.inventoryItemId,
@@ -171,10 +170,5 @@ export class FinanceService {
       entityId: id,
     });
     return expense;
-  }
-
-  private number(prefix: string): string {
-    const date = new Date().toISOString().slice(0, 10).replaceAll('-', '');
-    return `${prefix}-${date}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }
 }

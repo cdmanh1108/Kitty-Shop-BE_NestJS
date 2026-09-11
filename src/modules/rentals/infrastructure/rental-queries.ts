@@ -1,7 +1,8 @@
+import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
-import type { Prisma } from '@prisma/client';
-import { type PrismaClient } from '@prisma/client';
+import { type Prisma, type PrismaClient } from '@prisma/client';
+
 import { type RentalRepository } from '../domain/rental.repository';
 
 export async function customerExists(
@@ -28,16 +29,7 @@ export async function locationExists(
 }
 export async function list(
   prisma: PrismaService,
-  input: {
-    shopId: string;
-    page: number;
-    limit: number;
-    search?: string;
-    status?: string;
-    paymentStatus?: string;
-    from?: Date;
-    until?: Date;
-  },
+  input: Parameters<RentalRepository['list']>[0],
 ): ReturnType<RentalRepository['list']> {
   const where = {
     shopId: input.shopId,
@@ -121,7 +113,10 @@ export function getWithTx(
       location: true,
       items: { include: { allocations: { include: { inventoryItem: true } } } },
       charges: { where: { voidedAt: null }, orderBy: { createdAt: 'asc' } },
-      payments: { where: { status: 'COMPLETED', voidedAt: null }, orderBy: { paidAt: 'asc' } },
+      payments: {
+        where: { status: TRANSACTION_STATUS.COMPLETED, voidedAt: null },
+        orderBy: { paidAt: 'asc' },
+      },
       deliveries: { orderBy: { createdAt: 'asc' } },
       statusHistory: { orderBy: { changedAt: 'asc' } },
     },
