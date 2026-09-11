@@ -20,7 +20,7 @@ async function main(): Promise<void> {
       apiPrefix: config.get('apiPrefix', { infer: true }),
       appUrl: config.get('appUrl', { infer: true }),
     });
-    const outputDir = resolve(process.cwd(), 'generated');
+    const outputDir = resolve(__dirname, '../generated');
     await mkdir(outputDir, { recursive: true });
     await writeFile(resolve(outputDir, 'openapi.json'), JSON.stringify(document, null, 2));
     process.stdout.write('OpenAPI exported to generated/openapi.json\n');

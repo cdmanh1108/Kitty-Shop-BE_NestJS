@@ -53,6 +53,7 @@ describe('CatalogService - Product Management', () => {
       removeProductMedia: jest.fn(),
       addInventoryItem: jest.fn(),
       updateInventoryStatus: jest.fn(),
+      archiveInventoryItem: jest.fn(),
       listInventory: jest.fn(),
       findInventoryItem: jest.fn(),
       findAvailableInventory: jest.fn(),

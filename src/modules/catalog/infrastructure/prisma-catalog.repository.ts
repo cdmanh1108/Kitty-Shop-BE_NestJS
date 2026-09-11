@@ -15,6 +15,7 @@ import {
 import {
   addInventoryItem,
   updateInventoryStatus,
+  archiveInventoryItem,
   listInventory,
   findInventoryItem,
   findAvailableInventory,
@@ -112,6 +113,12 @@ export class PrismaCatalogRepository implements CatalogRepository {
     ...args: Parameters<CatalogRepository['updateInventoryStatus']>
   ): ReturnType<CatalogRepository['updateInventoryStatus']> {
     return updateInventoryStatus(this.prisma, ...args);
+  }
+
+  archiveInventoryItem(
+    ...args: Parameters<CatalogRepository['archiveInventoryItem']>
+  ): ReturnType<CatalogRepository['archiveInventoryItem']> {
+    return archiveInventoryItem(this.prisma, ...args);
   }
 
   listInventory(

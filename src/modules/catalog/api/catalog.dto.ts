@@ -169,7 +169,7 @@ export class ProductListQueryDto extends PaginationQueryDto {
 export class AddInventoryReqDto {
   @ApiProperty() @IsUUID() variantId!: string;
   @ApiPropertyOptional() @IsUUID() @IsOptional() locationId?: string;
-  @ApiProperty({ example: 'AUR-S-R-001' }) @IsString() sku!: string;
+  @ApiPropertyOptional({ example: 'AUR-S-R-001' }) @IsString() @IsOptional() sku?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() barcode?: string;
   @ApiPropertyOptional()
   @Type(() => Number)
@@ -185,13 +185,23 @@ export class UpdateInventoryStatusReqDto {
   @ApiProperty({ enum: Object.values(INVENTORY_STATUS) })
   @IsIn(Object.values(INVENTORY_STATUS))
   status!: InventoryStatus;
+  @ApiPropertyOptional({ enum: Object.values(INVENTORY_STATUS) })
+  @IsIn(Object.values(INVENTORY_STATUS))
+  @IsOptional()
+  expectedFromStatus?: InventoryStatus;
   @ApiPropertyOptional() @IsString() @IsOptional() condition?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() reason?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() notes?: string;
 }
 
+export class ArchiveInventoryItemReqDto {
+  @ApiPropertyOptional() @IsString() @IsOptional() reason?: string;
+}
+
 export class InventoryListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsUUID() @IsOptional() variantId?: string;
+  @ApiPropertyOptional() @IsUUID() @IsOptional() productId?: string;
+  @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
   @ApiPropertyOptional({ enum: Object.values(INVENTORY_STATUS) })
   @IsIn(Object.values(INVENTORY_STATUS))
   @IsOptional()
@@ -280,20 +290,6 @@ export class ProductResDto {
   @ApiPropertyOptional() updatedAt?: string;
 }
 
-export class InventoryItemResDto {
-  @ApiProperty() id!: string;
-  @ApiProperty() variantId!: string;
-  @ApiProperty() sku!: string;
-  @ApiPropertyOptional({ type: String, nullable: true }) barcode!: string | null;
-  @ApiProperty() currentStatus!: string;
-  @ApiProperty() condition!: string;
-  @ApiProperty({ type: Object }) variant!: object;
-  @ApiPropertyOptional({ nullable: true, type: Object }) location!: object | null;
-  @ApiPropertyOptional({ type: [Object] }) statusHistory?: object[];
-  @ApiPropertyOptional({ type: [Object] }) serviceRecords?: object[];
-  @ApiPropertyOptional({ type: [Object] }) allocations?: object[];
-}
-
 export class ProductPageResDto {
   @ApiProperty({ type: [ProductResDto] }) items!: ProductResDto[];
   @ApiProperty({ type: PaginationMetaResDto }) meta!: PaginationMetaResDto;
@@ -311,6 +307,86 @@ export class CatalogLookupsResDto {
   @ApiProperty({ type: [SizeSummaryResDto] }) sizes!: SizeSummaryResDto[];
   @ApiProperty({ type: [ColorSummaryResDto] }) colors!: ColorSummaryResDto[];
   @ApiProperty({ type: [ShopLocationSummaryResDto] }) locations!: ShopLocationSummaryResDto[];
+}
+
+export class InventoryProductSummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() categoryId!: string;
+}
+
+export class InventoryVariantSummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() variantCode!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) sizeId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) colorId!: string | null;
+  @ApiProperty({ type: InventoryProductSummaryResDto }) product!: InventoryProductSummaryResDto;
+  @ApiPropertyOptional({ nullable: true, type: SizeSummaryResDto }) size!: SizeSummaryResDto | null;
+  @ApiPropertyOptional({ nullable: true, type: ColorSummaryResDto }) color!: ColorSummaryResDto | null;
+  @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
+}
+
+export class InventoryStatusHistoryResDto {
+  @ApiProperty() id!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) fromStatus!: string | null;
+  @ApiProperty() toStatus!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) reason!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) notes!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) changedBy!: string | null;
+  @ApiProperty() changedAt!: string;
+}
+
+export class InventoryCurrentRentalResDto {
+  @ApiProperty() orderId!: string;
+  @ApiProperty() orderNumber!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty() reservedFrom!: string;
+  @ApiProperty() reservedUntil!: string;
+}
+
+export class InventoryAllocationOrderCustomerResDto {
+  @ApiProperty() fullName!: string;
+  @ApiProperty() phone!: string;
+}
+
+export class InventoryAllocationOrderResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() orderNumber!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty({ type: InventoryAllocationOrderCustomerResDto }) customer!: InventoryAllocationOrderCustomerResDto;
+}
+
+export class InventoryAllocationResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty() reservedFrom!: string;
+  @ApiProperty() reservedUntil!: string;
+  @ApiProperty({ type: InventoryAllocationOrderResDto }) order!: InventoryAllocationOrderResDto;
+}
+
+export class InventoryItemResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() variantId!: string;
+  @ApiProperty() sku!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) barcode!: string | null;
+  @ApiProperty({ enum: Object.values(INVENTORY_STATUS) }) currentStatus!: string;
+  @ApiProperty() condition!: string;
+  @ApiProperty({ enum: ['FREE', 'RESERVED', 'RENTED'] }) occupancyStatus!: string;
+  @ApiProperty({ type: [String] }) allowedManualTransitions!: string[];
+  @ApiPropertyOptional({ nullable: true, type: InventoryCurrentRentalResDto })
+  currentRental!: InventoryCurrentRentalResDto | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) purchasePrice!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) notes!: string | null;
+  @ApiProperty({ type: InventoryVariantSummaryResDto }) variant!: InventoryVariantSummaryResDto;
+  @ApiPropertyOptional({ nullable: true, type: ShopLocationSummaryResDto })
+  location!: ShopLocationSummaryResDto | null;
+  @ApiPropertyOptional({ type: [InventoryStatusHistoryResDto] })
+  statusHistory?: InventoryStatusHistoryResDto[];
+  @ApiPropertyOptional({ type: [InventoryAllocationResDto] })
+  allocations?: InventoryAllocationResDto[];
+  @ApiProperty() createdAt!: string;
+  @ApiProperty() updatedAt!: string;
 }
 
 export class InventoryPageResDto {

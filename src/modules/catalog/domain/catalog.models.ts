@@ -82,16 +82,29 @@ export type AddProductMediaResult = null | ProductMediaRecord;
 
 export type AddInventoryItemResult = null | InventoryItemRecord;
 
-export type InventoryPage = PaginatedResult<
-  InventoryItemRecord & {
-    variant: ProductVariantRecord & {
-      size: null | SizeRecord;
-      color: null | ColorRecord;
-      product: ProductRecord;
-    };
-    location: null | ShopLocationRecord;
-  }
->;
+export type InventoryOccupancyStatus = 'FREE' | 'RESERVED' | 'RENTED';
+
+export type InventoryCurrentRentalSummary = {
+  orderId: string;
+  orderNumber: string;
+  status: string;
+  reservedFrom: Date;
+  reservedUntil: Date;
+};
+
+export type InventoryPageItem = InventoryItemRecord & {
+  variant: ProductVariantRecord & {
+    size: null | SizeRecord;
+    color: null | ColorRecord;
+    product: ProductRecord;
+  };
+  location: null | ShopLocationRecord;
+  occupancyStatus: InventoryOccupancyStatus;
+  allowedManualTransitions: Array<string>;
+  currentRental: null | InventoryCurrentRentalSummary;
+};
+
+export type InventoryPage = PaginatedResult<InventoryPageItem>;
 
 export type InventoryDetails =
   | null
@@ -103,6 +116,9 @@ export type InventoryDetails =
         rentalRates: Array<RentalRateRecord>;
       };
       location: null | ShopLocationRecord;
+      occupancyStatus: InventoryOccupancyStatus;
+      allowedManualTransitions: Array<string>;
+      currentRental: null | InventoryCurrentRentalSummary;
       allocations: Array<
         RentalItemAllocationRecord & {
           order: {
@@ -121,3 +137,4 @@ export type InventoryDetails =
     });
 
 export type FindAvailableInventoryResult = Array<InventoryItemRecord>;
+

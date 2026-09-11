@@ -219,15 +219,18 @@ export class CatalogService {
   async updateInventoryStatus(user: CurrentUser, id: string, input: UpdateInventoryStatusInput) {
     const allowed: ReadonlySet<string> = new Set(Object.values(INVENTORY_STATUS));
     if (!allowed.has(input.status)) throw new BadRequestException('Unsupported inventory status');
-    const item = await this.repository.updateInventoryStatus({
-      shopId: user.shopId,
-      id,
-      status: input.status,
-      condition: input.condition,
-      reason: input.reason,
-      notes: input.notes,
-      changedBy: user.memberId,
-    });
+    const item = await this.withInvariant(() =>
+      this.repository.updateInventoryStatus({
+        shopId: user.shopId,
+        id,
+        status: input.status,
+        expectedFromStatus: input.expectedFromStatus,
+        condition: input.condition,
+        reason: input.reason,
+        notes: input.notes,
+        changedBy: user.memberId,
+      }),
+    );
     if (!item) throw new NotFoundException('Inventory item not found');
     await this.audit.log({
       shopId: user.shopId,
@@ -239,6 +242,23 @@ export class CatalogService {
       newValues: { status: input.status, reason: input.reason },
     });
     return item;
+  }
+
+  async archiveInventoryItem(user: CurrentUser, id: string, reason?: string) {
+    const archived = await this.withInvariant(() =>
+      this.repository.archiveInventoryItem(user.shopId, id, reason, user.memberId),
+    );
+    if (!archived) throw new NotFoundException('Inventory item not found');
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'ARCHIVE',
+      entityType: 'inventory_item',
+      entityId: id,
+      newValues: { reason },
+    });
+    return { success: true as const };
   }
 
   availability(user: CurrentUser, query: AvailabilityQuery) {
@@ -257,9 +277,14 @@ export class CatalogService {
       return await action();
     } catch (error) {
       if (error instanceof CatalogInvariantError) {
+        const msg = error.message.toLowerCase();
         if (
-          error.message.toLowerCase().includes('duplicate') ||
-          error.message.toLowerCase().includes('active rental')
+          msg.includes('duplicate') ||
+          msg.includes('đã tồn tại') ||
+          msg.includes('active rental') ||
+          msg.includes('lịch đặt') ||
+          msg.includes('đang được thuê') ||
+          msg.includes('thay đổi')
         ) {
           throw new ConflictException(error.message);
         }

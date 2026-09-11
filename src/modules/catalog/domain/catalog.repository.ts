@@ -60,6 +60,12 @@ export interface CatalogRepository {
   removeProductMedia(shopId: string, productId: string, mediaId: string): Promise<boolean>;
   addInventoryItem(shopId: string, input: AddInventoryData): Promise<AddInventoryItemResult>;
   updateInventoryStatus(input: CatalogUpdateInventoryStatusData): Promise<AddInventoryItemResult>;
+  archiveInventoryItem(
+    shopId: string,
+    id: string,
+    reason?: string,
+    changedBy?: string,
+  ): Promise<boolean>;
   listInventory(input: CatalogListInventoryCriteria): Promise<InventoryPage>;
   findInventoryItem(shopId: string, id: string): Promise<InventoryDetails>;
   findAvailableInventory(
@@ -103,11 +109,12 @@ export interface UpdateProductData {
 export interface AddInventoryData {
   variantId: string;
   locationId?: string;
-  sku: string;
+  sku?: string;
   barcode?: string;
   purchasePrice?: number;
   purchaseDate?: Date;
   notes?: string;
+  changedBy?: string;
 }
 
 export interface ProductMediaData {
@@ -130,6 +137,7 @@ export interface CatalogUpdateInventoryStatusData {
   shopId: string;
   id: string;
   status: InventoryStatus;
+  expectedFromStatus?: InventoryStatus;
   condition?: string;
   reason?: string;
   notes?: string;
@@ -139,6 +147,8 @@ export interface CatalogUpdateInventoryStatusData {
 export interface CatalogListInventoryCriteria {
   shopId: string;
   variantId?: string;
+  productId?: string;
+  categoryId?: string;
   status?: string;
   search?: string;
   page: number;

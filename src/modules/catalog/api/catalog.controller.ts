@@ -27,6 +27,7 @@ import {
   ProductMediaReqDto,
   ProductPageResDto,
   ProductResDto,
+  ArchiveInventoryItemReqDto,
   UpdateInventoryStatusReqDto,
   UpdateProductReqDto,
   UpsertRentalRateReqDto,
@@ -198,6 +199,18 @@ export class CatalogController {
     @Body() body: UpdateInventoryStatusReqDto,
   ) {
     return this.service.updateInventoryStatus(user, id, toUpdateInventoryStatusInput(body));
+  }
+
+  @Delete('inventory/:id')
+  @Permissions(PERMISSIONS.INVENTORY_MANAGE)
+  @ApiOperation({ summary: 'Archive/retire physical inventory item safely' })
+  @ApiOkResponse({ schema: { properties: { success: { type: 'boolean' } } } })
+  archiveInventoryItem(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body?: ArchiveInventoryItemReqDto,
+  ) {
+    return this.service.archiveInventoryItem(user, id, body?.reason);
   }
 
   @Get('inventory/availability/search')

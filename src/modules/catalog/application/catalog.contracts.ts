@@ -8,7 +8,7 @@ import type {
 export interface AddInventoryInput {
   variantId: string;
   locationId?: string;
-  sku: string;
+  sku?: string;
   barcode?: string;
   purchasePrice?: number;
   purchaseDate?: string;
@@ -54,6 +54,8 @@ export interface CreateSizeInput {
 
 export interface InventoryListQuery extends PaginationParams {
   variantId?: string;
+  productId?: string;
+  categoryId?: string;
   status?: string;
   search?: string;
 }
@@ -66,6 +68,7 @@ export interface ProductListQuery extends PaginationParams {
 
 export interface UpdateInventoryStatusInput {
   status: InventoryStatus;
+  expectedFromStatus?: InventoryStatus;
   condition?: string;
   reason?: string;
   notes?: string;
