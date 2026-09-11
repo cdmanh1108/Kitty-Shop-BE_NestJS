@@ -2,6 +2,94 @@
 
 Hướng dẫn vận hành và chi tiết kỹ thuật của pipeline nhập dữ liệu sản phẩm từ workbook Excel legacy (`Quản lý lịch thuê KITTY.xlsx`) vào hệ thống PostgreSQL (`kitty-be`).
 
+## 0. Hướng dẫn chạy lần đầu từng bước (First-Time Quickstart)
+
+Dành cho Developer hoặc Operator khi clone repo hoặc setup môi trường mới lần đầu:
+
+### Bước 1: Chuẩn bị file Excel
+Copy file workbook thật vào thư mục `kitty-be/private-data/legacy/`:
+```text
+kitty-be/private-data/legacy/Quản lý lịch thuê KITTY.xlsx
+```
+*(Thư mục này đã nằm trong `.gitignore` nên an toàn không sợ commit nhầm lên git).*
+
+### Bước 2: Khởi động database & bootstrap
+Đảm bảo PostgreSQL đang chạy và cơ sở dữ liệu đã có shop `MAIN`:
+```bash
+cd kitty-be
+npm run bootstrap
+```
+
+### Bước 3: Chạy thử kiểm tra (DRY-RUN — Không ghi DB)
+
+**Trên PowerShell (Windows):**
+```powershell
+# Cách 1: Chạy trên 1 dòng (khuyên dùng)
+npm run import:legacy-catalog -- --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" --shop MAIN --dry-run
+
+# Cách 2: Xuống dòng trong PowerShell (dùng dấu backtick `)
+npm run import:legacy-catalog -- `
+  --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" `
+  --shop MAIN `
+  --dry-run
+```
+
+**Trên Bash / Git Bash / Linux:**
+```bash
+npm run import:legacy-catalog -- \
+  --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" \
+  --shop MAIN \
+  --dry-run
+```
+Báo cáo sẽ hiển thị trên terminal:
+- **116** sản phẩm
+- **117** tổng số lượng
+- **0** Fatal errors
+- **Difference = 0**
+
+### Bước 4: Ghi dữ liệu chính thức vào PostgreSQL (APPLY)
+Khi dry-run đã PASS, chạy lệnh apply:
+
+**Trên PowerShell (Windows):**
+```powershell
+# Cách 1: Chạy trên 1 dòng (khuyên dùng)
+npm run import:legacy-catalog -- --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" --shop MAIN --apply
+
+# Cách 2: Xuống dòng trong PowerShell (dùng dấu backtick `)
+npm run import:legacy-catalog -- `
+  --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" `
+  --shop MAIN `
+  --apply
+```
+
+**Trên Bash / Git Bash / Linux:**
+```bash
+npm run import:legacy-catalog -- \
+  --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" \
+  --shop MAIN \
+  --apply
+```
+Database sẽ được tạo:
+- 116 Products
+- 120 Variants
+- 113 Inventory Items
+- 120 Rental Rates
+- 116 Product Media
+- 16 Colors, 13 Categories (tái sử dụng 6 có sẵn + tạo thêm 7)
+
+### Bước 5: Kiểm tra tính bất biến (Idempotency)
+Chạy lại cùng lệnh apply trên một lần nữa trên PowerShell:
+```powershell
+npm run import:legacy-catalog -- --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" --shop MAIN --apply
+```
+Kết quả mong muốn: **0** bản ghi mới được tạo, **116** products unchanged, không bị trùng lặp dữ liệu.
+
+### Bước 6: Xem dữ liệu trực quan
+Mở Prisma Studio để xem dữ liệu trong bảng:
+```bash
+npm run db:studio
+```
+
 ---
 
 ## 1. Vị trí file và Quản lý dữ liệu nhạy cảm
@@ -80,6 +168,13 @@ Workbook chứa các dòng tiêu đề/trống trước bảng dữ liệu chín
 ## 5. Hướng dẫn Chạy CLI
 
 ### 5.1. Chạy Dry-Run (Mặc định — An toàn, không sửa database)
+
+**PowerShell (Windows):**
+```powershell
+npm run import:legacy-catalog -- --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" --shop MAIN --dry-run
+```
+
+**Bash / Git Bash / Linux:**
 ```bash
 npm run import:legacy-catalog -- \
   --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" \
@@ -89,6 +184,13 @@ npm run import:legacy-catalog -- \
 *(Nếu không truyền cờ `--apply`, hệ thống tự động chạy ở chế độ DRY-RUN).*
 
 ### 5.2. Chạy Apply (Ghi dữ liệu vào Database)
+
+**PowerShell (Windows):**
+```powershell
+npm run import:legacy-catalog -- --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" --shop MAIN --apply
+```
+
+**Bash / Git Bash / Linux:**
 ```bash
 npm run import:legacy-catalog -- \
   --file "./private-data/legacy/Quản lý lịch thuê KITTY.xlsx" \

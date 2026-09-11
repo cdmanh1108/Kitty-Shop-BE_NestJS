@@ -70,6 +70,7 @@ npm run db:migrate:dev    # create a migration during development
 npm run db:seed           # idempotent base seed
 npm run db:studio         # Prisma Studio
 npm run openapi:export    # regenerate generated/openapi.json
+npm run import:legacy-catalog -- [options] # import legacy Excel catalog (see docs/LEGACY_CATALOG_IMPORT.md)
 ```
 
 ## Project structure
