@@ -1,9 +1,11 @@
+import type { JsonSerialized } from '@common/types/json';
+import { paginateMeta } from '@common/types/pagination';
+import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
+import { PrismaService } from '@database/prisma/prisma.service';
+import { serializableTransaction } from '@database/prisma/transaction';
 import { Injectable } from '@nestjs/common';
 import { Prisma, type PrismaClient } from '@prisma/client';
-import { PrismaService } from '@database/prisma/prisma.service';
-import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
-import { serializableTransaction } from '@database/prisma/transaction';
-import { paginateMeta } from '@common/dto/pagination.query.dto';
+import type { RentalOrderDetails } from '../domain/rental.models';
 import {
   RentalOverlapError,
   type BookableVariant,
@@ -17,14 +19,28 @@ export class PrismaRentalRepository implements RentalRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async customerExists(shopId: string, customerId: string): Promise<boolean> {
-    return (await this.prisma.customer.count({ where: { id: customerId, shopId, status: 'ACTIVE', archivedAt: null } })) > 0;
+    return (
+      (await this.prisma.customer.count({
+        where: { id: customerId, shopId, status: 'ACTIVE', archivedAt: null },
+      })) > 0
+    );
   }
 
   async locationExists(shopId: string, locationId: string): Promise<boolean> {
-    return (await this.prisma.shopLocation.count({ where: { id: locationId, shopId, isActive: true } })) > 0;
+    return (
+      (await this.prisma.shopLocation.count({
+        where: { id: locationId, shopId, isActive: true },
+      })) > 0
+    );
   }
 
-  async getBookableVariant(input: { shopId: string; variantId: string; durationDays: number; from: Date; until: Date }): Promise<BookableVariant | null> {
+  async getBookableVariant(input: {
+    shopId: string;
+    variantId: string;
+    durationDays: number;
+    from: Date;
+    until: Date;
+  }): Promise<BookableVariant | null> {
     const variant = await this.prisma.productVariant.findFirst({
       where: {
         id: input.variantId,
@@ -34,7 +50,13 @@ export class PrismaRentalRepository implements RentalRepository {
         product: { status: 'ACTIVE', isRentable: true, archivedAt: null },
       },
       include: {
-        product: { include: { rentalRates: { where: { variantId: null, isActive: true, durationDays: input.durationDays } } } },
+        product: {
+          include: {
+            rentalRates: {
+              where: { variantId: null, isActive: true, durationDays: input.durationDays },
+            },
+          },
+        },
         size: true,
         color: true,
         rentalRates: { where: { isActive: true, durationDays: input.durationDays } },
@@ -71,11 +93,14 @@ export class PrismaRentalRepository implements RentalRepository {
     };
   }
 
-  async createOrder(data: CreateRentalOrderData): Promise<unknown> {
+  async createOrder(data: CreateRentalOrderData) {
     try {
       return await serializableTransaction(this.prisma, async (tx) => {
         const rentalSubtotal = data.lines.reduce((sum, line) => sum + line.lineTotal, 0);
-        const explicitChargesTotal = data.charges.reduce((sum, charge) => sum + charge.amount * charge.quantity, 0);
+        const explicitChargesTotal = data.charges.reduce(
+          (sum, charge) => sum + charge.amount * charge.quantity,
+          0,
+        );
         const shippingTotal = data.delivery?.shippingFee ?? 0;
         const chargesTotal = explicitChargesTotal + shippingTotal;
         const depositRequired = data.lines.reduce((sum, line) => sum + line.depositAmount, 0);
@@ -190,7 +215,12 @@ export class PrismaRentalRepository implements RentalRepository {
         }
 
         await tx.rentalOrderStatusHistory.create({
-          data: { shopId: data.shopId, orderId: order.id, toStatus: 'RESERVED', changedBy: data.createdBy },
+          data: {
+            shopId: data.shopId,
+            orderId: order.id,
+            toStatus: 'RESERVED',
+            changedBy: data.createdBy,
+          },
         });
         await tx.outboxEvent.create({
           data: {
@@ -226,7 +256,16 @@ export class PrismaRentalRepository implements RentalRepository {
     }
   }
 
-  async list(input: { shopId: string; page: number; limit: number; search?: string; status?: string; paymentStatus?: string; from?: Date; until?: Date }) {
+  async list(input: {
+    shopId: string;
+    page: number;
+    limit: number;
+    search?: string;
+    status?: string;
+    paymentStatus?: string;
+    from?: Date;
+    until?: Date;
+  }) {
     const where = {
       shopId: input.shopId,
       ...(input.status ? { status: input.status } : {}),
@@ -252,7 +291,14 @@ export class PrismaRentalRepository implements RentalRepository {
         where,
         include: {
           customer: { select: { id: true, fullName: true, phone: true } },
-          items: { select: { id: true, productNameSnapshot: true, variantNameSnapshot: true, quantity: true } },
+          items: {
+            select: {
+              id: true,
+              productNameSnapshot: true,
+              variantNameSnapshot: true,
+              quantity: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (input.page - 1) * input.limit,
@@ -268,7 +314,10 @@ export class PrismaRentalRepository implements RentalRepository {
   }
 
   async getStatus(shopId: string, id: string): Promise<string | null> {
-    const order = await this.prisma.rentalOrder.findFirst({ where: { id, shopId }, select: { status: true } });
+    const order = await this.prisma.rentalOrder.findFirst({
+      where: { id, shopId },
+      select: { status: true },
+    });
     return order?.status ?? null;
   }
 
@@ -279,9 +328,18 @@ export class PrismaRentalRepository implements RentalRepository {
     });
   }
 
-  async transition(input: { shopId: string; orderId: string; fromStatuses: string[]; toStatus: string; changedBy: string; reason?: string }) {
+  async transition(input: {
+    shopId: string;
+    orderId: string;
+    fromStatuses: string[];
+    toStatus: string;
+    changedBy: string;
+    reason?: string;
+  }) {
     return this.prisma.$transaction(async (tx) => {
-      const order = await tx.rentalOrder.findFirst({ where: { id: input.orderId, shopId: input.shopId } });
+      const order = await tx.rentalOrder.findFirst({
+        where: { id: input.orderId, shopId: input.shopId },
+      });
       if (!order || !input.fromStatuses.includes(order.status)) return null;
       const now = new Date();
       const updateData: Prisma.RentalOrderUpdateManyMutationInput = {
@@ -308,29 +366,93 @@ export class PrismaRentalRepository implements RentalRepository {
       });
 
       if (input.toStatus === 'CONFIRMED') {
-        await tx.rentalItemAllocation.updateMany({ where: { orderId: order.id, status: 'HELD' }, data: { status: 'CONFIRMED' } });
-        await tx.rentalOrderItem.updateMany({ where: { orderId: order.id }, data: { status: 'CONFIRMED' } });
+        await tx.rentalItemAllocation.updateMany({
+          where: { orderId: order.id, status: 'HELD' },
+          data: { status: 'CONFIRMED' },
+        });
+        await tx.rentalOrderItem.updateMany({
+          where: { orderId: order.id },
+          data: { status: 'CONFIRMED' },
+        });
       } else if (input.toStatus === 'ACTIVE') {
-        await tx.rentalItemAllocation.updateMany({ where: { orderId: order.id, status: { in: ['HELD', 'CONFIRMED'] } }, data: { status: 'ACTIVE' } });
-        await tx.rentalOrderItem.updateMany({ where: { orderId: order.id }, data: { status: 'ACTIVE' } });
-        const allocations = await tx.rentalItemAllocation.findMany({ where: { orderId: order.id }, select: { inventoryItemId: true } });
+        await tx.rentalItemAllocation.updateMany({
+          where: { orderId: order.id, status: { in: ['HELD', 'CONFIRMED'] } },
+          data: { status: 'ACTIVE' },
+        });
+        await tx.rentalOrderItem.updateMany({
+          where: { orderId: order.id },
+          data: { status: 'ACTIVE' },
+        });
+        const allocations = await tx.rentalItemAllocation.findMany({
+          where: { orderId: order.id },
+          select: { inventoryItemId: true },
+        });
         for (const allocation of allocations) {
-          const inventory = await tx.inventoryItem.findUniqueOrThrow({ where: { id: allocation.inventoryItemId } });
-          await tx.inventoryItem.update({ where: { id: inventory.id }, data: { currentStatus: 'RENTED', lastRentedAt: now } });
-          await tx.inventoryStatusHistory.create({ data: { shopId: input.shopId, inventoryItemId: inventory.id, fromStatus: inventory.currentStatus, toStatus: 'RENTED', orderId: order.id, changedBy: input.changedBy, reason: 'ORDER_STARTED' } });
+          const inventory = await tx.inventoryItem.findUniqueOrThrow({
+            where: { id: allocation.inventoryItemId },
+          });
+          await tx.inventoryItem.update({
+            where: { id: inventory.id },
+            data: { currentStatus: 'RENTED', lastRentedAt: now },
+          });
+          await tx.inventoryStatusHistory.create({
+            data: {
+              shopId: input.shopId,
+              inventoryItemId: inventory.id,
+              fromStatus: inventory.currentStatus,
+              toStatus: 'RENTED',
+              orderId: order.id,
+              changedBy: input.changedBy,
+              reason: 'ORDER_STARTED',
+            },
+          });
         }
       } else if (input.toStatus === 'COMPLETED') {
-        await tx.rentalItemAllocation.updateMany({ where: { orderId: order.id, status: 'ACTIVE' }, data: { status: 'RETURNED', releasedAt: now } });
-        await tx.rentalOrderItem.updateMany({ where: { orderId: order.id }, data: { status: 'RETURNED' } });
-        const allocations = await tx.rentalItemAllocation.findMany({ where: { orderId: order.id }, select: { inventoryItemId: true } });
+        await tx.rentalItemAllocation.updateMany({
+          where: { orderId: order.id, status: 'ACTIVE' },
+          data: { status: 'RETURNED', releasedAt: now },
+        });
+        await tx.rentalOrderItem.updateMany({
+          where: { orderId: order.id },
+          data: { status: 'RETURNED' },
+        });
+        const allocations = await tx.rentalItemAllocation.findMany({
+          where: { orderId: order.id },
+          select: { inventoryItemId: true },
+        });
         for (const allocation of allocations) {
-          const inventory = await tx.inventoryItem.findUniqueOrThrow({ where: { id: allocation.inventoryItemId } });
-          await tx.inventoryItem.update({ where: { id: inventory.id }, data: { currentStatus: 'CLEANING', totalRentalCount: { increment: 1 }, lastRentedAt: now } });
-          await tx.inventoryStatusHistory.create({ data: { shopId: input.shopId, inventoryItemId: inventory.id, fromStatus: inventory.currentStatus, toStatus: 'CLEANING', orderId: order.id, changedBy: input.changedBy, reason: 'ORDER_RETURNED' } });
+          const inventory = await tx.inventoryItem.findUniqueOrThrow({
+            where: { id: allocation.inventoryItemId },
+          });
+          await tx.inventoryItem.update({
+            where: { id: inventory.id },
+            data: {
+              currentStatus: 'CLEANING',
+              totalRentalCount: { increment: 1 },
+              lastRentedAt: now,
+            },
+          });
+          await tx.inventoryStatusHistory.create({
+            data: {
+              shopId: input.shopId,
+              inventoryItemId: inventory.id,
+              fromStatus: inventory.currentStatus,
+              toStatus: 'CLEANING',
+              orderId: order.id,
+              changedBy: input.changedBy,
+              reason: 'ORDER_RETURNED',
+            },
+          });
         }
       } else if (input.toStatus === 'CANCELLED') {
-        await tx.rentalItemAllocation.updateMany({ where: { orderId: order.id, status: { in: ['HELD', 'CONFIRMED'] } }, data: { status: 'CANCELLED', releasedAt: now } });
-        await tx.rentalOrderItem.updateMany({ where: { orderId: order.id }, data: { status: 'CANCELLED' } });
+        await tx.rentalItemAllocation.updateMany({
+          where: { orderId: order.id, status: { in: ['HELD', 'CONFIRMED'] } },
+          data: { status: 'CANCELLED', releasedAt: now },
+        });
+        await tx.rentalOrderItem.updateMany({
+          where: { orderId: order.id },
+          data: { status: 'CANCELLED' },
+        });
       }
 
       await tx.outboxEvent.create({
@@ -346,22 +468,50 @@ export class PrismaRentalRepository implements RentalRepository {
     });
   }
 
-  async reschedule(input: { shopId: string; orderId: string; from: Date; until: Date; changedBy: string }) {
+  async reschedule(input: {
+    shopId: string;
+    orderId: string;
+    from: Date;
+    until: Date;
+    changedBy: string;
+  }) {
     try {
       return await serializableTransaction(this.prisma, async (tx) => {
-        const order = await tx.rentalOrder.findFirst({ where: { id: input.orderId, shopId: input.shopId } });
+        const order = await tx.rentalOrder.findFirst({
+          where: { id: input.orderId, shopId: input.shopId },
+        });
         if (!order || !['RESERVED', 'CONFIRMED'].includes(order.status)) return null;
         const rescheduled = await tx.rentalOrder.updateMany({
           where: { id: order.id, shopId: input.shopId, status: order.status },
           data: { rentalStartAt: input.from, rentalEndAt: input.until, updatedBy: input.changedBy },
         });
         if (rescheduled.count !== 1) return null;
-        await tx.rentalOrderItem.updateMany({ where: { orderId: order.id }, data: { rentalStartAt: input.from, rentalEndAt: input.until } });
-        const allocations = await tx.rentalItemAllocation.findMany({ where: { orderId: order.id, status: { in: ['HELD', 'CONFIRMED'] } } });
+        await tx.rentalOrderItem.updateMany({
+          where: { orderId: order.id },
+          data: { rentalStartAt: input.from, rentalEndAt: input.until },
+        });
+        const allocations = await tx.rentalItemAllocation.findMany({
+          where: { orderId: order.id, status: { in: ['HELD', 'CONFIRMED'] } },
+        });
         for (const allocation of allocations) {
-          await tx.rentalItemAllocation.update({ where: { id: allocation.id }, data: { reservedFrom: input.from, reservedUntil: input.until } });
+          await tx.rentalItemAllocation.update({
+            where: { id: allocation.id },
+            data: { reservedFrom: input.from, reservedUntil: input.until },
+          });
         }
-        await tx.outboxEvent.create({ data: { shopId: input.shopId, eventType: 'RENTAL_ORDER_RESCHEDULED', aggregateType: 'rental_order', aggregateId: order.id, payload: { orderId: order.id, rentalStartAt: input.from.toISOString(), rentalEndAt: input.until.toISOString() } } });
+        await tx.outboxEvent.create({
+          data: {
+            shopId: input.shopId,
+            eventType: 'RENTAL_ORDER_RESCHEDULED',
+            aggregateType: 'rental_order',
+            aggregateId: order.id,
+            payload: {
+              orderId: order.id,
+              rentalStartAt: input.from.toISOString(),
+              rentalEndAt: input.until.toISOString(),
+            },
+          },
+        });
         return this.getWithTx(tx, input.shopId, order.id);
       });
     } catch (error) {
@@ -370,43 +520,89 @@ export class PrismaRentalRepository implements RentalRepository {
     }
   }
 
-  async addCharge(input: { shopId: string; orderId: string; chargeType: string; description?: string; amount: number; quantity: number; createdBy: string }) {
+  async addCharge(input: {
+    shopId: string;
+    orderId: string;
+    chargeType: string;
+    description?: string;
+    amount: number;
+    quantity: number;
+    createdBy: string;
+  }) {
     return this.prisma.$transaction(async (tx) => {
-      const order = await tx.rentalOrder.findFirst({ where: { id: input.orderId, shopId: input.shopId } });
+      const order = await tx.rentalOrder.findFirst({
+        where: { id: input.orderId, shopId: input.shopId },
+      });
       if (!order) return null;
-      await tx.rentalOrderCharge.create({ data: { shopId: input.shopId, orderId: input.orderId, chargeType: input.chargeType, description: input.description, amount: input.amount, quantity: input.quantity, createdBy: input.createdBy } });
+      await tx.rentalOrderCharge.create({
+        data: {
+          shopId: input.shopId,
+          orderId: input.orderId,
+          chargeType: input.chargeType,
+          description: input.description,
+          amount: input.amount,
+          quantity: input.quantity,
+          createdBy: input.createdBy,
+        },
+      });
       const increment = input.amount * input.quantity;
-      await tx.rentalOrder.update({ where: { id: input.orderId }, data: { chargesTotal: { increment }, grandTotal: { increment }, updatedBy: input.createdBy } });
+      await tx.rentalOrder.update({
+        where: { id: input.orderId },
+        data: {
+          chargesTotal: { increment },
+          grandTotal: { increment },
+          updatedBy: input.createdBy,
+        },
+      });
       await recomputeOrderPaymentState(tx, input.orderId);
       return this.getWithTx(tx, input.shopId, input.orderId);
     });
   }
 
-  async claimIdempotency(input: { shopId: string; scope: string; key: string; requestHash: string; expiresAt: Date }): Promise<IdempotencyClaim> {
+  async claimIdempotency(input: {
+    shopId: string;
+    scope: string;
+    key: string;
+    requestHash: string;
+    expiresAt: Date;
+  }): Promise<IdempotencyClaim> {
     await this.prisma.idempotencyRecord.deleteMany({
-      where: { shopId: input.shopId, scope: input.scope, key: input.key, expiresAt: { lte: new Date() } },
+      where: {
+        shopId: input.shopId,
+        scope: input.scope,
+        key: input.key,
+        expiresAt: { lte: new Date() },
+      },
     });
 
     try {
       await this.prisma.idempotencyRecord.create({ data: input });
       return { state: 'CLAIMED' as const };
     } catch (error) {
-      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
+        throw error;
       const existing = await this.prisma.idempotencyRecord.findUnique({
         where: { shopId_scope_key: { shopId: input.shopId, scope: input.scope, key: input.key } },
         select: { requestHash: true, responseBody: true, completedAt: true },
       });
       if (!existing) return this.claimIdempotency(input);
       if (existing.requestHash !== input.requestHash) return { state: 'HASH_MISMATCH' as const };
-      if (existing.completedAt) return { state: 'COMPLETED' as const, responseBody: existing.responseBody };
+      if (existing.completedAt)
+        return {
+          state: 'COMPLETED' as const,
+          // This scope persists only JSON.stringify(getWithTx(...)) in createOrder.
+          // The stored JSON is the serialized read model, not a live Prisma record.
+          responseBody: existing.responseBody as JsonSerialized<RentalOrderDetails>,
+        };
       return { state: 'IN_PROGRESS' as const };
     }
   }
 
   async releaseIdempotency(shopId: string, scope: string, key: string): Promise<void> {
-    await this.prisma.idempotencyRecord.deleteMany({ where: { shopId, scope, key, completedAt: null } });
+    await this.prisma.idempotencyRecord.deleteMany({
+      where: { shopId, scope, key, completedAt: null },
+    });
   }
-
 
   private getWithTx(tx: Prisma.TransactionClient | PrismaClient, shopId: string, id: string) {
     return tx.rentalOrder.findFirst({
@@ -425,6 +621,9 @@ export class PrismaRentalRepository implements RentalRepository {
 
   private isOverlapError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
-    return message.includes('rental_item_no_overlap') || message.toLowerCase().includes('exclusion constraint');
+    return (
+      message.includes('rental_item_no_overlap') ||
+      message.toLowerCase().includes('exclusion constraint')
+    );
   }
 }

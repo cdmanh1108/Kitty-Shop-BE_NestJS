@@ -1,4 +1,5 @@
-import type { PaginatedResult } from '@common/dto/pagination.query.dto';
+import type { JsonSerialized } from '@common/types/json';
+import type { RentalOrderDetails, RentalOrderPage } from './rental.models';
 
 export class RentalOverlapError extends Error {
   constructor() {
@@ -18,10 +19,9 @@ export interface BookableVariant {
   availableInventory: Array<{ id: string; sku: string }>;
 }
 
-export interface IdempotencyClaim {
-  state: 'CLAIMED' | 'IN_PROGRESS' | 'COMPLETED' | 'HASH_MISMATCH';
-  responseBody?: unknown;
-}
+export type IdempotencyClaim =
+  | { state: 'CLAIMED' | 'IN_PROGRESS' | 'HASH_MISMATCH' }
+  | { state: 'COMPLETED'; responseBody: JsonSerialized<RentalOrderDetails> };
 
 export interface CreateRentalOrderData {
   orderNumber: string;
@@ -44,7 +44,7 @@ export interface CreateRentalOrderData {
     unitRentalPrice: number;
     depositAmount: number;
     lineTotal: number;
-    pricingSnapshot: object;
+    pricingSnapshot: { durationDays: number; unitRentalPrice: number; depositPerItem: number };
     inventory: Array<{ id: string; sku: string }>;
   }>;
   charges: Array<{ chargeType: string; description?: string; amount: number; quantity: number }>;
@@ -68,15 +68,72 @@ export const RENTAL_REPOSITORY = Symbol('RENTAL_REPOSITORY');
 export interface RentalRepository {
   customerExists(shopId: string, customerId: string): Promise<boolean>;
   locationExists(shopId: string, locationId: string): Promise<boolean>;
-  getBookableVariant(input: { shopId: string; variantId: string; durationDays: number; from: Date; until: Date }): Promise<BookableVariant | null>;
-  createOrder(data: CreateRentalOrderData): Promise<unknown>;
-  list(input: { shopId: string; page: number; limit: number; search?: string; status?: string; paymentStatus?: string; from?: Date; until?: Date }): Promise<PaginatedResult<unknown>>;
-  get(shopId: string, id: string): Promise<unknown | null>;
+  getBookableVariant(input: RentalGetBookableVariantData): Promise<BookableVariant | null>;
+  createOrder(data: CreateRentalOrderData): Promise<RentalOrderDetails>;
+  list(input: RentalListCriteria): Promise<RentalOrderPage>;
+  get(shopId: string, id: string): Promise<RentalOrderDetails>;
   getStatus(shopId: string, id: string): Promise<string | null>;
-  getSchedule(shopId: string, id: string): Promise<{ status: string; rentalStartAt: Date; rentalEndAt: Date } | null>;
-  transition(input: { shopId: string; orderId: string; fromStatuses: string[]; toStatus: string; changedBy: string; reason?: string }): Promise<unknown | null>;
-  reschedule(input: { shopId: string; orderId: string; from: Date; until: Date; changedBy: string }): Promise<unknown | null>;
-  addCharge(input: { shopId: string; orderId: string; chargeType: string; description?: string; amount: number; quantity: number; createdBy: string }): Promise<unknown | null>;
-  claimIdempotency(input: { shopId: string; scope: string; key: string; requestHash: string; expiresAt: Date }): Promise<IdempotencyClaim>;
+  getSchedule(
+    shopId: string,
+    id: string,
+  ): Promise<{ status: string; rentalStartAt: Date; rentalEndAt: Date } | null>;
+  transition(input: RentalTransitionData): Promise<RentalOrderDetails>;
+  reschedule(input: RentalRescheduleData): Promise<RentalOrderDetails>;
+  addCharge(input: RentalAddChargeData): Promise<RentalOrderDetails>;
+  claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
   releaseIdempotency(shopId: string, scope: string, key: string): Promise<void>;
+}
+
+export interface RentalGetBookableVariantData {
+  shopId: string;
+  variantId: string;
+  durationDays: number;
+  from: Date;
+  until: Date;
+}
+
+export interface RentalListCriteria {
+  shopId: string;
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+  paymentStatus?: string;
+  from?: Date;
+  until?: Date;
+}
+
+export interface RentalTransitionData {
+  shopId: string;
+  orderId: string;
+  fromStatuses: string[];
+  toStatus: string;
+  changedBy: string;
+  reason?: string;
+}
+
+export interface RentalRescheduleData {
+  shopId: string;
+  orderId: string;
+  from: Date;
+  until: Date;
+  changedBy: string;
+}
+
+export interface RentalAddChargeData {
+  shopId: string;
+  orderId: string;
+  chargeType: string;
+  description?: string;
+  amount: number;
+  quantity: number;
+  createdBy: string;
+}
+
+export interface RentalClaimIdempotencyData {
+  shopId: string;
+  scope: string;
+  key: string;
+  requestHash: string;
+  expiresAt: Date;
 }

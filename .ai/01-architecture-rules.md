@@ -18,6 +18,8 @@ Place a transaction around the full consistency boundary. Order creation include
 
 Transport DTOs live under `api/`. Validate every externally controlled field. Use `class-transformer` only for deliberate conversion. Never accept arbitrary Prisma `data` objects from clients.
 
+Application/domain must not import API DTOs. Controllers call API-local mappers that return plain application inputs in `application/*.contracts.ts`. Repository ports expose explicit criteria/data and read models; never use `unknown` for public results. Generic pagination lives in `common/types/pagination.ts`, independently of validation/Swagger DTOs. See `docs/APPLICATION_CONTRACTS.md` for JSON/decimal compatibility boundaries.
+
 ## Status changes
 
 Validate transition rules in the application layer and update related aggregates/history atomically in infrastructure. Avoid generic “setStatus(status: string)” endpoints for important lifecycles.

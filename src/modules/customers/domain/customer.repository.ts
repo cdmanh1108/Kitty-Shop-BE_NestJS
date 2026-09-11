@@ -1,40 +1,80 @@
-import type { PaginatedResult } from '@common/dto/pagination.query.dto';
-
-export interface CustomerRecord {
-  id: string;
-  customerCode: string;
-  fullName: string;
-  phone: string;
-  normalizedPhone: string;
-  email: string | null;
-  facebook: string | null;
-  zalo: string | null;
-  birthday: Date | null;
-  gender: string | null;
-  customerType: string;
-  status: string;
-  source: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import type { CustomerNoteRecord } from '@modules/customers/domain/customers.records';
+import type { PaginatedResult } from '@common/types/pagination';
+import type { CustomerAddressResult, CustomerDetails } from './customer.models';
+import type { CustomerRecord } from './customers.records';
 
 export const CUSTOMER_REPOSITORY = Symbol('CUSTOMER_REPOSITORY');
 
 export interface CustomerRepository {
-  list(input: {
-    shopId: string;
-    page: number;
-    limit: number;
-    search?: string;
-    status?: string;
-    customerType?: string;
-  }): Promise<PaginatedResult<CustomerRecord>>;
-  findById(shopId: string, id: string): Promise<unknown | null>;
-  create(shopId: string, input: Omit<CustomerRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<CustomerRecord>;
-  update(shopId: string, id: string, input: Partial<Omit<CustomerRecord, 'id' | 'customerCode' | 'createdAt' | 'updatedAt'>>): Promise<CustomerRecord | null>;
-  addNote(input: { shopId: string; customerId: string; content: string; isPinned: boolean; createdBy: string }): Promise<unknown>;
-  addAddress(input: { shopId: string; customerId: string; label?: string; recipientName?: string; phone?: string; addressLine: string; ward?: string; district?: string; city?: string; province?: string; isDefault: boolean }): Promise<unknown | null>;
-  updateAddress(input: { shopId: string; customerId: string; addressId: string; data: { label?: string; recipientName?: string; phone?: string; addressLine?: string; ward?: string; district?: string; city?: string; province?: string; isDefault?: boolean } }): Promise<unknown | null>;
+  list(input: CustomerListCriteria): Promise<PaginatedResult<CustomerRecord>>;
+  findById(shopId: string, id: string): Promise<CustomerDetails>;
+  create(
+    shopId: string,
+    input: Omit<
+      CustomerRecord,
+      'id' | 'createdAt' | 'updatedAt' | 'shopId' | 'metadata' | 'archivedAt'
+    >,
+  ): Promise<CustomerRecord>;
+  update(
+    shopId: string,
+    id: string,
+    input: Partial<
+      Omit<
+        CustomerRecord,
+        'id' | 'customerCode' | 'createdAt' | 'updatedAt' | 'shopId' | 'metadata' | 'archivedAt'
+      >
+    >,
+  ): Promise<CustomerRecord | null>;
+  addNote(input: CustomerAddNoteData): Promise<CustomerNoteRecord>;
+  addAddress(input: CustomerAddAddressData): Promise<CustomerAddressResult>;
+  updateAddress(input: CustomerUpdateAddressData): Promise<CustomerAddressResult>;
   deleteAddress(shopId: string, customerId: string, addressId: string): Promise<boolean>;
+}
 
+export interface CustomerListCriteria {
+  shopId: string;
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+  customerType?: string;
+}
+
+export interface CustomerAddNoteData {
+  shopId: string;
+  customerId: string;
+  content: string;
+  isPinned: boolean;
+  createdBy: string;
+}
+
+export interface CustomerAddAddressData {
+  shopId: string;
+  customerId: string;
+  label?: string;
+  recipientName?: string;
+  phone?: string;
+  addressLine: string;
+  ward?: string;
+  district?: string;
+  city?: string;
+  province?: string;
+  isDefault: boolean;
+}
+
+export interface CustomerUpdateAddressData {
+  shopId: string;
+  customerId: string;
+  addressId: string;
+  data: {
+    label?: string;
+    recipientName?: string;
+    phone?: string;
+    addressLine?: string;
+    ward?: string;
+    district?: string;
+    city?: string;
+    province?: string;
+    isDefault?: boolean;
+  };
 }

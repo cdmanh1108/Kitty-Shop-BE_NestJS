@@ -1,7 +1,7 @@
+import { paginateMeta } from '@common/types/pagination';
+import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { PrismaService } from '@database/prisma/prisma.service';
-import { paginateMeta } from '@common/dto/pagination.query.dto';
 import type { AuditRepository, CreateAuditLogData } from '../domain/audit.repository';
 
 @Injectable()
@@ -18,7 +18,13 @@ export class PrismaAuditRepository implements AuditRepository {
     });
   }
 
-  async list(input: { shopId: string; page: number; limit: number; entityType?: string; entityId?: string }) {
+  async list(input: {
+    shopId: string;
+    page: number;
+    limit: number;
+    entityType?: string;
+    entityId?: string;
+  }) {
     const where = {
       shopId: input.shopId,
       ...(input.entityType ? { entityType: input.entityType } : {}),

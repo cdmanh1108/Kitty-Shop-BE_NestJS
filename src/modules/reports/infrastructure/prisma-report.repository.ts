@@ -1,6 +1,11 @@
+import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '@database/prisma/prisma.service';
+import type {
+  CustomerPerformanceRow,
+  ProductPerformanceRow,
+  RevenueReportRow,
+} from '../domain/report.models';
 import type { ReportRepository } from '../domain/report.repository';
 
 @Injectable()
@@ -8,12 +13,15 @@ export class PrismaReportRepository implements ReportRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async shopTimezone(shopId: string): Promise<string> {
-    const shop = await this.prisma.shop.findUnique({ where: { id: shopId }, select: { timezone: true } });
+    const shop = await this.prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { timezone: true },
+    });
     return shop?.timezone ?? 'Asia/Ho_Chi_Minh';
   }
 
   revenue(input: { shopId: string; from: Date; until: Date; timezone: string }) {
-    return this.prisma.$queryRaw<unknown[]>(Prisma.sql`
+    return this.prisma.$queryRaw<RevenueReportRow[]>(Prisma.sql`
       WITH revenue AS (
         SELECT
           (paid_at AT TIME ZONE ${input.timezone})::date AS day,
@@ -48,7 +56,7 @@ export class PrismaReportRepository implements ReportRepository {
   }
 
   productPerformance(input: { shopId: string; from: Date; until: Date; limit: number }) {
-    return this.prisma.$queryRaw<unknown[]>(Prisma.sql`
+    return this.prisma.$queryRaw<ProductPerformanceRow[]>(Prisma.sql`
       SELECT
         p.id,
         p.code,
@@ -71,7 +79,7 @@ export class PrismaReportRepository implements ReportRepository {
   }
 
   customerPerformance(input: { shopId: string; from: Date; until: Date; limit: number }) {
-    return this.prisma.$queryRaw<unknown[]>(Prisma.sql`
+    return this.prisma.$queryRaw<CustomerPerformanceRow[]>(Prisma.sql`
       SELECT
         c.id,
         c.customer_code AS "customerCode",

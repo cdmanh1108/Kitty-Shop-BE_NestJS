@@ -1,8 +1,8 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
 import { AuditService } from '@modules/audit/application/audit.service';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DELIVERY_REPOSITORY, type DeliveryRepository } from '../domain/delivery.repository';
-import type { CreateDeliveryReqDto, UpdateDeliveryStatusReqDto } from '../api/delivery.dto';
+import type { CreateDeliveryInput, UpdateDeliveryStatusInput } from './delivery.contracts';
 
 @Injectable()
 export class DeliveryService {
@@ -11,9 +11,11 @@ export class DeliveryService {
     private readonly audit: AuditService,
   ) {}
 
-  list(user: CurrentUser, orderId?: string) { return this.repository.list(user.shopId, orderId); }
+  list(user: CurrentUser, orderId?: string) {
+    return this.repository.list(user.shopId, orderId);
+  }
 
-  async create(user: CurrentUser, orderId: string, input: CreateDeliveryReqDto) {
+  async create(user: CurrentUser, orderId: string, input: CreateDeliveryInput) {
     const delivery = await this.repository.create({
       shopId: user.shopId,
       orderId,
@@ -38,12 +40,29 @@ export class DeliveryService {
     return delivery;
   }
 
-  async updateStatus(user: CurrentUser, id: string, input: UpdateDeliveryStatusReqDto) {
-    const allowed = ['PENDING', 'READY', 'PICKED_UP', 'DELIVERING', 'DELIVERED', 'FAILED', 'CANCELLED'];
-    if (!allowed.includes(input.status)) throw new BadRequestException('Unsupported delivery status');
+  async updateStatus(user: CurrentUser, id: string, input: UpdateDeliveryStatusInput) {
+    const allowed = [
+      'PENDING',
+      'READY',
+      'PICKED_UP',
+      'DELIVERING',
+      'DELIVERED',
+      'FAILED',
+      'CANCELLED',
+    ];
+    if (!allowed.includes(input.status))
+      throw new BadRequestException('Unsupported delivery status');
     const delivery = await this.repository.updateStatus({ shopId: user.shopId, id, ...input });
     if (!delivery) throw new NotFoundException('Delivery job not found');
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'STATUS_CHANGE', entityType: 'delivery_job', entityId: id, newValues: { status: input.status } });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'STATUS_CHANGE',
+      entityType: 'delivery_job',
+      entityId: id,
+      newValues: { status: input.status },
+    });
     return delivery;
   }
 }

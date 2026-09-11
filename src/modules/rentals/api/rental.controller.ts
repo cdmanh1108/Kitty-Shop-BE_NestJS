@@ -1,9 +1,16 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
-import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiHeader,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { RentalService } from '../application/rental.service';
 import {
   AddRentalChargeReqDto,
@@ -14,6 +21,13 @@ import {
   RescheduleRentalReqDto,
   TransitionRentalReqDto,
 } from './rental.dto';
+import {
+  toAddRentalChargeInput,
+  toCreateRentalOrderInput,
+  toRentalListQuery,
+  toRescheduleRentalInput,
+  toTransitionRentalInput,
+} from './rental.mapper';
 
 @ApiTags('Rental Orders')
 @ApiBearerAuth('access-token')
@@ -26,7 +40,7 @@ export class RentalController {
   @ApiOperation({ summary: 'List/search orders; use from/until for calendar overlap queries' })
   @ApiOkResponse({ type: RentalOrderPageResDto })
   list(@CurrentUser() user: CurrentUserType, @Query() query: RentalListQueryDto) {
-    return this.service.list(user, query);
+    return this.service.list(user, toRentalListQuery(query));
   }
 
   @Get(':id')
@@ -38,7 +52,11 @@ export class RentalController {
 
   @Post()
   @Permissions(PERMISSIONS.RENTALS_CREATE)
-  @ApiHeader({ name: 'Idempotency-Key', required: false, description: 'Recommended for retries from admin/FE.' })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    description: 'Recommended for retries from admin/FE.',
+  })
   @ApiOperation({ summary: 'Create order + price snapshots + physical allocations atomically' })
   @ApiCreatedResponse({ type: RentalOrderResDto })
   create(
@@ -46,50 +64,74 @@ export class RentalController {
     @Body() body: CreateRentalOrderReqDto,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.service.create(user, body, idempotencyKey);
+    return this.service.create(user, toCreateRentalOrderInput(body), idempotencyKey);
   }
 
   @Patch(':id/schedule')
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
   @ApiOperation({ summary: 'Reschedule without changing rental duration; DB rechecks overlap' })
   @ApiOkResponse({ type: RentalOrderResDto })
-  reschedule(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Body() body: RescheduleRentalReqDto) {
-    return this.service.reschedule(user, id, body);
+  reschedule(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: RescheduleRentalReqDto,
+  ) {
+    return this.service.reschedule(user, id, toRescheduleRentalInput(body));
   }
 
   @Post(':id/confirm')
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
   @ApiOkResponse({ type: RentalOrderResDto })
-  confirm(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Body() body: TransitionRentalReqDto) {
-    return this.service.confirm(user, id, body);
+  confirm(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: TransitionRentalReqDto,
+  ) {
+    return this.service.confirm(user, id, toTransitionRentalInput(body));
   }
 
   @Post(':id/start')
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
   @ApiOkResponse({ type: RentalOrderResDto })
-  start(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Body() body: TransitionRentalReqDto) {
-    return this.service.start(user, id, body);
+  start(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: TransitionRentalReqDto,
+  ) {
+    return this.service.start(user, id, toTransitionRentalInput(body));
   }
 
   @Post(':id/complete')
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
   @ApiOperation({ summary: 'Complete order; returned inventory moves to CLEANING by default' })
   @ApiOkResponse({ type: RentalOrderResDto })
-  complete(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Body() body: TransitionRentalReqDto) {
-    return this.service.complete(user, id, body);
+  complete(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: TransitionRentalReqDto,
+  ) {
+    return this.service.complete(user, id, toTransitionRentalInput(body));
   }
 
   @Post(':id/cancel')
   @Permissions(PERMISSIONS.RENTALS_CANCEL)
   @ApiOkResponse({ type: RentalOrderResDto })
-  cancel(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Body() body: TransitionRentalReqDto) {
-    return this.service.cancel(user, id, body);
+  cancel(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: TransitionRentalReqDto,
+  ) {
+    return this.service.cancel(user, id, toTransitionRentalInput(body));
   }
 
   @Post(':id/charges')
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
   @ApiOkResponse({ type: RentalOrderResDto })
-  addCharge(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Body() body: AddRentalChargeReqDto) {
-    return this.service.addCharge(user, id, body);
+  addCharge(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: AddRentalChargeReqDto,
+  ) {
+    return this.service.addCharge(user, id, toAddRentalChargeInput(body));
   }
 }

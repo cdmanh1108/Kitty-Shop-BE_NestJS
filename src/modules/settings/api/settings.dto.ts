@@ -1,8 +1,9 @@
+import type { JsonValue } from '@common/types/json';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDefined, IsEmail, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 
 export class UpsertSettingReqDto {
-  @ApiProperty({ description: 'Any JSON-compatible value' }) @IsDefined() value!: unknown;
+  @ApiProperty({ description: 'Any JSON-compatible value' }) @IsDefined() value!: JsonValue;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
 }
 
@@ -13,5 +14,9 @@ export class UpdateShopReqDto {
   @ApiPropertyOptional() @IsString() @IsOptional() logoUrl?: string;
   @ApiPropertyOptional({ example: '#111827' }) @IsString() @IsOptional() primaryColor?: string;
   @ApiPropertyOptional({ example: 'Asia/Ho_Chi_Minh' }) @IsString() @IsOptional() timezone?: string;
-  @ApiPropertyOptional({ example: 'VND' }) @IsString() @Length(3, 3) @IsOptional() currency?: string;
+  @ApiPropertyOptional({ example: 'VND' })
+  @IsString()
+  @Length(3, 3)
+  @IsOptional()
+  currency?: string;
 }

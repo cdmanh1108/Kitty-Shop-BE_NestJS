@@ -28,6 +28,8 @@ Allowed dependency direction:
 
 The current repository is intentionally pragmatic rather than “pure DDD”: Prisma models are returned from infrastructure where a separate domain entity adds no value, while important business boundaries are still protected by ports and use-case services.
 
+Application services consume plain `application/*.contracts.ts` inputs mapped by the API, never transport DTOs. Repository ports expose independent records/read models from `domain/*.records.ts` and `*.models.ts`. Generic pagination is transport-independent. See [Application contracts](APPLICATION_CONTRACTS.md) for ownership, JSON/Decimal compatibility and idempotency replay semantics.
+
 ## Modules
 
 - `auth`: login, access JWT, refresh token rotation/revocation.

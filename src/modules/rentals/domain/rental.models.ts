@@ -1,0 +1,49 @@
+import type { PaginatedResult } from '@common/types/pagination';
+import type { InventoryItemRecord } from '@modules/catalog/domain/catalog.records';
+import type { CustomerRecord } from '@modules/customers/domain/customers.records';
+import type { DeliveryJobRecord } from '@modules/deliveries/domain/deliveries.records';
+import type { PaymentTransactionRecord } from '@modules/finance/domain/finance.records';
+import type {
+  RentalItemAllocationRecord,
+  RentalOrderChargeRecord,
+  RentalOrderItemRecord,
+  RentalOrderRecord,
+  RentalOrderStatusHistoryRecord,
+} from '@modules/rentals/domain/rentals.records';
+import type { ShopLocationRecord } from '@modules/settings/domain/settings.records';
+
+export type RentalOrderDetails =
+  | null
+  | (RentalOrderRecord & {
+      location: null | ShopLocationRecord;
+      statusHistory: Array<RentalOrderStatusHistoryRecord>;
+      customer: CustomerRecord;
+      items: Array<
+        RentalOrderItemRecord & {
+          allocations: Array<
+            RentalItemAllocationRecord & {
+              inventoryItem: InventoryItemRecord;
+            }
+          >;
+        }
+      >;
+      charges: Array<RentalOrderChargeRecord>;
+      payments: Array<PaymentTransactionRecord>;
+      deliveries: Array<DeliveryJobRecord>;
+    });
+
+export type RentalOrderPage = PaginatedResult<
+  RentalOrderRecord & {
+    customer: {
+      id: string;
+      phone: string;
+      fullName: string;
+    };
+    items: Array<{
+      id: string;
+      quantity: number;
+      productNameSnapshot: string;
+      variantNameSnapshot: string;
+    }>;
+  }
+>;

@@ -1,21 +1,35 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
-import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CustomerService } from '../application/customer.service';
 import {
   AddCustomerNoteReqDto,
-  CustomerAddressReqDto,
-  UpdateCustomerAddressReqDto,
   CreateCustomerReqDto,
-  CustomerListQueryDto,
+  CustomerAddressReqDto,
   CustomerDetailResDto,
+  CustomerListQueryDto,
   CustomerPageResDto,
   CustomerResDto,
+  UpdateCustomerAddressReqDto,
   UpdateCustomerReqDto,
 } from './customer.dto';
+import {
+  toAddCustomerNoteInput,
+  toCreateCustomerInput,
+  toCustomerAddressInput,
+  toCustomerListQuery,
+  toUpdateCustomerAddressInput,
+  toUpdateCustomerInput,
+} from './customer.mapper';
 
 @ApiTags('Customers')
 @ApiBearerAuth('access-token')
@@ -28,7 +42,7 @@ export class CustomerController {
   @ApiOperation({ summary: 'Search and list customers' })
   @ApiOkResponse({ type: CustomerPageResDto })
   list(@CurrentUser() user: CurrentUserType, @Query() query: CustomerListQueryDto) {
-    return this.service.list(user, query);
+    return this.service.list(user, toCustomerListQuery(query));
   }
 
   @Get(':id')
@@ -42,7 +56,7 @@ export class CustomerController {
   @Permissions(PERMISSIONS.CUSTOMERS_CREATE)
   @ApiCreatedResponse({ type: CustomerResDto })
   create(@CurrentUser() user: CurrentUserType, @Body() body: CreateCustomerReqDto) {
-    return this.service.create(user, body);
+    return this.service.create(user, toCreateCustomerInput(body));
   }
 
   @Patch(':id')
@@ -53,7 +67,7 @@ export class CustomerController {
     @Param('id') id: string,
     @Body() body: UpdateCustomerReqDto,
   ) {
-    return this.service.update(user, id, body);
+    return this.service.update(user, id, toUpdateCustomerInput(body));
   }
 
   @Post(':id/notes')
@@ -63,24 +77,36 @@ export class CustomerController {
     @Param('id') id: string,
     @Body() body: AddCustomerNoteReqDto,
   ) {
-    return this.service.addNote(user, id, body);
+    return this.service.addNote(user, id, toAddCustomerNoteInput(body));
   }
   @Post(':id/addresses')
   @Permissions(PERMISSIONS.CUSTOMERS_UPDATE)
-  addAddress(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Body() body: CustomerAddressReqDto) {
-    return this.service.addAddress(user, id, body);
+  addAddress(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: CustomerAddressReqDto,
+  ) {
+    return this.service.addAddress(user, id, toCustomerAddressInput(body));
   }
 
   @Patch(':id/addresses/:addressId')
   @Permissions(PERMISSIONS.CUSTOMERS_UPDATE)
-  updateAddress(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Param('addressId') addressId: string, @Body() body: UpdateCustomerAddressReqDto) {
-    return this.service.updateAddress(user, id, addressId, body);
+  updateAddress(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Param('addressId') addressId: string,
+    @Body() body: UpdateCustomerAddressReqDto,
+  ) {
+    return this.service.updateAddress(user, id, addressId, toUpdateCustomerAddressInput(body));
   }
 
   @Delete(':id/addresses/:addressId')
   @Permissions(PERMISSIONS.CUSTOMERS_UPDATE)
-  deleteAddress(@CurrentUser() user: CurrentUserType, @Param('id') id: string, @Param('addressId') addressId: string) {
+  deleteAddress(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Param('addressId') addressId: string,
+  ) {
     return this.service.deleteAddress(user, id, addressId);
   }
-
 }

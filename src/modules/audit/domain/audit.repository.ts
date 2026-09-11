@@ -1,4 +1,6 @@
-import type { PaginatedResult } from '@common/dto/pagination.query.dto';
+import type { JsonValue } from '@common/types/json';
+import type { AuditLogPage } from './audit.models';
+export type AuditSnapshot = { [key: string]: JsonValue | undefined };
 
 export interface CreateAuditLogData {
   shopId: string;
@@ -10,13 +12,21 @@ export interface CreateAuditLogData {
   action: string;
   entityType: string;
   entityId?: string;
-  oldValues?: object;
-  newValues?: object;
+  oldValues?: AuditSnapshot;
+  newValues?: AuditSnapshot;
 }
 
 export const AUDIT_REPOSITORY = Symbol('AUDIT_REPOSITORY');
 
 export interface AuditRepository {
   create(input: CreateAuditLogData): Promise<void>;
-  list(input: { shopId: string; page: number; limit: number; entityType?: string; entityId?: string }): Promise<PaginatedResult<unknown>>;
+  list(input: AuditListCriteria): Promise<AuditLogPage>;
+}
+
+export interface AuditListCriteria {
+  shopId: string;
+  page: number;
+  limit: number;
+  entityType?: string;
+  entityId?: string;
 }

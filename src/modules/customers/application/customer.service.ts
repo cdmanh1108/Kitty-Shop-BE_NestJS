@@ -1,19 +1,16 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
 import type { CurrentUser } from '@common/types/current-user';
 import { AuditService } from '@modules/audit/application/audit.service';
-import {
-  CUSTOMER_REPOSITORY,
-  type CustomerRepository,
-} from '../domain/customer.repository';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
+import { CUSTOMER_REPOSITORY, type CustomerRepository } from '../domain/customer.repository';
 import type {
-  AddCustomerNoteReqDto,
-  CustomerAddressReqDto,
-  UpdateCustomerAddressReqDto,
-  CreateCustomerReqDto,
-  CustomerListQueryDto,
-  UpdateCustomerReqDto,
-} from '../api/customer.dto';
+  AddCustomerNoteInput,
+  CreateCustomerInput,
+  CustomerAddressInput,
+  CustomerListQuery,
+  UpdateCustomerAddressInput,
+  UpdateCustomerInput,
+} from './customer.contracts';
 
 @Injectable()
 export class CustomerService {
@@ -22,7 +19,7 @@ export class CustomerService {
     private readonly audit: AuditService,
   ) {}
 
-  list(user: CurrentUser, query: CustomerListQueryDto) {
+  list(user: CurrentUser, query: CustomerListQuery) {
     return this.repository.list({ shopId: user.shopId, ...query });
   }
 
@@ -32,7 +29,7 @@ export class CustomerService {
     return customer;
   }
 
-  async create(user: CurrentUser, input: CreateCustomerReqDto) {
+  async create(user: CurrentUser, input: CreateCustomerInput) {
     const customer = await this.repository.create(user.shopId, {
       customerCode: `CUS-${Date.now().toString(36).toUpperCase()}-${randomBytes(2).toString('hex').toUpperCase()}`,
       fullName: input.fullName.trim(),
@@ -54,12 +51,16 @@ export class CustomerService {
       action: 'CREATE',
       entityType: 'customer',
       entityId: customer.id,
-      newValues: { customerCode: customer.customerCode, fullName: customer.fullName, phone: customer.phone },
+      newValues: {
+        customerCode: customer.customerCode,
+        fullName: customer.fullName,
+        phone: customer.phone,
+      },
     });
     return customer;
   }
 
-  async update(user: CurrentUser, id: string, input: UpdateCustomerReqDto) {
+  async update(user: CurrentUser, id: string, input: UpdateCustomerInput) {
     const updated = await this.repository.update(user.shopId, id, {
       ...(input.fullName !== undefined ? { fullName: input.fullName.trim() } : {}),
       ...(input.phone !== undefined
@@ -82,12 +83,12 @@ export class CustomerService {
       action: 'UPDATE',
       entityType: 'customer',
       entityId: id,
-      newValues: input,
+      newValues: { ...input },
     });
     return updated;
   }
 
-  async addNote(user: CurrentUser, customerId: string, input: AddCustomerNoteReqDto) {
+  async addNote(user: CurrentUser, customerId: string, input: AddCustomerNoteInput) {
     await this.get(user, customerId);
     return this.repository.addNote({
       shopId: user.shopId,
@@ -97,25 +98,56 @@ export class CustomerService {
       createdBy: user.memberId,
     });
   }
-  async addAddress(user: CurrentUser, customerId: string, input: CustomerAddressReqDto) {
+  async addAddress(user: CurrentUser, customerId: string, input: CustomerAddressInput) {
     const address = await this.repository.addAddress({ shopId: user.shopId, customerId, ...input });
     if (!address) throw new NotFoundException('Customer not found');
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'CREATE', entityType: 'customer_address', newValues: { customerId, ...input } });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'CREATE',
+      entityType: 'customer_address',
+      newValues: { customerId, ...input },
+    });
     return address;
   }
 
-  async updateAddress(user: CurrentUser, customerId: string, addressId: string, input: UpdateCustomerAddressReqDto) {
-    const address = await this.repository.updateAddress({ shopId: user.shopId, customerId, addressId, data: input });
+  async updateAddress(
+    user: CurrentUser,
+    customerId: string,
+    addressId: string,
+    input: UpdateCustomerAddressInput,
+  ) {
+    const address = await this.repository.updateAddress({
+      shopId: user.shopId,
+      customerId,
+      addressId,
+      data: input,
+    });
     if (!address) throw new NotFoundException('Customer address not found');
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'UPDATE', entityType: 'customer_address', entityId: addressId, newValues: input });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'UPDATE',
+      entityType: 'customer_address',
+      entityId: addressId,
+      newValues: { ...input },
+    });
     return address;
   }
 
   async deleteAddress(user: CurrentUser, customerId: string, addressId: string) {
     const deleted = await this.repository.deleteAddress(user.shopId, customerId, addressId);
     if (!deleted) throw new NotFoundException('Customer address not found');
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'DELETE', entityType: 'customer_address', entityId: addressId });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'DELETE',
+      entityType: 'customer_address',
+      entityId: addressId,
+    });
     return { deleted: true };
   }
-
 }

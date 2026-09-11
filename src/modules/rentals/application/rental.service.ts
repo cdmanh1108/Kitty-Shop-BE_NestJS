@@ -1,3 +1,5 @@
+import type { CurrentUser } from '@common/types/current-user';
+import { AuditService } from '@modules/audit/application/audit.service';
 import {
   BadRequestException,
   ConflictException,
@@ -7,21 +9,19 @@ import {
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
-import type { CurrentUser } from '@common/types/current-user';
-import { AuditService } from '@modules/audit/application/audit.service';
 import {
   RENTAL_REPOSITORY,
   RentalOverlapError,
-  type RentalRepository,
   type CreateRentalOrderData,
+  type RentalRepository,
 } from '../domain/rental.repository';
 import type {
-  AddRentalChargeReqDto,
-  CreateRentalOrderReqDto,
-  RentalListQueryDto,
-  RescheduleRentalReqDto,
-  TransitionRentalReqDto,
-} from '../api/rental.dto';
+  AddRentalChargeInput,
+  CreateRentalOrderInput,
+  RentalListQuery,
+  RescheduleRentalInput,
+  TransitionRentalInput,
+} from './rental.contracts';
 
 const CHARGE_TYPES = new Set([
   'RENTAL_EXTRA',
@@ -41,7 +41,7 @@ export class RentalService {
     private readonly audit: AuditService,
   ) {}
 
-  list(user: CurrentUser, query: RentalListQueryDto) {
+  list(user: CurrentUser, query: RentalListQuery) {
     return this.repository.list({
       shopId: user.shopId,
       page: query.page,
@@ -60,20 +60,26 @@ export class RentalService {
     return order;
   }
 
-  async create(user: CurrentUser, input: CreateRentalOrderReqDto, idempotencyKey?: string) {
+  async create(user: CurrentUser, input: CreateRentalOrderInput, idempotencyKey?: string) {
     const start = new Date(input.rentalStartAt);
     const end = new Date(input.rentalEndAt);
-    if (start >= end) throw new BadRequestException('rentalStartAt must be earlier than rentalEndAt');
+    if (start >= end)
+      throw new BadRequestException('rentalStartAt must be earlier than rentalEndAt');
     if (!(await this.repository.customerExists(user.shopId, input.customerId))) {
       throw new NotFoundException('Customer not found or inactive');
     }
-    if (input.locationId && !(await this.repository.locationExists(user.shopId, input.locationId))) {
+    if (
+      input.locationId &&
+      !(await this.repository.locationExists(user.shopId, input.locationId))
+    ) {
       throw new NotFoundException('Shop location not found or inactive');
     }
 
     const variantIds = input.items.map((item) => item.variantId);
     if (new Set(variantIds).size !== variantIds.length) {
-      throw new BadRequestException('Each variant should appear only once in a rental order request');
+      throw new BadRequestException(
+        'Each variant should appear only once in a rental order request',
+      );
     }
 
     for (const charge of input.charges) {
@@ -123,7 +129,9 @@ export class RentalService {
           );
         }
 
-        const byId = new Map(variant.availableInventory.map((inventory) => [inventory.id, inventory]));
+        const byId = new Map(
+          variant.availableInventory.map((inventory) => [inventory.id, inventory]),
+        );
         let selected: Array<{ id: string; sku: string }>;
         if (item.inventoryItemIds?.length) {
           if (item.inventoryItemIds.length !== item.quantity) {
@@ -196,7 +204,11 @@ export class RentalService {
         actorMemberId: user.memberId,
         action: 'CREATE',
         entityType: 'rental_order',
-        newValues: { rentalStartAt: input.rentalStartAt, rentalEndAt: input.rentalEndAt, itemCount: input.items.length },
+        newValues: {
+          rentalStartAt: input.rentalStartAt,
+          rentalEndAt: input.rentalEndAt,
+          itemCount: input.items.length,
+        },
       });
 
       return order;
@@ -209,23 +221,23 @@ export class RentalService {
     }
   }
 
-  confirm(user: CurrentUser, id: string, input: TransitionRentalReqDto) {
+  confirm(user: CurrentUser, id: string, input: TransitionRentalInput) {
     return this.transition(user, id, ['RESERVED'], 'CONFIRMED', input.reason);
   }
 
-  start(user: CurrentUser, id: string, input: TransitionRentalReqDto) {
+  start(user: CurrentUser, id: string, input: TransitionRentalInput) {
     return this.transition(user, id, ['RESERVED', 'CONFIRMED'], 'ACTIVE', input.reason);
   }
 
-  complete(user: CurrentUser, id: string, input: TransitionRentalReqDto) {
+  complete(user: CurrentUser, id: string, input: TransitionRentalInput) {
     return this.transition(user, id, ['ACTIVE'], 'COMPLETED', input.reason);
   }
 
-  cancel(user: CurrentUser, id: string, input: TransitionRentalReqDto) {
+  cancel(user: CurrentUser, id: string, input: TransitionRentalInput) {
     return this.transition(user, id, ['RESERVED', 'CONFIRMED'], 'CANCELLED', input.reason);
   }
 
-  async reschedule(user: CurrentUser, id: string, input: RescheduleRentalReqDto) {
+  async reschedule(user: CurrentUser, id: string, input: RescheduleRentalInput) {
     const current = await this.repository.getSchedule(user.shopId, id);
     if (!current) throw new NotFoundException('Rental order not found');
     if (!['RESERVED', 'CONFIRMED'].includes(current.status)) {
@@ -233,7 +245,8 @@ export class RentalService {
     }
     const start = new Date(input.rentalStartAt);
     const end = new Date(input.rentalEndAt);
-    if (start >= end) throw new BadRequestException('rentalStartAt must be earlier than rentalEndAt');
+    if (start >= end)
+      throw new BadRequestException('rentalStartAt must be earlier than rentalEndAt');
     if (
       calculateRentalDurationDays(current.rentalStartAt, current.rentalEndAt) !==
       calculateRentalDurationDays(start, end)
@@ -243,9 +256,23 @@ export class RentalService {
       );
     }
     try {
-      const order = await this.repository.reschedule({ shopId: user.shopId, orderId: id, from: start, until: end, changedBy: user.memberId });
+      const order = await this.repository.reschedule({
+        shopId: user.shopId,
+        orderId: id,
+        from: start,
+        until: end,
+        changedBy: user.memberId,
+      });
       if (!order) throw new BadRequestException('Order cannot be rescheduled in its current state');
-      await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'RESCHEDULE', entityType: 'rental_order', entityId: id, newValues: input });
+      await this.audit.log({
+        shopId: user.shopId,
+        actorUserId: user.userId,
+        actorMemberId: user.memberId,
+        action: 'RESCHEDULE',
+        entityType: 'rental_order',
+        entityId: id,
+        newValues: { ...input },
+      });
       return order;
     } catch (error) {
       if (error instanceof RentalOverlapError) throw new ConflictException(error.message);
@@ -253,26 +280,64 @@ export class RentalService {
     }
   }
 
-  async addCharge(user: CurrentUser, id: string, input: AddRentalChargeReqDto) {
-    if (!CHARGE_TYPES.has(input.chargeType)) throw new BadRequestException('Unsupported charge type');
-    const order = await this.repository.addCharge({ shopId: user.shopId, orderId: id, chargeType: input.chargeType, description: input.description, amount: input.amount, quantity: input.quantity, createdBy: user.memberId });
+  async addCharge(user: CurrentUser, id: string, input: AddRentalChargeInput) {
+    if (!CHARGE_TYPES.has(input.chargeType))
+      throw new BadRequestException('Unsupported charge type');
+    const order = await this.repository.addCharge({
+      shopId: user.shopId,
+      orderId: id,
+      chargeType: input.chargeType,
+      description: input.description,
+      amount: input.amount,
+      quantity: input.quantity,
+      createdBy: user.memberId,
+    });
     if (!order) throw new NotFoundException('Rental order not found');
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'ADD_CHARGE', entityType: 'rental_order', entityId: id, newValues: input });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'ADD_CHARGE',
+      entityType: 'rental_order',
+      entityId: id,
+      newValues: { ...input },
+    });
     return order;
   }
 
-  private async transition(user: CurrentUser, id: string, allowedFrom: string[], toStatus: string, reason?: string) {
+  private async transition(
+    user: CurrentUser,
+    id: string,
+    allowedFrom: string[],
+    toStatus: string,
+    reason?: string,
+  ) {
     const currentStatus = await this.repository.getStatus(user.shopId, id);
     if (!currentStatus) throw new NotFoundException('Rental order not found');
     if (!allowedFrom.includes(currentStatus)) {
       throw new BadRequestException(`Cannot change order from ${currentStatus} to ${toStatus}`);
     }
-    const order = await this.repository.transition({ shopId: user.shopId, orderId: id, fromStatuses: allowedFrom, toStatus, changedBy: user.memberId, reason });
-    if (!order) throw new ConflictException('Order status changed concurrently; reload and try again');
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'STATUS_CHANGE', entityType: 'rental_order', entityId: id, newValues: { fromStatus: currentStatus, toStatus, reason } });
+    const order = await this.repository.transition({
+      shopId: user.shopId,
+      orderId: id,
+      fromStatuses: allowedFrom,
+      toStatus,
+      changedBy: user.memberId,
+      reason,
+    });
+    if (!order)
+      throw new ConflictException('Order status changed concurrently; reload and try again');
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'STATUS_CHANGE',
+      entityType: 'rental_order',
+      entityId: id,
+      newValues: { fromStatus: currentStatus, toStatus, reason },
+    });
     return order;
   }
-
 
   private createOrderNumber(): string {
     const date = new Date().toISOString().slice(0, 10).replaceAll('-', '');

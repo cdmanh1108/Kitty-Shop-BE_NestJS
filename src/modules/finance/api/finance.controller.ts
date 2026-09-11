@@ -1,9 +1,15 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
-import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { FinanceService } from '../application/finance.service';
 import {
   CreateExpenseReqDto,
@@ -15,6 +21,12 @@ import {
   PaymentPageResDto,
   PaymentResDto,
 } from './finance.dto';
+import {
+  toCreateExpenseInput,
+  toCreatePaymentInput,
+  toExpenseListQuery,
+  toPaymentListQuery,
+} from './finance.mapper';
 
 @ApiTags('Finance')
 @ApiBearerAuth('access-token')
@@ -26,19 +38,21 @@ export class FinanceController {
   @Permissions(PERMISSIONS.PAYMENTS_VIEW)
   @ApiOkResponse({ type: PaymentPageResDto })
   listPayments(@CurrentUser() user: CurrentUserType, @Query() query: PaymentListQueryDto) {
-    return this.service.listPayments(user, query);
+    return this.service.listPayments(user, toPaymentListQuery(query));
   }
 
   @Post('rental-orders/:orderId/payments')
   @Permissions(PERMISSIONS.PAYMENTS_CREATE)
-  @ApiOperation({ summary: 'Record rental payment, deposit or refund and recompute order payment state' })
+  @ApiOperation({
+    summary: 'Record rental payment, deposit or refund and recompute order payment state',
+  })
   @ApiCreatedResponse({ type: PaymentResDto })
   createPayment(
     @CurrentUser() user: CurrentUserType,
     @Param('orderId') orderId: string,
     @Body() body: CreatePaymentReqDto,
   ) {
-    return this.service.createPayment(user, orderId, body);
+    return this.service.createPayment(user, orderId, toCreatePaymentInput(body));
   }
 
   @Post('payments/:id/void')
@@ -58,14 +72,14 @@ export class FinanceController {
   @Permissions(PERMISSIONS.FINANCE_VIEW)
   @ApiOkResponse({ type: ExpensePageResDto })
   listExpenses(@CurrentUser() user: CurrentUserType, @Query() query: ExpenseListQueryDto) {
-    return this.service.listExpenses(user, query);
+    return this.service.listExpenses(user, toExpenseListQuery(query));
   }
 
   @Post('expenses')
   @Permissions(PERMISSIONS.FINANCE_MANAGE)
   @ApiCreatedResponse({ type: ExpenseResDto })
   createExpense(@CurrentUser() user: CurrentUserType, @Body() body: CreateExpenseReqDto) {
-    return this.service.createExpense(user, body);
+    return this.service.createExpense(user, toCreateExpenseInput(body));
   }
 
   @Post('expenses/:id/void')

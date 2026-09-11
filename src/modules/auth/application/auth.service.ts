@@ -1,12 +1,12 @@
+import type { CurrentUser, JwtAccessPayload } from '@common/types/current-user';
+import type { AppConfiguration } from '@config/configuration';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
-import type { AppConfiguration } from '@config/configuration';
-import type { CurrentUser, JwtAccessPayload } from '@common/types/current-user';
 import { AUTH_REPOSITORY, type AuthIdentity, type AuthRepository } from '../domain/auth.repository';
-import type { ChangePasswordReqDto, LoginReqDto, LoginResDto } from '../api/auth.dto';
+import type { ChangePasswordInput, LoginInput, LoginResult } from './auth.contracts';
 
 @Injectable()
 export class AuthService {
@@ -17,9 +17,9 @@ export class AuthService {
   ) {}
 
   async login(
-    input: LoginReqDto,
+    input: LoginInput,
     context: { ipAddress?: string; userAgent?: string },
-  ): Promise<LoginResDto> {
+  ): Promise<LoginResult> {
     const identity = await this.repository.findIdentityByEmail(input.email, input.shopCode);
     if (
       !identity?.passwordHash ||
@@ -37,7 +37,7 @@ export class AuthService {
   async refresh(
     rawToken: string,
     context: { ipAddress?: string; userAgent?: string },
-  ): Promise<LoginResDto> {
+  ): Promise<LoginResult> {
     const tokenHash = this.hashToken(rawToken);
     const stored = await this.repository.consumeRefreshToken(tokenHash);
     if (
@@ -60,22 +60,29 @@ export class AuthService {
     return user;
   }
 
-  async changePassword(user: CurrentUser, input: ChangePasswordReqDto): Promise<{ success: true }> {
-    const currentHash = await this.repository.findPasswordHash(user.userId, user.memberId, user.shopId);
+  async changePassword(user: CurrentUser, input: ChangePasswordInput): Promise<{ success: true }> {
+    const currentHash = await this.repository.findPasswordHash(
+      user.userId,
+      user.memberId,
+      user.shopId,
+    );
     if (!currentHash || !(await compare(input.currentPassword, currentHash))) {
       throw new UnauthorizedException('Current password is incorrect');
     }
     if (await compare(input.newPassword, currentHash)) {
       throw new UnauthorizedException('New password must be different from the current password');
     }
-    await this.repository.updatePasswordAndRevokeSessions(user.userId, await hash(input.newPassword, 12));
+    await this.repository.updatePasswordAndRevokeSessions(
+      user.userId,
+      await hash(input.newPassword, 12),
+    );
     return { success: true };
   }
 
   private async issueSession(
     identity: AuthIdentity,
     context: { ipAddress?: string; userAgent?: string },
-  ): Promise<LoginResDto> {
+  ): Promise<LoginResult> {
     const ttlSeconds = this.config.get('jwtAccessTtlSeconds', { infer: true });
     const payload: JwtAccessPayload = {
       sub: identity.userId,

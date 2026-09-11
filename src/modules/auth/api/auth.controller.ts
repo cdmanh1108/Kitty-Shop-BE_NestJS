@@ -1,10 +1,17 @@
-import { Body, Controller, Get, Headers, Ip, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
+import { Body, Controller, Get, Headers, Ip, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthService } from '../application/auth.service';
-import { AuthUserResDto, ChangePasswordReqDto, LoginReqDto, LoginResDto, RefreshTokenReqDto } from './auth.dto';
+import {
+  AuthUserResDto,
+  ChangePasswordReqDto,
+  LoginReqDto,
+  LoginResDto,
+  RefreshTokenReqDto,
+} from './auth.dto';
+import { toChangePasswordInput, toLoginInput } from './auth.mapper';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -21,7 +28,7 @@ export class AuthController {
     @Ip() ipAddress: string,
     @Headers('user-agent') userAgent?: string,
   ): Promise<LoginResDto> {
-    return this.authService.login(body, { ipAddress, userAgent });
+    return this.authService.login(toLoginInput(body), { ipAddress, userAgent });
   }
 
   @Public()
@@ -59,7 +66,6 @@ export class AuthController {
     @CurrentUser() user: CurrentUserType,
     @Body() body: ChangePasswordReqDto,
   ): Promise<{ success: true }> {
-    return this.authService.changePassword(user, body);
+    return this.authService.changePassword(user, toChangePasswordInput(body));
   }
-
 }

@@ -1,14 +1,18 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
 import type { CurrentUser } from '@common/types/current-user';
 import { AuditService } from '@modules/audit/application/audit.service';
-import { FINANCE_REPOSITORY, FinanceInvariantError, type FinanceRepository } from '../domain/finance.repository';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
+import {
+  FINANCE_REPOSITORY,
+  FinanceInvariantError,
+  type FinanceRepository,
+} from '../domain/finance.repository';
 import type {
-  CreateExpenseReqDto,
-  CreatePaymentReqDto,
-  ExpenseListQueryDto,
-  PaymentListQueryDto,
-} from '../api/finance.dto';
+  CreateExpenseInput,
+  CreatePaymentInput,
+  ExpenseListQuery,
+  PaymentListQuery,
+} from './finance.contracts';
 
 const PAYMENT_PURPOSES = new Set([
   'RENTAL_PAYMENT',
@@ -28,7 +32,7 @@ export class FinanceService {
     private readonly audit: AuditService,
   ) {}
 
-  listPayments(user: CurrentUser, query: PaymentListQueryDto) {
+  listPayments(user: CurrentUser, query: PaymentListQuery) {
     return this.repository.listPayments({
       shopId: user.shopId,
       page: query.page,
@@ -40,7 +44,7 @@ export class FinanceService {
     });
   }
 
-  async createPayment(user: CurrentUser, orderId: string, input: CreatePaymentReqDto) {
+  async createPayment(user: CurrentUser, orderId: string, input: CreatePaymentInput) {
     if (!PAYMENT_PURPOSES.has(input.purpose)) {
       throw new BadRequestException('Unsupported payment purpose');
     }
@@ -51,7 +55,7 @@ export class FinanceService {
     if (!refundPurpose && input.direction === 'OUT' && input.purpose !== 'OTHER') {
       throw new BadRequestException('OUT transactions must use a refund purpose or OTHER');
     }
-    let payment: unknown;
+    let payment: Awaited<ReturnType<FinanceRepository['createPayment']>>;
     try {
       payment = await this.repository.createPayment({
         shopId: user.shopId,
@@ -78,15 +82,31 @@ export class FinanceService {
       actorMemberId: user.memberId,
       action: 'CREATE',
       entityType: 'payment_transaction',
-      newValues: { orderId, direction: input.direction, purpose: input.purpose, amount: input.amount },
+      newValues: {
+        orderId,
+        direction: input.direction,
+        purpose: input.purpose,
+        amount: input.amount,
+      },
     });
     return payment;
   }
 
   async voidPayment(user: CurrentUser, id: string) {
-    const payment = await this.repository.voidPayment({ shopId: user.shopId, paymentId: id, voidedBy: user.memberId });
+    const payment = await this.repository.voidPayment({
+      shopId: user.shopId,
+      paymentId: id,
+      voidedBy: user.memberId,
+    });
     if (!payment) throw new NotFoundException('Payment not found');
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'VOID', entityType: 'payment_transaction', entityId: id });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'VOID',
+      entityType: 'payment_transaction',
+      entityId: id,
+    });
     return payment;
   }
 
@@ -94,7 +114,7 @@ export class FinanceService {
     return this.repository.listExpenseCategories(user.shopId);
   }
 
-  listExpenses(user: CurrentUser, query: ExpenseListQueryDto) {
+  listExpenses(user: CurrentUser, query: ExpenseListQuery) {
     return this.repository.listExpenses({
       shopId: user.shopId,
       page: query.page,
@@ -106,8 +126,8 @@ export class FinanceService {
     });
   }
 
-  async createExpense(user: CurrentUser, input: CreateExpenseReqDto) {
-    let expense: unknown;
+  async createExpense(user: CurrentUser, input: CreateExpenseInput) {
+    let expense: Awaited<ReturnType<FinanceRepository['createExpense']>>;
     try {
       expense = await this.repository.createExpense({
         shopId: user.shopId,
@@ -128,14 +148,28 @@ export class FinanceService {
       if (error instanceof FinanceInvariantError) throw new BadRequestException(error.message);
       throw error;
     }
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'CREATE', entityType: 'expense', newValues: { amount: input.amount, description: input.description } });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'CREATE',
+      entityType: 'expense',
+      newValues: { amount: input.amount, description: input.description },
+    });
     return expense;
   }
 
   async voidExpense(user: CurrentUser, id: string) {
     const expense = await this.repository.voidExpense({ shopId: user.shopId, expenseId: id });
     if (!expense) throw new NotFoundException('Expense not found');
-    await this.audit.log({ shopId: user.shopId, actorUserId: user.userId, actorMemberId: user.memberId, action: 'VOID', entityType: 'expense', entityId: id });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'VOID',
+      entityType: 'expense',
+      entityId: id,
+    });
     return expense;
   }
 

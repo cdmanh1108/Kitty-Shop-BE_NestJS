@@ -1,25 +1,65 @@
+import type { ColorRecord } from '@modules/catalog/domain/catalog.records';
+import type { SizeRecord } from '@modules/catalog/domain/catalog.records';
+import type { CategoryRecord } from '@modules/catalog/domain/catalog.records';
+import type {
+  AddInventoryItemResult,
+  AddProductMediaResult,
+  AddVariantResult,
+  CatalogLookups,
+  CreateProductResult,
+  FindAvailableInventoryResult,
+  InventoryDetails,
+  InventoryPage,
+  ProductDetails,
+  ProductPage,
+  UpdateProductResult,
+  UpsertRentalRateResult,
+} from './catalog.models';
 export class CatalogInvariantError extends Error {}
 
 export const CATALOG_REPOSITORY = Symbol('CATALOG_REPOSITORY');
 
 export interface CatalogRepository {
-  listLookups(shopId: string): Promise<unknown>;
-  createCategory(shopId: string, input: { code: string; name: string; parentId?: string }): Promise<unknown>;
-  createSize(shopId: string, input: { code: string; name: string; sortOrder: number }): Promise<unknown>;
-  createColor(shopId: string, input: { code: string; name: string; hexColor?: string }): Promise<unknown>;
-  listProducts(input: { shopId: string; search?: string; categoryId?: string; status?: string; page: number; limit: number }): Promise<unknown>;
-  findProduct(shopId: string, id: string): Promise<unknown | null>;
-  createProduct(shopId: string, input: CreateProductData): Promise<unknown>;
-  addVariant(shopId: string, productId: string, input: CreateProductData['variants'][number]): Promise<unknown | null>;
-  upsertRentalRate(shopId: string, variantId: string, input: { durationDays: number; price: number }): Promise<unknown | null>;
-  updateProduct(shopId: string, id: string, input: UpdateProductData): Promise<unknown | null>;
-  addProductMedia(shopId: string, productId: string, input: ProductMediaData): Promise<unknown | null>;
+  listLookups(shopId: string): Promise<CatalogLookups>;
+  createCategory(
+    shopId: string,
+    input: { code: string; name: string; parentId?: string },
+  ): Promise<CategoryRecord>;
+  createSize(
+    shopId: string,
+    input: { code: string; name: string; sortOrder: number },
+  ): Promise<SizeRecord>;
+  createColor(
+    shopId: string,
+    input: { code: string; name: string; hexColor?: string },
+  ): Promise<ColorRecord>;
+  listProducts(input: CatalogListProductsCriteria): Promise<ProductPage>;
+  findProduct(shopId: string, id: string): Promise<ProductDetails>;
+  createProduct(shopId: string, input: CreateProductData): Promise<CreateProductResult>;
+  addVariant(
+    shopId: string,
+    productId: string,
+    input: CreateProductData['variants'][number],
+  ): Promise<AddVariantResult>;
+  upsertRentalRate(
+    shopId: string,
+    variantId: string,
+    input: { durationDays: number; price: number },
+  ): Promise<UpsertRentalRateResult>;
+  updateProduct(shopId: string, id: string, input: UpdateProductData): Promise<UpdateProductResult>;
+  addProductMedia(
+    shopId: string,
+    productId: string,
+    input: ProductMediaData,
+  ): Promise<AddProductMediaResult>;
   removeProductMedia(shopId: string, productId: string, mediaId: string): Promise<boolean>;
-  addInventoryItem(shopId: string, input: AddInventoryData): Promise<unknown>;
-  updateInventoryStatus(input: { shopId: string; id: string; status: string; condition?: string; reason?: string; notes?: string; changedBy: string }): Promise<unknown | null>;
-  listInventory(input: { shopId: string; variantId?: string; status?: string; search?: string; page: number; limit: number }): Promise<unknown>;
-  findInventoryItem(shopId: string, id: string): Promise<unknown | null>;
-  findAvailableInventory(input: { shopId: string; variantId: string; from: Date; until: Date }): Promise<unknown[]>;
+  addInventoryItem(shopId: string, input: AddInventoryData): Promise<AddInventoryItemResult>;
+  updateInventoryStatus(input: CatalogUpdateInventoryStatusData): Promise<AddInventoryItemResult>;
+  listInventory(input: CatalogListInventoryCriteria): Promise<InventoryPage>;
+  findInventoryItem(shopId: string, id: string): Promise<InventoryDetails>;
+  findAvailableInventory(
+    input: CatalogFindAvailableInventoryCriteria,
+  ): Promise<FindAvailableInventoryResult>;
 }
 
 export interface CreateProductData {
@@ -66,4 +106,39 @@ export interface ProductMediaData {
   altText?: string;
   isPrimary: boolean;
   sortOrder: number;
+}
+
+export interface CatalogListProductsCriteria {
+  shopId: string;
+  search?: string;
+  categoryId?: string;
+  status?: string;
+  page: number;
+  limit: number;
+}
+
+export interface CatalogUpdateInventoryStatusData {
+  shopId: string;
+  id: string;
+  status: string;
+  condition?: string;
+  reason?: string;
+  notes?: string;
+  changedBy: string;
+}
+
+export interface CatalogListInventoryCriteria {
+  shopId: string;
+  variantId?: string;
+  status?: string;
+  search?: string;
+  page: number;
+  limit: number;
+}
+
+export interface CatalogFindAvailableInventoryCriteria {
+  shopId: string;
+  variantId: string;
+  from: Date;
+  until: Date;
 }

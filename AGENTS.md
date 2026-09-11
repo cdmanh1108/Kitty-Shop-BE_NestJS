@@ -16,6 +16,8 @@ Non-negotiable rules:
 - deposits are not revenue.
 - do not hard-delete financial/order history.
 - controllers stay thin; business orchestration belongs in application services.
+- application/domain must not import API DTOs; controllers map validated transport DTOs into application-owned inputs.
+- repository ports use explicit typed results and inputs, with no `unknown` escape hatch or transport pagination dependency.
 - application/domain layers must not issue Prisma queries directly.
 - client-supplied `shopId` is never authorization; use authenticated membership.
 - new API input must use validation DTOs and Swagger metadata.
