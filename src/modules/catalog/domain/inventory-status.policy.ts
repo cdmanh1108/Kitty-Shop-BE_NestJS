@@ -14,8 +14,7 @@ export const OPERATIONAL_INVENTORY_STATUSES = [
   INVENTORY_STATUS.RETIRED,
 ] as const;
 
-export type OperationalInventoryStatus =
-  (typeof OPERATIONAL_INVENTORY_STATUSES)[number];
+export type OperationalInventoryStatus = (typeof OPERATIONAL_INVENTORY_STATUSES)[number];
 
 export interface InventoryTransitionContext {
   hasActiveAllocation?: boolean;
@@ -33,20 +32,23 @@ export function validateInventoryStatusTransition(
   context: InventoryTransitionContext = {},
 ): void {
   // 1. Prohibit manual transitions to or from occupancy states (RESERVED / RENTED)
-  if (toStatus === INVENTORY_STATUS.RESERVED || toStatus === INVENTORY_STATUS.RENTED) {
+  if (toStatus === 'RESERVED' || toStatus === 'RENTED') {
     throw new CatalogInvariantError(
-      `Trạng thái ${toStatus === INVENTORY_STATUS.RESERVED ? 'ĐÃ ĐẶT (RESERVED)' : 'ĐANG THUÊ (RENTED)'} chỉ được quản lý tự động qua quy trình Đơn thuê (Rental Order).`,
+      `Trạng thái ${toStatus === 'RESERVED' ? 'ĐÃ ĐẶT (RESERVED)' : 'ĐANG THUÊ (RENTED)'} chỉ được quản lý tự động qua quy trình Đơn thuê (Rental Order).`,
     );
   }
 
-  if (fromStatus === INVENTORY_STATUS.RESERVED || fromStatus === INVENTORY_STATUS.RENTED) {
+  if (fromStatus === 'RESERVED' || fromStatus === 'RENTED') {
     throw new CatalogInvariantError(
       'Món đồ hiện đang trong quy trình đơn thuê. Không thể đổi trạng thái thủ công từ kho.',
     );
   }
 
   // 2. Prohibit manual operational mutation if item has active allocations / active rentals
-  if (context.hasActiveAllocation || context.hasActiveRental) {
+  const completesService =
+    toStatus === INVENTORY_STATUS.AVAILABLE &&
+    (fromStatus === INVENTORY_STATUS.CLEANING || fromStatus === INVENTORY_STATUS.REPAIRING);
+  if (context.hasActiveRental || (context.hasActiveAllocation && !completesService)) {
     throw new CatalogInvariantError(
       'Món đồ đang có lịch thuê hoạt động hoặc đang được thuê. Không thể đổi trạng thái thủ công từ kho.',
     );
@@ -54,9 +56,7 @@ export function validateInventoryStatusTransition(
 
   // 3. No-op transition
   if (fromStatus === toStatus) {
-    throw new CatalogInvariantError(
-      `Món đồ hiện đã ở trạng thái ${fromStatus}.`,
-    );
+    throw new CatalogInvariantError(`Món đồ hiện đã ở trạng thái ${fromStatus}.`);
   }
 
   // 4. Validate allowed operational state machine paths
@@ -114,13 +114,16 @@ export function getAllowedOperationalTransitions(
   context: { hasActiveAllocation?: boolean; hasActiveRental?: boolean } = {},
 ): InventoryStatus[] {
   // If item is actively rented or allocated, no manual transitions are allowed
-  if (
-    context.hasActiveAllocation ||
-    context.hasActiveRental ||
-    currentStatus === INVENTORY_STATUS.RESERVED ||
-    currentStatus === INVENTORY_STATUS.RENTED
-  ) {
+  if (context.hasActiveRental || currentStatus === 'RESERVED' || currentStatus === 'RENTED') {
     return [];
+  }
+
+  // A scheduled reservation must not prevent finishing cleaning after a return.
+  if (context.hasActiveAllocation) {
+    return currentStatus === INVENTORY_STATUS.CLEANING ||
+      currentStatus === INVENTORY_STATUS.REPAIRING
+      ? [INVENTORY_STATUS.AVAILABLE]
+      : [];
   }
 
   switch (currentStatus) {
@@ -150,10 +153,7 @@ export function getAllowedOperationalTransitions(
       ];
 
     case INVENTORY_STATUS.DAMAGED:
-      return [
-        INVENTORY_STATUS.REPAIRING,
-        INVENTORY_STATUS.RETIRED,
-      ];
+      return [INVENTORY_STATUS.REPAIRING, INVENTORY_STATUS.RETIRED];
 
     case INVENTORY_STATUS.LOST:
       // Explicit recovery with mandatory reason

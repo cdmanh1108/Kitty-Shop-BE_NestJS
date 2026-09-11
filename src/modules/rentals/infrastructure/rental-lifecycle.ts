@@ -1,3 +1,4 @@
+import { assertInventoryRentable } from './rental-inventory';
 import type { RentalOutboxEvent } from '../domain/rental.events';
 import { INVENTORY_STATUS } from '@modules/catalog/domain/catalog-status';
 import {
@@ -19,24 +20,36 @@ export async function transition(
   prisma: PrismaService,
   input: Parameters<RentalRepository['transition']>[0],
 ): ReturnType<RentalRepository['transition']> {
-  return prisma.$transaction(async (tx) => {
+  return serializableTransaction(prisma, async (tx) => {
     const order = await tx.rentalOrder.findFirst({
       where: { id: input.orderId, shopId: input.shopId },
     });
     if (!order || !input.fromStatuses.some((status) => status === order.status)) return null;
+    if (input.toStatus === RENTAL_STATUS.ACTIVE || input.toStatus === RENTAL_STATUS.CONFIRMED) {
+      const allocations = await tx.rentalItemAllocation.findMany({
+        where: { orderId: order.id, releasedAt: null },
+        select: { inventoryItemId: true },
+      });
+      await assertInventoryRentable(tx, {
+        shopId: input.shopId,
+        inventoryIds: allocations.map((allocation) => allocation.inventoryItemId),
+        excludeOrderId: order.id,
+      });
+    }
     const now = new Date();
     const updateData: Prisma.RentalOrderUpdateManyMutationInput = {
       status: input.toStatus,
       updatedBy: input.changedBy,
-      ...(input.toStatus === RENTAL_STATUS.ACTIVE ? { actualStartedAt: now } : {}),
-      ...(input.toStatus === RENTAL_STATUS.COMPLETED ? { completedAt: now } : {}),
-      ...(input.toStatus === RENTAL_STATUS.CANCELLED ? { cancelledAt: now } : {}),
     };
-    const transitioned = await tx.rentalOrder.updateMany({
+    if (input.toStatus === RENTAL_STATUS.ACTIVE) updateData.actualStartedAt = now;
+    if (input.toStatus === RENTAL_STATUS.COMPLETED) updateData.completedAt = now;
+    if (input.toStatus === RENTAL_STATUS.CANCELLED) updateData.cancelledAt = now;
+
+    const updated = await tx.rentalOrder.updateMany({
       where: { id: order.id, shopId: input.shopId, status: order.status },
       data: updateData,
     });
-    if (transitioned.count !== 1) return null;
+    if (updated.count !== 1) return null;
     await tx.rentalOrderStatusHistory.create({
       data: {
         shopId: input.shopId,
@@ -74,23 +87,9 @@ export async function transition(
         select: { inventoryItemId: true },
       });
       for (const allocation of allocations) {
-        const inventory = await tx.inventoryItem.findUniqueOrThrow({
-          where: { id: allocation.inventoryItemId },
-        });
         await tx.inventoryItem.update({
-          where: { id: inventory.id },
-          data: { currentStatus: INVENTORY_STATUS.RENTED, lastRentedAt: now },
-        });
-        await tx.inventoryStatusHistory.create({
-          data: {
-            shopId: input.shopId,
-            inventoryItemId: inventory.id,
-            fromStatus: inventory.currentStatus,
-            toStatus: INVENTORY_STATUS.RENTED,
-            orderId: order.id,
-            changedBy: input.changedBy,
-            reason: 'ORDER_STARTED',
-          },
+          where: { id: allocation.inventoryItemId },
+          data: { lastRentedAt: now },
         });
       }
     } else if (input.toStatus === RENTAL_STATUS.COMPLETED) {
@@ -180,6 +179,11 @@ export async function reschedule(
           orderId: order.id,
           status: { in: [ALLOCATION_STATUS.HELD, ALLOCATION_STATUS.CONFIRMED] },
         },
+      });
+      await assertInventoryRentable(tx, {
+        shopId: input.shopId,
+        inventoryIds: allocations.map((allocation) => allocation.inventoryItemId),
+        excludeOrderId: order.id,
       });
       for (const allocation of allocations) {
         await tx.rentalItemAllocation.update({

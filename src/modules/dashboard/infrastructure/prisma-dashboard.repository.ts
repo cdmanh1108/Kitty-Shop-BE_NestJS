@@ -1,4 +1,8 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
+import {
+  activeOccupyingAllocationWhere,
+  unreleasedRentalWhere,
+} from '@database/prisma/inventory-availability';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
 import type { DashboardRepository } from '../domain/dashboard.repository';
@@ -54,6 +58,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
       pendingReminders,
       inventoryGrouped,
       bookedAvailableInventory,
+      rentedAvailableInventory,
       upcoming,
     ] = await this.prisma.$transaction([
       this.prisma.paymentTransaction.aggregate({
@@ -91,8 +96,8 @@ export class PrismaDashboardRepository implements DashboardRepository {
       this.prisma.rentalOrder.count({
         where: { shopId: input.shopId, createdAt: { gte: input.dayStart, lt: input.dayEnd } },
       }),
-      this.prisma.inventoryItem.count({
-        where: { shopId: input.shopId, currentStatus: 'RENTED', archivedAt: null },
+      this.prisma.rentalItemAllocation.count({
+        where: { shopId: input.shopId, status: 'ACTIVE', releasedAt: null },
       }),
       this.prisma.rentalOrder.count({
         where: {
@@ -117,10 +122,18 @@ export class PrismaDashboardRepository implements DashboardRepository {
           currentStatus: 'AVAILABLE',
           allocations: {
             some: {
-              status: { in: ['HELD', 'CONFIRMED'] },
-              reservedUntil: { gt: input.now },
+              ...activeOccupyingAllocationWhere(),
             },
+            none: unreleasedRentalWhere(),
           },
+        },
+      }),
+      this.prisma.inventoryItem.count({
+        where: {
+          shopId: input.shopId,
+          archivedAt: null,
+          currentStatus: 'AVAILABLE',
+          allocations: { some: unreleasedRentalWhere() },
         },
       }),
       this.prisma.rentalOrder.findMany({
@@ -156,8 +169,12 @@ export class PrismaDashboardRepository implements DashboardRepository {
         const counts = Object.fromEntries(
           inventoryGrouped.map((row) => [row.currentStatus, row._count._all]),
         );
-        counts.AVAILABLE = Math.max(0, (counts.AVAILABLE ?? 0) - bookedAvailableInventory);
+        counts.AVAILABLE = Math.max(
+          0,
+          (counts.AVAILABLE ?? 0) - bookedAvailableInventory - rentedAvailableInventory,
+        );
         counts.RESERVED = (counts.RESERVED ?? 0) + bookedAvailableInventory;
+        counts.RENTED = rentedAvailableInventory;
         counts.TOTAL = inventoryGrouped.reduce((sum, row) => sum + row._count._all, 0);
         return counts;
       })(),

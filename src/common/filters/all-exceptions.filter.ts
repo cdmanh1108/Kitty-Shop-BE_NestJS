@@ -12,6 +12,7 @@ import { RentalOverlapError } from '@modules/rentals/domain/rental.repository';
 import {
   RentalClaimLostError,
   InvalidRentalIntervalError,
+  RentalInventoryUnavailableError,
 } from '@modules/rentals/domain/rental-errors';
 import { FinanceInvariantError } from '@modules/finance/domain/finance.repository';
 import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
@@ -42,6 +43,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = HttpStatus.CONFLICT;
       code = 'RENTAL_OVERLAP';
       message = (exception as Error).message;
+    } else if (
+      exception instanceof RentalInventoryUnavailableError ||
+      errorName === 'RentalInventoryUnavailableError'
+    ) {
+      status = HttpStatus.CONFLICT;
+      code = 'RENTAL_INVENTORY_UNAVAILABLE';
+      message = (exception as Error).message;
     } else if (exception instanceof RentalClaimLostError || errorName === 'RentalClaimLostError') {
       status = HttpStatus.CONFLICT;
       code = 'RENTAL_CLAIM_LOST';
@@ -64,8 +72,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof CatalogInvariantError ||
       errorName === 'CatalogInvariantError'
     ) {
-      status = HttpStatus.BAD_REQUEST;
-      code = 'CATALOG_INVARIANT_ERROR';
+      const msg = (exception as Error).message.toLowerCase();
+      const isConflict =
+        msg.includes('duplicate') ||
+        msg.includes('đã tồn tại') ||
+        msg.includes('active rental') ||
+        msg.includes('lịch đặt') ||
+        msg.includes('lịch thuê') ||
+        msg.includes('đang được thuê') ||
+        msg.includes('thay đổi');
+      status = isConflict ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
+      code = isConflict ? 'CATALOG_CONFLICT' : 'CATALOG_INVARIANT_ERROR';
       message = (exception as Error).message;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -103,6 +120,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         status = HttpStatus.CONFLICT;
         code = 'UNIQUE_CONSTRAINT_VIOLATION';
         message = 'A record with the same unique value already exists';
+      } else if (exception.code === 'P2034') {
+        status = HttpStatus.CONFLICT;
+        code = 'CONCURRENT_MODIFICATION';
+        message = 'The resource changed concurrently; please retry';
       } else if (exception.code === 'P2025') {
         status = HttpStatus.NOT_FOUND;
         code = 'RECORD_NOT_FOUND';

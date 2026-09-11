@@ -6,7 +6,7 @@ import {
   toBookableVariant,
   bookableVariantInclude,
 } from '../src/modules/rentals/infrastructure/rental-prisma.mapper';
-import { availableInventoryWhere } from '../src/modules/catalog/infrastructure/inventory-availability';
+import { availableInventoryWhere } from '../src/database/prisma/inventory-availability';
 import { RentalOverlapError } from '../src/modules/rentals/domain/rental.repository';
 import { CatalogInvariantError } from '../src/modules/catalog/domain/catalog.repository';
 
@@ -117,17 +117,19 @@ describe('persistence mapping and availability', () => {
     };
     const where = availableInventoryWhere(input);
     expect(where.allocations.none).toEqual({
-      status: { in: ['HELD', 'CONFIRMED', 'ACTIVE'] },
-      reservedFrom: { lt: input.until },
-      reservedUntil: { gt: input.from },
+      OR: [
+        {
+          status: { in: ['HELD', 'CONFIRMED', 'ACTIVE'] },
+          reservedFrom: { lt: input.until },
+          reservedUntil: { gt: input.from },
+        },
+        {
+          status: 'ACTIVE',
+          releasedAt: null,
+        },
+      ],
     });
-    expect(where.currentStatus.notIn).toEqual([
-      'CLEANING',
-      'REPAIRING',
-      'DAMAGED',
-      'LOST',
-      'RETIRED',
-    ]);
+    expect(where.currentStatus).toBe('AVAILABLE');
     expect(where).toMatchObject({ isActive: true, archivedAt: null });
     const include = bookableVariantInclude(input);
     expect(include.inventoryItems.where).toEqual(where);

@@ -1,3 +1,4 @@
+import { assertInventoryRentable } from './rental-inventory';
 import type { RentalOutboxEvent } from '../domain/rental.events';
 import { lockRentalClaim, completeRentalClaim } from './rental-idempotency';
 import {
@@ -26,6 +27,15 @@ export async function createOrder(
   try {
     return await serializableTransaction(prisma, async (tx) => {
       if (data.idempotency) await lockRentalClaim(tx, data.shopId, data.idempotency);
+
+      for (const line of data.lines) {
+        await assertInventoryRentable(tx, {
+          shopId: data.shopId,
+          inventoryIds: line.inventory.map((item) => item.id),
+          variantId: line.variantId,
+        });
+      }
+
       const rentalSubtotal = data.lines.reduce((sum, line) => sum + line.lineTotal, 0);
       const explicitChargesTotal = data.charges.reduce(
         (sum, charge) => sum + charge.amount * charge.quantity,

@@ -83,6 +83,18 @@ describe('AllExceptionsFilter', () => {
       filter = new AllExceptionsFilter(true);
     });
 
+    it('maps exhausted serialization retries to a sanitized conflict', () => {
+      filter.catch(
+        new Prisma.PrismaClientKnownRequestError('private SQL details', {
+          code: 'P2034',
+          clientVersion: '6.19.3',
+        }),
+        mockHost,
+      );
+      expect(sentPayload).toMatchObject({ statusCode: 409, code: 'CONCURRENT_MODIFICATION' });
+      expect(JSON.stringify(sentPayload)).not.toContain('private SQL');
+    });
+
     it('maps RentalOverlapError to 409 RENTAL_OVERLAP', () => {
       const error = new RentalOverlapError();
       filter.catch(error, mockHost);

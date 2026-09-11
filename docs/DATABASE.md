@@ -55,6 +55,15 @@ EXCLUDE USING gist (
 WHERE (status IN ('HELD', 'CONFIRMED', 'ACTIVE'));
 ```
 
+## Inventory operational condition vs Rental occupancy
+
+Physical inventory operational condition and rental reservation occupancy are strictly decoupled:
+
+- `inventory_items.current_status`: Only stores physical operational states (`AVAILABLE`, `CLEANING`, `REPAIRING`, `DAMAGED`, `LOST`, `RETIRED`). Enforced by PostgreSQL constraint `inventory_items_operational_status_check`.
+- `rental_item_allocations`: Sole source of truth for rental reservations and occupancy (`HELD`, `CONFIRMED`, `ACTIVE`, `RETURNED`, `CANCELLED`).
+- Rental lifecycle transitions do not set `inventory_items.current_status = 'RENTED'`.
+- Items with active unreleased allocations (`status = 'ACTIVE'`, `released_at IS NULL`) remain occupied regardless of elapsed `reserved_until` timestamps.
+
 ## Rental status dimensions
 
 Order lifecycle and money state are separate:
@@ -101,3 +110,17 @@ token and createdAt as acquisition time; see [RELIABILITY.md](RELIABILITY.md) be
 5. Never use `prisma db push` in production.
 6. Deploy with `prisma migrate deploy`.
 7. Use expand/migrate/contract for destructive/high-volume changes.
+
+### Operational-status repair migration
+
+`202609110003_repair_inventory_operational_status` normalizes legacy RESERVED/RENTED
+values to AVAILABLE only when an unreleased blocking allocation exists in the same
+shop. Orphaned values become CLEANING for inspection before reuse. Allocation rows,
+status history and financial history are preserved; the migration is transactional
+and adds `inventory_items_operational_status_check`. The original
+`rental_item_no_overlap` exclusion constraint is unchanged. Unexpected operational
+values fail the CHECK rather than silently being rewritten.
+
+Deploy with rental/warehouse writers stopped, apply the migration, then start the
+new application version. Old instances that persist RENTED are incompatible with
+the new CHECK. Do not run old and new writers concurrently during deployment.

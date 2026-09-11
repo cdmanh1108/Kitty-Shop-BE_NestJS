@@ -1,6 +1,10 @@
-import { availableInventoryWhere } from './inventory-availability';
+import {
+  availableInventoryWhere,
+  activeOccupyingAllocationWhere,
+} from '@database/prisma/inventory-availability';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
+import { serializableTransaction } from '@database/prisma/transaction';
 import {
   type AddInventoryData,
   type CatalogRepository,
@@ -10,7 +14,7 @@ import {
   validateInventoryStatusTransition,
   getAllowedOperationalTransitions,
 } from '../domain/inventory-status.policy';
-import type { InventoryStatus } from '../domain/catalog-status';
+import { ALLOCATION_STATUS } from '@modules/rentals/domain/rental-status';
 import type {
   InventoryOccupancyStatus,
   InventoryCurrentRentalSummary,
@@ -19,7 +23,6 @@ import type {
 } from '../domain/catalog.models';
 
 function deriveOccupancy(
-  itemStatus: string,
   allocation?: {
     id: string;
     status: string;
@@ -33,26 +36,8 @@ function deriveOccupancy(
   hasActiveAllocation: boolean;
   hasActiveRental: boolean;
 } {
-  if (itemStatus === 'RENTED') {
-    return {
-      occupancyStatus: 'RENTED',
-      currentRental:
-        allocation && allocation.order
-          ? {
-              orderId: allocation.order.id,
-              orderNumber: allocation.order.orderNumber,
-              status: allocation.order.status,
-              reservedFrom: allocation.reservedFrom,
-              reservedUntil: allocation.reservedUntil,
-            }
-          : null,
-      hasActiveAllocation: true,
-      hasActiveRental: true,
-    };
-  }
-
   if (allocation) {
-    const isRented = allocation.status === 'ACTIVE';
+    const isRented = allocation.status === ALLOCATION_STATUS.ACTIVE;
     return {
       occupancyStatus: isRented ? 'RENTED' : 'RESERVED',
       currentRental: allocation.order
@@ -101,22 +86,25 @@ export async function addInventoryItem(
 
   let sku = input.sku?.trim();
   if (!sku) {
-    const existingCount = await prisma.inventoryItem.count({
-      where: { shopId, variantId: variant.id },
+    const count = await prisma.inventoryItem.count({
+      where: { variantId: input.variantId },
     });
-    let seq = existingCount + 1;
-    let candidate = `${variant.variantCode}-${String(seq).padStart(3, '0')}`;
-    while ((await prisma.inventoryItem.count({ where: { shopId, sku: candidate } })) > 0) {
-      seq++;
-      candidate = `${variant.variantCode}-${String(seq).padStart(3, '0')}`;
-    }
-    sku = candidate;
-  } else {
-    const duplicate = await prisma.inventoryItem.findFirst({
-      where: { shopId, sku },
+    sku = `${variant.variantCode}-${String(count + 1).padStart(3, '0')}`;
+  }
+
+  const existingSku = await prisma.inventoryItem.findFirst({
+    where: { shopId, sku },
+  });
+  if (existingSku) {
+    throw new CatalogInvariantError(`Mã SKU "${sku}" đã tồn tại trong kho của cửa hàng.`);
+  }
+
+  if (input.barcode) {
+    const existingBarcode = await prisma.inventoryItem.findFirst({
+      where: { shopId, barcode: input.barcode },
     });
-    if (duplicate) {
-      throw new CatalogInvariantError(`Mã SKU "${sku}" đã tồn tại trong kho của cửa hàng.`);
+    if (existingBarcode) {
+      throw new CatalogInvariantError(`Mã vạch "${input.barcode}" đã tồn tại trong kho.`);
     }
   }
 
@@ -142,9 +130,7 @@ export async function addInventoryItem(
         inventoryItemId: item.id,
         fromStatus: null,
         toStatus: 'AVAILABLE',
-        reason: 'Tạo mới món đồ vật lý',
-        notes: input.notes,
-        changedBy: input.changedBy || 'SYSTEM',
+        reason: 'Khởi tạo món đồ mới trong kho',
       },
     });
 
@@ -156,37 +142,32 @@ export async function updateInventoryStatus(
   prisma: PrismaService,
   input: Parameters<CatalogRepository['updateInventoryStatus']>[0],
 ): ReturnType<CatalogRepository['updateInventoryStatus']> {
-  const existing = await prisma.inventoryItem.findFirst({
-    where: { id: input.id, shopId: input.shopId, archivedAt: null },
-  });
-  if (!existing) return null;
+  return serializableTransaction(prisma, async (tx) => {
+    const existing = await tx.inventoryItem.findFirst({
+      where: { id: input.id, shopId: input.shopId, archivedAt: null },
+    });
+    if (!existing) return null;
 
-  if (input.expectedFromStatus && existing.currentStatus !== input.expectedFromStatus) {
-    throw new CatalogInvariantError(
-      `Trạng thái món đồ đã thay đổi (thực tế: ${existing.currentStatus}, kỳ vọng: ${input.expectedFromStatus}). Vui lòng tải lại trang.`,
-    );
-  }
+    if (input.expectedFromStatus && existing.currentStatus !== input.expectedFromStatus) {
+      throw new CatalogInvariantError(
+        `Trạng thái món đồ đã thay đổi (thực tế: ${existing.currentStatus}, kỳ vọng: ${input.expectedFromStatus}). Vui lòng tải lại trang.`,
+      );
+    }
 
-  const activeAllocation = await prisma.rentalItemAllocation.findFirst({
-    where: {
-      inventoryItemId: input.id,
-      status: { in: ['HELD', 'CONFIRMED', 'ACTIVE'] },
-      releasedAt: null,
-      reservedUntil: { gt: new Date() },
-    },
-  });
+    const activeAllocation = await tx.rentalItemAllocation.findFirst({
+      where: {
+        inventoryItemId: input.id,
+        ...activeOccupyingAllocationWhere(),
+      },
+      orderBy: { status: 'asc' }, // ACTIVE takes precedence over future reservations.
+    });
 
-  validateInventoryStatusTransition(
-    existing.currentStatus as InventoryStatus,
-    input.status,
-    {
+    validateInventoryStatusTransition(existing.currentStatus, input.status, {
       hasActiveAllocation: !!activeAllocation,
-      hasActiveRental: existing.currentStatus === 'RENTED',
+      hasActiveRental: activeAllocation?.status === ALLOCATION_STATUS.ACTIVE,
       reason: input.reason,
-    },
-  );
+    });
 
-  return prisma.$transaction(async (tx) => {
     const updated = await tx.inventoryItem.update({
       where: { id: input.id },
       data: {
@@ -217,26 +198,24 @@ export async function archiveInventoryItem(
   reason?: string,
   changedBy?: string,
 ): Promise<boolean> {
-  const existing = await prisma.inventoryItem.findFirst({
-    where: { id, shopId, archivedAt: null },
-  });
-  if (!existing) return false;
+  return serializableTransaction(prisma, async (tx) => {
+    const existing = await tx.inventoryItem.findFirst({
+      where: { id, shopId, archivedAt: null },
+    });
+    if (!existing) return false;
 
-  const activeAllocation = await prisma.rentalItemAllocation.findFirst({
-    where: {
-      inventoryItemId: id,
-      status: { in: ['HELD', 'CONFIRMED', 'ACTIVE'] },
-      releasedAt: null,
-      reservedUntil: { gt: new Date() },
-    },
-  });
-  if (activeAllocation) {
-    throw new CatalogInvariantError(
-      'Không thể ngừng sử dụng món đồ đang có lịch đặt hoặc đang được thuê.',
-    );
-  }
+    const activeAllocation = await tx.rentalItemAllocation.findFirst({
+      where: {
+        inventoryItemId: id,
+        ...activeOccupyingAllocationWhere(),
+      },
+    });
+    if (activeAllocation) {
+      throw new CatalogInvariantError(
+        'Không thể ngừng sử dụng món đồ đang có lịch đặt hoặc đang được thuê.',
+      );
+    }
 
-  await prisma.$transaction(async (tx) => {
     await tx.inventoryItem.update({
       where: { id },
       data: {
@@ -255,33 +234,28 @@ export async function archiveInventoryItem(
         changedBy: changedBy || 'ADMIN',
       },
     });
-  });
 
-  return true;
+    return true;
+  });
 }
 
 export async function listInventory(
   prisma: PrismaService,
   input: Parameters<CatalogRepository['listInventory']>[0],
-): ReturnType<CatalogRepository['listInventory']> {
+) {
   const where = {
     shopId: input.shopId,
     archivedAt: null,
+    ...(input.status ? { currentStatus: input.status } : {}),
     ...(input.variantId ? { variantId: input.variantId } : {}),
     ...(input.productId ? { variant: { productId: input.productId } } : {}),
     ...(input.categoryId ? { variant: { product: { categoryId: input.categoryId } } } : {}),
-    ...(input.status ? { currentStatus: input.status } : {}),
     ...(input.search
       ? {
           OR: [
             { sku: { contains: input.search, mode: 'insensitive' as const } },
             { barcode: { contains: input.search, mode: 'insensitive' as const } },
             { variant: { variantCode: { contains: input.search, mode: 'insensitive' as const } } },
-            {
-              variant: {
-                product: { code: { contains: input.search, mode: 'insensitive' as const } },
-              },
-            },
             {
               variant: {
                 product: { name: { contains: input.search, mode: 'insensitive' as const } },
@@ -299,17 +273,13 @@ export async function listInventory(
         variant: { include: { product: true, size: true, color: true } },
         location: true,
         allocations: {
-          where: {
-            status: { in: ['HELD', 'CONFIRMED', 'ACTIVE'] },
-            releasedAt: null,
-            reservedUntil: { gt: new Date() },
-          },
+          where: activeOccupyingAllocationWhere(),
           include: {
             order: {
               select: { id: true, orderNumber: true, status: true },
             },
           },
-          orderBy: { reservedFrom: 'asc' },
+          orderBy: [{ status: 'asc' }, { reservedFrom: 'asc' }],
           take: 1,
         },
       },
@@ -323,11 +293,11 @@ export async function listInventory(
   const items: InventoryPageItem[] = rawItems.map((item) => {
     const alloc = item.allocations[0] || null;
     const { occupancyStatus, currentRental, hasActiveAllocation, hasActiveRental } =
-      deriveOccupancy(item.currentStatus, alloc);
-    const allowedManualTransitions = getAllowedOperationalTransitions(
-      item.currentStatus as InventoryStatus,
-      { hasActiveAllocation, hasActiveRental },
-    );
+      deriveOccupancy(alloc);
+    const allowedManualTransitions = getAllowedOperationalTransitions(item.currentStatus, {
+      hasActiveAllocation,
+      hasActiveRental,
+    });
 
     const { allocations: _allocations, ...rest } = item;
     void _allocations;
@@ -362,11 +332,7 @@ export async function findInventoryItem(
       statusHistory: { orderBy: { changedAt: 'desc' }, take: 100 },
       serviceRecords: { orderBy: { createdAt: 'desc' }, take: 50 },
       allocations: {
-        where: {
-          status: { in: ['HELD', 'CONFIRMED', 'ACTIVE'] },
-          releasedAt: null,
-          reservedUntil: { gt: new Date() },
-        },
+        where: activeOccupyingAllocationWhere(),
         include: {
           order: {
             select: {
@@ -377,7 +343,7 @@ export async function findInventoryItem(
             },
           },
         },
-        orderBy: { reservedFrom: 'asc' },
+        orderBy: [{ status: 'asc' }, { reservedFrom: 'asc' }],
         take: 20,
       },
     },
@@ -387,11 +353,11 @@ export async function findInventoryItem(
 
   const firstAlloc = item.allocations[0] || null;
   const { occupancyStatus, currentRental, hasActiveAllocation, hasActiveRental } =
-    deriveOccupancy(item.currentStatus, firstAlloc);
-  const allowedManualTransitions = getAllowedOperationalTransitions(
-    item.currentStatus as InventoryStatus,
-    { hasActiveAllocation, hasActiveRental },
-  );
+    deriveOccupancy(firstAlloc);
+  const allowedManualTransitions = getAllowedOperationalTransitions(item.currentStatus, {
+    hasActiveAllocation,
+    hasActiveRental,
+  });
 
   return {
     ...item,

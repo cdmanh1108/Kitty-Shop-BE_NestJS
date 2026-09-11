@@ -1,4 +1,4 @@
-﻿import {
+import {
   connectTestDatabase,
   disconnectTestDatabase,
   resetTestDatabase,
@@ -130,10 +130,18 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
       toStatus: 'ACTIVE',
       changedBy: f.member.id,
     });
+    const activeItem = await prisma.inventoryItem.findUniqueOrThrow({
+      where: { id: f.inventory.id },
+    });
+    expect(activeItem.currentStatus).toBe('AVAILABLE');
     expect(
-      (await prisma.inventoryItem.findUniqueOrThrow({ where: { id: f.inventory.id } }))
-        .currentStatus,
-    ).toBe('RENTED');
+      (
+        await prisma.rentalItemAllocation.findFirstOrThrow({
+          where: { orderId: order.id },
+        })
+      ).status,
+    ).toBe('ACTIVE');
+    expect(await prisma.inventoryStatusHistory.count({ where: { toStatus: 'RENTED' } })).toBe(0);
     const finish = {
       shopId: f.shop.id,
       orderId: order.id,

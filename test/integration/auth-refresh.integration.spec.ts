@@ -43,6 +43,13 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
       refreshTokenTtlDays: 7,
       rateLimitTtlMs: 60000,
       rateLimitLimit: 100,
+      objectStorageProvider: 'minio',
+      objectStorageEndpoint: 'http://localhost:9000',
+      objectStorageRegion: 'us-east-1',
+      objectStorageBucket: 'rental-shop',
+      objectStorageAccessKeyId: 'test-key',
+      objectStorageSecretAccessKey: 'test-secret',
+      objectStoragePublicBaseUrl: 'http://localhost:9000/rental-shop',
     };
     const configService = new ConfigService<AppConfiguration, true>(testConfig);
 

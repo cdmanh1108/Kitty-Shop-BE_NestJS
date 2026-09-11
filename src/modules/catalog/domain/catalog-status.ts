@@ -4,10 +4,13 @@ export const PRODUCT_STATUS = {
 } as const;
 export type ProductStatus = (typeof PRODUCT_STATUS)[keyof typeof PRODUCT_STATUS];
 
+/**
+ * Operational condition of physical inventory items.
+ * Rental occupancy (HELD, CONFIRMED, ACTIVE, RETURNED, CANCELLED) is tracked
+ * exclusively by RentalItemAllocation and RentalOrder.
+ */
 export const INVENTORY_STATUS = {
   AVAILABLE: 'AVAILABLE',
-  RESERVED: 'RESERVED',
-  RENTED: 'RENTED',
   CLEANING: 'CLEANING',
   REPAIRING: 'REPAIRING',
   DAMAGED: 'DAMAGED',

@@ -17,6 +17,13 @@ export const ALLOCATION_STATUS = {
 } as const;
 export type AllocationStatus = (typeof ALLOCATION_STATUS)[keyof typeof ALLOCATION_STATUS];
 
+// Kept in sync with PostgreSQL rental_item_no_overlap's partial predicate.
+export const BLOCKING_ALLOCATION_STATUSES = [
+  ALLOCATION_STATUS.HELD,
+  ALLOCATION_STATUS.CONFIRMED,
+  ALLOCATION_STATUS.ACTIVE,
+] as const;
+
 export const RENTAL_ITEM_STATUS = {
   RESERVED: 'RESERVED',
   CONFIRMED: 'CONFIRMED',

@@ -91,3 +91,24 @@ CI should provide TEST_DATABASE_URL, create an isolated PostgreSQL database, app
 ## Verified result (2026-09-11)
 
 PostgreSQL 17 disposable container with both committed migrations: 214 unit/component tests, 24 integration tests, and 9 E2E tests passed (247 total across 26 suites). Combined coverage: 77.8% statements, 61.3% branches, 78.7% lines. Coverage is a diagnostic, not a correctness claim. Typecheck, lint, build, Prisma validate, OpenAPI export (unchanged contract), and full format check passed. The disposable container is stopped after verification.
+
+## Rental/inventory occupancy audit (2026-09-11)
+
+Verified on an isolated PostgreSQL 17 container with all four migrations:
+322 unit/component tests, 39 integration tests, and 9 E2E tests passed.
+`quality` (lint, unit, build, OpenAPI export), standalone typecheck and lint passed.
+OpenAPI output is unchanged. Full formatting was run; unrelated formatting changes
+were reverted to keep this repair scoped.
+
+Regression coverage includes booking versus CLEANING/REPAIRING/DAMAGED/LOST/RETIRED
+and archive, expired unreleased reservations, overdue ACTIVE occupancy, activation
+and rescheduling against another active rental, cleaning completion between booked
+orders, distinct dashboard occupancy, and operational-status CHECK enforcement.
+The migration test reconstructs the previous inventory schema within a rollback-only
+transaction, applies the actual repair SQL, and verifies legacy normalization plus
+allocation/history preservation. Clean-database migrate deploy also passed.
+
+Prisma Client generation passed using the same schema with an isolated output path.
+The normal output command was blocked by Windows EPERM replacing the in-use engine
+DLL, including outside the sandbox; no development process was stopped. Only schema
+comments changed, so there is no generated-client type change in this task.

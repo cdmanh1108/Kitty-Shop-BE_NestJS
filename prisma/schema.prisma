@@ -438,6 +438,7 @@ model InventoryItem {
   locationId       String?   @map("location_id") @db.Uuid
   sku              String    @db.VarChar(100)
   barcode          String?   @db.VarChar(100)
+  /// Operational condition only; SQL CHECK in 202609110003. Occupancy is derived from allocations.
   currentStatus    String    @default("AVAILABLE") @map("current_status") @db.VarChar(30)
   condition        String    @default("GOOD") @db.VarChar(30)
   purchasePrice    Decimal?  @map("purchase_price") @db.Decimal(18, 2)

@@ -8,6 +8,8 @@ export class RentalOverlapError extends Error {
   }
 }
 
+export { RentalInventoryUnavailableError } from './rental-errors';
+
 export interface BookableVariant {
   id: string;
   variantCode: string;

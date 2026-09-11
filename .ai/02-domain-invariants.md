@@ -12,3 +12,8 @@
 - Void/cancel/archive replaces destructive delete for business history.
 - Money uses decimal values only.
 - Business timestamps use timezone-aware timestamps; shop timezone controls day/month reporting boundaries.
+
+- Inventory currentStatus stores operational condition only; allocation status owns occupancy.
+- Rental create/reschedule/handover and warehouse mutations validate inside Serializable transactions.
+- Dates do not implicitly release warehouse occupancy; ACTIVE blocks booking until returned.
+- Future reservations allow finishing cleaning/repair to AVAILABLE; handover requires AVAILABLE.

@@ -9,39 +9,36 @@ describe('Inventory Status Transition Policy', () => {
   describe('validateInventoryStatusTransition', () => {
     it('blocks manual transitions to RESERVED or RENTED states', () => {
       expect(() =>
-        validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, INVENTORY_STATUS.RESERVED),
+        validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, 'RESERVED'),
       ).toThrow(CatalogInvariantError);
 
-      expect(() =>
-        validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, INVENTORY_STATUS.RENTED),
-      ).toThrow(CatalogInvariantError);
+      expect(() => validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, 'RENTED')).toThrow(
+        CatalogInvariantError,
+      );
     });
 
     it('blocks manual transitions from RESERVED or RENTED states', () => {
-      expect(() =>
-        validateInventoryStatusTransition(INVENTORY_STATUS.RENTED, INVENTORY_STATUS.AVAILABLE),
-      ).toThrow(CatalogInvariantError);
+      expect(() => validateInventoryStatusTransition('RENTED', INVENTORY_STATUS.AVAILABLE)).toThrow(
+        CatalogInvariantError,
+      );
 
       expect(() =>
-        validateInventoryStatusTransition(INVENTORY_STATUS.RESERVED, INVENTORY_STATUS.CLEANING),
+        validateInventoryStatusTransition('RESERVED', INVENTORY_STATUS.CLEANING),
       ).toThrow(CatalogInvariantError);
     });
 
     it('blocks manual operational mutations when item has active allocation or rental', () => {
       expect(() =>
-        validateInventoryStatusTransition(
-          INVENTORY_STATUS.AVAILABLE,
-          INVENTORY_STATUS.CLEANING,
-          { hasActiveAllocation: true },
-        ),
+        validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, INVENTORY_STATUS.CLEANING, {
+          hasActiveAllocation: true,
+        }),
       ).toThrow('Món đồ đang có lịch thuê hoạt động');
 
       expect(() =>
-        validateInventoryStatusTransition(
-          INVENTORY_STATUS.AVAILABLE,
-          INVENTORY_STATUS.DAMAGED,
-          { hasActiveRental: true, reason: 'Rách váy' },
-        ),
+        validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, INVENTORY_STATUS.DAMAGED, {
+          hasActiveRental: true,
+          reason: 'Rách váy',
+        }),
       ).toThrow('Món đồ đang có lịch thuê hoạt động');
     });
 
@@ -57,29 +54,23 @@ describe('Inventory Status Transition Policy', () => {
       ).toThrow('Cần nhập lý do');
 
       expect(() =>
-        validateInventoryStatusTransition(
-          INVENTORY_STATUS.AVAILABLE,
-          INVENTORY_STATUS.REPAIRING,
-          { reason: 'Bung chỉ viền eo' },
-        ),
+        validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, INVENTORY_STATUS.REPAIRING, {
+          reason: 'Bung chỉ viền eo',
+        }),
       ).not.toThrow();
 
       // DAMAGED requires reason
       expect(() =>
-        validateInventoryStatusTransition(
-          INVENTORY_STATUS.AVAILABLE,
-          INVENTORY_STATUS.DAMAGED,
-          { reason: 'Ố màu không tẩy được' },
-        ),
+        validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, INVENTORY_STATUS.DAMAGED, {
+          reason: 'Ố màu không tẩy được',
+        }),
       ).not.toThrow();
 
       // LOST requires reason
       expect(() =>
-        validateInventoryStatusTransition(
-          INVENTORY_STATUS.AVAILABLE,
-          INVENTORY_STATUS.LOST,
-          { reason: 'Thất lạc sau sự kiện' },
-        ),
+        validateInventoryStatusTransition(INVENTORY_STATUS.AVAILABLE, INVENTORY_STATUS.LOST, {
+          reason: 'Thất lạc sau sự kiện',
+        }),
       ).not.toThrow();
     });
 
@@ -100,11 +91,9 @@ describe('Inventory Status Transition Policy', () => {
 
       // DAMAGED can transition to REPAIRING or RETIRED
       expect(() =>
-        validateInventoryStatusTransition(
-          INVENTORY_STATUS.DAMAGED,
-          INVENTORY_STATUS.REPAIRING,
-          { reason: 'Mang đi sửa' },
-        ),
+        validateInventoryStatusTransition(INVENTORY_STATUS.DAMAGED, INVENTORY_STATUS.REPAIRING, {
+          reason: 'Mang đi sửa',
+        }),
       ).not.toThrow();
     });
 
@@ -114,11 +103,9 @@ describe('Inventory Status Transition Policy', () => {
       ).toThrow('Cần nhập lý do/nguồn tìm thấy');
 
       expect(() =>
-        validateInventoryStatusTransition(
-          INVENTORY_STATUS.LOST,
-          INVENTORY_STATUS.AVAILABLE,
-          { reason: 'Khách tìm thấy và hoàn trả' },
-        ),
+        validateInventoryStatusTransition(INVENTORY_STATUS.LOST, INVENTORY_STATUS.AVAILABLE, {
+          reason: 'Khách tìm thấy và hoàn trả',
+        }),
       ).not.toThrow();
 
       // LOST cannot jump to CLEANING or REPAIRING
@@ -133,11 +120,9 @@ describe('Inventory Status Transition Policy', () => {
       ).toThrow('Cần nhập lý do');
 
       expect(() =>
-        validateInventoryStatusTransition(
-          INVENTORY_STATUS.RETIRED,
-          INVENTORY_STATUS.AVAILABLE,
-          { reason: 'Tái kích hoạt sau kiểm kê' },
-        ),
+        validateInventoryStatusTransition(INVENTORY_STATUS.RETIRED, INVENTORY_STATUS.AVAILABLE, {
+          reason: 'Tái kích hoạt sau kiểm kê',
+        }),
       ).not.toThrow();
     });
   });
@@ -162,8 +147,8 @@ describe('Inventory Status Transition Policy', () => {
     });
 
     it('returns empty array for RENTED or RESERVED items', () => {
-      expect(getAllowedOperationalTransitions(INVENTORY_STATUS.RENTED)).toEqual([]);
-      expect(getAllowedOperationalTransitions(INVENTORY_STATUS.RESERVED)).toEqual([]);
+      expect(getAllowedOperationalTransitions('RENTED')).toEqual([]);
+      expect(getAllowedOperationalTransitions('RESERVED')).toEqual([]);
     });
   });
 });
