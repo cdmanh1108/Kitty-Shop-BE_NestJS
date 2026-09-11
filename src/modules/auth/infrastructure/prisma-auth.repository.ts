@@ -3,7 +3,8 @@ import { PrismaService } from '@database/prisma/prisma.service';
 import type {
   AuthIdentity,
   AuthRepository,
-  StoredRefreshToken,
+  RefreshTokenData,
+  CreateRefreshTokenData,
 } from '../domain/auth.repository';
 
 @Injectable()
@@ -37,7 +38,10 @@ export class PrismaAuthRepository implements AuthRepository {
     return this.mapIdentity(user, member);
   }
 
-  async consumeRefreshToken(tokenHash: string): Promise<StoredRefreshToken | null> {
+  async rotateRefreshToken(
+    tokenHash: string,
+    replacement: RefreshTokenData,
+  ): Promise<AuthIdentity | null> {
     return this.prisma.$transaction(async (tx) => {
       const token = await tx.refreshToken.findUnique({
         where: { tokenHash },
@@ -59,7 +63,15 @@ export class PrismaAuthRepository implements AuthRepository {
           },
         },
       });
-      if (!token || token.revokedAt || token.expiresAt.getTime() <= Date.now()) return null;
+      if (
+        !token ||
+        token.revokedAt ||
+        token.expiresAt.getTime() <= Date.now() ||
+        token.user.status !== 'ACTIVE' ||
+        token.member.status !== 'ACTIVE' ||
+        token.member.userId !== token.userId
+      )
+        return null;
 
       // Atomic consume: only one concurrent refresh can flip revokedAt from NULL.
       const consumed = await tx.refreshToken.updateMany({
@@ -68,24 +80,15 @@ export class PrismaAuthRepository implements AuthRepository {
       });
       if (consumed.count !== 1) return null;
 
-      return {
-        id: token.id,
-        tokenHash: token.tokenHash,
-        expiresAt: token.expiresAt,
-        revokedAt: token.revokedAt,
-        identity: this.mapIdentity(token.user, token.member),
-      };
+      // Inserting the replacement must roll back consumption if persistence fails.
+      await tx.refreshToken.create({
+        data: { ...replacement, userId: token.userId, memberId: token.memberId },
+      });
+      return this.mapIdentity(token.user, token.member);
     });
   }
 
-  async createRefreshToken(input: {
-    userId: string;
-    memberId: string;
-    tokenHash: string;
-    expiresAt: Date;
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<void> {
+  async createRefreshToken(input: CreateRefreshTokenData): Promise<void> {
     await this.prisma.refreshToken.create({
       data: {
         userId: input.userId,
@@ -98,13 +101,12 @@ export class PrismaAuthRepository implements AuthRepository {
     });
   }
 
-  async revokeRefreshToken(tokenHash: string): Promise<void> {
+  async revokeRefreshToken(tokenHash: string, userId: string, memberId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
-      where: { tokenHash, revokedAt: null },
+      where: { tokenHash, userId, memberId, revokedAt: null },
       data: { revokedAt: new Date() },
     });
   }
-
 
   async updateLastLogin(userId: string): Promise<void> {
     await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
@@ -129,7 +131,13 @@ export class PrismaAuthRepository implements AuthRepository {
   }
 
   private mapIdentity(
-    user: { id: string; email: string | null; fullName: string; passwordHash: string | null; status: string },
+    user: {
+      id: string;
+      email: string | null;
+      fullName: string;
+      passwordHash: string | null;
+      status: string;
+    },
     member: {
       id: string;
       shopId: string;

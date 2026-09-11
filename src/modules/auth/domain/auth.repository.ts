@@ -10,28 +10,28 @@ export interface AuthIdentity {
   permissions: string[];
 }
 
-export interface StoredRefreshToken {
-  id: string;
+export interface RefreshTokenData {
   tokenHash: string;
   expiresAt: Date;
-  revokedAt: Date | null;
-  identity: AuthIdentity;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface CreateRefreshTokenData extends RefreshTokenData {
+  userId: string;
+  memberId: string;
 }
 
 export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
 
 export interface AuthRepository {
   findIdentityByEmail(email: string, shopCode?: string): Promise<AuthIdentity | null>;
-  consumeRefreshToken(tokenHash: string): Promise<StoredRefreshToken | null>;
-  createRefreshToken(input: {
-    userId: string;
-    memberId: string;
-    tokenHash: string;
-    expiresAt: Date;
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<void>;
-  revokeRefreshToken(tokenHash: string): Promise<void>;
+  rotateRefreshToken(
+    tokenHash: string,
+    replacement: RefreshTokenData,
+  ): Promise<AuthIdentity | null>;
+  createRefreshToken(input: CreateRefreshTokenData): Promise<void>;
+  revokeRefreshToken(tokenHash: string, userId: string, memberId: string): Promise<void>;
   updateLastLogin(userId: string): Promise<void>;
   findPasswordHash(userId: string, memberId: string, shopId: string): Promise<string | null>;
   updatePasswordAndRevokeSessions(userId: string, passwordHash: string): Promise<void>;

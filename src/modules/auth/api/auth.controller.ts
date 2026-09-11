@@ -1,8 +1,9 @@
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
-import { Body, Controller, Get, Headers, Ip, Post } from '@nestjs/common';
+import { Body, Controller, Get, Header, Headers, Ip, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from '../application/auth.service';
 import {
   AuthUserResDto,
@@ -20,6 +21,8 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Header('Cache-Control', 'no-store')
   @ApiHeader({ name: 'user-agent', required: false })
   @ApiOperation({ summary: 'Admin login' })
   @ApiOkResponse({ type: LoginResDto })
@@ -33,6 +36,8 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @Header('Cache-Control', 'no-store')
   @ApiHeader({ name: 'user-agent', required: false })
   @ApiOperation({ summary: 'Rotate refresh token and issue a new access token' })
   @ApiOkResponse({ type: LoginResDto })
@@ -47,8 +52,11 @@ export class AuthController {
   @Post('logout')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Revoke a refresh token' })
-  async logout(@Body() body: RefreshTokenReqDto): Promise<{ success: true }> {
-    await this.authService.logout(body.refreshToken);
+  async logout(
+    @CurrentUser() user: CurrentUserType,
+    @Body() body: RefreshTokenReqDto,
+  ): Promise<{ success: true }> {
+    await this.authService.logout(user, body.refreshToken);
     return { success: true };
   }
 

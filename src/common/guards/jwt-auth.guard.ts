@@ -4,6 +4,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { isVerifiedAccessPayload } from '../types/verified-access-payload';
 import type { JwtAccessPayload } from '../types/current-user';
 
 @Injectable()
@@ -30,7 +31,9 @@ export class JwtAuthGuard implements CanActivate {
     const token = authorization.slice('Bearer '.length).trim();
     let payload: JwtAccessPayload;
     try {
-      payload = await this.jwtService.verifyAsync<JwtAccessPayload>(token);
+      const verified: unknown = await this.jwtService.verifyAsync(token, { algorithms: ['HS256'] });
+      if (!isVerifiedAccessPayload(verified)) throw new Error('Invalid claims');
+      payload = verified;
     } catch {
       throw new UnauthorizedException('Invalid or expired access token');
     }
@@ -58,7 +61,7 @@ export class JwtAuthGuard implements CanActivate {
       member.userId !== payload.sub ||
       member.shopId !== payload.sid
     ) {
-      throw new UnauthorizedException('Account membership is no longer active');
+      throw new UnauthorizedException('Invalid or expired access token');
     }
 
     const permissions = new Set<string>();

@@ -61,3 +61,5 @@ The database constraint should prevent active overlapping allocations. If an ove
 ## Incident: payment mismatch
 
 `payment_transactions` is the money movement history. Do not “fix” totals by editing a completed transaction. Void the erroneous transaction and record the correct one, then recompute/verify order payment and deposit statuses.
+
+See [Authentication security](AUTH_SECURITY.md) for JWT/refresh guarantees, auth rate limits, production seed requirements and deployment limitations.

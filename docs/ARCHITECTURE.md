@@ -137,3 +137,5 @@ src/modules/foo/
 ```
 
 Create a domain port before embedding Prisma calls in application logic. Keep controller methods thin. Transactions belong in the repository/transaction boundary that owns the consistency invariant.
+
+See [Authentication security](AUTH_SECURITY.md) for JWT/refresh guarantees, auth rate limits, production seed requirements and deployment limitations.

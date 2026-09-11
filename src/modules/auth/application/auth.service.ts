@@ -31,29 +31,33 @@ export class AuthService {
     }
 
     await this.repository.updateLastLogin(identity.userId);
-    return this.issueSession(identity, context);
+    const refresh = this.prepareRefreshToken(context);
+    const result = await this.issueSession(identity, refresh.rawToken);
+    await this.repository.createRefreshToken({
+      ...refresh.data,
+      userId: identity.userId,
+      memberId: identity.memberId,
+    });
+    return result;
   }
 
   async refresh(
     rawToken: string,
     context: { ipAddress?: string; userAgent?: string },
   ): Promise<LoginResult> {
-    const tokenHash = this.hashToken(rawToken);
-    const stored = await this.repository.consumeRefreshToken(tokenHash);
-    if (
-      !stored ||
-      stored.expiresAt.getTime() <= Date.now() ||
-      stored.identity.userStatus !== 'ACTIVE' ||
-      stored.identity.memberStatus !== 'ACTIVE'
-    ) {
+    const refresh = this.prepareRefreshToken(context);
+    const identity = await this.repository.rotateRefreshToken(
+      this.hashToken(rawToken),
+      refresh.data,
+    );
+    if (!identity) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
-
-    return this.issueSession(stored.identity, context);
+    return this.issueSession(identity, refresh.rawToken);
   }
 
-  async logout(rawToken: string): Promise<void> {
-    await this.repository.revokeRefreshToken(this.hashToken(rawToken));
+  async logout(user: CurrentUser, rawToken: string): Promise<void> {
+    await this.repository.revokeRefreshToken(this.hashToken(rawToken), user.userId, user.memberId);
   }
 
   me(user: CurrentUser): CurrentUser {
@@ -79,29 +83,16 @@ export class AuthService {
     return { success: true };
   }
 
-  private async issueSession(
-    identity: AuthIdentity,
-    context: { ipAddress?: string; userAgent?: string },
-  ): Promise<LoginResult> {
+  private async issueSession(identity: AuthIdentity, refreshToken: string): Promise<LoginResult> {
     const ttlSeconds = this.config.get('jwtAccessTtlSeconds', { infer: true });
     const payload: JwtAccessPayload = {
       sub: identity.userId,
       mid: identity.memberId,
       sid: identity.shopId,
     };
-    const accessToken = await this.jwt.signAsync(payload, { expiresIn: ttlSeconds });
-
-    const refreshToken = randomBytes(48).toString('base64url');
-    const expiresAt = new Date(
-      Date.now() + this.config.get('refreshTokenTtlDays', { infer: true }) * 86_400_000,
-    );
-    await this.repository.createRefreshToken({
-      userId: identity.userId,
-      memberId: identity.memberId,
-      tokenHash: this.hashToken(refreshToken),
-      expiresAt,
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
+    const accessToken = await this.jwt.signAsync(payload, {
+      expiresIn: ttlSeconds,
+      algorithm: 'HS256',
     });
 
     return {
@@ -114,6 +105,21 @@ export class AuthService {
         permissions: identity.permissions,
       },
       tokens: { accessToken, refreshToken, expiresIn: ttlSeconds },
+    };
+  }
+
+  private prepareRefreshToken(context: { ipAddress?: string; userAgent?: string }) {
+    const rawToken = randomBytes(48).toString('base64url');
+    return {
+      rawToken,
+      data: {
+        tokenHash: this.hashToken(rawToken),
+        expiresAt: new Date(
+          Date.now() + this.config.get('refreshTokenTtlDays', { infer: true }) * 86_400_000,
+        ),
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+      },
     };
   }
 

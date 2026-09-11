@@ -14,6 +14,15 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   ) {
     throw new Error('LOG_LEVEL must be fatal, error, warn, log, debug or verbose');
   }
+  for (const key of ['JWT_ACCESS_TTL_SECONDS', 'REFRESH_TOKEN_TTL_DAYS']) {
+    const value = config[key];
+    if (value === undefined) continue;
+    const parsed = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN;
+    const maximum = key === 'JWT_ACCESS_TTL_SECONDS' ? 86_400 : 365;
+    if (!Number.isSafeInteger(parsed) || parsed <= 0 || parsed > maximum) {
+      throw new Error(key + ' must be a positive integer within the supported lifetime');
+    }
+  }
   required(config, 'DATABASE_URL');
   const jwtSecret = required(config, 'JWT_ACCESS_SECRET');
   if (jwtSecret.length < 32 || jwtSecret === 'replace-with-at-least-32-random-characters') {

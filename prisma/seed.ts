@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { ApplicationLogger } from '../src/common/logging/application-logger';
 import { PERMISSIONS } from '../src/common/constants/permissions';
 
 const prisma = new PrismaClient();
@@ -39,6 +40,12 @@ async function main(): Promise<void> {
   const shopName = process.env.DEFAULT_SHOP_NAME ?? 'Rental Shop';
   const adminEmail = (process.env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com').toLowerCase();
   const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD ?? 'ChangeMe123!';
+  if (
+    process.env.NODE_ENV === 'production' &&
+    (!process.env.DEFAULT_ADMIN_PASSWORD?.trim() || adminPassword === 'ChangeMe123!')
+  ) {
+    throw new Error('Production seed requires an explicit non-default DEFAULT_ADMIN_PASSWORD');
+  }
   const adminName = process.env.DEFAULT_ADMIN_NAME ?? 'Shop Owner';
 
   const shop = await prisma.shop.upsert({
@@ -66,7 +73,13 @@ async function main(): Promise<void> {
   const ownerRole = await prisma.role.upsert({
     where: { shopId_code: { shopId: shop.id, code: 'OWNER' } },
     update: { name: 'Owner', isSystem: true },
-    create: { shopId: shop.id, code: 'OWNER', name: 'Owner', isSystem: true, description: 'Full shop access' },
+    create: {
+      shopId: shop.id,
+      code: 'OWNER',
+      name: 'Owner',
+      isSystem: true,
+      description: 'Full shop access',
+    },
   });
   const managerRole = await prisma.role.upsert({
     where: { shopId_code: { shopId: shop.id, code: 'MANAGER' } },
@@ -86,7 +99,9 @@ async function main(): Promise<void> {
 
   const byCode = new Map(permissionRows.map((p) => [p.code, p.id]));
   const allPermissionIds = permissionRows.map((p) => p.id);
-  const managerCodes = Object.values(PERMISSIONS).filter((code) => code !== PERMISSIONS.MEMBERS_MANAGE);
+  const managerCodes = Object.values(PERMISSIONS).filter(
+    (code) => code !== PERMISSIONS.MEMBERS_MANAGE,
+  );
   const staffCodes = [
     PERMISSIONS.DASHBOARD_VIEW,
     PERMISSIONS.CUSTOMERS_VIEW,
@@ -121,7 +136,10 @@ async function main(): Promise<void> {
   ];
   for (const [roleId, permissionIds] of rolePermissionIds) {
     await prisma.rolePermission.deleteMany({ where: { roleId } });
-    await prisma.rolePermission.createMany({ data: permissionIds.map((permissionId) => ({ roleId, permissionId })), skipDuplicates: true });
+    await prisma.rolePermission.createMany({
+      data: permissionIds.map((permissionId) => ({ roleId, permissionId })),
+      skipDuplicates: true,
+    });
   }
 
   const passwordHash = await hash(adminPassword, 12);
@@ -170,7 +188,11 @@ async function main(): Promise<void> {
 
   const defaults: Array<[string, unknown, string]> = [
     ['rental.default_buffer_hours', 0, 'Extra blocked hours between consecutive rentals.'],
-    ['rental.allow_manual_overlap_override', false, 'Reserved for a future privileged override flow.'],
+    [
+      'rental.allow_manual_overlap_override',
+      false,
+      'Reserved for a future privileged override flow.',
+    ],
     ['notification.return_reminder_hours', 24, 'Hours before return time to surface a reminder.'],
     ['order.number_prefix', 'RO', 'Rental order number prefix.'],
   ];
@@ -189,8 +211,8 @@ async function main(): Promise<void> {
 }
 
 main()
-  .catch((error) => {
-    console.error(error);
+  .catch((error: unknown) => {
+    new ApplicationLogger().error({ event: 'seed.failed', error });
     process.exitCode = 1;
   })
   .finally(async () => prisma.$disconnect());
