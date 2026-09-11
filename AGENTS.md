@@ -19,6 +19,8 @@ Non-negotiable rules:
 - application/domain must not import API DTOs; controllers map validated transport DTOs into application-owned inputs.
 - repository ports use explicit typed results and inputs, with no `unknown` escape hatch or transport pagination dependency.
 - application/domain layers must not issue Prisma queries directly.
+- keep Prisma payload types inside infrastructure; extract meaningful persistence mapping, not identity wrappers.
+- split persistence by aggregate/responsibility, not mechanically by database table; pass the same transaction client into all helpers participating in an atomic write.
 - client-supplied `shopId` is never authorization; use authenticated membership.
 - new API input must use validation DTOs and Swagger metadata.
 - new schema changes require committed migration + schema update + docs when invariants change.

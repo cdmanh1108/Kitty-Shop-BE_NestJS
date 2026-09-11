@@ -82,6 +82,41 @@ Important create/update/transition actions write audit records. Do not store sec
 
 ## Extending the system
 
+### Prisma persistence responsibilities
+
+Rental and Catalog ports remain unchanged. Their injectable Prisma adapters forward to
+infrastructure-local functions, using the existing PrismaService; no additional clients
+or providers are created.
+
+- Rentals: `rental-queries` owns reads and the shared transaction-aware detail loader;
+  `rental-availability` owns bookable variant lookup; `rental-prisma.mapper` owns its
+  typed include and Decimal/nullable mapping. `rental-booking` owns creation and
+  idempotency persistence; `rental-lifecycle` owns transitions, rescheduling and charges.
+- Catalog: `product-queries` owns product reads; `product-commands` owns product,
+  variant/rate and media aggregate writes. Its variant creation helper receives the
+  caller's transaction. `inventory-persistence` owns inventory reads/state/history;
+  `catalog-lookups` owns catalog reference data.
+- `catalog/infrastructure/inventory-availability` owns the shared inventory filter
+  used by Catalog and Rentals infrastructure. Intervals remain half-open, and the
+  database exclusion constraint remains the final protection against overlaps.
+
+Creation/rescheduling retain the existing Serializable transaction/retry helper and
+overlap error translation. Lifecycle, charge, product/media and inventory operations
+retain their original transaction boundaries. Rental detail loading, outbox writes
+and completed idempotency responses use the same transaction as their owning write.
+Idempotency claim/release remain separate operations as before.
+
+Prisma payload types stay in infrastructure. Read results that already structurally
+satisfy the inner contracts pass through without identity mappers: Decimal, Date,
+JSON, nullability and nested relations retain their existing runtime representation.
+List includes, filters, sorting, pagination and query counts are preserved; this is
+an organizational refactor, not a performance optimization.
+
+`test/persistence-boundaries.spec.ts` covers mapping, availability and selected
+adapter contracts using pure fixtures/delegate spies without connecting to a database.
+It does not establish PostgreSQL rollback or concurrent exclusion behavior; the
+repository currently has no integration/e2e database harness.
+
 For a new feature `foo`:
 
 ```text
