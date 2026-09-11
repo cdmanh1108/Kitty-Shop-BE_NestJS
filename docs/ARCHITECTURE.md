@@ -62,7 +62,17 @@ Do not trust a `shopId` sent by the client. The active tenant comes from `Curren
 
 ### Validation / errors
 
-Global `ValidationPipe` enables whitelist + forbid-non-whitelisted input. `AllExceptionsFilter` produces a consistent error shape and translates common Prisma unique/not-found errors without leaking DB details.
+Global `ValidationPipe` enables whitelist + forbid-non-whitelisted input. `AllExceptionsFilter` produces a consistent error shape, maps canonical domain errors (`RentalOverlapError`, `RentalClaimLostError`, `InvalidRentalIntervalError`, `FinanceInvariantError`, `CatalogInvariantError`), and sanitizes Prisma and unknown 500 errors in production without leaking DB queries, table details, or stack traces.
+
+### Production configuration & hardening
+
+Configuration is centralized and validated fail-fast at bootstrap. In production:
+
+- `JWT_ACCESS_SECRET` requires at least 32 characters and rejects weak/placeholder values.
+- `PORT`, `RATE_LIMIT_TTL_MS`, and `RATE_LIMIT_LIMIT` must be valid positive integers.
+- `CORS_ORIGINS` wildcard `*` is prohibited when credentials are enabled.
+- `SWAGGER_ENABLED` defaults to `false` in production (and `true` in development/test). Programmatic OpenAPI generation (`npm run openapi:export`) remains independent and DB-free.
+- Startup failures log sanitized messages and exit with non-zero status.
 
 ### Idempotency
 

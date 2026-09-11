@@ -40,7 +40,8 @@ export async function createApplication() {
       transformOptions: { enableImplicitConversion: false },
     }),
   );
-  app.useGlobalFilters(new AllExceptionsFilter());
+  const isProduction = config.get('nodeEnv', { infer: true }) === 'production';
+  app.useGlobalFilters(new AllExceptionsFilter(isProduction));
   app.enableShutdownHooks();
 
   if (config.get('swaggerEnabled', { infer: true })) {
@@ -73,5 +74,17 @@ async function bootstrap(): Promise<void> {
 }
 
 if (require.main === module) {
-  void bootstrap();
+  bootstrap().catch((error: unknown) => {
+    const logger = new ApplicationLogger();
+    logger.error(
+      {
+        event: 'application.start_failed',
+        errorClass: error instanceof Error ? error.constructor.name : 'UnknownError',
+        message: error instanceof Error ? error.message : 'Application failed to start',
+      },
+      undefined,
+      'Bootstrap',
+    );
+    process.exit(1);
+  });
 }
