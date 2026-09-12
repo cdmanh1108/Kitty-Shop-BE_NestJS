@@ -46,6 +46,10 @@ describe('OpenAPI Contract Baseline', () => {
     expect(paths['/rental-orders']?.post).toBeDefined();
     expect(paths['/products']?.get).toBeDefined();
     expect(paths['/customers']?.get).toBeDefined();
+    expect(paths['/customers']?.post).toBeDefined();
+    expect(paths['/customers/lookup']?.get).toBeDefined();
+    expect(paths['/customers/{id}']?.get).toBeDefined();
+    expect(paths['/customers/{id}']?.patch).toBeDefined();
     expect(paths['/inventory']?.get).toBeDefined();
     expect(paths['/inventory/availability/search']?.get).toBeDefined();
     expect(paths['/payments']?.get).toBeDefined();
@@ -109,5 +113,8 @@ describe('OpenAPI Contract Baseline', () => {
     }
     inspect({ $ref: '#/components/schemas/RentalOrderPageResDto' });
     inspect({ $ref: '#/components/schemas/RentalOrderResDto' });
+    inspect({ $ref: '#/components/schemas/CustomerPageResDto' });
+    inspect({ $ref: '#/components/schemas/CustomerDetailResDto' });
+    inspect({ $ref: '#/components/schemas/CustomerLookupItemResDto' });
   });
 });

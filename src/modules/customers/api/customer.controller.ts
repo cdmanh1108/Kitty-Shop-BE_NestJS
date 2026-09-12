@@ -15,8 +15,12 @@ import {
   AddCustomerNoteReqDto,
   CreateCustomerReqDto,
   CustomerAddressReqDto,
+  CustomerAddressResDto,
   CustomerDetailResDto,
   CustomerListQueryDto,
+  CustomerLookupItemResDto,
+  CustomerLookupQueryDto,
+  CustomerNoteResDto,
   CustomerPageResDto,
   CustomerResDto,
   UpdateCustomerAddressReqDto,
@@ -27,6 +31,7 @@ import {
   toCreateCustomerInput,
   toCustomerAddressInput,
   toCustomerListQuery,
+  toCustomerLookupQuery,
   toUpdateCustomerAddressInput,
   toUpdateCustomerInput,
 } from './customer.mapper';
@@ -43,6 +48,14 @@ export class CustomerController {
   @ApiOkResponse({ type: CustomerPageResDto })
   list(@CurrentUser() user: CurrentUserType, @Query() query: CustomerListQueryDto) {
     return this.service.list(user, toCustomerListQuery(query));
+  }
+
+  @Get('lookup')
+  @Permissions(PERMISSIONS.CUSTOMERS_VIEW)
+  @ApiOperation({ summary: 'Search lightweight customer options' })
+  @ApiOkResponse({ type: [CustomerLookupItemResDto] })
+  lookup(@CurrentUser() user: CurrentUserType, @Query() query: CustomerLookupQueryDto) {
+    return this.service.lookup(user, toCustomerLookupQuery(query));
   }
 
   @Get(':id')
@@ -72,6 +85,7 @@ export class CustomerController {
 
   @Post(':id/notes')
   @Permissions(PERMISSIONS.CUSTOMERS_UPDATE)
+  @ApiCreatedResponse({ type: CustomerNoteResDto })
   addNote(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
@@ -81,6 +95,7 @@ export class CustomerController {
   }
   @Post(':id/addresses')
   @Permissions(PERMISSIONS.CUSTOMERS_UPDATE)
+  @ApiCreatedResponse({ type: CustomerAddressResDto })
   addAddress(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
@@ -91,6 +106,7 @@ export class CustomerController {
 
   @Patch(':id/addresses/:addressId')
   @Permissions(PERMISSIONS.CUSTOMERS_UPDATE)
+  @ApiOkResponse({ type: CustomerAddressResDto })
   updateAddress(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,

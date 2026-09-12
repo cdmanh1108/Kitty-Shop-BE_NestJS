@@ -22,6 +22,18 @@ export interface CustomerRecord {
   archivedAt: Date | null;
 }
 
+export interface CustomerListItemRecord extends CustomerRecord {
+  completedRentalCount: number;
+  totalPaid: number;
+  lastRentalAt: Date | null;
+}
+
+export interface CustomerLookupRecord {
+  id: string;
+  fullName: string;
+  phone: string;
+}
+
 export interface CustomerNoteRecord {
   id: string;
   customerId: string;

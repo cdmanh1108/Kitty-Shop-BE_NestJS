@@ -225,7 +225,7 @@ model Customer {
   notificationLogs    NotificationLog[]
 
   @@unique([shopId, customerCode])
-  @@index([shopId, normalizedPhone])
+  @@unique([shopId, normalizedPhone])
   @@index([shopId, fullName])
   @@index([shopId, status])
   @@map("customers")

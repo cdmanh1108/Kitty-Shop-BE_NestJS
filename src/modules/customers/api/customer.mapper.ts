@@ -3,6 +3,7 @@ import type {
   CreateCustomerInput,
   CustomerAddressInput,
   CustomerListQuery,
+  CustomerLookupQuery,
   UpdateCustomerAddressInput,
   UpdateCustomerInput,
 } from '../application/customer.contracts';
@@ -11,12 +12,13 @@ import type {
   CreateCustomerReqDto,
   CustomerAddressReqDto,
   CustomerListQueryDto,
+  CustomerLookupQueryDto,
   UpdateCustomerAddressReqDto,
   UpdateCustomerReqDto,
 } from './customer.dto';
 
 export function toAddCustomerNoteInput(dto: AddCustomerNoteReqDto): AddCustomerNoteInput {
-  return { ...dto };
+  return { content: dto.content, isPinned: dto.isPinned ?? false };
 }
 export function toCustomerAddressInput(dto: CustomerAddressReqDto): CustomerAddressInput {
   return { ...dto };
@@ -31,6 +33,9 @@ export function toCreateCustomerInput(dto: CreateCustomerReqDto): CreateCustomer
 }
 export function toCustomerListQuery(dto: CustomerListQueryDto): CustomerListQuery {
   return { ...dto };
+}
+export function toCustomerLookupQuery(dto: CustomerLookupQueryDto): CustomerLookupQuery {
+  return { search: dto.search?.trim() || undefined, limit: dto.limit ?? 20 };
 }
 export function toUpdateCustomerInput(dto: UpdateCustomerReqDto): UpdateCustomerInput {
   return { ...dto };

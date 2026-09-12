@@ -38,12 +38,18 @@ export interface CreateCustomerInput {
   gender?: string;
   customerType?: string;
   source?: string;
+  note?: string;
 }
 
 export interface CustomerListQuery extends PaginationParams {
   search?: string;
   status?: string;
   customerType?: string;
+}
+
+export interface CustomerLookupQuery {
+  search?: string;
+  limit: number;
 }
 
 export interface UpdateCustomerInput {

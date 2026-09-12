@@ -101,6 +101,12 @@ Audit request IDs use VARCHAR(100), matching middleware correlation IDs, through
 202609110001_audit_request_id_text. Rental idempotency reuses row UUID as an ownership
 token and createdAt as acquisition time; see [RELIABILITY.md](RELIABILITY.md) before deployment.
 
+Customer phone identity is canonicalized to a ten-digit Vietnamese national number
+(`0xxxxxxxxx`) and unique per shop. It is a CRM lookup key only: matching a phone never
+authorizes linking a User account; a future account link must require verified phone ownership.
+Migration `202609120001_customer_phone_uniqueness` backfills from the display phone and reports
+invalid or duplicate legacy rows for manual reconciliation without merging customer history.
+
 ## Migration rules
 
 1. Edit `prisma/schema.prisma`.

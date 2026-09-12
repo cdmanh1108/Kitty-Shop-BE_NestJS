@@ -8,6 +8,9 @@ import {
   IsIn,
   IsOptional,
   IsString,
+  IsInt,
+  Max,
+  Min,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -34,6 +37,7 @@ export class CreateCustomerReqDto {
   @ApiPropertyOptional() @IsString() @IsOptional() gender?: string;
   @ApiPropertyOptional({ example: 'NORMAL' }) @IsString() @IsOptional() customerType?: string;
   @ApiPropertyOptional({ example: 'Facebook' }) @IsString() @IsOptional() source?: string;
+  @ApiPropertyOptional() @IsString() @MaxLength(2000) @IsOptional() note?: string;
 }
 
 export class UpdateCustomerReqDto extends PartialType(CreateCustomerReqDto) {
@@ -49,13 +53,24 @@ export class CustomerListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsString() @IsOptional() customerType?: string;
 }
 
+export class CustomerLookupQueryDto {
+  @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
+  @ApiPropertyOptional({ type: Number, default: 20, minimum: 1, maximum: 20 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  @IsOptional()
+  limit?: number;
+}
+
 export class AddCustomerNoteReqDto {
   @ApiProperty() @IsString() @MinLength(1) content!: string;
-  @ApiPropertyOptional({ default: false })
+  @ApiPropertyOptional({ type: Boolean, default: false })
   @Type(() => Boolean)
   @IsBoolean()
   @IsOptional()
-  isPinned = false;
+  isPinned?: boolean;
 }
 
 export class CustomerResDto {
@@ -63,12 +78,25 @@ export class CustomerResDto {
   @ApiProperty() customerCode!: string;
   @ApiProperty() fullName!: string;
   @ApiProperty() phone!: string;
-  @ApiPropertyOptional({ nullable: true }) email!: string | null;
-  @ApiPropertyOptional({ nullable: true }) facebook!: string | null;
-  @ApiPropertyOptional({ nullable: true }) zalo!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) email!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) facebook!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) zalo!: string | null;
   @ApiProperty() customerType!: string;
   @ApiProperty() status!: string;
   @ApiProperty() createdAt!: Date;
+  @ApiProperty() updatedAt!: Date;
+}
+
+export class CustomerListItemResDto extends CustomerResDto {
+  @ApiProperty() completedRentalCount!: number;
+  @ApiProperty({ example: 2500000 }) totalPaid!: number;
+  @ApiPropertyOptional({ nullable: true, type: Date }) lastRentalAt!: Date | null;
+}
+
+export class CustomerLookupItemResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() fullName!: string;
+  @ApiProperty() phone!: string;
 }
 
 export class CustomerAddressReqDto {
@@ -91,20 +119,66 @@ export class UpdateCustomerAddressReqDto extends PartialType(CustomerAddressReqD
 
 export class CustomerStatsResDto {
   @ApiProperty() totalOrders!: number;
-  @ApiProperty() completedOrders!: number;
+  @ApiProperty() completedRentalCount!: number;
   @ApiProperty({ example: 2500000 }) totalPaid!: number;
   @ApiProperty({ example: 1000000 }) depositHeld!: number;
+  @ApiPropertyOptional({ nullable: true, type: Date }) lastRentalAt!: Date | null;
+}
+
+export class CustomerAddressResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() customerId!: string;
+  @ApiPropertyOptional({ nullable: true, type: String }) label!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) recipientName!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) phone!: string | null;
+  @ApiProperty() addressLine!: string;
+  @ApiPropertyOptional({ nullable: true, type: String }) ward!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) district!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) city!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) province!: string | null;
+  @ApiProperty() country!: string;
+  @ApiProperty() isDefault!: boolean;
+  @ApiProperty() createdAt!: Date;
+  @ApiProperty() updatedAt!: Date;
+}
+
+export class CustomerNoteResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() customerId!: string;
+  @ApiProperty() content!: string;
+  @ApiProperty() isPinned!: boolean;
+  @ApiPropertyOptional({ nullable: true, type: String }) createdBy!: string | null;
+  @ApiProperty() createdAt!: Date;
+  @ApiProperty() updatedAt!: Date;
+}
+
+export class CustomerTagResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() shopId!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ nullable: true, type: String }) color!: string | null;
+  @ApiProperty() createdAt!: Date;
+}
+
+export class CustomerOrderSummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() orderNumber!: string;
+  @ApiProperty() rentalStartAt!: Date;
+  @ApiProperty() rentalEndAt!: Date;
+  @ApiProperty() status!: string;
+  @ApiProperty() paymentStatus!: string;
+  @ApiProperty({ type: String, example: '1500000.00' }) grandTotal!: string;
 }
 
 export class CustomerDetailResDto extends CustomerResDto {
-  @ApiProperty({ type: [Object] }) addresses!: object[];
-  @ApiProperty({ type: [Object] }) notes!: object[];
-  @ApiProperty({ type: [Object] }) tags!: object[];
+  @ApiProperty({ type: [CustomerAddressResDto] }) addresses!: CustomerAddressResDto[];
+  @ApiProperty({ type: [CustomerNoteResDto] }) notes!: CustomerNoteResDto[];
+  @ApiProperty({ type: [CustomerTagResDto] }) tags!: CustomerTagResDto[];
   @ApiProperty({ type: CustomerStatsResDto }) stats!: CustomerStatsResDto;
-  @ApiProperty({ type: [Object] }) recentOrders!: object[];
+  @ApiProperty({ type: [CustomerOrderSummaryResDto] }) recentOrders!: CustomerOrderSummaryResDto[];
 }
 
 export class CustomerPageResDto {
-  @ApiProperty({ type: [CustomerResDto] }) items!: CustomerResDto[];
+  @ApiProperty({ type: [CustomerListItemResDto] }) items!: CustomerListItemResDto[];
   @ApiProperty({ type: PaginationMetaResDto }) meta!: PaginationMetaResDto;
 }

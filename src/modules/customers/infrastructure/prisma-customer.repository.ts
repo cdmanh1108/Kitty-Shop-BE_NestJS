@@ -2,6 +2,9 @@ import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { paginateMeta } from '@common/types/pagination';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { CustomerPhoneAlreadyExistsError } from '../domain/customer-errors';
+import { normalizeCustomerPhoneSearch } from '../domain/customer-phone';
 import type { CustomerRepository } from '../domain/customer.repository';
 
 @Injectable()
@@ -9,7 +12,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(input: Parameters<CustomerRepository['list']>[0]) {
-    const phoneSearch = input.search?.replace(/\D/g, '');
+    const phoneSearch = input.search ? normalizeCustomerPhoneSearch(input.search) : undefined;
     const where = {
       shopId: input.shopId,
       archivedAt: null,
@@ -25,7 +28,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
           }
         : {}),
     };
-    const [items, total] = await this.prisma.$transaction([
+    const [customers, total] = await this.prisma.$transaction([
       this.prisma.customer.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -34,7 +37,75 @@ export class PrismaCustomerRepository implements CustomerRepository {
       }),
       this.prisma.customer.count({ where }),
     ]);
+    const customerIds = customers.map(({ id }) => id);
+    if (!customerIds.length)
+      return { items: [], meta: paginateMeta(input.page, input.limit, total) };
+
+    const rentals = await this.prisma.rentalOrder.groupBy({
+      by: ['customerId'],
+      where: { shopId: input.shopId, customerId: { in: customerIds }, status: 'COMPLETED' },
+      orderBy: { customerId: 'asc' },
+      _count: { customerId: true },
+      _max: { rentalStartAt: true },
+    });
+    const payments = await this.prisma.paymentTransaction.groupBy({
+      by: ['customerId', 'direction'],
+      where: {
+        shopId: input.shopId,
+        customerId: { in: customerIds },
+        status: 'COMPLETED',
+        voidedAt: null,
+        purpose: { notIn: ['DEPOSIT', 'DEPOSIT_REFUND'] },
+      },
+      orderBy: [{ customerId: 'asc' }, { direction: 'asc' }],
+      _sum: { amount: true },
+    });
+    const rentalByCustomer = new Map(rentals.map((row) => [row.customerId, row]));
+    const paidByCustomer = new Map<string, number>();
+    for (const payment of payments) {
+      const signedAmount =
+        (payment.direction === 'IN' ? 1 : -1) * decimalToNumber(payment._sum?.amount ?? 0);
+      paidByCustomer.set(
+        payment.customerId,
+        (paidByCustomer.get(payment.customerId) ?? 0) + signedAmount,
+      );
+    }
+    const items = customers.map((customer) => ({
+      ...customer,
+      completedRentalCount: rentalByCustomer.get(customer.id)?._count?.customerId ?? 0,
+      lastRentalAt: rentalByCustomer.get(customer.id)?._max?.rentalStartAt ?? null,
+      totalPaid: paidByCustomer.get(customer.id) ?? 0,
+    }));
     return { items, meta: paginateMeta(input.page, input.limit, total) };
+  }
+
+  async lookup(input: Parameters<CustomerRepository['lookup']>[0]) {
+    const phoneSearch = input.search ? normalizeCustomerPhoneSearch(input.search) : undefined;
+    return this.prisma.customer.findMany({
+      where: {
+        shopId: input.shopId,
+        archivedAt: null,
+        status: 'ACTIVE',
+        ...(input.search
+          ? {
+              OR: [
+                { fullName: { contains: input.search, mode: 'insensitive' as const } },
+                ...(phoneSearch ? [{ normalizedPhone: { contains: phoneSearch } }] : []),
+              ],
+            }
+          : {}),
+      },
+      select: { id: true, fullName: true, phone: true },
+      orderBy: [{ fullName: 'asc' }, { id: 'asc' }],
+      take: input.limit,
+    });
+  }
+
+  findByNormalizedPhone(shopId: string, normalizedPhone: string) {
+    return this.prisma.customer.findFirst({
+      where: { shopId, normalizedPhone, archivedAt: null },
+      select: { id: true, fullName: true, phone: true },
+    });
   }
 
   async findById(shopId: string, id: string) {
@@ -48,28 +119,34 @@ export class PrismaCustomerRepository implements CustomerRepository {
     });
     if (!customer) return null;
 
-    const [totalOrders, completedOrders, payments, recentOrders] = await this.prisma.$transaction([
-      this.prisma.rentalOrder.count({ where: { shopId, customerId: id } }),
-      this.prisma.rentalOrder.count({ where: { shopId, customerId: id, status: 'COMPLETED' } }),
-      this.prisma.paymentTransaction.findMany({
-        where: { shopId, customerId: id, status: 'COMPLETED', voidedAt: null },
-        select: { amount: true, direction: true, purpose: true },
-      }),
-      this.prisma.rentalOrder.findMany({
-        where: { shopId, customerId: id },
-        select: {
-          id: true,
-          orderNumber: true,
-          rentalStartAt: true,
-          rentalEndAt: true,
-          status: true,
-          paymentStatus: true,
-          grandTotal: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      }),
-    ]);
+    const [totalOrders, completedRentalCount, lastRental, payments, recentOrders] =
+      await this.prisma.$transaction([
+        this.prisma.rentalOrder.count({ where: { shopId, customerId: id } }),
+        this.prisma.rentalOrder.count({ where: { shopId, customerId: id, status: 'COMPLETED' } }),
+        this.prisma.rentalOrder.findFirst({
+          where: { shopId, customerId: id, status: 'COMPLETED' },
+          select: { rentalStartAt: true },
+          orderBy: { rentalStartAt: 'desc' },
+        }),
+        this.prisma.paymentTransaction.findMany({
+          where: { shopId, customerId: id, status: 'COMPLETED', voidedAt: null },
+          select: { amount: true, direction: true, purpose: true },
+        }),
+        this.prisma.rentalOrder.findMany({
+          where: { shopId, customerId: id },
+          select: {
+            id: true,
+            orderNumber: true,
+            rentalStartAt: true,
+            rentalEndAt: true,
+            status: true,
+            paymentStatus: true,
+            grandTotal: true,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        }),
+      ]);
 
     const netNonDepositPaid = payments.reduce((sum, payment) => {
       if (['DEPOSIT', 'DEPOSIT_REFUND'].includes(payment.purpose)) return sum;
@@ -93,13 +170,39 @@ export class PrismaCustomerRepository implements CustomerRepository {
     return {
       ...customer,
       tags: customer.tags.map((item) => item.tag),
-      stats: { totalOrders, completedOrders, totalPaid: netNonDepositPaid, depositHeld },
+      stats: {
+        totalOrders,
+        completedRentalCount,
+        totalPaid: netNonDepositPaid,
+        depositHeld,
+        lastRentalAt: lastRental?.rentalStartAt ?? null,
+      },
       recentOrders,
     };
   }
 
-  create(shopId: string, input: Parameters<CustomerRepository['create']>[1]) {
-    return this.prisma.customer.create({ data: { shopId, ...input } });
+  async create(shopId: string, input: Parameters<CustomerRepository['create']>[1]) {
+    try {
+      const { initialNote, ...customerData } = input;
+      return await this.prisma.$transaction(async (tx) => {
+        const customer = await tx.customer.create({ data: { shopId, ...customerData } });
+        if (initialNote) {
+          await tx.customerNote.create({
+            data: {
+              customerId: customer.id,
+              content: initialNote.content,
+              createdBy: initialNote.createdBy,
+            },
+          });
+        }
+        return customer;
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new CustomerPhoneAlreadyExistsError();
+      }
+      throw error;
+    }
   }
 
   async update(shopId: string, id: string, input: Parameters<CustomerRepository['update']>[2]) {
@@ -107,7 +210,14 @@ export class PrismaCustomerRepository implements CustomerRepository {
       where: { id, shopId, archivedAt: null },
     });
     if (!existing) return null;
-    return this.prisma.customer.update({ where: { id }, data: input });
+    try {
+      return await this.prisma.customer.update({ where: { id }, data: input });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new CustomerPhoneAlreadyExistsError();
+      }
+      throw error;
+    }
   }
 
   addNote(input: Parameters<CustomerRepository['addNote']>[0]) {

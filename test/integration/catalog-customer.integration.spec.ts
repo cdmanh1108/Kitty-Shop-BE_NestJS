@@ -5,13 +5,19 @@ import {
   resetTestDatabase,
   disconnectTestDatabase,
 } from '../helpers/test-database';
-import { createTestShop, createTestCategory, uniqueCode } from '../fixtures/test-factories';
+import {
+  createTestCustomer,
+  createTestShop,
+  createTestCategory,
+  uniqueCode,
+} from '../fixtures/test-factories';
 import { rentalScenario } from '../fixtures/rental.fixture';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { CustomerService } from '../../src/modules/customers/application/customer.service';
 import { AuditService } from '../../src/modules/audit/application/audit.service';
 import { PrismaAuditRepository } from '../../src/modules/audit/infrastructure/prisma-audit.repository';
+import { ConflictException } from '@nestjs/common';
 
 describe('Catalog and customer persistence boundaries', () => {
   let prisma: PrismaService;
@@ -84,5 +90,27 @@ describe('Catalog and customer persistence boundaries', () => {
     ).toEqual([]);
     expect(await repo.findById(other.id, customer.id)).toBeNull();
     expect(await repo.update(other.id, customer.id, { fullName: 'Spoof' })).toBeNull();
+
+    await expect(
+      service.create(f.principal, { fullName: 'Duplicate Alice', phone: '+84 939 505 378' }),
+    ).rejects.toThrow(ConflictException);
+    await expect(
+      createTestCustomer(prisma, other.id, {
+        phone: '+84 939 505 378',
+        normalizedPhone: '0939505378',
+      }),
+    ).resolves.toBeDefined();
+
+    const second = await service.create(f.principal, {
+      fullName: 'Second Customer',
+      phone: '0912 345 678',
+    });
+    await expect(
+      service.update(f.principal, second.id, { phone: '+84 939 505 378' }),
+    ).rejects.toThrow(ConflictException);
+
+    expect(await repo.lookup({ shopId: f.shop.id, search: '+84 939', limit: 20 })).toEqual([
+      { id: customer.id, fullName: 'Alice Updated', phone: '0939 505 378' },
+    ]);
   });
 });

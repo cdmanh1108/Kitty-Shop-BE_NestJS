@@ -3,7 +3,7 @@ import type { CustomerRepository } from '../../src/modules/customers/domain/cust
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { CurrentUser } from '../../src/common/types/current-user';
 import type { CustomerDetails } from '../../src/modules/customers/domain/customer.models';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 
 describe('CustomerService Unit Tests', () => {
   let service: CustomerService;
@@ -52,9 +52,10 @@ describe('CustomerService Unit Tests', () => {
     recentOrders: [],
     stats: {
       totalOrders: 0,
-      completedOrders: 0,
+      completedRentalCount: 0,
       totalPaid: 0,
       depositHeld: 0,
+      lastRentalAt: null,
     },
   };
 
@@ -76,6 +77,8 @@ describe('CustomerService Unit Tests', () => {
 
     repo = {
       list: jest.fn(),
+      lookup: jest.fn(),
+      findByNormalizedPhone: jest.fn().mockResolvedValue(null),
       findById: findByIdMock,
       create: createMock,
       update: updateMock,
@@ -138,6 +141,26 @@ describe('CustomerService Unit Tests', () => {
           entityId: sampleCustomer.id,
         }),
       );
+    });
+
+    it('rejects invalid phone input', async () => {
+      await expect(
+        service.create(currentUser, { fullName: 'Customer', phone: 'not-a-phone' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(createMock).not.toHaveBeenCalled();
+    });
+
+    it('rejects an existing normalized phone in the same shop', async () => {
+      repo.findByNormalizedPhone = jest.fn().mockResolvedValue({
+        id: 'cust-existing',
+        fullName: 'Existing',
+        phone: '0912345678',
+      });
+
+      await expect(
+        service.create(currentUser, { fullName: 'Duplicate', phone: '+84 912 345 678' }),
+      ).rejects.toThrow(ConflictException);
+      expect(createMock).not.toHaveBeenCalled();
     });
   });
 

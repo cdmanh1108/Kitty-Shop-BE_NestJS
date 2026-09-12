@@ -17,9 +17,10 @@ export type CustomerDetails =
       }>;
       stats: {
         totalOrders: number;
-        completedOrders: number;
+        completedRentalCount: number;
         totalPaid: number;
         depositHeld: number;
+        lastRentalAt: Date | null;
       };
       recentOrders: Array<{
         id: string;

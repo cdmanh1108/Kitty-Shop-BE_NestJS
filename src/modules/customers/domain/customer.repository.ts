@@ -1,19 +1,28 @@
 import type { CustomerNoteRecord } from '@modules/customers/domain/customers.records';
 import type { PaginatedResult } from '@common/types/pagination';
 import type { CustomerAddressResult, CustomerDetails } from './customer.models';
-import type { CustomerRecord } from './customers.records';
+import type {
+  CustomerListItemRecord,
+  CustomerLookupRecord,
+  CustomerRecord,
+} from './customers.records';
 
 export const CUSTOMER_REPOSITORY = Symbol('CUSTOMER_REPOSITORY');
 
 export interface CustomerRepository {
-  list(input: CustomerListCriteria): Promise<PaginatedResult<CustomerRecord>>;
+  list(input: CustomerListCriteria): Promise<PaginatedResult<CustomerListItemRecord>>;
+  lookup(input: CustomerLookupCriteria): Promise<CustomerLookupRecord[]>;
+  findByNormalizedPhone(
+    shopId: string,
+    normalizedPhone: string,
+  ): Promise<CustomerLookupRecord | null>;
   findById(shopId: string, id: string): Promise<CustomerDetails>;
   create(
     shopId: string,
     input: Omit<
       CustomerRecord,
       'id' | 'createdAt' | 'updatedAt' | 'shopId' | 'metadata' | 'archivedAt'
-    >,
+    > & { initialNote?: { content: string; createdBy: string } },
   ): Promise<CustomerRecord>;
   update(
     shopId: string,
@@ -29,6 +38,12 @@ export interface CustomerRepository {
   addAddress(input: CustomerAddAddressData): Promise<CustomerAddressResult>;
   updateAddress(input: CustomerUpdateAddressData): Promise<CustomerAddressResult>;
   deleteAddress(shopId: string, customerId: string, addressId: string): Promise<boolean>;
+}
+
+export interface CustomerLookupCriteria {
+  shopId: string;
+  search?: string;
+  limit: number;
 }
 
 export interface CustomerListCriteria {
