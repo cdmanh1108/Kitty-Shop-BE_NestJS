@@ -39,7 +39,7 @@ if (require.main === module) {
       {
         event: 'application.start_failed',
         errorClass: error instanceof Error ? error.constructor.name : 'UnknownError',
-        message: error instanceof Error ? error.message : 'Application failed to start',
+        message: error instanceof Error ? error.message : 'Không thể khởi động ứng dụng.',
       },
       undefined,
       'Bootstrap',

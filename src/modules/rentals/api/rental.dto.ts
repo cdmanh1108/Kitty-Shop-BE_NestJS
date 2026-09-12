@@ -23,129 +23,210 @@ import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { PaginationMetaResDto } from '@common/dto/response.dto';
 
 export class CreateRentalItemReqDto {
-  @ApiProperty() @IsUUID() variantId!: string;
+  @ApiProperty()
+  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  variantId!: string;
   @ApiProperty({ type: Number, default: 1, minimum: 1, maximum: 20 })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(20)
+  @IsInt({ message: 'Số lượng phải là số nguyên.' })
+  @Min(1, { message: 'Số lượng phải lớn hơn hoặc bằng $constraint1.' })
+  @Max(20, { message: 'Số lượng phải nhỏ hơn hoặc bằng $constraint1.' })
   quantity = 1;
   @ApiPropertyOptional({
     type: [String],
     description: 'Optional physical item selection; otherwise backend auto-allocates.',
   })
-  @IsArray()
-  @IsUUID('4', { each: true })
+  @IsArray({ message: 'Danh sách mã món đồ phải là danh sách.' })
+  @IsUUID('4', { each: true, message: 'Danh sách mã món đồ phải là UUID hợp lệ.' })
   @IsOptional()
   inventoryItemIds?: string[];
 }
 
 export class RentalChargeReqDto {
   @ApiProperty({ enum: Object.values(CHARGE_TYPE), example: 'ACCESSORY' })
-  @IsIn(Object.values(CHARGE_TYPE))
+  @IsIn(Object.values(CHARGE_TYPE), { message: 'Loại phụ phí không hợp lệ.' })
   chargeType!: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
-  @ApiProperty({ example: 50000 }) @Type(() => Number) @IsNumber() @Min(0) amount!: number;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsOptional()
+  description?: string;
+  @ApiProperty({ example: 50000 })
+  @Type(() => Number)
+  @IsNumber(undefined, { message: 'Số tiền phải là số hợp lệ.' })
+  @Min(0, { message: 'Số tiền phải lớn hơn hoặc bằng $constraint1.' })
+  amount!: number;
   @ApiPropertyOptional({ type: Number, default: 1 })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'Số lượng phải là số nguyên.' })
+  @Min(1, { message: 'Số lượng phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   quantity = 1;
 }
 
 export class RentalDeliveryReqDto {
   @ApiProperty({ enum: Object.values(DELIVERY_DIRECTION), default: 'OUTBOUND' })
-  @IsIn(Object.values(DELIVERY_DIRECTION))
+  @IsIn(Object.values(DELIVERY_DIRECTION), { message: 'Chiều giao dịch không hợp lệ.' })
   direction = 'OUTBOUND';
   @ApiProperty({ enum: Object.values(DELIVERY_METHOD) })
-  @IsIn(Object.values(DELIVERY_METHOD))
+  @IsIn(Object.values(DELIVERY_METHOD), { message: 'Phương thức không hợp lệ.' })
   method!: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() scheduledAt?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() recipientName?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() recipientPhone?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() addressLine?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() ward?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() district?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() city?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() province?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian hẹn phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  scheduledAt?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Tên người nhận phải là chuỗi ký tự.' })
+  @IsOptional()
+  recipientName?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Số điện thoại người nhận phải là chuỗi ký tự.' })
+  @IsOptional()
+  recipientPhone?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Địa chỉ phải là chuỗi ký tự.' })
+  @IsOptional()
+  addressLine?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Phường/xã phải là chuỗi ký tự.' })
+  @IsOptional()
+  ward?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Quận/huyện phải là chuỗi ký tự.' })
+  @IsOptional()
+  district?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Thành phố phải là chuỗi ký tự.' })
+  @IsOptional()
+  city?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Tỉnh/thành phải là chuỗi ký tự.' })
+  @IsOptional()
+  province?: string;
   @ApiPropertyOptional({ type: Number, default: 0 })
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber(undefined, { message: 'Phí giao hàng phải là số hợp lệ.' })
+  @Min(0, { message: 'Phí giao hàng phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   shippingFee = 0;
 }
 
 export class RentalCollateralReqDto {
-  @ApiProperty({ enum: ['CASH', 'DOCUMENT'] }) @IsIn(['CASH', 'DOCUMENT']) method!:
-    | 'CASH'
-    | 'DOCUMENT';
+  @ApiProperty({ enum: ['CASH', 'DOCUMENT'] })
+  @IsIn(['CASH', 'DOCUMENT'], { message: 'Phương thức không hợp lệ.' })
+  method!: 'CASH' | 'DOCUMENT';
   @ApiPropertyOptional({ enum: ['CCCD', 'GPLX'] })
-  @IsIn(['CCCD', 'GPLX'])
+  @IsIn(['CCCD', 'GPLX'], { message: 'Loại giấy tờ không hợp lệ.' })
   @IsOptional()
   documentType?: 'CCCD' | 'GPLX';
 }
 
 export class CreateRentalOrderReqDto {
-  @ApiProperty() @IsUUID() customerId!: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() locationId?: string;
-  @ApiProperty({ example: '2026-09-12T03:00:00.000Z' }) @IsDateString() rentalStartAt!: string;
-  @ApiProperty({ example: '2026-09-14T03:00:00.000Z' }) @IsDateString() rentalEndAt!: string;
+  @ApiProperty()
+  @IsUUID(undefined, { message: 'Mã khách hàng phải là UUID hợp lệ.' })
+  customerId!: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã địa điểm phải là UUID hợp lệ.' })
+  @IsOptional()
+  locationId?: string;
+  @ApiProperty({ example: '2026-09-12T03:00:00.000Z' })
+  @IsDateString(undefined, {
+    message: 'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  rentalStartAt!: string;
+  @ApiProperty({ example: '2026-09-14T03:00:00.000Z' })
+  @IsDateString(undefined, {
+    message: 'Thời gian kết thúc thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  rentalEndAt!: string;
   @ApiProperty({ type: [CreateRentalItemReqDto] })
-  @IsArray()
-  @ArrayMinSize(1)
-  @ValidateNested({ each: true })
+  @IsArray({ message: 'Danh sách sản phẩm thuê phải là danh sách.' })
+  @ArrayMinSize(1, { message: 'Danh sách sản phẩm thuê phải có ít nhất $constraint1 phần tử.' })
+  @ValidateNested({ each: true, message: 'Danh sách sản phẩm thuê có dữ liệu không hợp lệ.' })
   @Type(() => CreateRentalItemReqDto)
   items!: CreateRentalItemReqDto[];
   @ApiPropertyOptional({ type: [RentalChargeReqDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
+  @IsArray({ message: 'Danh sách phụ phí phải là danh sách.' })
+  @ValidateNested({ each: true, message: 'Danh sách phụ phí có dữ liệu không hợp lệ.' })
   @Type(() => RentalChargeReqDto)
   @IsOptional()
   charges: RentalChargeReqDto[] = [];
   @ApiPropertyOptional({ type: Number, default: 0 })
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber(undefined, { message: 'Tổng tiền giảm giá phải là số hợp lệ.' })
+  @Min(0, { message: 'Tổng tiền giảm giá phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   discountTotal = 0;
-  @ApiPropertyOptional() @IsString() @IsOptional() note?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() internalNote?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsOptional()
+  note?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Ghi chú nội bộ phải là chuỗi ký tự.' })
+  @IsOptional()
+  internalNote?: string;
   @ApiPropertyOptional({ type: RentalDeliveryReqDto })
-  @ValidateNested()
+  @ValidateNested({ message: 'Thông tin giao hàng có dữ liệu không hợp lệ.' })
   @Type(() => RentalDeliveryReqDto)
   @IsOptional()
   delivery?: RentalDeliveryReqDto;
   @ApiPropertyOptional({ type: () => RentalCollateralReqDto })
-  @ValidateNested()
+  @ValidateNested({ message: 'Thông tin đặt cọc có dữ liệu không hợp lệ.' })
   @Type(() => RentalCollateralReqDto)
   @IsOptional()
   collateral?: RentalCollateralReqDto;
 }
 
 export class RentalListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional() @IsUUID() @IsOptional() customerId?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã khách hàng phải là UUID hợp lệ.' })
+  @IsOptional()
+  customerId?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsOptional()
+  search?: string;
   @ApiPropertyOptional({ enum: Object.values(RENTAL_STATUS) })
-  @IsIn(Object.values(RENTAL_STATUS))
+  @IsIn(Object.values(RENTAL_STATUS), { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: string;
   @ApiPropertyOptional({ enum: Object.values(ORDER_PAYMENT_STATUS) })
-  @IsIn(Object.values(ORDER_PAYMENT_STATUS))
+  @IsIn(Object.values(ORDER_PAYMENT_STATUS), { message: 'Trạng thái thanh toán không hợp lệ.' })
   @IsOptional()
   paymentStatus?: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() from?: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() until?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  from?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  until?: string;
 }
 
 export class TransitionRentalReqDto {
-  @ApiPropertyOptional() @IsString() @IsOptional() reason?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Lý do phải là chuỗi ký tự.' })
+  @IsOptional()
+  reason?: string;
 }
 
 export class RescheduleRentalReqDto {
-  @ApiProperty() @IsDateString() rentalStartAt!: string;
-  @ApiProperty() @IsDateString() rentalEndAt!: string;
+  @ApiProperty()
+  @IsDateString(undefined, {
+    message: 'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  rentalStartAt!: string;
+  @ApiProperty()
+  @IsDateString(undefined, {
+    message: 'Thời gian kết thúc thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  rentalEndAt!: string;
 }
 
 export class AddRentalChargeReqDto extends RentalChargeReqDto {}

@@ -25,50 +25,122 @@ import { PaginationMetaResDto } from '@common/dto/response.dto';
 
 export class CreatePaymentReqDto {
   @ApiProperty({ enum: Object.values(PAYMENT_DIRECTION), default: 'IN' })
-  @IsIn(Object.values(PAYMENT_DIRECTION))
+  @IsIn(Object.values(PAYMENT_DIRECTION), { message: 'Chiều giao dịch không hợp lệ.' })
   direction: PaymentDirection = 'IN';
   @ApiProperty({ enum: Object.values(PAYMENT_PURPOSE), example: 'RENTAL_PAYMENT' })
-  @IsIn(Object.values(PAYMENT_PURPOSE))
+  @IsIn(Object.values(PAYMENT_PURPOSE), { message: 'Mục đích thanh toán không hợp lệ.' })
   purpose!: PaymentPurpose;
   @ApiProperty({ enum: Object.values(PAYMENT_METHOD), example: 'BANK_TRANSFER' })
-  @IsIn(Object.values(PAYMENT_METHOD))
+  @IsIn(Object.values(PAYMENT_METHOD), { message: 'Phương thức thanh toán không hợp lệ.' })
   paymentMethod!: PaymentMethod;
-  @ApiProperty({ example: 500000 }) @Type(() => Number) @IsNumber() @Min(0.01) amount!: number;
-  @ApiPropertyOptional() @IsString() @IsOptional() externalReference?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() bankReference?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() note?: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() paidAt?: string;
+  @ApiProperty({ example: 500000 })
+  @Type(() => Number)
+  @IsNumber(undefined, { message: 'Số tiền phải là số hợp lệ.' })
+  @Min(0.01, { message: 'Số tiền phải lớn hơn hoặc bằng $constraint1.' })
+  amount!: number;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Mã tham chiếu bên ngoài phải là chuỗi ký tự.' })
+  @IsOptional()
+  externalReference?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Mã tham chiếu ngân hàng phải là chuỗi ký tự.' })
+  @IsOptional()
+  bankReference?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsOptional()
+  note?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian thanh toán phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  paidAt?: string;
 }
 
 export class PaymentListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional() @IsUUID() @IsOptional() orderId?: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() from?: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() until?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã đơn thuê phải là UUID hợp lệ.' })
+  @IsOptional()
+  orderId?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  from?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  until?: string;
   @ApiPropertyOptional({ enum: Object.values(PAYMENT_PURPOSE) })
-  @IsIn(Object.values(PAYMENT_PURPOSE))
+  @IsIn(Object.values(PAYMENT_PURPOSE), { message: 'Mục đích thanh toán không hợp lệ.' })
   @IsOptional()
   purpose?: string;
 }
 
 export class CreateExpenseReqDto {
-  @ApiProperty() @IsUUID() categoryId!: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() orderId?: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() inventoryItemId?: string;
-  @ApiProperty() @IsString() description!: string;
-  @ApiProperty({ example: 120000 }) @Type(() => Number) @IsNumber() @Min(0.01) amount!: number;
-  @ApiPropertyOptional() @IsString() @IsOptional() paymentMethod?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() vendorName?: string;
-  @ApiProperty({ example: '2026-09-10' }) @IsDateString() expenseDate!: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() paidAt?: string;
-  @ApiPropertyOptional() @IsUrl() @IsOptional() receiptUrl?: string;
+  @ApiProperty()
+  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  categoryId!: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã đơn thuê phải là UUID hợp lệ.' })
+  @IsOptional()
+  orderId?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã món đồ phải là UUID hợp lệ.' })
+  @IsOptional()
+  inventoryItemId?: string;
+  @ApiProperty() @IsString({ message: 'Mô tả phải là chuỗi ký tự.' }) description!: string;
+  @ApiProperty({ example: 120000 })
+  @Type(() => Number)
+  @IsNumber(undefined, { message: 'Số tiền phải là số hợp lệ.' })
+  @Min(0.01, { message: 'Số tiền phải lớn hơn hoặc bằng $constraint1.' })
+  amount!: number;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Phương thức thanh toán phải là chuỗi ký tự.' })
+  @IsOptional()
+  paymentMethod?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Tên nhà cung cấp phải là chuỗi ký tự.' })
+  @IsOptional()
+  vendorName?: string;
+  @ApiProperty({ example: '2026-09-10' })
+  @IsDateString(undefined, { message: 'Ngày chi phải là ngày giờ hợp lệ theo định dạng ISO 8601.' })
+  expenseDate!: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian thanh toán phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  paidAt?: string;
+  @ApiPropertyOptional()
+  @IsUrl(undefined, { message: 'Liên kết chứng từ phải là URL hợp lệ.' })
+  @IsOptional()
+  receiptUrl?: string;
 }
 
 export class ExpenseListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() from?: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() until?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsOptional()
+  categoryId?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  from?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  until?: string;
   @ApiPropertyOptional({ enum: Object.values(EXPENSE_STATUS) })
-  @IsIn(Object.values(EXPENSE_STATUS))
+  @IsIn(Object.values(EXPENSE_STATUS), { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: string;
 }

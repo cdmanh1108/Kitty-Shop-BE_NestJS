@@ -384,13 +384,13 @@ export async function setDocumentCollateral(
     if (order.collateralMethod !== 'DOCUMENT')
       throw new RentalInvariantError(
         'COLLATERAL_METHOD_NOT_ALLOWED',
-        'Order does not use document collateral',
+        'Đơn thuê này không đặt cọc bằng giấy tờ.',
       );
     if (action === 'RECEIVE') {
       if (order.status !== RENTAL_STATUS.RESERVED || order.collateralStatus !== 'REQUIRED')
         throw new RentalInvariantError(
           'COLLATERAL_TRANSITION_NOT_ALLOWED',
-          'Document cannot be received in this state',
+          'Không thể nhận giấy tờ đặt cọc ở trạng thái hiện tại.',
         );
       await tx.rentalOrder.update({
         where: { id: order.id },
@@ -400,7 +400,7 @@ export async function setDocumentCollateral(
       if (order.status !== RENTAL_STATUS.COMPLETED || order.collateralStatus !== 'HELD')
         throw new RentalInvariantError(
           'COLLATERAL_TRANSITION_NOT_ALLOWED',
-          'Document cannot be returned in this state',
+          'Không thể trả giấy tờ đặt cọc ở trạng thái hiện tại.',
         );
       await tx.rentalOrder.update({
         where: { id: order.id },

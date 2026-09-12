@@ -81,18 +81,21 @@ describe('AllExceptionsFilter', () => {
 
   describe('canonical domain error mapping', () => {
     beforeEach(() => {
-      filter = new AllExceptionsFilter(true);
+      filter = new AllExceptionsFilter();
     });
 
     it('preserves the semantic rental code without interpreting the message', () => {
       filter.catch(
-        new RentalInvariantError('RESCHEDULE_LIMIT_EXCEEDED', 'Booking window exceeded'),
+        new RentalInvariantError(
+          'RESCHEDULE_LIMIT_EXCEEDED',
+          'Đã vượt quá thời hạn đổi lịch cho phép.',
+        ),
         mockHost,
       );
       expect(sentPayload).toMatchObject({
         statusCode: 400,
         code: 'RESCHEDULE_LIMIT_EXCEEDED',
-        message: 'Booking window exceeded',
+        message: 'Đã vượt quá thời hạn đổi lịch cho phép.',
       });
     });
 
@@ -116,7 +119,7 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 409,
         code: 'RENTAL_OVERLAP',
-        message: 'One or more inventory items are no longer available for the selected period',
+        message: 'Một hoặc nhiều món đồ không còn trống trong khoảng thời gian đã chọn.',
         requestId: 'req-test-12345',
         path: '/api/v1/rentals?item=123',
       });
@@ -131,7 +134,7 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 409,
         code: 'RENTAL_CLAIM_LOST',
-        message: 'A request with this Idempotency-Key is already in progress',
+        message: 'Yêu cầu này đang được xử lý. Vui lòng chờ và thử lại.',
       });
     });
 
@@ -143,38 +146,38 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 400,
         code: 'INVALID_RENTAL_INTERVAL',
-        message: 'Invalid rental interval',
+        message: 'Khoảng thời gian thuê không hợp lệ.',
       });
     });
 
     it('maps FinanceInvariantError to 400 FINANCE_INVARIANT_ERROR', () => {
-      const error = new FinanceInvariantError('Expense order does not belong to this shop');
+      const error = new FinanceInvariantError('Đơn thuê của khoản chi không thuộc cửa hàng này.');
       filter.catch(error, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(sentPayload).toMatchObject({
         statusCode: 400,
         code: 'FINANCE_INVARIANT_ERROR',
-        message: 'Expense order does not belong to this shop',
+        message: 'Đơn thuê của khoản chi không thuộc cửa hàng này.',
       });
     });
 
     it('maps CatalogInvariantError to 400 CATALOG_INVARIANT_ERROR', () => {
-      const error = new CatalogInvariantError('Size does not belong to this shop');
+      const error = new CatalogInvariantError('Kích thước không thuộc cửa hàng này.');
       filter.catch(error, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(sentPayload).toMatchObject({
         statusCode: 400,
         code: 'CATALOG_INVARIANT_ERROR',
-        message: 'Size does not belong to this shop',
+        message: 'Kích thước không thuộc cửa hàng này.',
       });
     });
   });
 
   describe('Prisma error sanitization', () => {
     beforeEach(() => {
-      filter = new AllExceptionsFilter(true);
+      filter = new AllExceptionsFilter();
     });
 
     it('translates P2002 unique constraint error without leaking table/column details', () => {
@@ -188,7 +191,7 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 409,
         code: 'UNIQUE_CONSTRAINT_VIOLATION',
-        message: 'A record with the same unique value already exists',
+        message: 'Dữ liệu đã tồn tại. Vui lòng kiểm tra thông tin bị trùng.',
       });
       expect(sentPayload.details).toBeUndefined();
       expect(JSON.stringify(sentPayload)).not.toContain('email');
@@ -205,7 +208,7 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 404,
         code: 'RECORD_NOT_FOUND',
-        message: 'The requested record does not exist',
+        message: 'Không tìm thấy dữ liệu được yêu cầu.',
       });
       expect(sentPayload.details).toBeUndefined();
     });
@@ -221,7 +224,7 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 500,
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'An unexpected error occurred',
+        message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
       });
       expect(JSON.stringify(sentPayload)).not.toContain('P2003');
       expect(JSON.stringify(sentPayload)).not.toContain('order_items');
@@ -238,7 +241,7 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 500,
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'An unexpected error occurred',
+        message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
       });
       expect(JSON.stringify(sentPayload)).not.toContain('postgres://');
       expect(JSON.stringify(sentPayload)).not.toContain('secret');
@@ -247,7 +250,7 @@ describe('AllExceptionsFilter', () => {
 
   describe('production vs development unknown error handling', () => {
     it('in production, hides raw message, cause, and stack traces', () => {
-      const prodFilter = new AllExceptionsFilter(true);
+      const prodFilter = new AllExceptionsFilter();
       const loggerSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
       const error = new Error(
@@ -259,7 +262,7 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 500,
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'An unexpected error occurred',
+        message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
         requestId: 'req-test-12345',
       });
       expect(sentPayload.details).toBeUndefined();
@@ -281,8 +284,8 @@ describe('AllExceptionsFilter', () => {
       );
     });
 
-    it('in development, returns the error message for debugging while keeping stack out of JSON', () => {
-      const devFilter = new AllExceptionsFilter(false);
+    it('also hides raw internal messages in development', () => {
+      const devFilter = new AllExceptionsFilter();
       const error = new Error('Table rental_orders does not exist');
       devFilter.catch(error, mockHost);
 
@@ -290,7 +293,7 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: 500,
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Table rental_orders does not exist',
+        message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
       });
       expect(sentPayload.details).toBeUndefined();
     });
@@ -298,15 +301,15 @@ describe('AllExceptionsFilter', () => {
 
   describe('HTTP exception preservation', () => {
     beforeEach(() => {
-      filter = new AllExceptionsFilter(true);
+      filter = new AllExceptionsFilter();
     });
 
     it('preserves 400 validation errors with actionable details', () => {
       const validationError = new BadRequestException({
         statusCode: 400,
         message: [
-          'rentalStartAt must be a valid ISO 8601 date string',
-          'customerId should not be empty',
+          'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+          'Mã khách hàng không được để trống.',
         ],
         error: 'Bad Request',
       });
@@ -317,12 +320,12 @@ describe('AllExceptionsFilter', () => {
         statusCode: 400,
         code: 'HTTP_400',
         message:
-          'rentalStartAt must be a valid ISO 8601 date string, customerId should not be empty',
+          'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601., Mã khách hàng không được để trống.',
         details: {
           statusCode: 400,
           message: [
-            'rentalStartAt must be a valid ISO 8601 date string',
-            'customerId should not be empty',
+            'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+            'Mã khách hàng không được để trống.',
           ],
           error: 'Bad Request',
         },
@@ -330,40 +333,41 @@ describe('AllExceptionsFilter', () => {
     });
 
     it('preserves 401 Unauthorized status and message', () => {
-      const authError = new UnauthorizedException('Invalid email or password');
+      const authError = new UnauthorizedException('Email hoặc mật khẩu không chính xác.');
       filter.catch(authError, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(401);
       expect(sentPayload).toMatchObject({
         statusCode: 401,
         code: 'HTTP_401',
-        message: 'Invalid email or password',
+        message: 'Email hoặc mật khẩu không chính xác.',
       });
     });
 
     it('preserves 403 Forbidden status and message', () => {
-      const forbiddenError = new ForbiddenException(
-        'You do not have permission to perform this action',
-      );
+      const forbiddenError = new ForbiddenException('Bạn không có quyền thực hiện thao tác này.');
       filter.catch(forbiddenError, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(403);
       expect(sentPayload).toMatchObject({
         statusCode: 403,
         code: 'HTTP_403',
-        message: 'You do not have permission to perform this action',
+        message: 'Bạn không có quyền thực hiện thao tác này.',
       });
     });
 
     it('preserves 429 Too Many Requests status', () => {
-      const throttlerError = new HttpException('ThrottlerException: Too Many Requests', 429);
+      const throttlerError = new HttpException(
+        'Bạn gửi yêu cầu quá nhanh. Vui lòng chờ một lúc rồi thử lại.',
+        429,
+      );
       filter.catch(throttlerError, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(429);
       expect(sentPayload).toMatchObject({
         statusCode: 429,
         code: 'HTTP_429',
-        message: 'ThrottlerException: Too Many Requests',
+        message: 'Bạn gửi yêu cầu quá nhanh. Vui lòng chờ một lúc rồi thử lại.',
       });
     });
   });

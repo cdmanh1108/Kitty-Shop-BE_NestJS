@@ -204,7 +204,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
         .post('/auth/login')
         .send({ ...credentials, password: reason === 'wrong' ? 'Wrong-password!' : password })
         .expect(401);
-      expect(response.text).toContain('Invalid email or password');
+      expect(response.text).toContain('Email hoặc mật khẩu không chính xác.');
       expect(repository.createRefreshToken.mock.calls).toHaveLength(0);
     },
   );

@@ -55,7 +55,7 @@ describe('Auth & Security End-to-End Tests', () => {
 
       expect(res.body).toHaveProperty('statusCode', 401);
       expect(res.body).toHaveProperty('code', 'HTTP_401');
-      expect(parseErrorMessage(res.body)).toContain('Missing bearer access token');
+      expect(parseErrorMessage(res.body)).toContain('Vui lòng đăng nhập để tiếp tục.');
     });
 
     it('returns 401 when accessing protected endpoint with invalid token format or signature', async () => {
@@ -66,7 +66,9 @@ describe('Auth & Security End-to-End Tests', () => {
 
       expect(res.body).toHaveProperty('statusCode', 401);
       expect(res.body).toHaveProperty('code', 'HTTP_401');
-      expect(parseErrorMessage(res.body)).toContain('Invalid or expired access token');
+      expect(parseErrorMessage(res.body)).toContain(
+        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+      );
     });
 
     it('returns 403 when user is authenticated but lacks required permission', async () => {
@@ -90,9 +92,7 @@ describe('Auth & Security End-to-End Tests', () => {
 
       expect(res.body).toHaveProperty('statusCode', 403);
       expect(res.body).toHaveProperty('code', 'HTTP_403');
-      expect(parseErrorMessage(res.body)).toContain(
-        'You do not have permission to perform this action',
-      );
+      expect(parseErrorMessage(res.body)).toContain('Bạn không có quyền thực hiện thao tác này.');
     });
 
     it('returns 200 when user has valid token and required permission', async () => {
@@ -137,7 +137,7 @@ describe('Auth & Security End-to-End Tests', () => {
 
       expect(res.body).toHaveProperty('statusCode', 400);
       expect(res.body).toHaveProperty('code', 'HTTP_400');
-      expect(parseErrorMessage(res.body)).toContain('email must be an email');
+      expect(parseErrorMessage(res.body)).toContain('Email không hợp lệ.');
     });
   });
 

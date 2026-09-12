@@ -18,7 +18,7 @@ export class PermissionsGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const granted = new Set(request.currentUser?.permissions ?? []);
     if (!required.every((permission) => granted.has(permission))) {
-      throw new ForbiddenException('You do not have permission to perform this action');
+      throw new ForbiddenException('Bạn không có quyền thực hiện thao tác này.');
     }
     return true;
   }

@@ -108,7 +108,9 @@ describe('FinanceService Unit Tests', () => {
           paymentMethod: 'CASH',
           amount: 50000,
         }),
-      ).rejects.toThrow(new BadRequestException('DEPOSIT_REFUND must use direction OUT'));
+      ).rejects.toThrow(
+        new BadRequestException('Giao dịch hoàn tiền (DEPOSIT_REFUND) phải là khoản chi.'),
+      );
     });
 
     it('throws BadRequestException if OUT direction is used with non-refund/non-other purpose', async () => {
@@ -120,13 +122,13 @@ describe('FinanceService Unit Tests', () => {
           amount: 50000,
         }),
       ).rejects.toThrow(
-        new BadRequestException('OUT transactions must use a refund purpose or OTHER'),
+        new BadRequestException('Giao dịch chi phải có mục đích hoàn tiền hoặc mục đích khác.'),
       );
     });
 
     it('maps FinanceInvariantError to BadRequestException', async () => {
       repo.createPayment.mockRejectedValueOnce(
-        new FinanceInvariantError('Deposit refund cannot exceed the currently held deposit'),
+        new FinanceInvariantError('Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'),
       );
 
       await expect(
@@ -137,7 +139,7 @@ describe('FinanceService Unit Tests', () => {
           amount: 500000,
         }),
       ).rejects.toThrow(
-        new BadRequestException('Deposit refund cannot exceed the currently held deposit'),
+        new BadRequestException('Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'),
       );
     });
 
@@ -151,7 +153,7 @@ describe('FinanceService Unit Tests', () => {
           paymentMethod: 'CASH',
           amount: 100000,
         }),
-      ).rejects.toThrow(new NotFoundException('Rental order not found'));
+      ).rejects.toThrow(new NotFoundException('Không tìm thấy đơn thuê.'));
     });
 
     it('creates payment successfully and logs audit event', async () => {
@@ -180,7 +182,7 @@ describe('FinanceService Unit Tests', () => {
       voidPaymentMock.mockResolvedValueOnce(null);
 
       await expect(service.voidPayment(currentUser, 'non-existent')).rejects.toThrow(
-        new NotFoundException('Payment not found'),
+        new NotFoundException('Không tìm thấy giao dịch thanh toán.'),
       );
     });
 
@@ -244,7 +246,7 @@ describe('FinanceService Unit Tests', () => {
       voidExpenseMock.mockResolvedValueOnce(null);
 
       await expect(service.voidExpense(currentUser, 'non-existent')).rejects.toThrow(
-        new NotFoundException('Expense not found'),
+        new NotFoundException('Không tìm thấy khoản chi.'),
       );
     });
 

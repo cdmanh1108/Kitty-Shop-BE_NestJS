@@ -3,27 +3,27 @@ import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class LoginReqDto {
   @ApiProperty({ example: 'admin@example.com' })
-  @IsEmail()
+  @IsEmail(undefined, { message: 'Email không hợp lệ.' })
   email!: string;
 
   @ApiProperty({ example: 'ChangeMe123!' })
-  @IsString()
-  @MinLength(8)
+  @IsString({ message: 'Mật khẩu phải là chuỗi ký tự.' })
+  @MinLength(8, { message: 'Mật khẩu phải có ít nhất $constraint1 ký tự.' })
   password!: string;
 
   @ApiPropertyOptional({
     example: 'MAIN',
     description: 'Optional when a user belongs to one shop.',
   })
-  @IsString()
+  @IsString({ message: 'Mã cửa hàng phải là chuỗi ký tự.' })
   @IsOptional()
   shopCode?: string;
 }
 
 export class RefreshTokenReqDto {
   @ApiProperty()
-  @IsString()
-  @MinLength(32)
+  @IsString({ message: 'Mã làm mới phiên đăng nhập phải là chuỗi ký tự.' })
+  @MinLength(32, { message: 'Mã làm mới phiên đăng nhập phải có ít nhất $constraint1 ký tự.' })
   refreshToken!: string;
 }
 
@@ -49,12 +49,12 @@ export class LoginResDto {
 
 export class ChangePasswordReqDto {
   @ApiProperty()
-  @IsString()
-  @MinLength(8)
+  @IsString({ message: 'Mật khẩu hiện tại phải là chuỗi ký tự.' })
+  @MinLength(8, { message: 'Mật khẩu hiện tại phải có ít nhất $constraint1 ký tự.' })
   currentPassword!: string;
 
   @ApiProperty({ minLength: 12, description: 'Use a unique passphrase/password for production.' })
-  @IsString()
-  @MinLength(12)
+  @IsString({ message: 'Mật khẩu mới phải là chuỗi ký tự.' })
+  @MinLength(12, { message: 'Mật khẩu mới phải có ít nhất $constraint1 ký tự.' })
   newPassword!: string;
 }

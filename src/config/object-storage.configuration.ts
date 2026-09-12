@@ -15,7 +15,7 @@ export function parseObjectStorageConfiguration(
   const read = (name: string, fallback = ''): string => {
     const value = env[`OBJECT_STORAGE_${name}`];
     if (value === undefined || value === '') return fallback;
-    if (typeof value !== 'string') throw new Error(`OBJECT_STORAGE_${name} must be a string`);
+    if (typeof value !== 'string') throw new Error(`OBJECT_STORAGE_${name} phải là chuỗi ký tự.`);
     return value.trim();
   };
   const config = {
@@ -27,7 +27,7 @@ export function parseObjectStorageConfiguration(
     secretAccessKey: read('SECRET_ACCESS_KEY'),
     publicBaseUrl: read('PUBLIC_BASE_URL'),
   };
-  if (config.provider !== 's3') throw new Error('OBJECT_STORAGE_PROVIDER must be s3');
+  if (config.provider !== 's3') throw new Error('OBJECT_STORAGE_PROVIDER phải là s3.');
   for (const [name, value] of [
     ['ENDPOINT', config.endpoint],
     ['PUBLIC_BASE_URL', config.publicBaseUrl],
@@ -42,10 +42,10 @@ export function parseObjectStorageConfiguration(
         url.search ||
         url.hash
       )
-        throw new Error();
+        throw new Error('URL kho lưu trữ không hợp lệ.');
     } catch {
       throw new Error(
-        `OBJECT_STORAGE_${name} must be an HTTP(S) URL without credentials, query or fragment`,
+        `OBJECT_STORAGE_${name} phải là URL HTTP(S), không chứa thông tin đăng nhập, truy vấn hoặc phân đoạn.`,
       );
     }
   }
@@ -59,9 +59,7 @@ export function parseObjectStorageConfiguration(
       ['PUBLIC_BASE_URL', config.publicBaseUrl],
     ]) {
       if (!value)
-        throw new Error(
-          `OBJECT_STORAGE_${name} is required when object storage uploads are configured`,
-        );
+        throw new Error(`Cần cấu hình OBJECT_STORAGE_${name} khi bật tải lên kho lưu trữ.`);
     }
   }
   return config;

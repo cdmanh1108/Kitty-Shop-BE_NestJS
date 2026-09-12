@@ -36,7 +36,7 @@ export class LegacyCatalogImportService {
 
     // 1. Validate File Path
     if (!fs.existsSync(options.filePath)) {
-      throw new Error(`Legacy Excel file does not exist at: "${options.filePath}"`);
+      throw new Error(`Không tìm thấy tệp Excel dữ liệu cũ tại: "${options.filePath}".`);
     }
 
     // 2. Resolve Shop
@@ -45,7 +45,7 @@ export class LegacyCatalogImportService {
     });
     if (!shop) {
       throw new Error(
-        `Shop with code "${options.shopCode}" was not found in the database. Ensure bootstrap/seed has run.`,
+        `Không tìm thấy cửa hàng có mã "${options.shopCode}" trong cơ sở dữ liệu. Vui lòng khởi tạo dữ liệu trước.`,
       );
     }
 
@@ -126,7 +126,7 @@ export class LegacyCatalogImportService {
             productCode: planned.code,
             field: 'Tên sản phẩm',
             rawValue: existing.name,
-            message: `Product in DB has name "${existing.name}" diverging from Excel name "${planned.name}". Skipping overwrite.`,
+            message: `Sản phẩm trong cơ sở dữ liệu có tên "${existing.name}", khác với tên "${planned.name}" trong Excel. Bỏ qua ghi đè.`,
           });
         } else {
           mutations.productsUnchanged++;

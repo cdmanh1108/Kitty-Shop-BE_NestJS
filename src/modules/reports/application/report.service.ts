@@ -36,9 +36,10 @@ export class ReportService {
   private range(query: ReportRangeQuery): { from: Date; until: Date } {
     const until = query.until ? new Date(query.until) : this.clock.now();
     const from = query.from ? new Date(query.from) : new Date(until.getTime() - 30 * 86_400_000);
-    if (from >= until) throw new BadRequestException('from must be earlier than until');
+    if (from >= until)
+      throw new BadRequestException('Thời gian bắt đầu phải trước thời gian kết thúc.');
     if (until.getTime() - from.getTime() > 2 * 365 * 86_400_000) {
-      throw new BadRequestException('Report range cannot exceed 2 years');
+      throw new BadRequestException('Khoảng thời gian báo cáo không được vượt quá 2 năm.');
     }
     return { from, until };
   }

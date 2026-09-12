@@ -27,7 +27,7 @@ export class MemberService {
 
   async create(user: CurrentUser, input: CreateMemberInput) {
     if (await this.repository.membershipExists(user.shopId, input.email)) {
-      throw new ConflictException('This email is already a member of the shop');
+      throw new ConflictException('Email này đã được sử dụng bởi một thành viên của cửa hàng.');
     }
     const passwordHash = await hash(input.password, 12);
     const member = await this.repository.create({
@@ -38,7 +38,7 @@ export class MemberService {
       employeeCode: input.employeeCode,
       roleCodes: input.roleCodes,
     });
-    if (!member) throw new BadRequestException('One or more roles do not exist');
+    if (!member) throw new BadRequestException('Một hoặc nhiều vai trò không tồn tại.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -53,10 +53,12 @@ export class MemberService {
 
   async update(user: CurrentUser, id: string, input: UpdateMemberInput) {
     if (id === user.memberId && input.status === 'INACTIVE') {
-      throw new BadRequestException('You cannot deactivate your own current membership');
+      throw new BadRequestException(
+        'Bạn không thể vô hiệu hóa tư cách thành viên hiện tại của chính mình.',
+      );
     }
     const member = await this.repository.update({ shopId: user.shopId, memberId: id, ...input });
-    if (!member) throw new NotFoundException('Member or role not found');
+    if (!member) throw new NotFoundException('Không tìm thấy thành viên hoặc vai trò.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,

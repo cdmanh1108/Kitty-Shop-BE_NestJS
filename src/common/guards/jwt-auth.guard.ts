@@ -25,17 +25,19 @@ export class JwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const authorization = request.headers.authorization;
     if (!authorization?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing bearer access token');
+      throw new UnauthorizedException('Vui lòng đăng nhập để tiếp tục.');
     }
 
     const token = authorization.slice('Bearer '.length).trim();
     let payload: JwtAccessPayload;
     try {
       const verified: unknown = await this.jwtService.verifyAsync(token, { algorithms: ['HS256'] });
-      if (!isVerifiedAccessPayload(verified)) throw new Error('Invalid claims');
+      if (!isVerifiedAccessPayload(verified)) throw new Error('Thông tin xác thực không hợp lệ.');
       payload = verified;
     } catch {
-      throw new UnauthorizedException('Invalid or expired access token');
+      throw new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+      );
     }
 
     const member = await this.prisma.shopMember.findUnique({
@@ -61,7 +63,9 @@ export class JwtAuthGuard implements CanActivate {
       member.userId !== payload.sub ||
       member.shopId !== payload.sid
     ) {
-      throw new UnauthorizedException('Invalid or expired access token');
+      throw new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+      );
     }
 
     const permissions = new Set<string>();

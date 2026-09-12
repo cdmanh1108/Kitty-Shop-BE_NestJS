@@ -36,12 +36,15 @@ import { StorageModule } from '@common/storage/storage.module';
     }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService<AppConfiguration, true>) => [
-        {
-          ttl: config.get('rateLimitTtlMs', { infer: true }),
-          limit: config.get('rateLimitLimit', { infer: true }),
-        },
-      ],
+      useFactory: (config: ConfigService<AppConfiguration, true>) => ({
+        errorMessage: 'Bạn gửi yêu cầu quá nhanh. Vui lòng chờ một lúc rồi thử lại.',
+        throttlers: [
+          {
+            ttl: config.get('rateLimitTtlMs', { infer: true }),
+            limit: config.get('rateLimitLimit', { infer: true }),
+          },
+        ],
+      }),
     }),
     ScheduleModule.forRoot(),
     PrismaModule,

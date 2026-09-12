@@ -22,7 +22,7 @@ export function createProduct(
       const key = `${variant.sizeId ?? 'null'}::${variant.colorId ?? 'null'}`;
       if (seenCombinations.has(key)) {
         throw new CatalogInvariantError(
-          'Duplicate variant combination for size and color in product',
+          'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
         );
       }
       seenCombinations.add(key);
@@ -30,13 +30,15 @@ export function createProduct(
       const seenDurations = new Set<number>();
       for (const rate of variant.rentalRates) {
         if (seenDurations.has(rate.durationDays)) {
-          throw new CatalogInvariantError('Duplicate rental rate duration for variant');
+          throw new CatalogInvariantError(
+            'Mức giá thuê cho số ngày này đã tồn tại trong biến thể.',
+          );
         }
         seenDurations.add(rate.durationDays);
       }
     }
     if (input.media.filter((m) => m.isPrimary).length > 1) {
-      throw new CatalogInvariantError('Only one product image can be marked as primary');
+      throw new CatalogInvariantError('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
     }
     await assertCatalogReferences(tx, shopId, input.categoryId, input.variants);
     const product = await tx.product.create({
@@ -93,7 +95,7 @@ export async function addVariant(
     for (const v of existingVariants) {
       if (`${v.sizeId ?? 'null'}::${v.colorId ?? 'null'}` === key) {
         throw new CatalogInvariantError(
-          'Duplicate variant combination for size and color in product',
+          'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
         );
       }
     }
@@ -133,7 +135,7 @@ export async function upsertRentalRate(
       DO UPDATE SET price = EXCLUDED.price, updated_at = NOW()
       RETURNING id
     `;
-    if (!saved) throw new Error('Rental rate upsert did not return a row');
+    if (!saved) throw new Error('Không thể lưu mức giá thuê.');
     return tx.rentalRate.findUniqueOrThrow({ where: { id: saved.id } });
   });
 }
@@ -212,7 +214,7 @@ async function assertProductCanArchive(
     select: { id: true },
   });
   if (allocation)
-    throw new CatalogInvariantError('Cannot archive product with active rental allocations');
+    throw new CatalogInvariantError('Không thể lưu trữ sản phẩm đang có lịch thuê chưa kết thúc.');
 }
 
 export async function addProductMedia(
@@ -282,11 +284,11 @@ async function assertVariantReferences(
 ): Promise<void> {
   if (variant.sizeId) {
     const size = await tx.size.count({ where: { id: variant.sizeId, shopId } });
-    if (!size) throw new CatalogInvariantError('Size does not belong to this shop');
+    if (!size) throw new CatalogInvariantError('Kích thước không thuộc cửa hàng này.');
   }
   if (variant.colorId) {
     const color = await tx.color.count({ where: { id: variant.colorId, shopId } });
-    if (!color) throw new CatalogInvariantError('Color does not belong to this shop');
+    if (!color) throw new CatalogInvariantError('Màu sắc không thuộc cửa hàng này.');
   }
 }
 

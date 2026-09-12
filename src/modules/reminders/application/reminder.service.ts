@@ -27,7 +27,7 @@ export class ReminderService {
         this.logger.error({
           event: 'reminders.refresh.failed',
           shopId: shop.id,
-          error: error instanceof Error ? error : new Error('Unknown exception'),
+          error: error instanceof Error ? error : new Error('Lỗi không xác định.'),
         });
       }
     }
@@ -45,7 +45,7 @@ export class ReminderService {
 
   async dismiss(user: CurrentUser, id: string) {
     const reminder = await this.repository.dismiss(user.shopId, id, user.memberId);
-    if (!reminder) throw new NotFoundException('Reminder not found');
+    if (!reminder) throw new NotFoundException('Không tìm thấy lời nhắc.');
     return reminder;
   }
 

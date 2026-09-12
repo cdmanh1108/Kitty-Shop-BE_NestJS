@@ -1,5 +1,6 @@
 import 'reflect-metadata';
-import { ValidationPipe, type INestApplication } from '@nestjs/common';
+import { BadRequestException, ValidationPipe, type INestApplication } from '@nestjs/common';
+import type { ValidationError } from 'class-validator';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
@@ -32,10 +33,26 @@ export function configureApplication(app: INestApplication): void {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: false },
+      exceptionFactory: (errors: ValidationError[]) => {
+        const messages = (items: ValidationError[], parent = ''): string[] =>
+          items.flatMap((error) => {
+            const field = parent ? `${parent}.${error.property}` : error.property;
+            return [
+              ...Object.entries(error.constraints ?? {}).map(([constraint, message]) =>
+                constraint === 'whitelistValidation'
+                  ? `Trường "${field}" không được phép gửi trong yêu cầu.`
+                  : constraint === 'unknownValue'
+                    ? 'Dữ liệu gửi lên không hợp lệ.'
+                    : message,
+              ),
+              ...messages(error.children ?? [], field),
+            ];
+          });
+        return new BadRequestException(messages(errors));
+      },
     }),
   );
-  const isProduction = config.get('nodeEnv', { infer: true }) === 'production';
-  app.useGlobalFilters(new AllExceptionsFilter(isProduction));
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   if (config.get('swaggerEnabled', { infer: true })) {
     const document = createOpenApiDocument(app, {

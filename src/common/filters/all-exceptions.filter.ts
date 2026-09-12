@@ -21,12 +21,6 @@ import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repositor
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
-  private readonly isProduction: boolean;
-
-  constructor(isProduction?: boolean) {
-    this.isProduction = isProduction ?? process.env.NODE_ENV === 'production';
-  }
-
   catch(exception: unknown, host: ArgumentsHost): void {
     const context = host.switchToHttp();
     const request = context.getRequest<Request>();
@@ -34,7 +28,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code = 'INTERNAL_SERVER_ERROR';
-    let message = 'An unexpected error occurred';
+    let message = 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.';
     let details: unknown;
 
     const errorName =
@@ -96,15 +90,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
         code = 'INTERNAL_SERVER_ERROR';
-        message = this.isProduction
-          ? 'An unexpected error occurred'
-          : typeof body === 'string'
-            ? body
-            : (body as Record<string, unknown>)?.message &&
-                typeof (body as Record<string, unknown>).message === 'string'
-              ? ((body as Record<string, unknown>).message as string)
-              : exception.message;
+        message = 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.';
         details = undefined;
+      } else if (
+        status === HttpStatus.NOT_FOUND &&
+        exception.message === `Cannot ${request.method} ${request.url}`
+      ) {
+        message = 'Không tìm thấy đường dẫn được yêu cầu.';
+      } else if (
+        status === HttpStatus.BAD_REQUEST &&
+        /^(?:Unexpected (?:token|end of)|Expected (?:property name|double-quoted property name|',' or '}')|Unterminated string in JSON|Bad (?:control character|escaped character|Unicode escape) in JSON)/.test(
+          exception.message,
+        )
+      ) {
+        message = 'Nội dung yêu cầu không đúng định dạng JSON. Vui lòng kiểm tra và gửi lại.';
       } else if (typeof body === 'string') {
         message = body;
       } else if (body && typeof body === 'object') {
@@ -124,19 +123,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (exception.code === 'P2002') {
         status = HttpStatus.CONFLICT;
         code = 'UNIQUE_CONSTRAINT_VIOLATION';
-        message = 'A record with the same unique value already exists';
+        message = 'Dữ liệu đã tồn tại. Vui lòng kiểm tra thông tin bị trùng.';
       } else if (exception.code === 'P2034') {
         status = HttpStatus.CONFLICT;
         code = 'CONCURRENT_MODIFICATION';
-        message = 'The resource changed concurrently; please retry';
+        message = 'Dữ liệu vừa được thay đổi. Vui lòng tải lại và thử lại.';
       } else if (exception.code === 'P2025') {
         status = HttpStatus.NOT_FOUND;
         code = 'RECORD_NOT_FOUND';
-        message = 'The requested record does not exist';
+        message = 'Không tìm thấy dữ liệu được yêu cầu.';
       } else {
         status = HttpStatus.INTERNAL_SERVER_ERROR;
         code = 'INTERNAL_SERVER_ERROR';
-        message = 'An unexpected error occurred';
+        message = 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.';
       }
     } else if (
       exception instanceof Prisma.PrismaClientUnknownRequestError ||
@@ -146,9 +145,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     ) {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
       code = 'INTERNAL_SERVER_ERROR';
-      message = 'An unexpected error occurred';
-    } else if (!this.isProduction && exception instanceof Error) {
-      message = exception.message || 'An unexpected error occurred';
+      message = 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.';
     }
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
@@ -167,7 +164,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             : typeof exception === 'object' && exception !== null
               ? 'ObjectException'
               : 'UnknownException',
-        error: exception instanceof Error ? exception : new Error('Unknown exception'),
+        error: exception instanceof Error ? exception : new Error('Lỗi không xác định.'),
       });
     }
 

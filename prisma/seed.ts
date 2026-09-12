@@ -44,7 +44,9 @@ async function main(): Promise<void> {
     process.env.NODE_ENV === 'production' &&
     (!process.env.DEFAULT_ADMIN_PASSWORD?.trim() || adminPassword === 'ChangeMe123!')
   ) {
-    throw new Error('Production seed requires an explicit non-default DEFAULT_ADMIN_PASSWORD');
+    throw new Error(
+      'Khởi tạo dữ liệu production yêu cầu DEFAULT_ADMIN_PASSWORD được chỉ định và khác mật khẩu mặc định.',
+    );
   }
   const adminName = process.env.DEFAULT_ADMIN_NAME ?? 'Shop Owner';
 

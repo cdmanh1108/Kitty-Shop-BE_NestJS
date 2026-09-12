@@ -31,7 +31,7 @@ describe('PublicUrlResolver', () => {
       'https://assets.example.com/shops/main/a%20b%23%25.jpg',
     );
     expect(() => resolvePublicUrl('https://assets.example.com', '')).toThrow(
-      'key must not be empty',
+      'Khóa đối tượng lưu trữ không được để trống.',
     );
   });
 

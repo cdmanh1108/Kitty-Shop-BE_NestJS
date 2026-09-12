@@ -55,9 +55,9 @@ export function parseCliArgs(args: string[]): CliArgs {
     result.apply = false;
     result.dryRun = true;
   }
-  if (!Number.isInteger(result.concurrency)) throw new Error('--concurrency must be an integer');
+  if (!Number.isInteger(result.concurrency)) throw new Error('--concurrency phải là số nguyên.');
   if (result.limit !== undefined && (!Number.isInteger(result.limit) || result.limit < 1))
-    throw new Error('--limit must be a positive integer');
+    throw new Error('--limit phải là số nguyên dương.');
   return result;
 }
 
@@ -122,7 +122,7 @@ export async function downloadWithRetry(
 
       // Unrecoverable errors
       if (status === 404) {
-        throw Object.assign(new Error(`Source returned 404 Not Found`), {
+        throw Object.assign(new Error(`Không tìm thấy tệp nguồn (HTTP 404).`), {
           errorCode: 'SOURCE_NOT_FOUND',
           httpStatus: 404,
           retryable: false,
@@ -131,7 +131,7 @@ export async function downloadWithRetry(
 
       // Quota / Rate-limit or Server error
       if (status === 429 || status === 408 || (status >= 500 && status <= 504)) {
-        const error = Object.assign(new Error(`Source returned HTTP ${status}`), {
+        const error = Object.assign(new Error(`Nguồn tải trả về mã HTTP ${status}.`), {
           errorCode: status === 429 ? 'RATE_LIMITED' : 'SERVER_ERROR',
           httpStatus: status,
           retryable: true,
@@ -146,7 +146,7 @@ export async function downloadWithRetry(
       }
 
       if (!response.ok) {
-        throw Object.assign(new Error(`Source download failed with HTTP ${status}`), {
+        throw Object.assign(new Error(`Không thể tải tệp nguồn (HTTP ${status}).`), {
           errorCode: 'DOWNLOAD_FAILED',
           httpStatus: status,
           retryable: false,
@@ -179,7 +179,7 @@ export async function downloadWithRetry(
     }
   }
 
-  throw new Error(`Failed to download after ${maxRetries} attempts`);
+  throw new Error(`Không thể tải xuống sau ${maxRetries} lần thử.`);
 }
 
 export async function main() {

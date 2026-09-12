@@ -24,7 +24,7 @@ describe('environment validation and configuration', () => {
 
     it('throws when required DATABASE_URL is missing', () => {
       expect(() => validateEnvironment({ JWT_ACCESS_SECRET: validSecret })).toThrow(
-        'Missing required environment variable: DATABASE_URL',
+        'Thiếu biến môi trường bắt buộc: DATABASE_URL.',
       );
     });
 
@@ -39,11 +39,11 @@ describe('environment validation and configuration', () => {
 
     it('throws when JWT_ACCESS_SECRET is missing or too short', () => {
       expect(() => validateEnvironment({ DATABASE_URL: baseConfig.DATABASE_URL })).toThrow(
-        'Missing required environment variable: JWT_ACCESS_SECRET',
+        'Thiếu biến môi trường bắt buộc: JWT_ACCESS_SECRET.',
       );
 
       expect(() => validateEnvironment({ ...baseConfig, JWT_ACCESS_SECRET: 'too-short' })).toThrow(
-        'JWT_ACCESS_SECRET must be a real secret with at least 32 characters',
+        'JWT_ACCESS_SECRET phải là khóa bí mật thực tế có ít nhất 32 ký tự.',
       );
 
       expect(() =>
@@ -51,7 +51,7 @@ describe('environment validation and configuration', () => {
           ...baseConfig,
           JWT_ACCESS_SECRET: 'replace-with-at-least-32-random-characters',
         }),
-      ).toThrow('JWT_ACCESS_SECRET must be a real secret with at least 32 characters');
+      ).toThrow('JWT_ACCESS_SECRET phải là khóa bí mật thực tế có ít nhất 32 ký tự.');
     });
 
     it('rejects weak secrets in production without leaking the secret value', () => {
@@ -68,15 +68,13 @@ describe('environment validation and configuration', () => {
         caughtError = error as Error;
       }
       expect(caughtError).toBeDefined();
-      expect(caughtError?.message).toContain(
-        'JWT_ACCESS_SECRET contains weak or placeholder values',
-      );
+      expect(caughtError?.message).toContain('JWT_ACCESS_SECRET chứa giá trị yếu hoặc giá trị mẫu');
       expect(caughtError?.message).not.toContain(weakSecret);
     });
 
     it.each(['0', '-1', '65536', 'abc', '3000.5'])('rejects invalid PORT value %s', (port) => {
       expect(() => validateEnvironment({ ...baseConfig, PORT: port })).toThrow(
-        'PORT must be an integer between 1 and 65535',
+        'PORT phải là số nguyên từ 1 đến 65535.',
       );
     });
 
@@ -86,19 +84,19 @@ describe('environment validation and configuration', () => {
 
     it.each(['0', '-100', 'abc', '10.5'])('rejects invalid RATE_LIMIT_TTL_MS %s', (ttl) => {
       expect(() => validateEnvironment({ ...baseConfig, RATE_LIMIT_TTL_MS: ttl })).toThrow(
-        'RATE_LIMIT_TTL_MS must be a positive integer',
+        'RATE_LIMIT_TTL_MS phải là số nguyên dương.',
       );
     });
 
     it.each(['0', '-5', 'abc'])('rejects invalid RATE_LIMIT_LIMIT %s', (limit) => {
       expect(() => validateEnvironment({ ...baseConfig, RATE_LIMIT_LIMIT: limit })).toThrow(
-        'RATE_LIMIT_LIMIT must be a positive integer',
+        'RATE_LIMIT_LIMIT phải là số nguyên dương.',
       );
     });
 
     it.each(['yes', 'no', '1', '0', 'TRUE_VALUE'])('rejects non-boolean TRUST_PROXY %s', (val) => {
       expect(() => validateEnvironment({ ...baseConfig, TRUST_PROXY: val })).toThrow(
-        'TRUST_PROXY must be either "true" or "false"',
+        'TRUST_PROXY phải là "true" hoặc "false".',
       );
     });
 
@@ -108,13 +106,13 @@ describe('environment validation and configuration', () => {
 
     it.each(['yes', 'no', 'disabled'])('rejects non-boolean SWAGGER_ENABLED %s', (val) => {
       expect(() => validateEnvironment({ ...baseConfig, SWAGGER_ENABLED: val })).toThrow(
-        'SWAGGER_ENABLED must be either "true" or "false"',
+        'SWAGGER_ENABLED phải là "true" hoặc "false".',
       );
     });
 
     it.each(['staging', 'prod', 'local'])('rejects invalid NODE_ENV %s', (env) => {
       expect(() => validateEnvironment({ ...baseConfig, NODE_ENV: env })).toThrow(
-        'NODE_ENV must be development, test or production',
+        'NODE_ENV phải là development, test hoặc production.',
       );
     });
 
@@ -126,7 +124,9 @@ describe('environment validation and configuration', () => {
           CORS_ORIGINS: 'https://admin.example.com, *',
           DEFAULT_ADMIN_PASSWORD: 'SecureProductionPassword123!',
         }),
-      ).toThrow('CORS_ORIGINS cannot contain wildcard "*" in production with credentials');
+      ).toThrow(
+        'CORS_ORIGINS không được chứa ký tự đại diện "*" trong môi trường production khi cho phép thông tin xác thực.',
+      );
     });
 
     it('rejects default admin password in production', () => {
@@ -136,7 +136,7 @@ describe('environment validation and configuration', () => {
           NODE_ENV: 'production',
           DEFAULT_ADMIN_PASSWORD: 'ChangeMe123!',
         }),
-      ).toThrow('DEFAULT_ADMIN_PASSWORD must be changed before production');
+      ).toThrow('Phải thay đổi DEFAULT_ADMIN_PASSWORD trước khi chạy trong môi trường production.');
     });
   });
 

@@ -39,7 +39,7 @@ export class CustomerService {
 
   async get(user: CurrentUser, id: string) {
     const customer = await this.repository.findById(user.shopId, id);
-    if (!customer) throw new NotFoundException('Customer not found');
+    if (!customer) throw new NotFoundException('Không tìm thấy khách hàng.');
     return customer;
   }
 
@@ -103,7 +103,7 @@ export class CustomerService {
         ...(input.status !== undefined ? { status: input.status } : {}),
       }),
     );
-    if (!updated) throw new NotFoundException('Customer not found');
+    if (!updated) throw new NotFoundException('Không tìm thấy khách hàng.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -128,7 +128,7 @@ export class CustomerService {
   }
   async addAddress(user: CurrentUser, customerId: string, input: CustomerAddressInput) {
     const address = await this.repository.addAddress({ shopId: user.shopId, customerId, ...input });
-    if (!address) throw new NotFoundException('Customer not found');
+    if (!address) throw new NotFoundException('Không tìm thấy khách hàng.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -152,7 +152,7 @@ export class CustomerService {
       addressId,
       data: input,
     });
-    if (!address) throw new NotFoundException('Customer address not found');
+    if (!address) throw new NotFoundException('Không tìm thấy địa chỉ khách hàng.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -167,7 +167,7 @@ export class CustomerService {
 
   async deleteAddress(user: CurrentUser, customerId: string, addressId: string) {
     const deleted = await this.repository.deleteAddress(user.shopId, customerId, addressId);
-    if (!deleted) throw new NotFoundException('Customer address not found');
+    if (!deleted) throw new NotFoundException('Không tìm thấy địa chỉ khách hàng.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -193,7 +193,7 @@ export class CustomerService {
   private throwPhoneConflict(existingCustomerId?: string): never {
     throw new ConflictException({
       code: 'CUSTOMER_PHONE_ALREADY_EXISTS',
-      message: 'Customer phone already exists',
+      message: 'Số điện thoại khách hàng đã tồn tại.',
       existingCustomerId,
     });
   }

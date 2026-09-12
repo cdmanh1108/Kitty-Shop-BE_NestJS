@@ -174,7 +174,7 @@ describe('SettingsService - Rental Policy', () => {
         service.updateRentalPolicy(mockUser, {
           specialCleaning: { feeMin: 50_000, feeMax: 30_000 },
         }),
-      ).rejects.toThrow('Special cleaning maximum fee cannot be less than minimum fee');
+      ).rejects.toThrow('Phí vệ sinh đặc biệt tối đa không được nhỏ hơn phí tối thiểu.');
     });
 
     it('rejects zero or negative rentalsRequired in loyalty', async () => {
@@ -199,7 +199,7 @@ describe('SettingsService - Rental Policy', () => {
             ],
           },
         }),
-      ).rejects.toThrow('Duplicate category override detected for categoryId: cat-1');
+      ).rejects.toThrow('Cấu hình tiền cọc bị trùng cho danh mục: cat-1.');
     });
 
     it('rejects invalid deposit methods', async () => {

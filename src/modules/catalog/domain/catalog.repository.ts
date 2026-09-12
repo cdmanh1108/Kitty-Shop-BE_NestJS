@@ -25,9 +25,18 @@ import type {
   UpsertRentalRateResult,
 } from './catalog.models';
 export class CatalogInvariantError extends Error {}
+export class CatalogCategoryCodeAlreadyExistsError extends CatalogInvariantError {
+  readonly code = 'CATEGORY_CODE_ALREADY_EXISTS';
+
+  constructor() {
+    super('Mã danh mục đã tồn tại.');
+  }
+}
 export class CatalogCategoryError extends CatalogInvariantError {
   constructor(public readonly code: 'CATEGORY_NOT_FOUND' | 'CATEGORY_INACTIVE') {
-    super(code === 'CATEGORY_INACTIVE' ? 'Category is inactive' : 'Category not found');
+    super(
+      code === 'CATEGORY_INACTIVE' ? 'Danh mục đã ngừng hoạt động.' : 'Không tìm thấy danh mục.',
+    );
   }
 }
 

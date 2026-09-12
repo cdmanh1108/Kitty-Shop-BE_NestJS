@@ -156,7 +156,9 @@ describe('Idempotency Integration with PostgreSQL', () => {
     };
 
     await expect(service.create(currentUser, input2, idempotencyKey)).rejects.toThrow(
-      new ConflictException('Idempotency-Key was already used with a different request'),
+      new ConflictException(
+        'Mã chống trùng đã được sử dụng cho một yêu cầu khác. Vui lòng gửi lại với mã mới.',
+      ),
     );
   });
 

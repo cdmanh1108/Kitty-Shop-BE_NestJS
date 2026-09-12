@@ -300,7 +300,7 @@ describe('CatalogService - Product Management', () => {
 
     it('throws ConflictException when product has active rentals', async () => {
       archiveProductMock.mockRejectedValue(
-        new CatalogInvariantError('Cannot archive product with active rental orders'),
+        new CatalogInvariantError('Không thể lưu trữ sản phẩm đang có lịch thuê chưa kết thúc.'),
       );
       await expect(service.archiveProduct(mockUser, 'prod-1')).rejects.toThrow(ConflictException);
     });

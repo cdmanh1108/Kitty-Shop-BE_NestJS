@@ -114,10 +114,12 @@ describe('transport to application contracts', () => {
     const repository = rentalRepository();
     repository.get.mockResolvedValue(null);
     const service = new RentalService(repository, audit(), fixedClock);
-    await expect(service.get(user, 'missing')).rejects.toThrow('Rental order not found');
+    await expect(service.get(user, 'missing')).rejects.toThrow('Không tìm thấy đơn thuê.');
     const input = toCreateRentalOrderInput(request());
     input.rentalEndAt = input.rentalStartAt;
-    await expect(service.create(user, input)).rejects.toThrow('rentalStartAt must be earlier');
+    await expect(service.create(user, input)).rejects.toThrow(
+      'Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.',
+    );
     expect(repository.createOrder.mock.calls).toHaveLength(0);
   });
 

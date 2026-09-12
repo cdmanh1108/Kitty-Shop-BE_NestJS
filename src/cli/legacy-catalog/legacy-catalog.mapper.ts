@@ -91,7 +91,7 @@ export function buildInventorySku(variantCode: string, index: number): string {
 export function mapLegacyProductRow(row: LegacyProductRow, lookups: MasterLookups): PlannedProduct {
   const cat = lookups.categoryByName.get(row.productGroup.trim().toLowerCase());
   if (!cat) {
-    throw new Error(`Category "${row.productGroup}" could not be resolved in lookups`);
+    throw new Error(`Không tìm thấy nhóm "${row.productGroup}" trong dữ liệu danh mục.`);
   }
 
   const activeBool = parseLegacyBoolean(row.rawActive);

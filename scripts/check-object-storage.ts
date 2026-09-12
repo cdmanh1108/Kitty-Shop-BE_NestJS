@@ -47,7 +47,7 @@ async function main() {
     console.log('2. Testing HEAD on test key...');
     const meta = await adapter.headObject(testKey);
     if (!meta) {
-      throw new Error('HEAD check failed: object was written but not found.');
+      throw new Error('Kiểm tra HEAD thất bại: đã ghi đối tượng nhưng không tìm thấy.');
     }
     console.log(`   HEAD success. ContentLength: ${meta.contentLength}, ETag: ${meta.etag}`);
 
@@ -55,7 +55,7 @@ async function main() {
     await adapter.deleteObject(testKey);
     const metaAfter = await adapter.headObject(testKey);
     if (metaAfter !== null) {
-      throw new Error('DELETE check failed: object still exists after deletion.');
+      throw new Error('Kiểm tra DELETE thất bại: đối tượng vẫn tồn tại sau khi xóa.');
     }
     console.log('   DELETE success. Cleaned up test object.');
 

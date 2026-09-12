@@ -39,20 +39,20 @@ export class FinanceService {
 
   async createPayment(user: CurrentUser, orderId: string, input: CreatePaymentInput) {
     if (!PAYMENT_PURPOSES.has(input.purpose)) {
-      throw new BadRequestException('Unsupported payment purpose');
+      throw new BadRequestException('Mục đích thanh toán không hợp lệ.');
     }
     const refundPurpose =
       input.purpose === PAYMENT_PURPOSE.DEPOSIT_REFUND ||
       input.purpose === PAYMENT_PURPOSE.ORDER_REFUND;
     if (refundPurpose && input.direction !== PAYMENT_DIRECTION.OUT) {
-      throw new BadRequestException(`${input.purpose} must use direction OUT`);
+      throw new BadRequestException(`Giao dịch hoàn tiền (${input.purpose}) phải là khoản chi.`);
     }
     if (
       !refundPurpose &&
       input.direction === PAYMENT_DIRECTION.OUT &&
       input.purpose !== PAYMENT_PURPOSE.OTHER
     ) {
-      throw new BadRequestException('OUT transactions must use a refund purpose or OTHER');
+      throw new BadRequestException('Giao dịch chi phải có mục đích hoàn tiền hoặc mục đích khác.');
     }
     let payment: Awaited<ReturnType<FinanceRepository['createPayment']>>;
     try {
@@ -74,7 +74,7 @@ export class FinanceService {
       if (error instanceof FinanceInvariantError) throw new BadRequestException(error.message);
       throw error;
     }
-    if (!payment) throw new NotFoundException('Rental order not found');
+    if (!payment) throw new NotFoundException('Không tìm thấy đơn thuê.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -98,7 +98,7 @@ export class FinanceService {
       paymentId: id,
       voidedBy: user.memberId,
     });
-    if (!payment) throw new NotFoundException('Payment not found');
+    if (!payment) throw new NotFoundException('Không tìm thấy giao dịch thanh toán.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -162,7 +162,7 @@ export class FinanceService {
 
   async voidExpense(user: CurrentUser, id: string) {
     const expense = await this.repository.voidExpense({ shopId: user.shopId, expenseId: id });
-    if (!expense) throw new NotFoundException('Expense not found');
+    if (!expense) throw new NotFoundException('Không tìm thấy khoản chi.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,

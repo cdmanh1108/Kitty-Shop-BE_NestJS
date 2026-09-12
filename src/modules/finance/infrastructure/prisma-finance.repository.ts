@@ -35,8 +35,8 @@ export class PrismaFinanceRepository implements FinanceRepository {
         if (input.amount > net) {
           throw new FinanceInvariantError(
             input.purpose === 'DEPOSIT_REFUND'
-              ? 'Deposit refund cannot exceed the currently held deposit'
-              : 'Order refund cannot exceed the net non-deposit amount received',
+              ? 'Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'
+              : 'Tiền hoàn đơn không được vượt quá tiền thực nhận sau hoàn tiền, không bao gồm tiền cọc.',
           );
         }
       }
@@ -125,7 +125,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
       });
       if (!category)
         throw new FinanceInvariantError(
-          'Expense category does not belong to this shop or is inactive',
+          'Danh mục chi phí không thuộc cửa hàng này hoặc đã ngừng hoạt động.',
         );
 
       if (input.orderId) {
@@ -133,14 +133,14 @@ export class PrismaFinanceRepository implements FinanceRepository {
           where: { id: input.orderId, shopId: input.shopId },
         });
         if (!orderExists)
-          throw new FinanceInvariantError('Expense order does not belong to this shop');
+          throw new FinanceInvariantError('Đơn thuê của khoản chi không thuộc cửa hàng này.');
       }
       if (input.inventoryItemId) {
         const itemExists = await tx.inventoryItem.count({
           where: { id: input.inventoryItemId, shopId: input.shopId },
         });
         if (!itemExists)
-          throw new FinanceInvariantError('Expense inventory item does not belong to this shop');
+          throw new FinanceInvariantError('Món đồ của khoản chi không thuộc cửa hàng này.');
       }
 
       return tx.expense.create({ data: input });

@@ -37,7 +37,7 @@ function parseCliArgs(argv: string[]): CliArgs {
     dryRun = true;
   }
 
-  if (!file) throw new Error('--file is required; supply an explicit workbook path');
+  if (!file) throw new Error('Cần cung cấp --file với đường dẫn cụ thể đến tệp Excel.');
   return { file, shop, dryRun, apply: apply && !dryRun };
 }
 

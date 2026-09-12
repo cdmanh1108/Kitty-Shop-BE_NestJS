@@ -39,7 +39,7 @@ describe('Object storage configuration boundary', () => {
         ...env,
         OBJECT_STORAGE_ENDPOINT: 'https://user:secret@example.com',
       }),
-    ).toThrow('without credentials');
+    ).toThrow('không chứa thông tin đăng nhập');
     expect(() =>
       parseObjectStorageConfiguration({ ...env, OBJECT_STORAGE_PUBLIC_BASE_URL: 'https://' }),
     ).toThrow('HTTP(S)');

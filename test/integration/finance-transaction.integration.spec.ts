@@ -221,7 +221,7 @@ describe('Finance Payment Lifecycle, State Recomputation & Rollback Integration'
         createdBy: member.id,
       }),
     ).rejects.toThrow(
-      new FinanceInvariantError('Deposit refund cannot exceed the currently held deposit'),
+      new FinanceInvariantError('Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'),
     );
 
     // 2. Pay 150,000 deposit
@@ -265,7 +265,7 @@ describe('Finance Payment Lifecycle, State Recomputation & Rollback Integration'
         createdBy: member.id,
       }),
     ).rejects.toThrow(
-      new FinanceInvariantError('Deposit refund cannot exceed the currently held deposit'),
+      new FinanceInvariantError('Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'),
     );
   });
 });

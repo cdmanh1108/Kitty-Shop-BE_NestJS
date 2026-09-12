@@ -43,9 +43,17 @@ export class InventorySummaryResDto {
   @ApiProperty() needsAttention!: number;
 }
 export class InventoryHistoryQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional() @IsUUID() @IsOptional() productId?: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() inventoryItemId?: string;
-  @ApiPropertyOptional({ type: Number, maximum: 100, default: 20 }) @Max(100) override limit = 20;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsOptional()
+  productId?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã món đồ phải là UUID hợp lệ.' })
+  @IsOptional()
+  inventoryItemId?: string;
+  @ApiPropertyOptional({ type: Number, maximum: 100, default: 20 })
+  @Max(100, { message: 'Số kết quả mỗi trang phải nhỏ hơn hoặc bằng $constraint1.' })
+  override limit = 20;
 }
 export class InventoryHistoryItemResDto {
   @ApiProperty() id!: string;

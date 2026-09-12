@@ -31,7 +31,7 @@ export async function createOrder(
   if (!policy.deposit.allowedMethods.includes(collateral.method))
     throw new RentalInvariantError(
       'COLLATERAL_METHOD_NOT_ALLOWED',
-      'Collateral method is not allowed by shop policy',
+      'Phương thức đặt cọc không được chính sách cửa hàng cho phép.',
     );
   if (collateral.method === 'DOCUMENT') {
     if (
@@ -40,12 +40,12 @@ export async function createOrder(
     )
       throw new RentalInvariantError(
         'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED',
-        'Document type is not allowed by shop policy',
+        'Loại giấy tờ đặt cọc không được chính sách cửa hàng cho phép.',
       );
   } else if (collateral.documentType) {
     throw new RentalInvariantError(
       'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED',
-      'Cash collateral cannot specify a document type',
+      'Đặt cọc bằng tiền mặt không được chỉ định loại giấy tờ.',
     );
   }
   try {

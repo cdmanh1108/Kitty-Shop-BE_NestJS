@@ -24,10 +24,10 @@ export const MAX_MEDIA_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15MB safe limit
  */
 export function detectImageFormat(buffer: Buffer): { mimeType: string; extension: string } {
   if (!buffer || buffer.length === 0) {
-    throw new Error('Image buffer is empty');
+    throw new Error('Dữ liệu hình ảnh trống.');
   }
   if (buffer.length > MAX_MEDIA_FILE_SIZE_BYTES) {
-    throw new Error(`Image exceeds maximum allowed size of ${MAX_MEDIA_FILE_SIZE_BYTES} bytes`);
+    throw new Error(`Hình ảnh vượt quá kích thước tối đa ${MAX_MEDIA_FILE_SIZE_BYTES} byte.`);
   }
 
   // Check magic bytes
@@ -78,12 +78,20 @@ export function detectImageFormat(buffer: Buffer): { mimeType: string; extension
   }
 
   // Check if buffer starts with HTML tags or XML
-  const preview = buffer.subarray(0, Math.min(buffer.length, 100)).toString('utf8').trim().toLowerCase();
-  if (preview.startsWith('<!doctype html') || preview.startsWith('<html') || preview.startsWith('<?xml')) {
-    throw new Error('Downloaded content is HTML/XML text, not a valid image file');
+  const preview = buffer
+    .subarray(0, Math.min(buffer.length, 100))
+    .toString('utf8')
+    .trim()
+    .toLowerCase();
+  if (
+    preview.startsWith('<!doctype html') ||
+    preview.startsWith('<html') ||
+    preview.startsWith('<?xml')
+  ) {
+    throw new Error('Nội dung tải về là văn bản HTML/XML, không phải tệp hình ảnh hợp lệ.');
   }
 
-  throw new Error('Unsupported or unrecognizable image format (magic bytes check failed)');
+  throw new Error('Định dạng hình ảnh không được hỗ trợ hoặc không nhận diện được.');
 }
 
 /**
@@ -96,14 +104,17 @@ export function computeContentHash(buffer: Buffer): string {
 /**
  * Inspects and validates raw image buffer, returning validated MIME, extension, hash, and size.
  */
-export function validateAndHashImage(buffer: Buffer, declaredContentType?: string): ValidatedImageInfo {
+export function validateAndHashImage(
+  buffer: Buffer,
+  declaredContentType?: string,
+): ValidatedImageInfo {
   const detected = detectImageFormat(buffer);
 
   // If declared Content-Type is provided, verify it's an image
   if (declaredContentType) {
     const cleanDeclared = declaredContentType.split(';')[0]?.trim().toLowerCase() ?? '';
     if (cleanDeclared.startsWith('text/') || cleanDeclared.includes('html')) {
-      throw new Error(`Declared content type "${declaredContentType}" is not an image`);
+      throw new Error(`Loại nội dung "${declaredContentType}" không phải hình ảnh.`);
     }
     // If declared matches an extension in our map and detected is compatible, prefer standard mapping
     if (cleanDeclared in MIME_TO_EXTENSION && cleanDeclared === detected.mimeType) {

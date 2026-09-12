@@ -93,7 +93,11 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     // 3. Attempt to reuse Token A -> MUST fail with UnauthorizedException (consumed/revoked)
     await expect(
       authService.refresh(tokenA, { ipAddress: '127.0.0.1', userAgent: 'Jest-Test' }),
-    ).rejects.toThrow(new UnauthorizedException('Invalid or expired refresh token'));
+    ).rejects.toThrow(
+      new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+      ),
+    );
 
     // 4. Token B is still valid and can be refreshed
     const secondRefresh = await authService.refresh(tokenB, {
@@ -173,7 +177,11 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     // Subsequent refresh must be rejected
     await expect(
       authService.refresh(token, { ipAddress: '127.0.0.1', userAgent: 'Jest-Test' }),
-    ).rejects.toThrow(new UnauthorizedException('Invalid or expired refresh token'));
+    ).rejects.toThrow(
+      new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+      ),
+    );
   });
   it('does not consume the old token when replacement persistence fails inside the transaction', async () => {
     const shop = await createTestShop(prisma);

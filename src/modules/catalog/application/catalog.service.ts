@@ -13,6 +13,7 @@ import {
   CATALOG_REPOSITORY,
   CatalogCategoryError,
   CatalogInvariantError,
+  CatalogCategoryCodeAlreadyExistsError,
   type CatalogRepository,
 } from '../domain/catalog.repository';
 import type {
@@ -104,7 +105,10 @@ export class CatalogService {
       description: input.description === null ? null : input.description?.trim() || undefined,
     });
     if (!updated)
-      throw new NotFoundException({ code: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
+      throw new NotFoundException({
+        code: 'CATEGORY_NOT_FOUND',
+        message: 'Không tìm thấy danh mục.',
+      });
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -120,11 +124,14 @@ export class CatalogService {
   async deleteCategory(user: CurrentUser, id: string) {
     const result = await this.repository.deleteCategory(user.shopId, id);
     if (result === 'not-found')
-      throw new NotFoundException({ code: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
+      throw new NotFoundException({
+        code: 'CATEGORY_NOT_FOUND',
+        message: 'Không tìm thấy danh mục.',
+      });
     if (result === 'in-use')
       throw new ConflictException({
         code: 'CATEGORY_IN_USE',
-        message: 'Category is used by products',
+        message: 'Danh mục đang được sử dụng bởi sản phẩm.',
       });
     await this.audit.log({
       shopId: user.shopId,
@@ -151,31 +158,33 @@ export class CatalogService {
 
   async getProduct(user: CurrentUser, id: string) {
     const product = await this.repository.findProduct(user.shopId, id);
-    if (!product) throw new NotFoundException('Product not found');
+    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm.');
     return (await this.repository.findProduct(user.shopId, product.id)) ?? product;
   }
 
   async createProduct(user: CurrentUser, input: CreateProductInput) {
     const duplicateVariantCodes = input.variants.map((item) => item.variantCode);
     if (new Set(duplicateVariantCodes).size !== duplicateVariantCodes.length) {
-      throw new BadRequestException('Variant codes must be unique in the request');
+      throw new BadRequestException('Mã biến thể không được trùng nhau trong cùng yêu cầu.');
     }
     const seenCombinations = new Set<string>();
     for (const variant of input.variants) {
       const key = `${variant.sizeId ?? 'null'}::${variant.colorId ?? 'null'}`;
       if (seenCombinations.has(key)) {
-        throw new ConflictException('Duplicate variant combination for size and color in product');
+        throw new ConflictException(
+          'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
+        );
       }
       seenCombinations.add(key);
       const durations = variant.rentalRates.map((rate) => rate.durationDays);
       if (new Set(durations).size !== durations.length) {
         throw new BadRequestException(
-          `Rental rate durations must be unique for ${variant.variantCode}`,
+          `Số ngày trong các mức giá thuê của biến thể ${variant.variantCode} không được trùng nhau.`,
         );
       }
     }
     if (input.media.filter((item) => item.isPrimary).length > 1) {
-      throw new BadRequestException('Only one product image can be marked as primary');
+      throw new BadRequestException('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
     }
     const product = await this.withInvariant(() =>
       this.repository.createProduct(user.shopId, input),
@@ -196,7 +205,7 @@ export class CatalogService {
     const variant = await this.withInvariant(() =>
       this.repository.addVariant(user.shopId, productId, input),
     );
-    if (!variant) throw new NotFoundException('Product not found');
+    if (!variant) throw new NotFoundException('Không tìm thấy sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -211,7 +220,7 @@ export class CatalogService {
 
   async upsertRentalRate(user: CurrentUser, variantId: string, input: UpsertRentalRateInput) {
     const rate = await this.repository.upsertRentalRate(user.shopId, variantId, input);
-    if (!rate) throw new NotFoundException('Variant not found');
+    if (!rate) throw new NotFoundException('Không tìm thấy biến thể sản phẩm.');
     return rate;
   }
 
@@ -229,7 +238,7 @@ export class CatalogService {
         status: input.status,
       }),
     );
-    if (!updated) throw new NotFoundException('Product not found');
+    if (!updated) throw new NotFoundException('Không tìm thấy sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -246,7 +255,7 @@ export class CatalogService {
     const archived = await this.withInvariant(() =>
       this.repository.archiveProduct(user.shopId, id),
     );
-    if (!archived) throw new NotFoundException('Product not found');
+    if (!archived) throw new NotFoundException('Không tìm thấy sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -260,7 +269,7 @@ export class CatalogService {
 
   async addProductMedia(user: CurrentUser, productId: string, input: ProductMediaInput) {
     const media = await this.repository.addProductMedia(user.shopId, productId, input);
-    if (!media) throw new NotFoundException('Product not found');
+    if (!media) throw new NotFoundException('Không tìm thấy sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -275,7 +284,7 @@ export class CatalogService {
 
   async removeProductMedia(user: CurrentUser, productId: string, mediaId: string) {
     const removed = await this.repository.removeProductMedia(user.shopId, productId, mediaId);
-    if (!removed) throw new NotFoundException('Product media not found');
+    if (!removed) throw new NotFoundException('Không tìm thấy hình ảnh sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -295,7 +304,7 @@ export class CatalogService {
         purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : undefined,
       }),
     );
-    if (!item) throw new NotFoundException('Variant not found');
+    if (!item) throw new NotFoundException('Không tìm thấy biến thể sản phẩm.');
     return item;
   }
 
@@ -305,13 +314,13 @@ export class CatalogService {
 
   async getInventory(user: CurrentUser, id: string) {
     const item = await this.repository.findInventoryItem(user.shopId, id);
-    if (!item) throw new NotFoundException('Inventory item not found');
+    if (!item) throw new NotFoundException('Không tìm thấy món đồ trong kho.');
     return item;
   }
 
   async updateInventoryStatus(user: CurrentUser, id: string, input: UpdateInventoryStatusInput) {
     const allowed: ReadonlySet<string> = new Set(Object.values(INVENTORY_STATUS));
-    if (!allowed.has(input.status)) throw new BadRequestException('Unsupported inventory status');
+    if (!allowed.has(input.status)) throw new BadRequestException('Trạng thái kho không hợp lệ.');
     const item = await this.withInvariant(() =>
       this.repository.updateInventoryStatus({
         shopId: user.shopId,
@@ -324,7 +333,7 @@ export class CatalogService {
         changedBy: user.memberId,
       }),
     );
-    if (!item) throw new NotFoundException('Inventory item not found');
+    if (!item) throw new NotFoundException('Không tìm thấy món đồ trong kho.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -341,7 +350,7 @@ export class CatalogService {
     const archived = await this.withInvariant(() =>
       this.repository.archiveInventoryItem(user.shopId, id, reason, user.memberId),
     );
-    if (!archived) throw new NotFoundException('Inventory item not found');
+    if (!archived) throw new NotFoundException('Không tìm thấy món đồ trong kho.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -357,7 +366,8 @@ export class CatalogService {
   availability(user: CurrentUser, query: AvailabilityQuery) {
     const from = new Date(query.from);
     const until = new Date(query.until);
-    if (from >= until) throw new BadRequestException('from must be earlier than until');
+    if (from >= until)
+      throw new BadRequestException('Thời gian bắt đầu phải trước thời gian kết thúc.');
     return this.repository.findAvailableInventory({
       shopId: user.shopId,
       variantId: query.variantId,
@@ -375,16 +385,16 @@ export class CatalogService {
             throw new NotFoundException({ code: error.code, message: error.message });
           throw new ConflictException({ code: error.code, message: error.message });
         }
-        if (error.message === 'CATEGORY_CODE_ALREADY_EXISTS')
+        if (error instanceof CatalogCategoryCodeAlreadyExistsError)
           throw new ConflictException({
-            code: error.message,
-            message: 'Category code already exists',
+            code: error.code,
+            message: 'Mã danh mục đã tồn tại.',
           });
         const msg = error.message.toLowerCase();
         if (
           msg.includes('duplicate') ||
           msg.includes('đã tồn tại') ||
-          msg.includes('active rental') ||
+          msg.includes('lịch thuê') ||
           msg.includes('lịch đặt') ||
           msg.includes('đang được thuê') ||
           msg.includes('thay đổi')

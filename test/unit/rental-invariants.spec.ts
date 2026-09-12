@@ -31,12 +31,12 @@ describe('Rental booking invariants', () => {
         from: new Date(schedule.from.getTime() + 1),
         until: new Date(schedule.until.getTime() + 1),
       }),
-    ).toThrow('The new rental start is outside the booking policy window');
+    ).toThrow('Ngày bắt đầu thuê mới vượt quá thời hạn đổi lịch cho phép.');
   });
 
   it('honors a custom shop limit instead of a hardcoded default', () => {
     expect(() => assertRentalReschedule({ ...schedule, maxDaysFromBooking: 10 })).toThrow(
-      'The new rental start is outside the booking policy window',
+      'Ngày bắt đầu thuê mới vượt quá thời hạn đổi lịch cho phép.',
     );
   });
 
@@ -47,20 +47,20 @@ describe('Rental booking invariants', () => {
         from: new Date('2026-08-30T03:00:00Z'),
         until: new Date('2026-09-01T03:00:00Z'),
       }),
-    ).toThrow('The new rental start is outside the booking policy window');
+    ).toThrow('Ngày bắt đầu thuê mới vượt quá thời hạn đổi lịch cho phép.');
   });
 
   it('requires explicit repricing when duration changes', () => {
     expect(() =>
       assertRentalReschedule({ ...schedule, until: new Date('2026-09-24T03:00:00Z') }),
-    ).toThrow('Changing rental duration requires repricing');
+    ).toThrow('Thay đổi số ngày thuê cần tính lại giá.');
   });
 
   it.each([new Date('invalid'), schedule.from, new Date('2026-09-20T03:00:00Z')])(
     'rejects invalid intervals before persistence',
     (until) => {
       expect(() => assertRentalReschedule({ ...schedule, until })).toThrow(
-        'Invalid rental interval',
+        'Khoảng thời gian thuê không hợp lệ.',
       );
     },
   );

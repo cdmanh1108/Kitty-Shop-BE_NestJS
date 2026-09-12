@@ -13,9 +13,9 @@ export function resolvePublicUrl(
 ): string {
   const cleanKey = storageKey.trim().replace(/^\/+/, '');
   if (!publicBaseUrl || publicBaseUrl.trim() === '') {
-    throw new Error('OBJECT_STORAGE_PUBLIC_BASE_URL is required to resolve internal media');
+    throw new Error('Cần cấu hình OBJECT_STORAGE_PUBLIC_BASE_URL để truy cập hình ảnh nội bộ.');
   }
-  if (!cleanKey) throw new Error('Object storage key must not be empty');
+  if (!cleanKey) throw new Error('Khóa đối tượng lưu trữ không được để trống.');
   const cleanBase = publicBaseUrl.trim().replace(/\/+$/, '');
   return `${cleanBase}/${cleanKey.split('/').map(encodeURIComponent).join('/')}`;
 }

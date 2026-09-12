@@ -3,16 +3,26 @@ import { Type } from 'class-transformer';
 import { IsDateString, IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class ReportRangeQueryDto {
-  @ApiPropertyOptional() @IsDateString() @IsOptional() from?: string;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() until?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  from?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, {
+    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  @IsOptional()
+  until?: string;
 }
 
 export class PerformanceQueryDto extends ReportRangeQueryDto {
   @ApiPropertyOptional({ default: 20 })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
+  @IsInt({ message: 'Số kết quả mỗi trang phải là số nguyên.' })
+  @Min(1, { message: 'Số kết quả mỗi trang phải lớn hơn hoặc bằng $constraint1.' })
+  @Max(100, { message: 'Số kết quả mỗi trang phải nhỏ hơn hoặc bằng $constraint1.' })
   @IsOptional()
   limit = 20;
 }

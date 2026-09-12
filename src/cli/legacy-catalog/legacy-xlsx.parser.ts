@@ -89,7 +89,7 @@ export function parseLegacyWorkbook(source: string | Buffer): ParsedLegacyWorkbo
   const requiredSheets = ['Sản phẩm', 'Danh mục', 'Cài đặt'];
   for (const sheetName of requiredSheets) {
     if (!workbook.Sheets[sheetName]) {
-      throw new LegacyParserError(`Required sheet "${sheetName}" is missing from workbook`);
+      throw new LegacyParserError(`Tệp Excel thiếu trang tính bắt buộc "${sheetName}".`);
     }
   }
 
@@ -98,7 +98,7 @@ export function parseLegacyWorkbook(source: string | Buffer): ParsedLegacyWorkbo
   const dmRows: unknown[][] = XLSX.utils.sheet_to_json(dmSheet, { header: 1 });
   const dmHeaderIdx = findHeaderRowIndex(dmRows, 'Nhóm sản phẩm');
   if (dmHeaderIdx === -1) {
-    throw new LegacyParserError('Cannot find header row in sheet "Danh mục"');
+    throw new LegacyParserError('Không tìm thấy dòng tiêu đề trong trang tính "Danh mục".');
   }
 
   const rawDmHeader = (dmRows[dmHeaderIdx] ?? []).map((h) => normalizeText(h));
@@ -162,7 +162,7 @@ export function parseLegacyWorkbook(source: string | Buffer): ParsedLegacyWorkbo
   const spRows: unknown[][] = XLSX.utils.sheet_to_json(spSheet, { header: 1 });
   const spHeaderIdx = findHeaderRowIndex(spRows, 'Mã sản phẩm');
   if (spHeaderIdx === -1) {
-    throw new LegacyParserError('Cannot find header row in sheet "Sản phẩm"');
+    throw new LegacyParserError('Không tìm thấy dòng tiêu đề trong trang tính "Sản phẩm".');
   }
 
   const spHeader = (spRows[spHeaderIdx] ?? []).map((h) => normalizeText(h));
@@ -174,7 +174,7 @@ export function parseLegacyWorkbook(source: string | Buffer): ParsedLegacyWorkbo
   const reqCols = ['Mã sản phẩm', 'Tên sản phẩm', 'Nhóm sản phẩm'];
   for (const rc of reqCols) {
     if (colMap[rc] === undefined) {
-      throw new LegacyParserError(`Required column "${rc}" is missing from sheet "Sản phẩm"`);
+      throw new LegacyParserError(`Trang tính "Sản phẩm" thiếu cột bắt buộc "${rc}".`);
     }
   }
 

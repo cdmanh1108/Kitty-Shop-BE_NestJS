@@ -44,7 +44,7 @@ describe('business primitives', () => {
   it('uses a typed interval error with the same existing message', () => {
     expect(() => calculateRentalDurationDays(now, now)).toThrow(InvalidRentalIntervalError);
     expect(() => calculateRentalDurationDays(new Date('invalid'), now)).toThrow(
-      'Invalid rental interval',
+      'Khoảng thời gian thuê không hợp lệ.',
     );
     expect(calculateRentalDurationDays(now, new Date(now.getTime() + 86400001))).toBe(2);
   });

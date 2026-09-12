@@ -2,7 +2,7 @@ import { parseObjectStorageConfiguration } from './object-storage.configuration'
 const required = (config: Record<string, unknown>, key: string): string => {
   const value = config[key];
   if (typeof value !== 'string' || value.trim() === '') {
-    throw new Error(`Missing required environment variable: ${key}`);
+    throw new Error(`Thiếu biến môi trường bắt buộc: ${key}.`);
   }
   return value.trim();
 };
@@ -13,7 +13,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     (typeof config.NODE_ENV !== 'string' ||
       !['development', 'test', 'production'].includes(config.NODE_ENV))
   ) {
-    throw new Error('NODE_ENV must be development, test or production');
+    throw new Error('NODE_ENV phải là development, test hoặc production.');
   }
   const isProduction = config.NODE_ENV === 'production';
 
@@ -22,7 +22,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     (typeof config.LOG_LEVEL !== 'string' ||
       !['fatal', 'error', 'warn', 'log', 'debug', 'verbose'].includes(config.LOG_LEVEL))
   ) {
-    throw new Error('LOG_LEVEL must be fatal, error, warn, log, debug or verbose');
+    throw new Error('LOG_LEVEL phải là fatal, error, warn, log, debug hoặc verbose.');
   }
 
   if (config.PORT !== undefined) {
@@ -30,7 +30,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     const parsed =
       typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
     if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 65535) {
-      throw new Error('PORT must be an integer between 1 and 65535');
+      throw new Error('PORT phải là số nguyên từ 1 đến 65535.');
     }
   }
 
@@ -40,7 +40,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     const parsed = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN;
     const maximum = key === 'JWT_ACCESS_TTL_SECONDS' ? 86_400 : 365;
     if (!Number.isSafeInteger(parsed) || parsed <= 0 || parsed > maximum) {
-      throw new Error(key + ' must be a positive integer within the supported lifetime');
+      throw new Error(key + ' phải là số nguyên dương trong thời hạn được hỗ trợ.');
     }
   }
 
@@ -50,7 +50,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     const parsed =
       typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
     if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-      throw new Error(key + ' must be a positive integer');
+      throw new Error(key + ' phải là số nguyên dương.');
     }
   }
 
@@ -58,7 +58,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     const value =
       typeof config.TRUST_PROXY === 'string' ? config.TRUST_PROXY.trim().toLowerCase() : '';
     if (value !== 'true' && value !== 'false') {
-      throw new Error('TRUST_PROXY must be either "true" or "false"');
+      throw new Error('TRUST_PROXY phải là "true" hoặc "false".');
     }
   }
 
@@ -66,7 +66,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     const value =
       typeof config.SWAGGER_ENABLED === 'string' ? config.SWAGGER_ENABLED.trim().toLowerCase() : '';
     if (value !== 'true' && value !== 'false') {
-      throw new Error('SWAGGER_ENABLED must be either "true" or "false"');
+      throw new Error('SWAGGER_ENABLED phải là "true" hoặc "false".');
     }
   }
 
@@ -76,12 +76,12 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
 
   const jwtSecret = required(config, 'JWT_ACCESS_SECRET');
   if (jwtSecret.length < 32 || jwtSecret === 'replace-with-at-least-32-random-characters') {
-    throw new Error('JWT_ACCESS_SECRET must be a real secret with at least 32 characters');
+    throw new Error('JWT_ACCESS_SECRET phải là khóa bí mật thực tế có ít nhất 32 ký tự.');
   }
   const weakSecrets = ['secret', 'changeme', 'password', '123456', 'development'];
   if (isProduction && weakSecrets.some((w) => jwtSecret.toLowerCase().includes(w))) {
     throw new Error(
-      'JWT_ACCESS_SECRET contains weak or placeholder values and cannot be used in production',
+      'JWT_ACCESS_SECRET chứa giá trị yếu hoặc giá trị mẫu, không thể dùng trong môi trường production.',
     );
   }
 
@@ -90,7 +90,9 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
       .map((origin) => origin.trim())
       .filter(Boolean);
     if (origins.includes('*')) {
-      throw new Error('CORS_ORIGINS cannot contain wildcard "*" in production with credentials');
+      throw new Error(
+        'CORS_ORIGINS không được chứa ký tự đại diện "*" trong môi trường production khi cho phép thông tin xác thực.',
+      );
     }
   }
 
@@ -102,7 +104,9 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
       adminPassword === 'ChangeMe123!' ||
       ['password', '123456', 'admin'].includes(adminPassword.toLowerCase())
     ) {
-      throw new Error('DEFAULT_ADMIN_PASSWORD must be changed before production');
+      throw new Error(
+        'Phải thay đổi DEFAULT_ADMIN_PASSWORD trước khi chạy trong môi trường production.',
+      );
     }
   }
 

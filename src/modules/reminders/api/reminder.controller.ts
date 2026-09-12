@@ -8,7 +8,10 @@ import type { CurrentUser as CurrentUserType } from '@common/types/current-user'
 import { ReminderService } from '../application/reminder.service';
 
 class ReminderQueryDto {
-  @ApiPropertyOptional() @IsString() @IsOptional() status?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Trạng thái phải là chuỗi ký tự.' })
+  @IsOptional()
+  status?: string;
 }
 
 @ApiTags('Reminders')

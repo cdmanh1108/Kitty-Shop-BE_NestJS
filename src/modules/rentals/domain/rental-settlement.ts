@@ -7,7 +7,7 @@ export interface RentalSettlement {
 
 function cents(value: string): bigint {
   const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(value);
-  if (!match) throw new Error('Invalid monetary amount');
+  if (!match) throw new Error('Số tiền không hợp lệ.');
   const amount = BigInt(match[2]!) * 100n + BigInt((match[3] ?? '').padEnd(2, '0'));
   return match[1] ? -amount : amount;
 }
@@ -38,12 +38,12 @@ export function assertRentalConfirmation(input: {
   if (paidRental < cents(input.rentalDue))
     throw new RentalInvariantError(
       'ORDER_NOT_FULLY_PAID',
-      'Rental amount must be fully paid before confirmation',
+      'Cần thanh toán đủ tiền thuê trước khi xác nhận đơn.',
     );
   if (!input.policy.deposit.allowedMethods.includes(input.collateralMethod as 'CASH' | 'DOCUMENT'))
     throw new RentalInvariantError(
       'COLLATERAL_METHOD_NOT_ALLOWED',
-      'Collateral method is not allowed by shop policy',
+      'Phương thức đặt cọc không được chính sách cửa hàng cho phép.',
     );
   if (input.collateralMethod === 'DOCUMENT') {
     if (
@@ -52,17 +52,17 @@ export function assertRentalConfirmation(input: {
     )
       throw new RentalInvariantError(
         'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED',
-        'Document type is not allowed by shop policy',
+        'Loại giấy tờ đặt cọc không được chính sách cửa hàng cho phép.',
       );
     if (input.collateralStatus !== 'HELD')
       throw new RentalInvariantError(
         'COLLATERAL_NOT_RECEIVED',
-        'Document collateral must be received before confirmation',
+        'Cần nhận giấy tờ đặt cọc trước khi xác nhận đơn.',
       );
   } else if (heldDeposit < cents(input.depositRequired)) {
     throw new RentalInvariantError(
       'DEPOSIT_NOT_RECEIVED',
-      'Cash deposit must be received before confirmation',
+      'Cần nhận đủ tiền cọc trước khi xác nhận đơn.',
     );
   }
 }
@@ -96,7 +96,10 @@ export function calculateLateCharges(input: {
 export function rewardForCompletedRental(completedBefore: number, policy: RentalPolicy): number {
   if (!policy.loyalty.enabled) return 0;
   if (!Number.isSafeInteger(completedBefore) || completedBefore < 0)
-    throw new RentalInvariantError('INVALID_LOYALTY_PROGRESS', 'Invalid completed rental count');
+    throw new RentalInvariantError(
+      'INVALID_LOYALTY_PROGRESS',
+      'Số lượt thuê đã hoàn thành không hợp lệ.',
+    );
   return (completedBefore + 1) % policy.loyalty.rentalsRequired === 0
     ? policy.loyalty.rewardRentalValue
     : 0;

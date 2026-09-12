@@ -33,22 +33,26 @@ describe('StorageKeyBuilder & ImageValidator', () => {
     });
 
     it('throws error for empty buffer', () => {
-      expect(() => detectImageFormat(Buffer.alloc(0))).toThrow('Image buffer is empty');
+      expect(() => detectImageFormat(Buffer.alloc(0))).toThrow('Dữ liệu hình ảnh trống.');
     });
 
     it('rejects HTML masquerading as image', () => {
-      const htmlBuffer = Buffer.from('<!DOCTYPE html><html><body>Error 429 Quota Exceeded</body></html>');
-      expect(() => detectImageFormat(htmlBuffer)).toThrow('Downloaded content is HTML/XML text');
+      const htmlBuffer = Buffer.from(
+        '<!DOCTYPE html><html><body>Error 429 Quota Exceeded</body></html>',
+      );
+      expect(() => detectImageFormat(htmlBuffer)).toThrow('Nội dung tải về là văn bản HTML/XML');
     });
 
     it('rejects random binary data without valid image magic bytes', () => {
       const randomBuffer = Buffer.from([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
-      expect(() => detectImageFormat(randomBuffer)).toThrow('Unsupported or unrecognizable image format');
+      expect(() => detectImageFormat(randomBuffer)).toThrow(
+        'Định dạng hình ảnh không được hỗ trợ hoặc không nhận diện được.',
+      );
     });
 
     it('rejects oversized buffer', () => {
       const hugeBuffer = Buffer.alloc(MAX_MEDIA_FILE_SIZE_BYTES + 10);
-      expect(() => detectImageFormat(hugeBuffer)).toThrow(/exceeds maximum allowed size/);
+      expect(() => detectImageFormat(hugeBuffer)).toThrow(/vượt quá kích thước tối đa/);
     });
   });
 
@@ -78,7 +82,7 @@ describe('StorageKeyBuilder & ImageValidator', () => {
 
     it('rejects if declared content type is HTML', () => {
       expect(() => validateAndHashImage(jpegBuffer, 'text/html')).toThrow(
-        'Declared content type "text/html" is not an image',
+        'Loại nội dung "text/html" không phải hình ảnh.',
       );
     });
   });

@@ -43,7 +43,7 @@ export class AuditService implements AuditPort {
         entityId: input.entityId,
         shopId: input.shopId,
         requestId: currentRequestMetadata()?.requestId,
-        error: error instanceof Error ? error : new Error('Unknown exception'),
+        error: error instanceof Error ? error : new Error('Lỗi không xác định.'),
       });
     }
   }

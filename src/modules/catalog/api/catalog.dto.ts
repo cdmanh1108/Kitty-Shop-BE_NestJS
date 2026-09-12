@@ -36,62 +36,98 @@ const normalizeCode = ({ value }: TransformFnParams): unknown =>
   typeof value === 'string' ? value.trim().toUpperCase() : value;
 
 export class RentalRateReqDto {
-  @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt() @Min(1) @Max(365) durationDays!: number;
-  @ApiProperty({ example: 300000 }) @Type(() => Number) @IsNumber() @Min(0) price!: number;
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt({ message: 'Số ngày thuê phải là số nguyên.' })
+  @Min(1, { message: 'Số ngày thuê phải lớn hơn hoặc bằng $constraint1.' })
+  @Max(365, { message: 'Số ngày thuê phải nhỏ hơn hoặc bằng $constraint1.' })
+  durationDays!: number;
+  @ApiProperty({ example: 300000 })
+  @Type(() => Number)
+  @IsNumber(undefined, { message: 'Giá thuê phải là số hợp lệ.' })
+  @Min(0, { message: 'Giá thuê phải lớn hơn hoặc bằng $constraint1.' })
+  price!: number;
 }
 
 export class ProductVariantReqDto {
-  @ApiProperty({ example: 'AURORA-S-RED' }) @IsString() variantCode!: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() sizeId?: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() colorId?: string;
+  @ApiProperty({ example: 'AURORA-S-RED' })
+  @IsString({ message: 'Mã biến thể phải là chuỗi ký tự.' })
+  variantCode!: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã kích thước phải là UUID hợp lệ.' })
+  @IsOptional()
+  sizeId?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã màu sắc phải là UUID hợp lệ.' })
+  @IsOptional()
+  colorId?: string;
   @ApiPropertyOptional()
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber(undefined, { message: 'Tiền cọc riêng của biến thể phải là số hợp lệ.' })
+  @Min(0, { message: 'Tiền cọc riêng của biến thể phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   depositAmountOverride?: number;
   @ApiPropertyOptional({ type: Number, default: 1, minimum: 0 })
   @Type(() => Number)
-  @IsInt()
-  @Min(0)
+  @IsInt({ message: 'Số lượng tồn kho phải là số nguyên.' })
+  @Min(0, { message: 'Số lượng tồn kho phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   inventoryCount = 1;
-  @ApiPropertyOptional({ example: 'AUR-S-R' }) @IsString() @IsOptional() skuPrefix?: string;
+  @ApiPropertyOptional({ example: 'AUR-S-R' })
+  @IsString({ message: 'Tiền tố SKU phải là chuỗi ký tự.' })
+  @IsOptional()
+  skuPrefix?: string;
   @ApiProperty({ type: [RentalRateReqDto] })
-  @IsArray()
-  @ArrayMinSize(1)
-  @ValidateNested({ each: true })
+  @IsArray({ message: 'Danh sách giá thuê phải là danh sách.' })
+  @ArrayMinSize(1, { message: 'Danh sách giá thuê phải có ít nhất $constraint1 phần tử.' })
+  @ValidateNested({ each: true, message: 'Danh sách giá thuê có dữ liệu không hợp lệ.' })
   @Type(() => RentalRateReqDto)
   rentalRates!: RentalRateReqDto[];
 }
 
 export class ProductMediaReqDto {
-  @ApiProperty() @IsUrl() url!: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() altText?: string;
-  @ApiPropertyOptional({ type: Boolean, default: false }) @IsBoolean() @IsOptional() isPrimary =
-    false;
+  @ApiProperty()
+  @IsUrl(undefined, { message: 'Liên kết hình ảnh phải là URL hợp lệ.' })
+  url!: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Mô tả hình ảnh phải là chuỗi ký tự.' })
+  @IsOptional()
+  altText?: string;
+  @ApiPropertyOptional({ type: Boolean, default: false })
+  @IsBoolean({ message: 'Tùy chọn ảnh đại diện phải là giá trị đúng hoặc sai.' })
+  @IsOptional()
+  isPrimary = false;
   @ApiPropertyOptional({ type: Number, default: 0 })
   @Type(() => Number)
-  @IsInt()
+  @IsInt({ message: 'Thứ tự hiển thị phải là số nguyên.' })
   @IsOptional()
   sortOrder = 0;
 }
 
 export class CreateProductReqDto {
-  @ApiProperty({ example: 'DRESS-AURORA' }) @IsString() code!: string;
-  @ApiProperty({ example: 'Váy Aurora Satin' }) @IsString() name!: string;
-  @ApiProperty() @IsUUID() categoryId!: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
+  @ApiProperty({ example: 'DRESS-AURORA' })
+  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  code!: string;
+  @ApiProperty({ example: 'Váy Aurora Satin' })
+  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  name!: string;
+  @ApiProperty()
+  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  categoryId!: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsOptional()
+  description?: string;
   @ApiPropertyOptional({ type: Number, default: 0, minimum: 0 })
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber(undefined, { message: 'Tiền cọc mặc định phải là số hợp lệ.' })
+  @Min(0, { message: 'Tiền cọc mặc định phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   defaultDepositAmount = 0;
   @ApiPropertyOptional({ nullable: true, type: Number, minimum: 0, example: 1500000 })
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber(undefined, { message: 'Giá trị bồi thường phải là số hợp lệ.' })
+  @Min(0, { message: 'Giá trị bồi thường phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   replacementValue?: number | null;
   @ApiPropertyOptional({
@@ -109,40 +145,51 @@ export class CreateProductReqDto {
   @ValidateIf((o: CreateProductReqDto) => o.facebookPostUrl != null)
   @IsUrl(
     { protocols: ['http', 'https'], require_protocol: true },
-    { message: 'facebookPostUrl must be a valid HTTP/HTTPS URL' },
+    { message: 'Liên kết bài viết Facebook phải là URL HTTP hoặc HTTPS hợp lệ.' },
   )
   @IsOptional()
   facebookPostUrl?: string | null;
-  @ApiPropertyOptional({ type: Boolean, default: false }) @IsBoolean() @IsOptional() isPublic =
-    false;
+  @ApiPropertyOptional({ type: Boolean, default: false })
+  @IsBoolean({ message: 'Tùy chọn hiển thị công khai phải là giá trị đúng hoặc sai.' })
+  @IsOptional()
+  isPublic = false;
   @ApiProperty({ type: [ProductVariantReqDto] })
-  @IsArray()
-  @ArrayMinSize(1)
-  @ValidateNested({ each: true })
+  @IsArray({ message: 'Danh sách biến thể phải là danh sách.' })
+  @ArrayMinSize(1, { message: 'Danh sách biến thể phải có ít nhất $constraint1 phần tử.' })
+  @ValidateNested({ each: true, message: 'Danh sách biến thể có dữ liệu không hợp lệ.' })
   @Type(() => ProductVariantReqDto)
   variants!: ProductVariantReqDto[];
   @ApiPropertyOptional({ type: [ProductMediaReqDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
+  @IsArray({ message: 'Danh sách hình ảnh phải là danh sách.' })
+  @ValidateNested({ each: true, message: 'Danh sách hình ảnh có dữ liệu không hợp lệ.' })
   @Type(() => ProductMediaReqDto)
   @IsOptional()
   media: ProductMediaReqDto[] = [];
 }
 
 export class UpdateProductReqDto {
-  @ApiPropertyOptional() @IsString() @IsOptional() name?: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsOptional()
+  name?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsOptional()
+  categoryId?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsOptional()
+  description?: string;
   @ApiPropertyOptional({ type: Number, minimum: 0 })
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber(undefined, { message: 'Tiền cọc mặc định phải là số hợp lệ.' })
+  @Min(0, { message: 'Tiền cọc mặc định phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   defaultDepositAmount?: number;
   @ApiPropertyOptional({ nullable: true, type: Number, minimum: 0, example: 1500000 })
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber(undefined, { message: 'Giá trị bồi thường phải là số hợp lệ.' })
+  @Min(0, { message: 'Giá trị bồi thường phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   replacementValue?: number | null;
   @ApiPropertyOptional({
@@ -160,14 +207,20 @@ export class UpdateProductReqDto {
   @ValidateIf((o: UpdateProductReqDto) => o.facebookPostUrl != null)
   @IsUrl(
     { protocols: ['http', 'https'], require_protocol: true },
-    { message: 'facebookPostUrl must be a valid HTTP/HTTPS URL' },
+    { message: 'Liên kết bài viết Facebook phải là URL HTTP hoặc HTTPS hợp lệ.' },
   )
   @IsOptional()
   facebookPostUrl?: string | null;
-  @ApiPropertyOptional() @IsBoolean() @IsOptional() isPublic?: boolean;
-  @ApiPropertyOptional() @IsBoolean() @IsOptional() isRentable?: boolean;
+  @ApiPropertyOptional()
+  @IsBoolean({ message: 'Tùy chọn hiển thị công khai phải là giá trị đúng hoặc sai.' })
+  @IsOptional()
+  isPublic?: boolean;
+  @ApiPropertyOptional()
+  @IsBoolean({ message: 'Tùy chọn cho phép thuê phải là giá trị đúng hoặc sai.' })
+  @IsOptional()
+  isRentable?: boolean;
   @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
-  @IsIn(Object.values(PRODUCT_STATUS))
+  @IsIn(Object.values(PRODUCT_STATUS), { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: string;
 }
@@ -175,31 +228,31 @@ export class UpdateProductReqDto {
 export class CreateCategoryReqDto {
   @ApiPropertyOptional({ example: 'DRESS' })
   @Transform(normalizeCode)
-  @IsString()
-  @Matches(/^[A-Z0-9_]+$/)
-  @MaxLength(50)
+  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @Matches(/^[A-Z0-9_]+$/, { message: 'Mã chỉ được chứa chữ in hoa, chữ số và dấu gạch dưới.' })
+  @MaxLength(50, { message: 'Mã không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   code?: string;
   @ApiProperty()
   @Transform(trimString)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
+  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsNotEmpty({ message: 'Tên không được để trống.' })
+  @MaxLength(255, { message: 'Tên không được vượt quá $constraint1 ký tự.' })
   name!: string;
   @ApiPropertyOptional()
   @Transform(trimString)
-  @IsString()
-  @MaxLength(2000)
+  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @MaxLength(2000, { message: 'Mô tả không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   description?: string;
   @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' })
-  @IsIn(['ACTIVE', 'INACTIVE'])
+  @IsIn(['ACTIVE', 'INACTIVE'], { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: 'ACTIVE' | 'INACTIVE';
   @ApiPropertyOptional({ type: Number, default: 0, minimum: 0 })
   @Type(() => Number)
-  @IsInt()
-  @Min(0)
+  @IsInt({ message: 'Thứ tự hiển thị phải là số nguyên.' })
+  @Min(0, { message: 'Thứ tự hiển thị phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   sortOrder?: number;
 }
@@ -207,51 +260,57 @@ export class CreateCategoryReqDto {
 export class UpdateCategoryReqDto {
   @ApiPropertyOptional()
   @Transform(trimString)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
+  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsNotEmpty({ message: 'Tên không được để trống.' })
+  @MaxLength(255, { message: 'Tên không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   name?: string;
   @ApiPropertyOptional({ nullable: true, type: String })
   @Transform(trimString)
-  @IsString()
-  @MaxLength(2000)
+  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @MaxLength(2000, { message: 'Mô tả không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   description?: string | null;
   @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] })
-  @IsIn(['ACTIVE', 'INACTIVE'])
+  @IsIn(['ACTIVE', 'INACTIVE'], { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: 'ACTIVE' | 'INACTIVE';
   @ApiPropertyOptional({ type: Number, minimum: 0 })
   @Type(() => Number)
-  @IsInt()
-  @Min(0)
+  @IsInt({ message: 'Thứ tự hiển thị phải là số nguyên.' })
+  @Min(0, { message: 'Thứ tự hiển thị phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   sortOrder?: number;
 }
 
 export class CategoryListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsOptional()
+  search?: string;
   @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] })
-  @IsIn(['ACTIVE', 'INACTIVE'])
+  @IsIn(['ACTIVE', 'INACTIVE'], { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export class CreateSizeReqDto {
-  @ApiProperty() @IsString() code!: string;
-  @ApiProperty() @IsString() name!: string;
+  @ApiProperty() @IsString({ message: 'Mã phải là chuỗi ký tự.' }) code!: string;
+  @ApiProperty() @IsString({ message: 'Tên phải là chuỗi ký tự.' }) name!: string;
   @ApiPropertyOptional({ type: Number, default: 0 })
   @Type(() => Number)
-  @IsInt()
+  @IsInt({ message: 'Thứ tự hiển thị phải là số nguyên.' })
   @IsOptional()
   sortOrder = 0;
 }
 
 export class CreateColorReqDto {
-  @ApiProperty() @IsString() code!: string;
-  @ApiProperty() @IsString() name!: string;
-  @ApiPropertyOptional({ example: '#000000' }) @IsString() @IsOptional() hexColor?: string;
+  @ApiProperty() @IsString({ message: 'Mã phải là chuỗi ký tự.' }) code!: string;
+  @ApiProperty() @IsString({ message: 'Tên phải là chuỗi ký tự.' }) name!: string;
+  @ApiPropertyOptional({ example: '#000000' })
+  @IsString({ message: 'Mã màu phải là chuỗi ký tự.' })
+  @IsOptional()
+  hexColor?: string;
 }
 
 export class AddVariantReqDto extends ProductVariantReqDto {}
@@ -259,61 +318,120 @@ export class AddVariantReqDto extends ProductVariantReqDto {}
 export class UpsertRentalRateReqDto extends RentalRateReqDto {}
 
 export class ProductListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsOptional()
+  search?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsOptional()
+  categoryId?: string;
   @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
-  @IsIn(Object.values(PRODUCT_STATUS))
+  @IsIn(Object.values(PRODUCT_STATUS), { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: string;
 }
 
 export class AddInventoryReqDto {
-  @ApiProperty() @IsUUID() variantId!: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() locationId?: string;
-  @ApiPropertyOptional({ example: 'AUR-S-R-001' }) @IsString() @IsOptional() sku?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() barcode?: string;
+  @ApiProperty()
+  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  variantId!: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã địa điểm phải là UUID hợp lệ.' })
+  @IsOptional()
+  locationId?: string;
+  @ApiPropertyOptional({ example: 'AUR-S-R-001' })
+  @IsString({ message: 'Mã SKU phải là chuỗi ký tự.' })
+  @IsOptional()
+  sku?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Mã vạch phải là chuỗi ký tự.' })
+  @IsOptional()
+  barcode?: string;
   @ApiPropertyOptional()
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber(undefined, { message: 'Giá mua phải là số hợp lệ.' })
+  @Min(0, { message: 'Giá mua phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   purchasePrice?: number;
-  @ApiPropertyOptional() @IsDateString() @IsOptional() purchaseDate?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() notes?: string;
+  @ApiPropertyOptional()
+  @IsDateString(undefined, { message: 'Ngày mua phải là ngày giờ hợp lệ theo định dạng ISO 8601.' })
+  @IsOptional()
+  purchaseDate?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsOptional()
+  notes?: string;
 }
 
 export class UpdateInventoryStatusReqDto {
   @ApiProperty({ enum: Object.values(INVENTORY_STATUS) })
-  @IsIn(Object.values(INVENTORY_STATUS))
+  @IsIn(Object.values(INVENTORY_STATUS), { message: 'Trạng thái không hợp lệ.' })
   status!: InventoryStatus;
   @ApiPropertyOptional({ enum: Object.values(INVENTORY_STATUS) })
-  @IsIn(Object.values(INVENTORY_STATUS))
+  @IsIn(Object.values(INVENTORY_STATUS), {
+    message: 'Trạng thái kho trước khi thay đổi không hợp lệ.',
+  })
   @IsOptional()
   expectedFromStatus?: InventoryStatus;
-  @ApiPropertyOptional() @IsString() @IsOptional() condition?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() reason?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() notes?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Tình trạng phải là chuỗi ký tự.' })
+  @IsOptional()
+  condition?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Lý do phải là chuỗi ký tự.' })
+  @IsOptional()
+  reason?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsOptional()
+  notes?: string;
 }
 
 export class ArchiveInventoryItemReqDto {
-  @ApiPropertyOptional() @IsString() @IsOptional() reason?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Lý do phải là chuỗi ký tự.' })
+  @IsOptional()
+  reason?: string;
 }
 
 export class InventoryListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional() @IsUUID() @IsOptional() variantId?: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() productId?: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() categoryId?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  @IsOptional()
+  variantId?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsOptional()
+  productId?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsOptional()
+  categoryId?: string;
   @ApiPropertyOptional({ enum: Object.values(INVENTORY_STATUS) })
-  @IsIn(Object.values(INVENTORY_STATUS))
+  @IsIn(Object.values(INVENTORY_STATUS), { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: string;
-  @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsOptional()
+  search?: string;
 }
 
 export class AvailabilityQueryDto {
-  @ApiProperty() @IsUUID() variantId!: string;
-  @ApiProperty() @IsDateString() from!: string;
-  @ApiProperty() @IsDateString() until!: string;
+  @ApiProperty()
+  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  variantId!: string;
+  @ApiProperty()
+  @IsDateString(undefined, {
+    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  from!: string;
+  @ApiProperty()
+  @IsDateString(undefined, {
+    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+  })
+  until!: string;
 }
 
 export class CategorySummaryResDto {
@@ -441,7 +559,7 @@ export class CategoryOptionResDto {
 export class CategoryOptionsQueryDto {
   @ApiPropertyOptional({ type: Boolean, default: false })
   @Transform(({ value }: TransformFnParams) => value === true || value === 'true')
-  @IsBoolean()
+  @IsBoolean({ message: 'Tùy chọn bao gồm dữ liệu ngừng hoạt động phải là giá trị đúng hoặc sai.' })
   @IsOptional()
   includeInactive = false;
 }
@@ -565,6 +683,11 @@ export class InventoryPageResDto {
 }
 
 export class ProductLookupQueryDto extends ProductListQueryDto {
-  @ApiPropertyOptional() @IsUUID() @IsOptional() productId?: string;
-  @ApiPropertyOptional({ type: Number, maximum: 50, default: 20 }) @Max(50) override limit = 20;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsOptional()
+  productId?: string;
+  @ApiPropertyOptional({ type: Number, maximum: 50, default: 20 })
+  @Max(50, { message: 'Số kết quả mỗi trang phải nhỏ hơn hoặc bằng $constraint1.' })
+  override limit = 20;
 }

@@ -18,7 +18,8 @@ async function main(): Promise<void> {
         env: { ...process.env, DATABASE_URL: url },
       },
     );
-    if (result.error || result.status !== 0) throw new Error('Test database migration failed');
+    if (result.error || result.status !== 0)
+      throw new Error('Không thể chạy migration cho cơ sở dữ liệu kiểm thử.');
   } finally {
     await disconnectTestDatabase();
   }

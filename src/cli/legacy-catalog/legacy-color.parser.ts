@@ -60,7 +60,7 @@ export function parseLegacyColors(raw: unknown): LegacyColorParseResult {
       isMultiColor: false,
       raw,
       warningCode: 'MISSING_COLOR',
-      warningMessage: 'Color field is empty',
+      warningMessage: 'Màu sắc đang để trống.',
     };
   }
 
@@ -72,7 +72,7 @@ export function parseLegacyColors(raw: unknown): LegacyColorParseResult {
       isMultiColor: false,
       raw,
       warningCode: 'INVALID_COLOR_VALUE',
-      warningMessage: `Invalid numeric color value: ${raw}`,
+      warningMessage: `Giá trị màu dạng số không hợp lệ: ${raw}.`,
     };
   }
 
@@ -84,7 +84,7 @@ export function parseLegacyColors(raw: unknown): LegacyColorParseResult {
       isMultiColor: false,
       raw,
       warningCode: 'MISSING_COLOR',
-      warningMessage: 'Color field is empty',
+      warningMessage: 'Màu sắc đang để trống.',
     };
   }
 
@@ -149,7 +149,7 @@ export function parseLegacyColors(raw: unknown): LegacyColorParseResult {
       isMultiColor: false,
       raw,
       warningCode: 'UNRESOLVED_COLOR_VALUE',
-      warningMessage: `Unresolved color token in value: "${text}"`,
+      warningMessage: `Không nhận diện được màu trong giá trị: "${text}".`,
     };
   }
 
@@ -161,7 +161,7 @@ export function parseLegacyColors(raw: unknown): LegacyColorParseResult {
     ...(hasUnresolved
       ? {
           warningCode: 'UNRESOLVED_COLOR_VALUE',
-          warningMessage: `Partially unresolved color in value: "${text}"`,
+          warningMessage: `Một phần màu sắc chưa được nhận diện trong giá trị: "${text}".`,
         }
       : {}),
   };

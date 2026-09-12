@@ -159,7 +159,7 @@ describe('RentalService Unit Tests', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [],
         }),
-      ).rejects.toThrow(new NotFoundException('Customer not found or inactive'));
+      ).rejects.toThrow(new NotFoundException('Khách hàng không tồn tại hoặc đã ngừng hoạt động.'));
     });
 
     it('throws NotFoundException if location is specified but does not exist in shop', async () => {
@@ -175,7 +175,9 @@ describe('RentalService Unit Tests', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [],
         }),
-      ).rejects.toThrow(new NotFoundException('Shop location not found or inactive'));
+      ).rejects.toThrow(
+        new NotFoundException('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.'),
+      );
     });
 
     it('throws BadRequestException if duplicate variants are submitted in single order', async () => {
@@ -192,7 +194,7 @@ describe('RentalService Unit Tests', () => {
           charges: [],
         }),
       ).rejects.toThrow(
-        new BadRequestException('Each variant should appear only once in a rental order request'),
+        new BadRequestException('Mỗi biến thể sản phẩm chỉ được xuất hiện một lần trong đơn thuê.'),
       );
     });
 
@@ -221,7 +223,7 @@ describe('RentalService Unit Tests', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [],
         }),
-      ).rejects.toThrow(new NotFoundException('Variant var-1 is not rentable'));
+      ).rejects.toThrow(new NotFoundException('Biến thể var-1 không được phép cho thuê.'));
     });
 
     it('throws BadRequestException if no rental rate is configured for the duration', async () => {
@@ -377,7 +379,7 @@ describe('RentalService Unit Tests', () => {
           rentalEndAt: '2026-10-12T10:00:00.000Z',
         }),
       ).rejects.toThrow(
-        new BadRequestException('Only reserved or confirmed orders can be rescheduled'),
+        new BadRequestException('Chỉ có thể đổi lịch đơn đã đặt trước hoặc đã xác nhận.'),
       );
     });
 
@@ -393,7 +395,9 @@ describe('RentalService Unit Tests', () => {
           rentalStartAt: '2026-10-12T10:00:00.000Z',
           rentalEndAt: '2026-10-10T10:00:00.000Z',
         }),
-      ).rejects.toThrow(new BadRequestException('rentalStartAt must be earlier than rentalEndAt'));
+      ).rejects.toThrow(
+        new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.'),
+      );
     });
 
     it('orchestrates valid reschedule and logs audit event', async () => {

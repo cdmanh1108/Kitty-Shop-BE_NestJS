@@ -4,7 +4,7 @@ import type { RentalOrderDetails, RentalOrderPage } from './rental.models';
 
 export class RentalOverlapError extends Error {
   constructor() {
-    super('One or more inventory items are no longer available for the selected period');
+    super('Một hoặc nhiều món đồ không còn trống trong khoảng thời gian đã chọn.');
   }
 }
 

@@ -112,7 +112,7 @@ describe('LegacyCatalogImportService Unit Tests', () => {
         shopCode: 'NON_EXISTENT_SHOP',
         dryRun: true,
       }),
-    ).rejects.toThrow('Shop with code "NON_EXISTENT_SHOP" was not found in the database');
+    ).rejects.toThrow('Không tìm thấy cửa hàng có mã "NON_EXISTENT_SHOP" trong cơ sở dữ liệu.');
   });
 
   it('performs dry-run with zero database mutations', async () => {

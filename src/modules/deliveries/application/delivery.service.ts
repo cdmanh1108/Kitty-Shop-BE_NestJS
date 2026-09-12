@@ -37,16 +37,16 @@ export class DeliveryService {
       notes: input.notes,
       createdBy: user.memberId,
     });
-    if (!delivery) throw new NotFoundException('Rental order not found');
+    if (!delivery) throw new NotFoundException('Không tìm thấy đơn thuê.');
     return delivery;
   }
 
   async updateStatus(user: CurrentUser, id: string, input: UpdateDeliveryStatusInput) {
     const allowed: readonly string[] = Object.values(DELIVERY_STATUS);
     if (!allowed.includes(input.status))
-      throw new BadRequestException('Unsupported delivery status');
+      throw new BadRequestException('Trạng thái giao hàng không hợp lệ.');
     const delivery = await this.repository.updateStatus({ shopId: user.shopId, id, ...input });
-    if (!delivery) throw new NotFoundException('Delivery job not found');
+    if (!delivery) throw new NotFoundException('Không tìm thấy công việc giao hàng.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,

@@ -6,7 +6,7 @@ export const CurrentUser = createParamDecorator(
   (_data: unknown, context: ExecutionContext): CurrentUserType => {
     const request = context.switchToHttp().getRequest<Request>();
     if (!request.currentUser) {
-      throw new Error('Current user is not available in request context');
+      throw new Error('Không tìm thấy thông tin người dùng trong yêu cầu.');
     }
     return request.currentUser;
   },

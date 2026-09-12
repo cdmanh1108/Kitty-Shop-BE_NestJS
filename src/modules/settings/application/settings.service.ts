@@ -110,14 +110,14 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     !Number.isInteger(policy.rentalPricing.defaultRentalPrice) ||
     policy.rentalPricing.defaultRentalPrice < 0
   ) {
-    throw new BadRequestException('Default rental price must be a non-negative integer');
+    throw new BadRequestException('Giá thuê mặc định phải là số nguyên không âm.');
   }
 
   if (
     !Number.isInteger(policy.deposit.defaultCashDeposit) ||
     policy.deposit.defaultCashDeposit < 0
   ) {
-    throw new BadRequestException('Default cash deposit must be a non-negative integer');
+    throw new BadRequestException('Tiền cọc mặc định phải là số nguyên không âm.');
   }
 
   if (
@@ -125,14 +125,16 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     policy.deposit.allowedMethods.length === 0 ||
     policy.deposit.allowedMethods.some((m) => !['CASH', 'DOCUMENT'].includes(m))
   ) {
-    throw new BadRequestException('Allowed deposit methods must include CASH or DOCUMENT');
+    throw new BadRequestException('Phương thức đặt cọc phải gồm tiền mặt hoặc giấy tờ.');
   }
 
   if (
     !Array.isArray(policy.deposit.allowedDocumentTypes) ||
     policy.deposit.allowedDocumentTypes.some((d) => !['CCCD', 'GPLX'].includes(d))
   ) {
-    throw new BadRequestException('Allowed document types must be CCCD or GPLX');
+    throw new BadRequestException(
+      'Loại giấy tờ đặt cọc phải là căn cước công dân hoặc giấy phép lái xe.',
+    );
   }
 
   if (policy.deposit.categoryOverrides) {
@@ -140,14 +142,12 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     for (const override of policy.deposit.categoryOverrides) {
       if (seen.has(override.categoryId)) {
         throw new BadRequestException(
-          `Duplicate category override detected for categoryId: ${override.categoryId}`,
+          `Cấu hình tiền cọc bị trùng cho danh mục: ${override.categoryId}.`,
         );
       }
       seen.add(override.categoryId);
       if (!Number.isInteger(override.cashAmount) || override.cashAmount < 0) {
-        throw new BadRequestException(
-          'Category cash deposit override must be a non-negative integer',
-        );
+        throw new BadRequestException('Tiền cọc riêng của danh mục phải là số nguyên không âm.');
       }
     }
   }
@@ -156,49 +156,53 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     !Number.isInteger(policy.reschedule.maxDaysFromBooking) ||
     policy.reschedule.maxDaysFromBooking < 1
   ) {
-    throw new BadRequestException('Max reschedule days from booking must be at least 1');
+    throw new BadRequestException(
+      'Số ngày tối đa được đổi lịch kể từ khi đặt thuê phải ít nhất là 1.',
+    );
   }
 
   if (
     !Number.isInteger(policy.lateReturn.feePerItemPerDay) ||
     policy.lateReturn.feePerItemPerDay < 0
   ) {
-    throw new BadRequestException('Late fee per item per day must be a non-negative integer');
+    throw new BadRequestException('Phí trả trễ mỗi món mỗi ngày phải là số nguyên không âm.');
   }
 
   if (
     !Number.isInteger(policy.lateReturn.newRentalChargeFromLateDay) ||
     policy.lateReturn.newRentalChargeFromLateDay < 1
   ) {
-    throw new BadRequestException('New rental charge from late day must be at least 1');
+    throw new BadRequestException('Ngày trả trễ bắt đầu tính lượt thuê mới phải ít nhất là 1.');
   }
 
   if (!Number.isInteger(policy.specialCleaning.feeMin) || policy.specialCleaning.feeMin < 0) {
-    throw new BadRequestException('Special cleaning minimum fee must be a non-negative integer');
+    throw new BadRequestException('Phí vệ sinh đặc biệt tối thiểu phải là số nguyên không âm.');
   }
 
   if (!Number.isInteger(policy.specialCleaning.feeMax) || policy.specialCleaning.feeMax < 0) {
-    throw new BadRequestException('Special cleaning maximum fee must be a non-negative integer');
+    throw new BadRequestException('Phí vệ sinh đặc biệt tối đa phải là số nguyên không âm.');
   }
 
   if (policy.specialCleaning.feeMax < policy.specialCleaning.feeMin) {
-    throw new BadRequestException('Special cleaning maximum fee cannot be less than minimum fee');
+    throw new BadRequestException('Phí vệ sinh đặc biệt tối đa không được nhỏ hơn phí tối thiểu.');
   }
 
   if (typeof policy.loyalty.enabled !== 'boolean') {
-    throw new BadRequestException('Loyalty enabled must be a boolean');
+    throw new BadRequestException('Trạng thái bật tích điểm phải là giá trị đúng hoặc sai.');
   }
 
   if (!Number.isInteger(policy.loyalty.rentalsRequired) || policy.loyalty.rentalsRequired < 1) {
-    throw new BadRequestException('Loyalty required rentals must be at least 1');
+    throw new BadRequestException('Số lượt thuê cần để nhận thưởng phải ít nhất là 1.');
   }
 
   if (!Number.isInteger(policy.loyalty.rewardRentalValue) || policy.loyalty.rewardRentalValue < 0) {
-    throw new BadRequestException('Loyalty reward rental value must be a non-negative integer');
+    throw new BadRequestException('Giá trị thưởng thuê phải là số nguyên không âm.');
   }
 
   if (typeof policy.loyalty.stackableWithPromotions !== 'boolean') {
-    throw new BadRequestException('Loyalty stackableWithPromotions must be a boolean');
+    throw new BadRequestException(
+      'Tùy chọn kết hợp tích điểm với khuyến mãi phải là giá trị đúng hoặc sai.',
+    );
   }
 }
 
@@ -232,7 +236,7 @@ export class SettingsService implements RentalPolicyProvider {
 
   async shop(user: CurrentUser) {
     const shop = await this.repository.getShop(user.shopId);
-    if (!shop) throw new NotFoundException('Shop not found');
+    if (!shop) throw new NotFoundException('Không tìm thấy cửa hàng.');
     return shop;
   }
 
@@ -240,7 +244,7 @@ export class SettingsService implements RentalPolicyProvider {
     if (key === RENTAL_POLICY_SETTING_KEY) {
       throw new BadRequestException({
         code: 'RENTAL_POLICY_REQUIRES_VALIDATED_UPDATE',
-        message: 'Use the rental policy endpoint to update business rules',
+        message: 'Vui lòng cập nhật quy tắc kinh doanh tại mục chính sách thuê.',
       });
     }
     const setting = await this.repository.upsert({

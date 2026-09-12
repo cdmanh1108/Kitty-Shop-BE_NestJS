@@ -31,14 +31,10 @@ import {
           // Return a fallback port that allows public URL resolution and fails cleanly on mutation
           return {
             putObject: () =>
-              Promise.reject(
-                new Error('Object storage is not configured: missing OBJECT_STORAGE_BUCKET'),
-              ),
-            headObject: () => Promise.reject(new Error('Object storage is not configured')),
+              Promise.reject(new Error('Chưa cấu hình kho lưu trữ: thiếu OBJECT_STORAGE_BUCKET.')),
+            headObject: () => Promise.reject(new Error('Chưa cấu hình kho lưu trữ.')),
             deleteObject: () =>
-              Promise.reject(
-                new Error('Object storage is not configured: missing OBJECT_STORAGE_BUCKET'),
-              ),
+              Promise.reject(new Error('Chưa cấu hình kho lưu trữ: thiếu OBJECT_STORAGE_BUCKET.')),
             getPublicUrl: (key: string) => resolvePublicUrl(publicBaseUrl, key),
           };
         }

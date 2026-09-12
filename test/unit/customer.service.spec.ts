@@ -85,7 +85,7 @@ describe('CustomerService Unit Tests', () => {
       findByIdMock.mockResolvedValueOnce(null);
 
       await expect(service.get(currentUser, 'non-existent')).rejects.toThrow(
-        new NotFoundException('Customer not found'),
+        new NotFoundException('Không tìm thấy khách hàng.'),
       );
       expect(findByIdMock).toHaveBeenCalledWith('shop-1', 'non-existent');
     });
@@ -155,7 +155,7 @@ describe('CustomerService Unit Tests', () => {
 
       await expect(
         service.update(currentUser, 'non-existent', { fullName: 'Updated Name' }),
-      ).rejects.toThrow(new NotFoundException('Customer not found'));
+      ).rejects.toThrow(new NotFoundException('Không tìm thấy khách hàng.'));
     });
 
     it('updates customer and logs audit event', async () => {

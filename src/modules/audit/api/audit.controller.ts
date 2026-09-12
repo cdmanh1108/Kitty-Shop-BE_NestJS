@@ -9,8 +9,14 @@ import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { AuditService } from '../application/audit.service';
 
 class AuditQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional() @IsString() @IsOptional() entityType?: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() entityId?: string;
+  @ApiPropertyOptional()
+  @IsString({ message: 'Loại đối tượng phải là chuỗi ký tự.' })
+  @IsOptional()
+  entityType?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã đối tượng phải là UUID hợp lệ.' })
+  @IsOptional()
+  entityId?: string;
 }
 
 @ApiTags('Audit')

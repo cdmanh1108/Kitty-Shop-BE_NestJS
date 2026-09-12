@@ -37,7 +37,7 @@ export function assertRentalReschedule(input: {
   if (duration !== calculateRentalDurationDays(input.rentalStartAt, input.rentalEndAt)) {
     throw new RentalInvariantError(
       'RENTAL_REPRICING_REQUIRED',
-      'Changing rental duration requires repricing',
+      'Thay đổi số ngày thuê cần tính lại giá.',
     );
   }
   // createdAt is the original booking instant; rescheduling never moves this anchor.
@@ -45,7 +45,7 @@ export function assertRentalReschedule(input: {
   if (input.from.getTime() < input.createdAt.getTime() || input.from.getTime() > deadline) {
     throw new RentalInvariantError(
       'RESCHEDULE_LIMIT_EXCEEDED',
-      'The new rental start is outside the booking policy window',
+      'Ngày bắt đầu thuê mới vượt quá thời hạn đổi lịch cho phép.',
     );
   }
 }

@@ -45,7 +45,7 @@ export function validateLegacyRows(
         row: p.sourceRow,
         field: 'Mã sản phẩm',
         rawValue: p.productCode,
-        message: 'Mã sản phẩm cannot be empty',
+        message: 'Mã sản phẩm không được để trống.',
       });
       continue;
     }
@@ -60,7 +60,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Mã sản phẩm',
         rawValue: p.productCode,
-        message: `Duplicate product code "${p.productCode}" detected in workbook`,
+        message: `Mã sản phẩm "${p.productCode}" bị trùng trong tệp Excel.`,
       });
     } else {
       seenProductCodes.add(p.productCode);
@@ -76,7 +76,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Tên sản phẩm',
         rawValue: p.productName,
-        message: 'Tên sản phẩm cannot be empty',
+        message: 'Tên sản phẩm không được để trống.',
       });
     }
 
@@ -90,7 +90,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Nhóm sản phẩm',
         rawValue: p.productGroup,
-        message: 'Nhóm sản phẩm cannot be empty',
+        message: 'Nhóm sản phẩm không được để trống.',
       });
     } else if (!masterCatSet.has(p.productGroup.trim().toLowerCase())) {
       // Category Đầm anomaly (e.g. SP017, SP064)
@@ -102,7 +102,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Nhóm sản phẩm',
         rawValue: p.productGroup,
-        message: `Category "${p.productGroup}" used by product but not declared in sheet "Danh mục"`,
+        message: `Nhóm "${p.productGroup}" được sản phẩm sử dụng nhưng chưa khai báo trong trang tính "Danh mục".`,
       });
     }
 
@@ -116,7 +116,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Số lượng tổng',
         rawValue: p.quantity,
-        message: 'Quantity must be a valid number',
+        message: 'Số lượng phải là số hợp lệ.',
       });
     } else if (p.quantity < 0) {
       issues.push({
@@ -127,7 +127,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Số lượng tổng',
         rawValue: p.quantity,
-        message: 'Quantity cannot be negative',
+        message: 'Số lượng không được âm.',
       });
     } else if (p.quantity === 0) {
       // SP040, SP047 anomaly
@@ -139,7 +139,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Số lượng tổng',
         rawValue: p.quantity,
-        message: 'Product is active but has zero total physical inventory',
+        message: 'Sản phẩm đang hoạt động nhưng không có món đồ trong kho.',
       });
     }
 
@@ -153,7 +153,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Giá thuê mặc định',
         rawValue: p.rentalPrice,
-        message: 'Giá thuê mặc định must be a valid number',
+        message: 'Giá thuê mặc định phải là số hợp lệ.',
       });
     } else if (p.rentalPrice < 0) {
       issues.push({
@@ -164,7 +164,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Giá thuê mặc định',
         rawValue: p.rentalPrice,
-        message: 'Rental price cannot be negative',
+        message: 'Giá thuê không được âm.',
       });
     }
 
@@ -178,7 +178,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Tiền cọc mặc định',
         rawValue: p.depositAmount,
-        message: 'Tiền cọc mặc định must be a valid number',
+        message: 'Tiền cọc mặc định phải là số hợp lệ.',
       });
     } else if (p.depositAmount < 0) {
       issues.push({
@@ -189,7 +189,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Tiền cọc mặc định',
         rawValue: p.depositAmount,
-        message: 'Deposit amount cannot be negative',
+        message: 'Tiền cọc không được âm.',
       });
     }
 
@@ -204,7 +204,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Màu',
         rawValue: p.rawColor,
-        message: colorResult.warningMessage ?? 'Invalid color value',
+        message: colorResult.warningMessage ?? 'Giá trị màu sắc không hợp lệ.',
       });
     } else if (colorResult.warningCode === 'MISSING_COLOR') {
       issues.push({
@@ -215,7 +215,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Màu',
         rawValue: p.rawColor,
-        message: 'Product row has empty color (variant will have null colorId)',
+        message: 'Sản phẩm chưa có màu sắc (biến thể sẽ có colorId rỗng).',
       });
     } else if (colorResult.isMultiColor) {
       issues.push({
@@ -226,7 +226,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Màu',
         rawValue: p.rawColor,
-        message: `Parsed multi-color into [${colorResult.colors.map((c) => c.name).join(', ')}]`,
+        message: `Đã tách các màu thành [${colorResult.colors.map((c) => c.name).join(', ')}].`,
       });
 
       // Check inventory allocation for multi-color
@@ -239,7 +239,7 @@ export function validateLegacyRows(
           productCode: p.productCode,
           field: 'Số lượng tổng',
           rawValue: p.quantity,
-          message: `Product has ${colorResult.colors.length} color variants but only ${p.quantity} physical stock. Inventory allocation requires manual review.`,
+          message: `Sản phẩm có ${colorResult.colors.length} biến thể màu nhưng chỉ có ${p.quantity} món đồ trong kho. Cần kiểm tra lại việc phân bổ kho.`,
         });
       }
     }
@@ -255,7 +255,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Trạng thái hoạt động',
         rawValue: p.rawActive,
-        message: `Unknown active status: "${typeof p.rawActive === 'string' ? p.rawActive : String(p.rawActive)}"`,
+        message: `Trạng thái hoạt động không hợp lệ: "${typeof p.rawActive === 'string' ? p.rawActive : String(p.rawActive)}".`,
       });
     }
 
@@ -269,7 +269,7 @@ export function validateLegacyRows(
         productCode: p.productCode,
         field: 'Ảnh vuông URL',
         rawValue: p.imageUrl,
-        message: 'Missing or invalid image URL',
+        message: 'Liên kết hình ảnh bị thiếu hoặc không hợp lệ.',
       });
     }
   }

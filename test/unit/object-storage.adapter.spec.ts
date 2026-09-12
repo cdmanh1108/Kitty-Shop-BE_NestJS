@@ -39,7 +39,7 @@ describe('S3ObjectStorageAdapter', () => {
             ...config,
             bucket: '   ',
           }),
-      ).toThrow('S3ObjectStorageAdapter requires a non-empty bucket name');
+      ).toThrow('Tên vùng lưu trữ S3 không được để trống.');
     });
 
     it('instantiates S3Client with forcePathStyle and provider-neutral config', () => {

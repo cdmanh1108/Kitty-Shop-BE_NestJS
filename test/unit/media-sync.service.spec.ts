@@ -104,7 +104,7 @@ describe('MediaSync & Idempotency Logic', () => {
       );
 
       expect(() => detectImageFormat(htmlQuotaPage)).toThrow(
-        'Downloaded content is HTML/XML text, not a valid image file',
+        'Nội dung tải về là văn bản HTML/XML, không phải tệp hình ảnh hợp lệ.',
       );
     });
   });
@@ -124,7 +124,11 @@ describe('MediaSync & Idempotency Logic', () => {
       expect(resolvedProd).toBe('https://assets.example.com/shops/main/products/sp001/abc.jpg');
 
       // If storageKey is null, falls back to legacy Drive URL
-      const legacyRecord = { id: 'media-2', storageKey: null, url: 'https://drive.google.com/legacy' };
+      const legacyRecord = {
+        id: 'media-2',
+        storageKey: null,
+        url: 'https://drive.google.com/legacy',
+      };
       const resolvedLegacy = legacyRecord.storageKey
         ? resolvePublicUrl('https://assets.example.com', legacyRecord.storageKey)
         : legacyRecord.url;

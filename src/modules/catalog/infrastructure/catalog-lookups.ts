@@ -1,6 +1,6 @@
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { CatalogRepository } from '../domain/catalog.repository';
-import { CatalogInvariantError } from '../domain/catalog.repository';
+import { CatalogCategoryCodeAlreadyExistsError } from '../domain/catalog.repository';
 import { Prisma } from '@prisma/client';
 
 export async function listLookups(
@@ -57,7 +57,7 @@ export async function createCategory(
   },
 ): ReturnType<CatalogRepository['createCategory']> {
   if (await prisma.category.count({ where: { shopId, code: input.code } })) {
-    throw new CatalogInvariantError('CATEGORY_CODE_ALREADY_EXISTS');
+    throw new CatalogCategoryCodeAlreadyExistsError();
   }
   let created;
   try {
@@ -81,7 +81,7 @@ export async function createCategory(
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
-      throw new CatalogInvariantError('CATEGORY_CODE_ALREADY_EXISTS');
+      throw new CatalogCategoryCodeAlreadyExistsError();
     throw error;
   }
   const { isActive, ...safeCreated } = created;

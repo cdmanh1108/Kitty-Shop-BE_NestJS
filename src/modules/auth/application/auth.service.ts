@@ -27,7 +27,7 @@ export class AuthService {
       identity.memberStatus !== 'ACTIVE' ||
       !(await compare(input.password, identity.passwordHash))
     ) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Email hoặc mật khẩu không chính xác.');
     }
 
     await this.repository.updateLastLogin(identity.userId);
@@ -51,7 +51,9 @@ export class AuthService {
       refresh.data,
     );
     if (!identity) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+      );
     }
     return this.issueSession(identity, refresh.rawToken);
   }
@@ -71,10 +73,10 @@ export class AuthService {
       user.shopId,
     );
     if (!currentHash || !(await compare(input.currentPassword, currentHash))) {
-      throw new UnauthorizedException('Current password is incorrect');
+      throw new UnauthorizedException('Mật khẩu hiện tại không chính xác.');
     }
     if (await compare(input.newPassword, currentHash)) {
-      throw new UnauthorizedException('New password must be different from the current password');
+      throw new UnauthorizedException('Mật khẩu mới phải khác mật khẩu hiện tại.');
     }
     await this.repository.updatePasswordAndRevokeSessions(
       user.userId,

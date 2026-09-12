@@ -10,7 +10,9 @@ import { CreateDeliveryReqDto, UpdateDeliveryStatusReqDto } from './delivery.dto
 import { toCreateDeliveryInput, toUpdateDeliveryStatusInput } from './delivery.mapper';
 
 class DeliveryListQueryDto {
-  @IsUUID() @IsOptional() orderId?: string;
+  @IsUUID(undefined, { message: 'Mã đơn thuê phải là UUID hợp lệ.' })
+  @IsOptional()
+  orderId?: string;
 }
 
 @ApiTags('Delivery')

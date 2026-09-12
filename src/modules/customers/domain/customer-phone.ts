@@ -2,7 +2,7 @@ export class InvalidCustomerPhoneError extends Error {
   readonly code = 'INVALID_PHONE';
 
   constructor() {
-    super('Phone number is invalid');
+    super('Số điện thoại không hợp lệ.');
   }
 }
 

@@ -28,13 +28,14 @@ export class S3ObjectStorageAdapter implements ObjectStoragePort {
 
   constructor(config: S3StorageConfig) {
     if (!config.bucket || config.bucket.trim() === '') {
-      throw new Error('S3ObjectStorageAdapter requires a non-empty bucket name');
+      throw new Error('Tên vùng lưu trữ S3 không được để trống.');
     }
     this.bucket = config.bucket.trim();
     this.publicBaseUrl = config.publicBaseUrl ?? '';
 
     this.client = new S3Client({
-      endpoint: config.endpoint && config.endpoint.trim() !== '' ? config.endpoint.trim() : undefined,
+      endpoint:
+        config.endpoint && config.endpoint.trim() !== '' ? config.endpoint.trim() : undefined,
       region: config.region && config.region.trim() !== '' ? config.region.trim() : 'auto',
       credentials: {
         accessKeyId: config.accessKeyId ?? '',

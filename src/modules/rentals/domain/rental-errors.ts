@@ -10,21 +10,21 @@ export class RentalInvariantError extends Error {
 
 export class InvalidRentalIntervalError extends Error {
   constructor() {
-    super('Invalid rental interval');
+    super('Khoảng thời gian thuê không hợp lệ.');
     this.name = 'InvalidRentalIntervalError';
   }
 }
 
 export class RentalClaimLostError extends Error {
   constructor() {
-    super('A request with this Idempotency-Key is already in progress');
+    super('Yêu cầu này đang được xử lý. Vui lòng chờ và thử lại.');
     this.name = 'RentalClaimLostError';
   }
 }
 
 export class RentalInventoryUnavailableError extends Error {
   constructor(
-    message = 'One or more inventory items are not operationally available or no longer rentable',
+    message = 'Một hoặc nhiều món đồ hiện không sẵn sàng hoặc không còn được phép cho thuê.',
   ) {
     super(message);
     this.name = 'RentalInventoryUnavailableError';
