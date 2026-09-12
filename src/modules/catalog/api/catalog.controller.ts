@@ -40,6 +40,9 @@ import {
   ProductMediaReqDto,
   ProductPageResDto,
   ProductResDto,
+  ProductVariantResDto,
+  RentalRateResDto,
+  ProductMediaResDto,
   ArchiveInventoryItemReqDto,
   UpdateInventoryStatusReqDto,
   UpdateProductReqDto,
@@ -165,6 +168,7 @@ export class CatalogController {
 
   @Post('products/:id/variants')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiCreatedResponse({ type: ProductVariantResDto })
   addVariant(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
@@ -175,6 +179,7 @@ export class CatalogController {
 
   @Post('variants/:id/rental-rates')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiCreatedResponse({ type: RentalRateResDto })
   upsertRentalRate(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
@@ -185,6 +190,7 @@ export class CatalogController {
 
   @Patch('products/:id')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ type: ProductResDto })
   updateProduct(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
@@ -238,6 +244,7 @@ export class CatalogController {
 
   @Post('products/:id/media')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiCreatedResponse({ type: ProductMediaResDto })
   @ApiOperation({
     summary: 'Add an image to a product; setting primary clears the previous primary image',
   })

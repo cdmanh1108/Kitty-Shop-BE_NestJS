@@ -18,6 +18,7 @@ import { CustomerService } from '../../src/modules/customers/application/custome
 import { AuditService } from '../../src/modules/audit/application/audit.service';
 import { PrismaAuditRepository } from '../../src/modules/audit/infrastructure/prisma-audit.repository';
 import { ConflictException } from '@nestjs/common';
+import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';
 
 describe('Catalog and customer persistence boundaries', () => {
   let prisma: PrismaService;
@@ -112,5 +113,30 @@ describe('Catalog and customer persistence boundaries', () => {
     expect(await repo.lookup({ shopId: f.shop.id, search: '+84 939', limit: 20 })).toEqual([
       { id: customer.id, fullName: 'Alice Updated', phone: '0939 505 378' },
     ]);
+  });
+
+  it('aggregates only completed non-voided payments and keeps deposits separate', async () => {
+    const f = await rentalScenario(prisma);
+    const rental = await prisma.rentalOrder.create({
+      data: {
+        shopId: f.shop.id, customerId: f.customer.id, orderNumber: uniqueCode('RT'),
+        rentalStartAt: f.data.rentalStartAt, rentalEndAt: f.data.rentalEndAt,
+        createdBy: f.member.id,
+      },
+    });
+    const finance = new PrismaFinanceRepository(prisma);
+    const record = (purpose: 'RENTAL_PAYMENT' | 'DEPOSIT' | 'ORDER_REFUND' | 'DEPOSIT_REFUND', direction: 'IN' | 'OUT', amount: number) =>
+      finance.createPayment({ shopId: f.shop.id, orderId: rental.id, transactionNumber: uniqueCode('PAY'), purpose, direction, amount, paymentMethod: 'CASH', paidAt: new Date(), createdBy: f.member.id });
+    await record('RENTAL_PAYMENT', 'IN', 200000);
+    await record('DEPOSIT', 'IN', 100000);
+    await record('ORDER_REFUND', 'OUT', 30000);
+    await record('DEPOSIT_REFUND', 'OUT', 20000);
+    const voided = await record('RENTAL_PAYMENT', 'IN', 50000);
+    if (!voided) throw new Error('Missing payment');
+    await finance.voidPayment({ shopId: f.shop.id, paymentId: voided.id, voidedBy: f.member.id });
+    expect((await new PrismaCustomerRepository(prisma).findById(f.shop.id, f.customer.id))?.stats).toMatchObject({
+      totalPaid: 170000,
+      depositHeld: 80000,
+    });
   });
 });

@@ -203,4 +203,23 @@ describe('Rental policy transaction enforcement', () => {
     expect(await prisma.customerLoyaltyEntry.count({ where: { customerId: f.customer.id } })).toBe(5);
     expect(await prisma.outboxEvent.count({ where: { eventType: 'LOYALTY_REWARD_EARNED' } })).toBe(1);
   });
+
+  it('lists rentals intersecting a date range, including orders spanning the whole range', async () => {
+    const f = await rentalScenario(prisma);
+    const periods = [
+      ['2026-09-01T00:00:00Z', '2026-09-12T00:00:00Z'],
+      ['2026-09-12T00:00:00Z', '2026-09-30T00:00:00Z'],
+      ['2026-09-01T00:00:00Z', '2026-09-30T00:00:00Z'],
+      ['2026-08-01T00:00:00Z', '2026-08-05T00:00:00Z'],
+    ] as const;
+    const ids: string[] = [];
+    for (const [start, end] of periods) {
+      const order = await prisma.rentalOrder.create({
+        data: { shopId: f.shop.id, customerId: f.customer.id, orderNumber: uniqueCode('RT'), rentalStartAt: new Date(start), rentalEndAt: new Date(end), createdBy: f.member.id },
+      });
+      ids.push(order.id);
+    }
+    const result = await repo.list({ shopId: f.shop.id, page: 1, limit: 20, from: new Date('2026-09-10T00:00:00Z'), until: new Date('2026-09-20T00:00:00Z') });
+    expect(result.items.map((order) => order.id).sort()).toEqual(ids.slice(0, 3).sort());
+  });
 });

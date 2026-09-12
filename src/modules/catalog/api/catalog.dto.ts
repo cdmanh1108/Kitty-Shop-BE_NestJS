@@ -358,6 +358,12 @@ export class VariantInventoryCountDto {
   @ApiProperty() inventoryItems!: number;
 }
 
+export class ProductVariantInventoryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() sku!: string;
+  @ApiProperty() currentStatus!: string;
+}
+
 export class ProductVariantResDto {
   @ApiProperty() id!: string;
   @ApiProperty() variantCode!: string;
@@ -370,7 +376,8 @@ export class ProductVariantResDto {
   @ApiProperty() status!: string;
   @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
   @ApiPropertyOptional({ type: VariantInventoryCountDto }) _count?: VariantInventoryCountDto;
-  @ApiPropertyOptional({ type: [Object] }) inventoryItems?: object[];
+  @ApiPropertyOptional({ type: [ProductVariantInventoryResDto] })
+  inventoryItems?: ProductVariantInventoryResDto[];
 }
 
 export class ProductCategorySummaryResDto {

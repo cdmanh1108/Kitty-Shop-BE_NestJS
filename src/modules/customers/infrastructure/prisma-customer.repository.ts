@@ -128,9 +128,11 @@ export class PrismaCustomerRepository implements CustomerRepository {
           select: { rentalStartAt: true },
           orderBy: { rentalStartAt: 'desc' },
         }),
-        this.prisma.paymentTransaction.findMany({
+        this.prisma.paymentTransaction.groupBy({
+          by: ['direction', 'purpose'],
           where: { shopId, customerId: id, status: 'COMPLETED', voidedAt: null },
-          select: { amount: true, direction: true, purpose: true },
+          orderBy: [{ direction: 'asc' }, { purpose: 'asc' }],
+          _sum: { amount: true },
         }),
         this.prisma.rentalOrder.findMany({
           where: { shopId, customerId: id },
@@ -153,8 +155,8 @@ export class PrismaCustomerRepository implements CustomerRepository {
       return (
         sum +
         (payment.direction === 'IN'
-          ? decimalToNumber(payment.amount)
-          : -decimalToNumber(payment.amount))
+          ? decimalToNumber(payment._sum?.amount ?? 0)
+          : -decimalToNumber(payment._sum?.amount ?? 0))
       );
     }, 0);
     const depositHeld = payments.reduce((sum, payment) => {
@@ -162,8 +164,8 @@ export class PrismaCustomerRepository implements CustomerRepository {
       return (
         sum +
         (payment.direction === 'IN'
-          ? decimalToNumber(payment.amount)
-          : -decimalToNumber(payment.amount))
+          ? decimalToNumber(payment._sum?.amount ?? 0)
+          : -decimalToNumber(payment._sum?.amount ?? 0))
       );
     }, 0);
 
