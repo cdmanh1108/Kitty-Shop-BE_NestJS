@@ -1,3 +1,4 @@
+import { parseObjectStorageConfiguration } from '../src/config/object-storage.configuration';
 import { config } from 'dotenv';
 config();
 
@@ -182,7 +183,9 @@ async function main() {
   console.log('====================================================');
   console.log('  Product Media S3 Object Storage Sync Tool');
   console.log('====================================================');
-  console.log(`Mode:         ${args.apply ? 'APPLY (Mutations Enabled)' : 'DRY-RUN (Simulate Only)'}`);
+  console.log(
+    `Mode:         ${args.apply ? 'APPLY (Mutations Enabled)' : 'DRY-RUN (Simulate Only)'}`,
+  );
   console.log(`Force:        ${args.force}`);
   console.log(`Concurrency:  ${args.concurrency}`);
   console.log(`Cache Dir:    ${args.cacheDir}`);
@@ -197,17 +200,15 @@ async function main() {
 
   const prisma = new PrismaClient();
 
-  const bucket = process.env.OBJECT_STORAGE_BUCKET || '';
-  const endpoint = process.env.OBJECT_STORAGE_ENDPOINT || '';
-  const region = process.env.OBJECT_STORAGE_REGION || 'auto';
-  const accessKeyId = process.env.OBJECT_STORAGE_ACCESS_KEY_ID || '';
-  const secretAccessKey = process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY || '';
-  const publicBaseUrl = process.env.OBJECT_STORAGE_PUBLIC_BASE_URL || '';
+  const storageConfig = parseObjectStorageConfiguration(process.env);
+  const { bucket, endpoint, region, accessKeyId, secretAccessKey, publicBaseUrl } = storageConfig;
 
   let storageAdapter: S3ObjectStorageAdapter | null = null;
   if (args.apply) {
     if (!bucket || !accessKeyId || !secretAccessKey) {
-      console.error('\n[FATAL] --apply requires OBJECT_STORAGE_BUCKET, OBJECT_STORAGE_ACCESS_KEY_ID, and OBJECT_STORAGE_SECRET_ACCESS_KEY to be set.');
+      console.error(
+        '\n[FATAL] --apply requires OBJECT_STORAGE_BUCKET, OBJECT_STORAGE_ACCESS_KEY_ID, and OBJECT_STORAGE_SECRET_ACCESS_KEY to be set.',
+      );
       process.exit(1);
     }
     storageAdapter = new S3ObjectStorageAdapter({
@@ -277,8 +278,7 @@ async function main() {
         }
 
         const legacyFileId =
-          (media.metadata as { legacyFileId?: string } | null)?.legacyFileId ||
-          media.id;
+          (media.metadata as { legacyFileId?: string } | null)?.legacyFileId || media.id;
         const cacheFilePath = join(args.cacheDir, `${legacyFileId}.bin`);
 
         try {
@@ -345,9 +345,13 @@ async function main() {
               },
             });
             stats.dbUpdated++;
-            console.log(`[APPLY] Migrated ${productCode} (${media.id.slice(0, 8)}) -> ${storageKey}`);
+            console.log(
+              `[APPLY] Migrated ${productCode} (${media.id.slice(0, 8)}) -> ${storageKey}`,
+            );
           } else {
-            console.log(`[DRY-RUN] Would migrate ${productCode} (${media.id.slice(0, 8)}) -> ${storageKey} (${(validated.sizeBytes / 1024).toFixed(1)} KB)`);
+            console.log(
+              `[DRY-RUN] Would migrate ${productCode} (${media.id.slice(0, 8)}) -> ${storageKey} (${(validated.sizeBytes / 1024).toFixed(1)} KB)`,
+            );
           }
         } catch (err: unknown) {
           stats.failed++;
@@ -391,7 +395,9 @@ async function main() {
   if (failures.length > 0) {
     console.log('\nFailures Detail:');
     for (const f of failures) {
-      console.log(`- Product: ${f.productCode}, Media: ${f.mediaId}, Code: ${f.errorCode} (HTTP ${f.httpStatus ?? 'N/A'}), Error: ${f.message}`);
+      console.log(
+        `- Product: ${f.productCode}, Media: ${f.mediaId}, Code: ${f.errorCode} (HTTP ${f.httpStatus ?? 'N/A'}), Error: ${f.message}`,
+      );
     }
   }
 

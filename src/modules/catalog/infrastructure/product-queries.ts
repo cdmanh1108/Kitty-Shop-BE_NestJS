@@ -1,10 +1,11 @@
-import { resolvePublicUrl } from '@common/storage/public-url.resolver';
+import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { CatalogRepository } from '../domain/catalog.repository';
 
 export async function listProducts(
   prisma: PrismaService,
+  mediaUrls: PublicMediaUrlResolver,
   input: Parameters<CatalogRepository['listProducts']>[0],
 ): ReturnType<CatalogRepository['listProducts']> {
   const where = {
@@ -70,16 +71,11 @@ export async function listProducts(
       })
     : [];
   const priceMap = new Map(prices.map((p) => [p.productId, p]));
-  const publicBaseUrl = process.env.OBJECT_STORAGE_PUBLIC_BASE_URL;
   return {
     items: items.map(({ category, media, variants, ...product }) => ({
       ...product,
       categoryName: category.name,
-      imageUrl: media[0]
-        ? media[0].storageKey
-          ? resolvePublicUrl(publicBaseUrl, media[0].storageKey)
-          : media[0].url
-        : null,
+      imageUrl: media[0] ? mediaUrls.resolve(media[0]) : null,
       variantCount: variants.length,
       sizes: [...new Set(variants.flatMap((v) => (v.size ? [v.size.name] : [])))],
       colors: [...new Set(variants.flatMap((v) => (v.color ? [v.color.name] : [])))],
@@ -150,6 +146,7 @@ export async function lookupProducts(
 
 export async function findProduct(
   prisma: PrismaService,
+  mediaUrls: PublicMediaUrlResolver,
   shopId: string,
   id: string,
 ): ReturnType<CatalogRepository['findProduct']> {
@@ -172,12 +169,11 @@ export async function findProduct(
 
   if (!product) return null;
 
-  const publicBaseUrl = process.env.OBJECT_STORAGE_PUBLIC_BASE_URL;
   return {
     ...product,
     media: product.media.map((m) => ({
       ...m,
-      url: m.storageKey ? resolvePublicUrl(publicBaseUrl, m.storageKey) : m.url,
+      url: mediaUrls.resolve(m),
     })),
   };
 }

@@ -1,3 +1,4 @@
+import { parseObjectStorageConfiguration } from './object-storage.configuration';
 const required = (config: Record<string, unknown>, key: string): string => {
   const value = config[key];
   if (typeof value !== 'string' || value.trim() === '') {
@@ -105,44 +106,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     }
   }
 
-  if (config.OBJECT_STORAGE_ENDPOINT !== undefined && typeof config.OBJECT_STORAGE_ENDPOINT === 'string') {
-    const ep = config.OBJECT_STORAGE_ENDPOINT.trim();
-    if (ep !== '' && !/^https?:\/\//i.test(ep)) {
-      throw new Error('OBJECT_STORAGE_ENDPOINT must be a valid HTTP or HTTPS URL');
-    }
-  }
-
-  if (
-    config.OBJECT_STORAGE_PUBLIC_BASE_URL !== undefined &&
-    typeof config.OBJECT_STORAGE_PUBLIC_BASE_URL === 'string'
-  ) {
-    const pbu = config.OBJECT_STORAGE_PUBLIC_BASE_URL.trim();
-    if (pbu !== '' && !/^https?:\/\//i.test(pbu)) {
-      throw new Error('OBJECT_STORAGE_PUBLIC_BASE_URL must be a valid HTTP or HTTPS URL');
-    }
-  }
-
-  if (config.OBJECT_STORAGE_BUCKET !== undefined && typeof config.OBJECT_STORAGE_BUCKET === 'string') {
-    const bucket = config.OBJECT_STORAGE_BUCKET.trim();
-    if (
-      bucket !== '' &&
-      (typeof config.OBJECT_STORAGE_ACCESS_KEY_ID !== 'string' ||
-        config.OBJECT_STORAGE_ACCESS_KEY_ID.trim() === '')
-    ) {
-      throw new Error(
-        'OBJECT_STORAGE_ACCESS_KEY_ID is required when OBJECT_STORAGE_BUCKET is configured',
-      );
-    }
-    if (
-      bucket !== '' &&
-      (typeof config.OBJECT_STORAGE_SECRET_ACCESS_KEY !== 'string' ||
-        config.OBJECT_STORAGE_SECRET_ACCESS_KEY.trim() === '')
-    ) {
-      throw new Error(
-        'OBJECT_STORAGE_SECRET_ACCESS_KEY is required when OBJECT_STORAGE_BUCKET is configured',
-      );
-    }
-  }
+  parseObjectStorageConfiguration(config);
 
   return config;
 }

@@ -1,3 +1,4 @@
+import { ConfiguredPublicMediaUrlResolver } from '../src/common/storage/public-url.resolver';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../src/database/prisma/prisma.service';
 import { PrismaRentalRepository } from '../src/modules/rentals/infrastructure/prisma-rental.repository';
@@ -155,7 +156,12 @@ describe('repository persistence boundaries', () => {
   it('preserves tenant-scoped missing product and rental reads', async () => {
     const product = jest.spyOn(prisma.product, 'findFirst').mockResolvedValue(null);
     const order = jest.spyOn(prisma.rentalOrder, 'findFirst').mockResolvedValue(null);
-    expect(await new PrismaCatalogRepository(prisma).findProduct('shop', 'missing')).toBeNull();
+    expect(
+      await new PrismaCatalogRepository(
+        prisma,
+        new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      ).findProduct('shop', 'missing'),
+    ).toBeNull();
     expect(
       await new PrismaRentalRepository(prisma, { now: () => new Date() }).get('shop', 'missing'),
     ).toBeNull();
@@ -173,7 +179,10 @@ describe('repository persistence boundaries', () => {
 
   it('preserves the catalog detail relation filters and ordering', async () => {
     const find = jest.spyOn(prisma.product, 'findFirst').mockResolvedValue(null);
-    await new PrismaCatalogRepository(prisma).findProduct('shop', 'product');
+    await new PrismaCatalogRepository(
+      prisma,
+      new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+    ).findProduct('shop', 'product');
     expect(find.mock.calls[0]?.[0]?.include).toEqual({
       category: true,
       media: { orderBy: { sortOrder: 'asc' } },
@@ -223,7 +232,10 @@ describe('repository persistence boundaries', () => {
     const lookup = jest.spyOn(prisma.category, 'count').mockResolvedValue(0);
     const create = jest.spyOn(prisma.category, 'create');
     await expect(
-      new PrismaCatalogRepository(prisma).createCategory('shop', {
+      new PrismaCatalogRepository(
+        prisma,
+        new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      ).createCategory('shop', {
         code: 'BB',
         name: 'Ba ba',
         parentId: 'other',
@@ -243,7 +255,10 @@ describe('repository persistence boundaries', () => {
     const lookup = jest.spyOn(tx.category, 'count').mockResolvedValue(0);
     jest.spyOn(prisma, '$transaction').mockImplementation((operation) => operation(tx));
     await expect(
-      new PrismaCatalogRepository(prisma).createProduct('shop', {
+      new PrismaCatalogRepository(
+        prisma,
+        new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      ).createProduct('shop', {
         code: 'BB',
         name: 'Ba ba',
         categoryId: 'other',

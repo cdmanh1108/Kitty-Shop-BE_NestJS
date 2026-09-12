@@ -193,9 +193,7 @@ export function parseLegacyWorkbook(source: string | Buffer): ParsedLegacyWorkbo
       productName: normalizeText(row[colMap['Tên sản phẩm']!]),
       productGroup: normalizeText(row[colMap['Nhóm sản phẩm']!]),
       classification:
-        colMap['Phân loại'] !== undefined
-          ? normalizeNullableText(row[colMap['Phân loại']])
-          : null,
+        colMap['Phân loại'] !== undefined ? normalizeNullableText(row[colMap['Phân loại']]) : null,
       size: colMap['Size'] !== undefined ? normalizeNullableText(row[colMap['Size']]) : null,
       rawColor: colMap['Màu'] !== undefined ? row[colMap['Màu']] : undefined,
       quantity:

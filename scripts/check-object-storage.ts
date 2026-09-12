@@ -1,3 +1,4 @@
+import { parseObjectStorageConfiguration } from '../src/config/object-storage.configuration';
 import { config } from 'dotenv';
 config();
 
@@ -6,24 +7,21 @@ import { S3ObjectStorageAdapter } from '../src/common/storage/s3-object-storage.
 async function main() {
   console.log('=== Object Storage Health Check ===');
 
-  const provider = process.env.OBJECT_STORAGE_PROVIDER || 's3';
-  const endpoint = process.env.OBJECT_STORAGE_ENDPOINT || '';
-  const region = process.env.OBJECT_STORAGE_REGION || 'auto';
-  const bucket = process.env.OBJECT_STORAGE_BUCKET || '';
-  const accessKeyId = process.env.OBJECT_STORAGE_ACCESS_KEY_ID || '';
-  const secretAccessKey = process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY || '';
-  const publicBaseUrl = process.env.OBJECT_STORAGE_PUBLIC_BASE_URL || '';
+  const storageConfig = parseObjectStorageConfiguration(process.env);
+  const { bucket, endpoint, region, accessKeyId, secretAccessKey, publicBaseUrl, provider } =
+    storageConfig;
 
   console.log(`Provider:        ${provider}`);
   console.log(`Endpoint:        ${endpoint || '(default AWS S3)'}`);
   console.log(`Region:          ${region}`);
   console.log(`Bucket:          ${bucket || '(not configured)'}`);
   console.log(`Public Base URL: ${publicBaseUrl || '(not configured)'}`);
-  console.log(`Access Key ID:   ${accessKeyId ? `${accessKeyId.slice(0, 4)}...${accessKeyId.slice(-4)}` : '(not configured)'}`);
 
   if (!bucket || !accessKeyId || !secretAccessKey) {
     console.warn('\n[WARN] Object storage credentials are not fully configured in environment.');
-    console.warn('To test against live Cloudflare R2 / S3, ensure OBJECT_STORAGE_* are set in .env.');
+    console.warn(
+      'To test against live Cloudflare R2 / S3, ensure OBJECT_STORAGE_* are set in .env.',
+    );
     process.exit(1);
   }
 
@@ -61,7 +59,9 @@ async function main() {
     }
     console.log('   DELETE success. Cleaned up test object.');
 
-    console.log('\n[PASS] Object storage credentials, bucket connectivity, and read/write/delete permissions verified successfully!');
+    console.log(
+      '\n[PASS] Object storage credentials, bucket connectivity, and read/write/delete permissions verified successfully!',
+    );
   } catch (err: unknown) {
     const error = err as Error;
     console.error(`\n[FAIL] Storage check failed: ${error.message}`);

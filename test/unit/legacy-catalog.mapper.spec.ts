@@ -3,8 +3,8 @@ import {
   buildVariantCode,
   mapLegacyProductRow,
   type MasterLookups,
-} from '../../src/modules/catalog/infrastructure/import/legacy-catalog.mapper';
-import type { LegacyProductRow } from '../../src/modules/catalog/infrastructure/import/legacy-xlsx.parser';
+} from '../../src/cli/legacy-catalog/legacy-catalog.mapper';
+import type { LegacyProductRow } from '../../src/cli/legacy-catalog/legacy-xlsx.parser';
 
 describe('Legacy Catalog Mapper', () => {
   const mockLookups: MasterLookups = {

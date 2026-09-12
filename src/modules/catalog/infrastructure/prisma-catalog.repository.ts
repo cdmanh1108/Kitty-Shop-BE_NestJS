@@ -1,6 +1,10 @@
+import {
+  PUBLIC_MEDIA_URL_RESOLVER,
+  type PublicMediaUrlResolver,
+} from '@common/storage/public-url.resolver';
 import { inventorySummary, inventoryHistory } from './inventory-read-queries';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { CatalogRepository } from '../domain/catalog.repository';
 import { listLookups, createCategory, createSize, createColor } from './catalog-lookups';
 import { listProducts, findProduct, lookupProducts } from './product-queries';
@@ -24,7 +28,10 @@ import {
 
 @Injectable()
 export class PrismaCatalogRepository implements CatalogRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(PUBLIC_MEDIA_URL_RESOLVER) private readonly mediaUrls: PublicMediaUrlResolver,
+  ) {}
 
   lookupProducts(
     ...args: Parameters<CatalogRepository['lookupProducts']>
@@ -71,13 +78,13 @@ export class PrismaCatalogRepository implements CatalogRepository {
   listProducts(
     ...args: Parameters<CatalogRepository['listProducts']>
   ): ReturnType<CatalogRepository['listProducts']> {
-    return listProducts(this.prisma, ...args);
+    return listProducts(this.prisma, this.mediaUrls, ...args);
   }
 
   findProduct(
     ...args: Parameters<CatalogRepository['findProduct']>
   ): ReturnType<CatalogRepository['findProduct']> {
-    return findProduct(this.prisma, ...args);
+    return findProduct(this.prisma, this.mediaUrls, ...args);
   }
 
   createProduct(
@@ -113,7 +120,7 @@ export class PrismaCatalogRepository implements CatalogRepository {
   addProductMedia(
     ...args: Parameters<CatalogRepository['addProductMedia']>
   ): ReturnType<CatalogRepository['addProductMedia']> {
-    return addProductMedia(this.prisma, ...args);
+    return addProductMedia(this.prisma, this.mediaUrls, ...args);
   }
 
   removeProductMedia(

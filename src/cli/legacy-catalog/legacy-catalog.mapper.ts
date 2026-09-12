@@ -66,7 +66,11 @@ export interface MasterLookups {
  * Format: {productCode}-{sizeCode}-{colorCode}
  * e.g. SP001-M-DO, SP040-M-DEFAULT
  */
-export function buildVariantCode(productCode: string, sizeCode?: string, colorCode?: string): string {
+export function buildVariantCode(
+  productCode: string,
+  sizeCode?: string,
+  colorCode?: string,
+): string {
   const s = sizeCode ? sizeCode.toUpperCase() : 'ONESIZE';
   const c = colorCode ? colorCode.toUpperCase() : 'DEFAULT';
   return `${productCode}-${s}-${c}`;
@@ -84,10 +88,7 @@ export function buildInventorySku(variantCode: string, index: number): string {
 /**
  * Maps a validated legacy product row into planned domain structures.
  */
-export function mapLegacyProductRow(
-  row: LegacyProductRow,
-  lookups: MasterLookups,
-): PlannedProduct {
+export function mapLegacyProductRow(row: LegacyProductRow, lookups: MasterLookups): PlannedProduct {
   const cat = lookups.categoryByName.get(row.productGroup.trim().toLowerCase());
   if (!cat) {
     throw new Error(`Category "${row.productGroup}" could not be resolved in lookups`);

@@ -1,3 +1,7 @@
+import {
+  parseObjectStorageConfiguration,
+  type ObjectStorageConfiguration,
+} from './object-storage.configuration';
 export interface AppConfiguration {
   nodeEnv: string;
   port: number;
@@ -12,13 +16,7 @@ export interface AppConfiguration {
   refreshTokenTtlDays: number;
   rateLimitTtlMs: number;
   rateLimitLimit: number;
-  objectStorageProvider: string;
-  objectStorageEndpoint: string;
-  objectStorageRegion: string;
-  objectStorageBucket: string;
-  objectStorageAccessKeyId: string;
-  objectStorageSecretAccessKey: string;
-  objectStoragePublicBaseUrl: string;
+  objectStorage: ObjectStorageConfiguration;
 }
 
 const asBoolean = (value: string | undefined, fallback: boolean): boolean => {
@@ -56,12 +54,6 @@ export default (): AppConfiguration => {
     refreshTokenTtlDays: asNumber(process.env.REFRESH_TOKEN_TTL_DAYS, 30),
     rateLimitTtlMs: asNumber(process.env.RATE_LIMIT_TTL_MS, 60_000),
     rateLimitLimit: asNumber(process.env.RATE_LIMIT_LIMIT, 300),
-    objectStorageProvider: process.env.OBJECT_STORAGE_PROVIDER ?? 's3',
-    objectStorageEndpoint: process.env.OBJECT_STORAGE_ENDPOINT ?? '',
-    objectStorageRegion: process.env.OBJECT_STORAGE_REGION ?? 'auto',
-    objectStorageBucket: process.env.OBJECT_STORAGE_BUCKET ?? '',
-    objectStorageAccessKeyId: process.env.OBJECT_STORAGE_ACCESS_KEY_ID ?? '',
-    objectStorageSecretAccessKey: process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY ?? '',
-    objectStoragePublicBaseUrl: process.env.OBJECT_STORAGE_PUBLIC_BASE_URL ?? '',
+    objectStorage: parseObjectStorageConfiguration(process.env),
   };
 };

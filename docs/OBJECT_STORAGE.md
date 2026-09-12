@@ -1,148 +1,67 @@
-# Object Storage Architecture & Product Media Guide
+# Object storage and Product media
 
----
-
-## 1. Overview & Vendor-Neutral Architecture
-
-Hệ thống quản lý tài nguyên media của Kitty Rental Shop được thiết kế theo nguyên tắc **Zero Vendor Lock-in**, tuân thủ nghiêm ngặt chuẩn tương thích S3 (S3-Compatible API).
+## Architecture
 
 ```text
-Catalog / Product Domain (Business Logic)
-            ↓
-    ObjectStoragePort (Port / Common Interface)
-            ↑
-  S3ObjectStorageAdapter (Infrastructure Adapter using @aws-sdk/client-s3)
-            ↓
-  S3-Compatible Provider (Cloudflare R2, AWS S3, MinIO, Wasabi, v.v.)
+Catalog application/domain -> media metadata / repository port
+Catalog Prisma read projection -> PublicMediaUrlResolver -> configured public URL
+Storage callers -> ObjectStoragePort -> S3ObjectStorageAdapter -> S3-compatible provider
 ```
 
-- **Domain Independence**: Tầng Domain và Application tuyệt đối không import `@aws-sdk/client-s3`, Cloudflare SDK, hay bất kỳ SDK vendor cụ thể nào.
-- **Provider Portability**: Triển khai hiện tại sử dụng **Cloudflare R2**, nhưng toàn bộ logic hoàn toàn có thể tráo đổi sang AWS S3, MinIO (on-premise), hay nhà cung cấp khác chỉ bằng thay đổi biến môi trường.
+Business code does not know buckets, public domains or SDKs. Catalog repositories receive `PUBLIC_MEDIA_URL_RESOLVER` through DI; list, detail and media-command responses share the resolver. URL derivation is local and performs no HEAD/GET request. Storage mutation capabilities remain on the existing ObjectStoragePort; no unused private-document API was added.
 
----
+## Persistence semantics
 
-## 2. Environment Configuration
+The schema deliberately retains `storageKey String?` and `url String` during legacy migration:
 
-Các biến môi trường chuẩn được định nghĩa provider-neutral:
+- With `storageKey`, the key is the canonical identity. API `url` is derived from configured publicBaseUrl. The stored `url` remains original external provenance for retry/force migration; it is not a serving fallback when a key exists.
+- Without `storageKey`, `url` is an external/legacy source and is returned unchanged.
+- Normal Product create/add-media currently accepts external URLs, not uploaded keys. There is no runtime upload endpoint in this task. Legacy importer writes external URLs. The media migration uploads first and updates only the key plus migration metadata; it never persists the generated public URL.
+
+No schema migration or data rewrite is needed. Existing rows are preserved. Historical full provider URLs without a key remain legacy external URLs until explicitly migrated.
+
+Changing the public domain changes responses without DB updates. Changing bucket/provider additionally requires moving objects under the same keys and configuring appropriate public serving; configuration alone does not copy objects or set bucket access policies.
+
+## Configuration
+
+Existing environment names remain unchanged. `configuration.ts` exposes one typed `objectStorage` object. Nest validation and standalone storage commands share `parseObjectStorageConfiguration`; runtime modules do not fall back to raw environment names.
 
 ```env
-# S3-Compatible Object Storage Provider
 OBJECT_STORAGE_PROVIDER=s3
-OBJECT_STORAGE_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+OBJECT_STORAGE_ENDPOINT=https://s3.example.com
 OBJECT_STORAGE_REGION=auto
-OBJECT_STORAGE_BUCKET=kitty-assets-prod
-
-# Credentials (Server-side only — NEVER expose to frontend)
-OBJECT_STORAGE_ACCESS_KEY_ID=your-access-key-id
-OBJECT_STORAGE_SECRET_ACCESS_KEY=your-secret-access-key
-
-# Public Serving Base URL (CDN / Custom Domain or R2 Dev Domain)
-OBJECT_STORAGE_PUBLIC_BASE_URL=https://pub-da9772f41ace4dda9871f112ae659353.r2.dev
+OBJECT_STORAGE_BUCKET=product-assets
+OBJECT_STORAGE_ACCESS_KEY_ID=example-access-key
+OBJECT_STORAGE_SECRET_ACCESS_KEY=example-secret-key
+OBJECT_STORAGE_PUBLIC_BASE_URL=https://assets.example.com
 ```
 
-### Ví dụ cấu hình Cloudflare R2:
-- `OBJECT_STORAGE_ENDPOINT`: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`
-- `OBJECT_STORAGE_REGION`: `auto`
-- `OBJECT_STORAGE_BUCKET`: Tên bucket đã tạo trên Cloudflare (ví dụ: `kitty-assets-prod`).
-- `OBJECT_STORAGE_PUBLIC_BASE_URL`: Domain công khai trỏ tới bucket (r2.dev dev domain hoặc custom domain như `https://assets.kittyrental.com`).
+The endpoint may be omitted for AWS S3; set the appropriate AWS region. Cloudflare R2 uses its S3-compatible account endpoint and region `auto`. MinIO also uses provider `s3`, not a different provider label.
 
----
+All storage values may be omitted when storage is unused. A publicBaseUrl alone supports read-only URL resolution. Configuring bucket, endpoint or either credential activates upload validation: bucket, region, both credentials and publicBaseUrl must be present, in every environment including production. URLs must be valid HTTP(S) without credentials, query or fragment. Validation errors name fields without echoing values.
 
-## 3. Canonical Object Key Design
+Missing storage mutation configuration rejects PUT/HEAD/DELETE rather than pretending an object is absent. Missing publicBaseUrl for a key-backed media read fails explicitly instead of generating a broken relative URL. Deployments serving internal media must configure publicBaseUrl even when uploads are disabled.
 
-Database **chỉ lưu trữ duy nhất `storageKey`**, tuyệt đối không lưu trữ hardcoded domain hoặc URL đầy đủ (`https://...` hay `r2://...`).
+## Keys and public access
 
-### Định dạng Object Key:
-```text
-shops/<shop-code>/products/<product-code>/<content-sha256>.<extension>
-```
+Existing keys remain `shops/<normalized-shop-code>/products/<normalized-product-code>/<sha256>.<extension>`. Content hashes make retries stable, with HEAD-before-PUT and immutable caching. Keys contain neither provider hostname nor bucket nor credentials. Public URL resolution encodes each path segment independently, preserving slash separators.
 
-Ví dụ thực tế:
-```text
-shops/main/products/sp001/21792c25ef7f5a7face7ce6b2a2610b3ce141aeec5a5961f372540abcd262149.jpg
-```
+The existing key scheme assumes normalized shop codes are distinct. Operators must preserve that invariant across tenant codes; this cleanup does not rename existing keys. Public Product objects must contain no identity documents or secrets.
 
-### Ưu điểm của Content-Addressed Hash:
-1. **Idempotency & Deduplication**: Cùng một file ảnh luôn sinh ra cùng một `storageKey` duy nhất.
-2. **Immutability & Long-term Caching**: Key là bất biến nên object được lưu trữ với header HTTP:
-   `Cache-Control: public, max-age=31536000, immutable`
-   giúp trình duyệt và CDN cache tối ưu, tiết kiệm tối đa băng thông.
-3. **Không rò rỉ hạ tầng**: Key không chứa tên bucket, account ID hay domain.
+Product media uses public/CDN-safe access. Future identity/collateral documents require private objects, authorized/signed access and retention controls. None of that private-document infrastructure is implemented here.
 
----
-
-## 4. Public URL Resolution & API Boundary
-
-Khi API đọc dữ liệu sản phẩm (`GET /api/v1/products` và `GET /api/v1/products/:id`):
-- Nếu `media.storageKey` tồn tại: URL được resolve tập trung:
-  ```ts
-  url = resolvePublicUrl(process.env.OBJECT_STORAGE_PUBLIC_BASE_URL, media.storageKey)
-  ```
-- Nếu `media.storageKey` là null (chưa migrate): fallback về URL nguồn cũ (`media.url` từ Google Drive).
-
-Frontend client nhận được URL hợp lệ trực tiếp tại `media.url` và tải ảnh thẳng từ CDN/R2 công khai, không tốn tài nguyên băng thông trung gian qua backend NestJS.
-
----
-
-## 5. Media Sync CLI (`media:sync-storage`)
-
-Công cụ migration an toàn, có khả năng resume, cache đĩa cục bộ, và xử lý giới hạn Google Drive:
+## Maintenance commands
 
 ```bash
-# 1. Kiểm tra kết nối và quyền đọc/ghi bucket
-npm run object-storage:check
-
-# 2. Chạy mô phỏng trước (Dry-run — Mặc định an toàn)
-npm run media:sync-storage -- --dry-run
-
-# 3. Chạy thực tế (Apply mutations)
-npm run media:sync-storage -- --apply
-
-# 4. Các tham số lọc và kiểm soát
+npm run media:sync-storage -- --dry-run --limit 10
 npm run media:sync-storage -- --apply --limit 10
-npm run media:sync-storage -- --apply --product-code SP001
-npm run media:sync-storage -- --apply --concurrency 2
-npm run media:sync-storage -- --apply --force
+npm run object-storage:check
 ```
 
-### Cơ chế bảo vệ và tối ưu:
-- **Local Disk Cache (`private-data/cache/product-media/`)**: Ảnh sau khi tải về lần đầu được cache cục bộ theo ID. Các lần chạy tiếp theo tái sử dụng 100% từ cache, không tạo request mới đến Google Drive.
-- **Bounded Concurrency**: Giới hạn tải 2-4 luồng đồng thời để không bị Google Drive chặn IP.
-- **Exponential Backoff & Jitter**: Tự động retry khi gặp mã lỗi tạm thời 429 (Rate Limit) hoặc 5xx.
-- **HEAD-before-PUT**: Kiểm tra object đã tồn tại trên bucket chưa trước khi upload; nếu đã có trên storage thì bỏ qua bước PUT và chỉ liên kết DB.
-- **Safe Transaction Boundary**: Quá trình upload hoàn tất thành công mới cập nhật DB, tránh lỗi treo transaction database.
+Sync remains dry-run by default, supports local cache/resume, bounded concurrency, download retry/backoff and MIME/hash validation. Upload completes before the DB update, outside any DB transaction. A rerun can reuse an uploaded object after a failed DB update. `--force` reprocesses the retained original source. No automatic deletion was added to archive/delete flows.
 
----
+`object-storage:check` performs PUT/HEAD/DELETE against the configured bucket: it is a live mutation diagnostic, not an offline dry-run. It no longer prints any part of the access key. Run it only against an authorized target.
 
-## 6. Bucket Migration Procedure (Quy trình chuyển đổi Bucket / Provider)
+Current download implementation validates the 15 MB limit after buffering and clears its timeout after headers. Those existing limits do not guarantee a bounded streamed response/body deadline; changing the downloader is outside this boundary cleanup.
 
-Khi cần di dời media sang một Bucket mới hoặc đổi nhà cung cấp (ví dụ từ R2 Bucket A sang R2 Bucket B hoặc sang AWS S3):
-
-1. **Tạo Bucket mới**: Tạo bucket đích trên provider mới (ví dụ AWS S3 hoặc Cloudflare R2 mới).
-2. **Copy Objects**: Sử dụng công cụ tương thích S3 (như `rclone`, `aws s3 sync`, hoặc Cloudflare Super Slurper) copy toàn bộ file từ bucket cũ sang bucket mới, **giữ nguyên toàn bộ cấu trúc key**.
-3. **Kiểm tra Checksum**: Xác minh số lượng object và SHA-256 khớp nhau giữa 2 bucket.
-4. **Cập nhật Biến Môi Trường**:
-   ```env
-   OBJECT_STORAGE_ENDPOINT=<new-endpoint>
-   OBJECT_STORAGE_BUCKET=<new-bucket>
-   OBJECT_STORAGE_ACCESS_KEY_ID=<new-key>
-   OBJECT_STORAGE_SECRET_ACCESS_KEY=<new-secret>
-   OBJECT_STORAGE_PUBLIC_BASE_URL=<new-cdn-url>
-   ```
-5. **Khởi động lại / Deploy**: Khởi động lại dịch vụ backend.
-6. **Smoke Test**: Mở Admin kiểm tra ảnh sản phẩm tải bình thường từ URL mới.
-
-> [!NOTE]
-> **Database không cần chạy bất kỳ câu lệnh SQL UPDATE nào!** Vì database chỉ lưu `storageKey`, việc chuyển bucket hay đổi tên miền chỉ là thao tác cấu hình môi trường.
-
----
-
-## 7. Security Boundaries
-
-1. **Public Asset vs Sensitive Documents**:
-   - Media của Product trong task này là **Public Catalog Assets**, phục vụ hiển thị công khai trên website và app quản lý.
-   - Các tài liệu định danh nhạy cảm của khách hàng trong các tính năng tương lai (như **CCCD / CMND / GPLX** để giữ tài sản thế chấp) **TUYỆT ĐỐI KHÔNG ĐƯỢC LƯU CHUNG** trong public bucket này.
-   - Tài liệu nhạy cảm bắt buộc phải dùng bucket riêng tư (Private Storage), mã hóa at-rest, và chỉ truy cập thông qua Pre-signed URL có thời hạn cùng phân quyền bảo mật chặt chẽ.
-2. **Credential Protection**:
-   - `OBJECT_STORAGE_ACCESS_KEY_ID` và `OBJECT_STORAGE_SECRET_ACCESS_KEY` chỉ tồn tại ở backend (`kitty-be`).
-   - Tuyệt đối không import hoặc cấu hình các biến bí mật này vào frontend (`kitty-admin-fe`).
+See [Task 6 report](STORAGE_CLI_BOUNDARIES.md) for verification and remaining limitations.

@@ -1,9 +1,9 @@
-import { parseLegacyColors } from '../../src/modules/catalog/infrastructure/import/legacy-color.parser';
+import { parseLegacyColors } from '../../src/cli/legacy-catalog/legacy-color.parser';
 import {
   normalizeToCode,
   parseLegacyBoolean,
   parseLegacyNumber,
-} from '../../src/modules/catalog/infrastructure/import/legacy-catalog.normalizer';
+} from '../../src/cli/legacy-catalog/legacy-catalog.normalizer';
 
 describe('Legacy Color Parser & Normalizer', () => {
   describe('Normalizer utilities', () => {

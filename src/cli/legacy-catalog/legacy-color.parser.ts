@@ -89,7 +89,10 @@ export function parseLegacyColors(raw: unknown): LegacyColorParseResult {
   }
 
   // Split by explicit delimiters: comma, slash, plus, semicolon
-  const chunks = text.split(/[,/\\+;]/).map((c) => c.trim()).filter((c) => c.length > 0);
+  const chunks = text
+    .split(/[,/\\+;]/)
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
 
   const matchedColors: LegacyColor[] = [];
   let hasUnresolved = false;

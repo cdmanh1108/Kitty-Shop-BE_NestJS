@@ -2,6 +2,14 @@
 
 Hướng dẫn vận hành và chi tiết kỹ thuật của pipeline nhập dữ liệu sản phẩm từ workbook Excel legacy (`Quản lý lịch thuê KITTY.xlsx`) vào hệ thống PostgreSQL (`kitty-be`).
 
+## CLI boundary (Task 6)
+
+The importer lives in `src/cli/legacy-catalog/`. `scripts/import-legacy-catalog.ts` creates a `LegacyCatalogImportModule` application context with central config, Prisma and audit only. HTTP CatalogModule neither registers nor exports the importer; the HTTP import graph does not reach XLSX.
+
+`--file` is required; there is no implicit private workbook path. Default execution is dry-run, and `--dry-run` overrides `--apply`. Use explicit `--shop` for operational runs. Existing per-product transactions, validation/reconciliation, idempotency and non-destructive conflict behavior are retained. `xlsx` remains a normal dependency because CLI commands ship with the deployed source/package.
+
+Importer media are external URLs. The separate media sync command later adds canonical storage keys; API URLs are then derived. Private workbooks stay ignored and must never be committed. A synthetic workbook is generated in tests; it contains no business data. See [Task 6 report](STORAGE_CLI_BOUNDARIES.md).
+
 ## 0. Hướng dẫn chạy lần đầu từng bước (First-Time Quickstart)
 
 Dành cho Developer hoặc Operator khi clone repo hoặc setup môi trường mới lần đầu:

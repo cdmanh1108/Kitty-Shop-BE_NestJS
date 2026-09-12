@@ -1,8 +1,8 @@
 import * as path from 'path';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
-import { LegacyCatalogImportService } from '../src/modules/catalog/infrastructure/import/legacy-catalog-import.service';
-import type { LegacyImportReport } from '../src/modules/catalog/infrastructure/import/legacy-catalog-import.types';
+import { LegacyCatalogImportModule } from '../src/cli/legacy-catalog/legacy-catalog-import.module';
+import { LegacyCatalogImportService } from '../src/cli/legacy-catalog/legacy-catalog-import.service';
+import type { LegacyImportReport } from '../src/cli/legacy-catalog/legacy-catalog-import.types';
 
 interface CliArgs {
   file: string;
@@ -12,7 +12,7 @@ interface CliArgs {
 }
 
 function parseCliArgs(argv: string[]): CliArgs {
-  let file = './private-data/legacy/Quản lý lịch thuê KITTY.xlsx';
+  let file = '';
   let shop = process.env.DEFAULT_SHOP_CODE ?? 'MAIN';
   let apply = false;
   let dryRun = false;
@@ -37,12 +37,15 @@ function parseCliArgs(argv: string[]): CliArgs {
     dryRun = true;
   }
 
-  return { file, shop, dryRun, apply };
+  if (!file) throw new Error('--file is required; supply an explicit workbook path');
+  return { file, shop, dryRun, apply: apply && !dryRun };
 }
 
 function printReport(report: LegacyImportReport): void {
-  const divider = '================================================================================';
-  const subDivider = '--------------------------------------------------------------------------------';
+  const divider =
+    '================================================================================';
+  const subDivider =
+    '--------------------------------------------------------------------------------';
 
   console.log('\n' + divider);
   console.log(`  LEGACY CATALOG IMPORT REPORT [${report.mode}]`);
@@ -84,7 +87,9 @@ function printReport(report: LegacyImportReport): void {
   if (inv.unallocatedItems.length > 0) {
     console.log('\n  Unallocated Items Detail (Multi-color Qty=1 ambiguity):');
     for (const item of inv.unallocatedItems) {
-      console.log(`    * [${item.productCode}] "${item.productName}": Qty=${item.quantity}, Variants=[${item.variants.join(', ')}]`);
+      console.log(
+        `    * [${item.productCode}] "${item.productName}": Qty=${item.quantity}, Variants=[${item.variants.join(', ')}]`,
+      );
     }
   }
 
@@ -92,14 +97,24 @@ function printReport(report: LegacyImportReport): void {
   console.log(`  3. DATABASE MUTATIONS (${report.mode === 'DRY_RUN' ? 'PLANNED' : 'EXECUTED'})`);
   console.log(subDivider);
   const m = report.mutations;
-  console.log(`  - Categories:     +${m.categoriesCreated} created, ${m.categoriesExisting} existing`);
+  console.log(
+    `  - Categories:     +${m.categoriesCreated} created, ${m.categoriesExisting} existing`,
+  );
   console.log(`  - Sizes:          +${m.sizesCreated} created, ${m.sizesExisting} existing`);
   console.log(`  - Colors:         +${m.colorsCreated} created, ${m.colorsExisting} existing`);
-  console.log(`  - Products:       +${m.productsCreated} created, ${m.productsUnchanged} unchanged, ${m.productsConflicted} conflicted`);
-  console.log(`  - Variants:       +${m.variantsCreated} created, ${m.variantsUnchanged} unchanged`);
-  console.log(`  - Rental Rates:   +${m.rentalRatesCreated} created, ${m.rentalRatesUnchanged} unchanged`);
+  console.log(
+    `  - Products:       +${m.productsCreated} created, ${m.productsUnchanged} unchanged, ${m.productsConflicted} conflicted`,
+  );
+  console.log(
+    `  - Variants:       +${m.variantsCreated} created, ${m.variantsUnchanged} unchanged`,
+  );
+  console.log(
+    `  - Rental Rates:   +${m.rentalRatesCreated} created, ${m.rentalRatesUnchanged} unchanged`,
+  );
   console.log(`  - Product Media:  +${m.mediaCreated} created, ${m.mediaUnchanged} unchanged`);
-  console.log(`  - Inventory Items:+${m.inventoryItemsCreated} created, ${m.inventoryItemsUnchanged} unchanged`);
+  console.log(
+    `  - Inventory Items:+${m.inventoryItemsCreated} created, ${m.inventoryItemsUnchanged} unchanged`,
+  );
 
   console.log('\n' + subDivider);
   console.log('  4. VALIDATION & ANOMALIES');
@@ -115,7 +130,9 @@ function printReport(report: LegacyImportReport): void {
     for (const issue of report.issues) {
       if (issue.severity !== 'INFO') {
         const pCode = issue.productCode ? `[${issue.productCode}] ` : '';
-        console.log(`    [${issue.severity}] ${issue.code} at Row ${issue.row}: ${pCode}${issue.message}`);
+        console.log(
+          `    [${issue.severity}] ${issue.code} at Row ${issue.row}: ${pCode}${issue.message}`,
+        );
       }
     }
   }
@@ -132,7 +149,7 @@ async function main(): Promise<void> {
   console.log(`Shop Code:   ${args.shop}`);
   console.log(`Mode:        ${args.apply ? 'APPLY (Mutating DB)' : 'DRY RUN (Read Only)'}`);
 
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(LegacyCatalogImportModule, {
     logger: ['error', 'warn'],
   });
 
@@ -158,4 +175,8 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+if (require.main === module)
+  void main().catch(() => {
+    console.error('Legacy import failed. Check arguments and configuration.');
+    process.exitCode = 1;
+  });

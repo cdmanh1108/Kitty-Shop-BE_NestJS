@@ -417,6 +417,7 @@ model ProductMedia {
   productId String   @map("product_id") @db.Uuid
   variantId String?  @map("variant_id") @db.Uuid
   mediaType String   @default("IMAGE") @map("media_type") @db.VarChar(20)
+  // Canonical for managed objects; url retains the external migration source.
   storageKey String? @map("storage_key") @db.Text
   url       String   @db.Text
   altText   String?  @map("alt_text") @db.VarChar(255)

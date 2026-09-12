@@ -1,5 +1,8 @@
-import { validateLegacyRows } from '../../src/modules/catalog/infrastructure/import/legacy-catalog.validator';
-import type { LegacyCategoryRow, LegacyProductRow } from '../../src/modules/catalog/infrastructure/import/legacy-xlsx.parser';
+import { validateLegacyRows } from '../../src/cli/legacy-catalog/legacy-catalog.validator';
+import type {
+  LegacyCategoryRow,
+  LegacyProductRow,
+} from '../../src/cli/legacy-catalog/legacy-xlsx.parser';
 
 describe('Legacy Catalog Validator', () => {
   const masterCategories: LegacyCategoryRow[] = [
@@ -111,7 +114,9 @@ describe('Legacy Catalog Validator', () => {
 
     const result = validateLegacyRows([damRow], masterCategories);
     expect(result.isValid).toBe(true); // Still valid to import
-    expect(result.issues.some((i) => i.code === 'CATEGORY_NOT_DECLARED_IN_MASTER_SHEET')).toBe(true);
+    expect(result.issues.some((i) => i.code === 'CATEGORY_NOT_DECLARED_IN_MASTER_SHEET')).toBe(
+      true,
+    );
   });
 
   it('flags zero inventory with WARNING (ACTIVE_PRODUCT_WITH_ZERO_INVENTORY)', () => {

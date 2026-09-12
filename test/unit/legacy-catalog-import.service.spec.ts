@@ -1,4 +1,4 @@
-import { LegacyCatalogImportService } from '../../src/modules/catalog/infrastructure/import/legacy-catalog-import.service';
+import { LegacyCatalogImportService } from '../../src/cli/legacy-catalog/legacy-catalog-import.service';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 
@@ -35,35 +35,45 @@ describe('LegacyCatalogImportService Unit Tests', () => {
           { id: 'cat-vay', code: 'VAY', name: 'Váy' },
           { id: 'cat-dam-ngan', code: 'DAM_NGAN', name: 'Đầm ngắn' },
         ]),
-        upsert: jest.fn().mockImplementation((args: { create: { code: string; name: string } }) =>
-          Promise.resolve({ id: `cat-${args.create.code}`, ...args.create }),
-        ),
+        upsert: jest
+          .fn()
+          .mockImplementation((args: { create: { code: string; name: string } }) =>
+            Promise.resolve({ id: `cat-${args.create.code}`, ...args.create }),
+          ),
       },
       size: {
         findMany: jest.fn().mockResolvedValue([
           { id: 'size-m', code: 'M', name: 'M', sortOrder: 10 },
           { id: 'size-s', code: 'S', name: 'S', sortOrder: 20 },
         ]),
-        upsert: jest.fn().mockImplementation((args: { create: { code: string; name: string } }) =>
-          Promise.resolve({ id: `size-${args.create.code}`, ...args.create }),
-        ),
+        upsert: jest
+          .fn()
+          .mockImplementation((args: { create: { code: string; name: string } }) =>
+            Promise.resolve({ id: `size-${args.create.code}`, ...args.create }),
+          ),
       },
       color: {
         findMany: jest.fn().mockResolvedValue([]),
-        upsert: jest.fn().mockImplementation((args: { create: { code: string; name: string } }) =>
-          Promise.resolve({ id: `color-${args.create.code}`, ...args.create }),
-        ),
+        upsert: jest
+          .fn()
+          .mockImplementation((args: { create: { code: string; name: string } }) =>
+            Promise.resolve({ id: `color-${args.create.code}`, ...args.create }),
+          ),
       },
       product: {
         findMany: jest.fn().mockResolvedValue([]),
-        create: jest.fn().mockImplementation((args: { data: { code: string; name: string } }) =>
-          Promise.resolve({ id: `prod-${args.data.code}`, ...args.data }),
-        ),
+        create: jest
+          .fn()
+          .mockImplementation((args: { data: { code: string; name: string } }) =>
+            Promise.resolve({ id: `prod-${args.data.code}`, ...args.data }),
+          ),
       },
       productVariant: {
-        create: jest.fn().mockImplementation((args: { data: { variantCode: string } }) =>
-          Promise.resolve({ id: `var-${args.data.variantCode}`, ...args.data }),
-        ),
+        create: jest
+          .fn()
+          .mockImplementation((args: { data: { variantCode: string } }) =>
+            Promise.resolve({ id: `var-${args.data.variantCode}`, ...args.data }),
+          ),
       },
       rentalRate: {
         create: jest.fn().mockResolvedValue({ id: 'rate-1' }),
@@ -84,10 +94,7 @@ describe('LegacyCatalogImportService Unit Tests', () => {
       log: auditLogMock,
     };
 
-    service = new LegacyCatalogImportService(
-      mockPrisma as unknown as PrismaService,
-      mockAudit,
-    );
+    service = new LegacyCatalogImportService(mockPrisma as unknown as PrismaService, mockAudit);
   });
 
   it('fails cleanly when shop code is not found', async () => {
@@ -174,7 +181,9 @@ describe('LegacyCatalogImportService Unit Tests', () => {
 
     expect(report.mutations.productsConflicted).toBe(1);
     expect(
-      report.issues.some((i) => i.code === 'EXISTING_PRODUCT_CONFLICT' && i.productCode === 'SP001'),
+      report.issues.some(
+        (i) => i.code === 'EXISTING_PRODUCT_CONFLICT' && i.productCode === 'SP001',
+      ),
     ).toBe(true);
   });
 });

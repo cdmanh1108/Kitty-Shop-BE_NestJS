@@ -1,4 +1,4 @@
-import { resolvePublicUrl } from '@common/storage/public-url.resolver';
+import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
 import { serializableTransaction } from '@database/prisma/transaction';
@@ -220,6 +220,7 @@ async function assertProductCanArchive(
 
 export async function addProductMedia(
   prisma: PrismaService,
+  mediaUrls: PublicMediaUrlResolver,
   shopId: string,
   productId: string,
   input: ProductMediaData,
@@ -242,9 +243,7 @@ export async function addProductMedia(
 
   return {
     ...created,
-    url: created.storageKey
-      ? resolvePublicUrl(process.env.OBJECT_STORAGE_PUBLIC_BASE_URL, created.storageKey)
-      : created.url,
+    url: mediaUrls.resolve(created),
   };
 }
 export async function removeProductMedia(

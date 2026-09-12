@@ -1,3 +1,4 @@
+import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -19,7 +20,10 @@ describe('Catalog persistence invariants', () => {
   let rentals: PrismaRentalRepository;
   beforeAll(async () => {
     prisma = await connectTestDatabase();
-    catalog = new PrismaCatalogRepository(prisma);
+    catalog = new PrismaCatalogRepository(
+      prisma,
+      new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+    );
     rentals = new PrismaRentalRepository(prisma, fixedClock);
   });
   beforeEach(async () => {

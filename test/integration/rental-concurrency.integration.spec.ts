@@ -1,3 +1,4 @@
+import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import {
   connectTestDatabase,
   disconnectTestDatabase,
@@ -26,7 +27,10 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
     repo = new PrismaRentalRepository(prisma, fixedClock);
-    catalogRepo = new PrismaCatalogRepository(prisma);
+    catalogRepo = new PrismaCatalogRepository(
+      prisma,
+      new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+    );
   });
 
   beforeEach(async () => {

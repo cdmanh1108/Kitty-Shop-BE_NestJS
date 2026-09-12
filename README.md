@@ -101,3 +101,7 @@ scripts/                   # bootstrap and OpenAPI export
 Auth/RBAC, dashboard, customers, product catalog, physical inventory, rental orders/calendar, rental overlap protection, payments/deposits, expenses, delivery/return jobs, reminders, reports, settings, members and audit log.
 
 See [docs/API.md](docs/API.md) for endpoint groups and [docs/ROADMAP.md](docs/ROADMAP.md) for intentionally deferred features.
+
+## Storage and import boundaries
+
+Catalog media reads use an injected public URL resolver and centrally validated storage configuration. Key-backed objects retain provider-neutral identity; external legacy URLs remain supported. Legacy Excel import runs in its own CLI context, outside HTTP CatalogModule. See [Object storage](docs/OBJECT_STORAGE.md) and [Task 6 verification](docs/STORAGE_CLI_BOUNDARIES.md).

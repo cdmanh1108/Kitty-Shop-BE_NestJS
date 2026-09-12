@@ -1,3 +1,4 @@
+import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
@@ -18,7 +19,10 @@ describe('Catalog purpose-specific reads', () => {
   let repo: PrismaCatalogRepository;
   beforeAll(async () => {
     prisma = await connectTestDatabase();
-    repo = new PrismaCatalogRepository(prisma);
+    repo = new PrismaCatalogRepository(
+      prisma,
+      new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+    );
   });
   beforeEach(async () => {
     await resetTestDatabase(prisma);

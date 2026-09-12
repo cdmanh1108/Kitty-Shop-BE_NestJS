@@ -189,3 +189,7 @@ indexes remain the final protection for direct/import writes. Unique conflicts
 use the existing sanitized 409 mapping. Legacy importer writes remain atomic per
 product and preserve existing prices; competing inserts can fail the aggregate
 transaction under these indexes rather than create duplicates.
+
+## Storage and import boundaries
+
+Catalog media reads use an injected public URL resolver and centrally validated storage configuration. Key-backed objects retain provider-neutral identity; external legacy URLs remain supported. Legacy Excel import runs in its own CLI context, outside HTTP CatalogModule. See [Object storage](OBJECT_STORAGE.md) and [Task 6 verification](STORAGE_CLI_BOUNDARIES.md).

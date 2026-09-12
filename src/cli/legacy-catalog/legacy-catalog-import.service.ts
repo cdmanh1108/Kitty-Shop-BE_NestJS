@@ -10,10 +10,7 @@ import {
   type PlannedProduct,
 } from './legacy-catalog.mapper';
 import { validateLegacyRows } from './legacy-catalog.validator';
-import {
-  parseLegacyWorkbook,
-  type ParsedLegacyWorkbook,
-} from './legacy-xlsx.parser';
+import { parseLegacyWorkbook, type ParsedLegacyWorkbook } from './legacy-xlsx.parser';
 import type {
   EntityMutationSummary,
   InventoryReconciliation,
@@ -429,9 +426,7 @@ export class LegacyCatalogImportService {
           }
 
           // Rental Rates
-          const existingRateDurations = new Set(
-            (ev?.rentalRates ?? []).map((r) => r.durationDays),
-          );
+          const existingRateDurations = new Set((ev?.rentalRates ?? []).map((r) => r.durationDays));
           for (const rate of pv.rentalRates) {
             if (!existingRateDurations.has(rate.durationDays)) {
               await tx.rentalRate.create({
