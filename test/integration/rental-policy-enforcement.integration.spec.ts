@@ -223,6 +223,10 @@ describe('Rental policy transaction enforcement', () => {
     expect(result.items.map((order) => order.id).sort()).toEqual(ids.slice(0, 3).sort());
     expect(result.items[0]).toMatchObject({ itemCount: 0, productCount: 0 });
     expect(result.items[0]).not.toHaveProperty('items');
+    const boundary = await repo.list({ shopId: f.shop.id, page: 1, limit: 20, from: new Date('2026-09-12T00:00:00Z'), until: new Date('2026-09-20T00:00:00Z') });
+    expect(boundary.items.map((order) => order.id).sort()).toEqual(ids.slice(1, 3).sort());
+    const after = await repo.list({ shopId: f.shop.id, page: 1, limit: 20, from: new Date('2026-09-30T00:00:00Z'), until: new Date('2026-10-01T00:00:00Z') });
+    expect(after.items).toEqual([]);
   });
 
   it('aggregates rental list counts without returning item rows', async () => {
