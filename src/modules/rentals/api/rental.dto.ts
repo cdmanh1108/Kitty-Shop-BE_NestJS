@@ -24,7 +24,7 @@ import { PaginationMetaResDto } from '@common/dto/response.dto';
 
 export class CreateRentalItemReqDto {
   @ApiProperty() @IsUUID() variantId!: string;
-  @ApiProperty({ default: 1, minimum: 1, maximum: 20 })
+  @ApiProperty({ type: Number, default: 1, minimum: 1, maximum: 20 })
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -46,8 +46,12 @@ export class RentalChargeReqDto {
   chargeType!: string;
   @ApiPropertyOptional() @IsString() @IsOptional() description?: string;
   @ApiProperty({ example: 50000 }) @Type(() => Number) @IsNumber() @Min(0) amount!: number;
-  @ApiPropertyOptional({ default: 1 }) @Type(() => Number) @IsInt() @Min(1) @IsOptional() quantity =
-    1;
+  @ApiPropertyOptional({ type: Number, default: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  quantity = 1;
 }
 
 export class RentalDeliveryReqDto {
@@ -65,7 +69,7 @@ export class RentalDeliveryReqDto {
   @ApiPropertyOptional() @IsString() @IsOptional() district?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() city?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() province?: string;
-  @ApiPropertyOptional({ default: 0 })
+  @ApiPropertyOptional({ type: Number, default: 0 })
   @Type(() => Number)
   @IsNumber()
   @Min(0)
@@ -90,7 +94,7 @@ export class CreateRentalOrderReqDto {
   @Type(() => RentalChargeReqDto)
   @IsOptional()
   charges: RentalChargeReqDto[] = [];
-  @ApiPropertyOptional({ default: 0 })
+  @ApiPropertyOptional({ type: Number, default: 0 })
   @Type(() => Number)
   @IsNumber()
   @Min(0)
@@ -225,6 +229,8 @@ export class RentalOrderResDto extends RentalOrderListItemResDto {
   @ApiProperty({ type: String, example: '50000.00' }) chargesTotal!: string;
   @ApiProperty({ type: String, example: '0.00' }) discountTotal!: string;
   @ApiProperty({ type: String, example: '1000000.00' }) depositRequired!: string;
+  @ApiProperty({ type: String, example: '250000.00' }) paidAmount!: string;
+  @ApiProperty({ type: String, example: '250000.00' }) remainingAmount!: string;
   @ApiProperty({ type: String, nullable: true }) note!: string | null;
   @ApiProperty({ type: String, nullable: true }) internalNote!: string | null;
   @ApiProperty({ type: [RentalChargeResDto] }) charges!: RentalChargeResDto[];

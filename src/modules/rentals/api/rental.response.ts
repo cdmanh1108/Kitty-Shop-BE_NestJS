@@ -34,12 +34,20 @@ export function toRentalResponse(
   row: RentalOrderDetails | JsonSerialized<RentalOrderDetails>,
 ): RentalOrderResDto | null {
   if (!row) return null;
+  const paidAmount = row.payments.reduce((total, payment) => {
+    if (payment.purpose === 'DEPOSIT' || payment.purpose === 'DEPOSIT_REFUND') return total;
+    const amount = Number(payment.amount);
+    return total + (payment.direction === 'IN' ? amount : -amount);
+  }, 0);
+  const remainingAmount = Math.max(0, Number(row.grandTotal) - paidAmount);
   return {
     ...toRentalSummary(row),
     rentalSubtotal: row.rentalSubtotal.toString(),
     chargesTotal: row.chargesTotal.toString(),
     discountTotal: row.discountTotal.toString(),
     depositRequired: row.depositRequired.toString(),
+    paidAmount: paidAmount.toString(),
+    remainingAmount: remainingAmount.toString(),
     note: row.note,
     internalNote: row.internalNote,
     items: row.items.map((item) => ({
