@@ -373,12 +373,20 @@ export class ProductVariantResDto {
   @ApiPropertyOptional({ type: [Object] }) inventoryItems?: object[];
 }
 
+export class ProductCategorySummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status!: 'ACTIVE' | 'INACTIVE';
+}
+
 export class ProductResDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
   @ApiProperty() categoryId!: string;
-  @ApiPropertyOptional({ type: CategorySummaryResDto }) category?: CategorySummaryResDto;
+  @ApiPropertyOptional({ type: ProductCategorySummaryResDto })
+  category?: ProductCategorySummaryResDto;
   @ApiProperty() status!: string;
   @ApiProperty() isRentable!: boolean;
   @ApiProperty() isPublic!: boolean;
@@ -420,6 +428,15 @@ export class CategoryOptionResDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status!: 'ACTIVE' | 'INACTIVE';
+}
+
+export class CategoryOptionsQueryDto {
+  @ApiPropertyOptional({ type: Boolean, default: false })
+  @Transform(({ value }: TransformFnParams) => value === true || value === 'true')
+  @IsBoolean()
+  @IsOptional()
+  includeInactive = false;
 }
 
 export class CategoryResDto extends CategorySummaryResDto {

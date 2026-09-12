@@ -8,6 +8,7 @@ import type {
 } from '../../src/modules/catalog/domain/catalog.models';
 import {
   type CatalogRepository,
+  CatalogCategoryError,
   CatalogInvariantError,
 } from '../../src/modules/catalog/domain/catalog.repository';
 import { CatalogService } from '../../src/modules/catalog/application/catalog.service';
@@ -72,6 +73,24 @@ describe('CatalogService - Product Management', () => {
   });
 
   describe('createProduct', () => {
+    it.each([
+      ['CATEGORY_NOT_FOUND', NotFoundException],
+      ['CATEGORY_INACTIVE', ConflictException],
+    ] as const)('maps %s to a semantic HTTP error', async (code, exceptionType) => {
+      createProductMock.mockRejectedValue(new CatalogCategoryError(code));
+      const promise = service.createProduct(mockUser, {
+        code: 'DRESS-ERR',
+        name: 'Dress',
+        categoryId: 'category',
+        defaultDepositAmount: 0,
+        isPublic: true,
+        variants: [],
+        media: [],
+      });
+      await expect(promise).rejects.toBeInstanceOf(exceptionType);
+      await expect(promise).rejects.toMatchObject({ response: { code } });
+    });
+
     it('creates product with multiple variants (M/Trắng and M/Hồng) atomically', async () => {
       const createdProduct: CreateProductResult = {
         id: 'prod-1',

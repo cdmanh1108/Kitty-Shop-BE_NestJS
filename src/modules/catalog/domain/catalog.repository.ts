@@ -25,6 +25,11 @@ import type {
   UpsertRentalRateResult,
 } from './catalog.models';
 export class CatalogInvariantError extends Error {}
+export class CatalogCategoryError extends CatalogInvariantError {
+  constructor(public readonly code: 'CATEGORY_NOT_FOUND' | 'CATEGORY_INACTIVE') {
+    super(code === 'CATEGORY_INACTIVE' ? 'Category is inactive' : 'Category not found');
+  }
+}
 
 export const CATALOG_REPOSITORY = Symbol('CATALOG_REPOSITORY');
 
@@ -42,7 +47,7 @@ export interface CatalogRepository {
     search?: string;
     status?: 'ACTIVE' | 'INACTIVE';
   }): Promise<CategoryPage>;
-  categoryOptions(shopId: string): Promise<CategoryOption[]>;
+  categoryOptions(shopId: string, includeInactive?: boolean): Promise<CategoryOption[]>;
   createCategory(
     shopId: string,
     input: {

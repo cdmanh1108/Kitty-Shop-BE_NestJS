@@ -26,6 +26,7 @@ import {
   CategoryListQueryDto,
   CategoryPageResDto,
   CategoryOptionResDto,
+  CategoryOptionsQueryDto,
   CategoryResDto,
   CreateCategoryReqDto,
   UpdateCategoryReqDto,
@@ -94,8 +95,8 @@ export class CatalogController {
   @Get('catalog/categories/options')
   @Permissions(PERMISSIONS.CATALOG_VIEW)
   @ApiOkResponse({ type: [CategoryOptionResDto] })
-  categoryOptions(@CurrentUser() user: CurrentUserType) {
-    return this.service.categoryOptions(user);
+  categoryOptions(@CurrentUser() user: CurrentUserType, @Query() query: CategoryOptionsQueryDto) {
+    return this.service.categoryOptions(user, query.includeInactive);
   }
 
   @Patch('catalog/categories/:id')

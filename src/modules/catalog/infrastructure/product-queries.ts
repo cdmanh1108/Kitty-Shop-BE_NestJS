@@ -153,7 +153,7 @@ export async function findProduct(
   const product = await prisma.product.findFirst({
     where: { id, shopId, archivedAt: null },
     include: {
-      category: true,
+      category: { select: { id: true, code: true, name: true, isActive: true } },
       media: { orderBy: { sortOrder: 'asc' } },
       rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
       variants: {
@@ -171,6 +171,12 @@ export async function findProduct(
 
   return {
     ...product,
+    category: {
+      id: product.category.id,
+      code: product.category.code,
+      name: product.category.name,
+      status: product.category.isActive ? 'ACTIVE' : 'INACTIVE',
+    },
     media: product.media.map((m) => ({
       ...m,
       url: mediaUrls.resolve(m),

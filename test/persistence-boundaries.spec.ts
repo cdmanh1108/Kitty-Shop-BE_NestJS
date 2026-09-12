@@ -188,7 +188,7 @@ describe('repository persistence boundaries', () => {
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
     ).findProduct('shop', 'product');
     expect(find.mock.calls[0]?.[0]?.include).toEqual({
-      category: true,
+      category: { select: { id: true, code: true, name: true, isActive: true } },
       media: { orderBy: { sortOrder: 'asc' } },
       rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
       variants: {
@@ -253,7 +253,7 @@ describe('repository persistence boundaries', () => {
   it('uses the supplied transaction for catalog aggregate validation and propagates failure', async () => {
     const tx = new PrismaService();
     const root = jest.spyOn(prisma.category, 'count');
-    const lookup = jest.spyOn(tx.category, 'count').mockResolvedValue(0);
+    const lookup = jest.spyOn(tx.category, 'findFirst').mockResolvedValue(null);
     jest.spyOn(prisma, '$transaction').mockImplementation((operation) => operation(tx));
     await expect(
       new PrismaCatalogRepository(
@@ -270,10 +270,9 @@ describe('repository persistence boundaries', () => {
       }),
     ).rejects.toBeInstanceOf(CatalogInvariantError);
     expect(root.mock.calls).toHaveLength(0);
-    expect(lookup.mock.calls[0]?.[0]?.where).toEqual({
-      id: 'other',
-      shopId: 'shop',
-      isActive: true,
+    expect(lookup.mock.calls[0]?.[0]).toEqual({
+      where: { id: 'other', shopId: 'shop' },
+      select: { isActive: true },
     });
   });
 

@@ -150,12 +150,20 @@ export async function listCategories(
 export function categoryOptions(
   prisma: PrismaService,
   shopId: string,
+  includeInactive = false,
 ): ReturnType<CatalogRepository['categoryOptions']> {
-  return prisma.category.findMany({
-    where: { shopId, isActive: true },
-    select: { id: true, code: true, name: true },
-    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-  });
+  return prisma.category
+    .findMany({
+      where: { shopId, ...(!includeInactive ? { isActive: true } : {}) },
+      select: { id: true, code: true, name: true, isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    })
+    .then((items) =>
+      items.map(({ isActive, ...item }) => ({
+        ...item,
+        status: isActive ? 'ACTIVE' : 'INACTIVE',
+      })),
+    );
 }
 
 export async function updateCategory(

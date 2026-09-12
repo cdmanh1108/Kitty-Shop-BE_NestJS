@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   CATALOG_REPOSITORY,
+  CatalogCategoryError,
   CatalogInvariantError,
   type CatalogRepository,
 } from '../domain/catalog.repository';
@@ -59,8 +60,8 @@ export class CatalogService {
     return this.repository.listCategories({ shopId: user.shopId, ...query });
   }
 
-  categoryOptions(user: CurrentUser) {
-    return this.repository.categoryOptions(user.shopId);
+  categoryOptions(user: CurrentUser, includeInactive = false) {
+    return this.repository.categoryOptions(user.shopId, includeInactive);
   }
 
   async createCategory(user: CurrentUser, input: CreateCategoryInput) {
@@ -151,7 +152,7 @@ export class CatalogService {
   async getProduct(user: CurrentUser, id: string) {
     const product = await this.repository.findProduct(user.shopId, id);
     if (!product) throw new NotFoundException('Product not found');
-    return product;
+    return (await this.repository.findProduct(user.shopId, product.id)) ?? product;
   }
 
   async createProduct(user: CurrentUser, input: CreateProductInput) {
@@ -238,7 +239,7 @@ export class CatalogService {
       entityId: id,
       newValues: { ...input },
     });
-    return updated;
+    return (await this.repository.findProduct(user.shopId, id)) ?? updated;
   }
 
   async archiveProduct(user: CurrentUser, id: string) {
@@ -369,6 +370,11 @@ export class CatalogService {
       return await action();
     } catch (error) {
       if (error instanceof CatalogInvariantError) {
+        if (error instanceof CatalogCategoryError) {
+          if (error.code === 'CATEGORY_NOT_FOUND')
+            throw new NotFoundException({ code: error.code, message: error.message });
+          throw new ConflictException({ code: error.code, message: error.message });
+        }
         if (error.message === 'CATEGORY_CODE_ALREADY_EXISTS')
           throw new ConflictException({
             code: error.message,

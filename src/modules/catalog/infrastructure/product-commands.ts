@@ -9,7 +9,7 @@ import type {
   ProductMediaData,
   UpdateProductData,
 } from '../domain/catalog.repository';
-import { CatalogInvariantError } from '../domain/catalog.repository';
+import { CatalogCategoryError, CatalogInvariantError } from '../domain/catalog.repository';
 
 export function createProduct(
   prisma: PrismaService,
@@ -149,12 +149,8 @@ export async function updateProduct(
       where: { id, shopId, archivedAt: null },
     });
     if (!existing) return null;
-    if (input.categoryId) {
-      const category = await tx.category.count({
-        where: { id: input.categoryId, shopId, isActive: true },
-      });
-      if (!category)
-        throw new CatalogInvariantError('Category does not belong to this shop or is inactive');
+    if (input.categoryId && input.categoryId !== existing.categoryId) {
+      await assertActiveCategory(tx, shopId, input.categoryId);
     }
     const data: Prisma.ProductUpdateInput = {};
     if (input.status === 'ARCHIVED') {
@@ -162,7 +158,8 @@ export async function updateProduct(
       data.archivedAt = new Date();
     }
     if (input.name !== undefined) data.name = input.name;
-    if (input.categoryId !== undefined) data.category = { connect: { id: input.categoryId } };
+    if (input.categoryId !== undefined && input.categoryId !== existing.categoryId)
+      data.category = { connect: { id: input.categoryId } };
     if (input.description !== undefined) data.description = input.description;
     if (input.defaultDepositAmount !== undefined)
       data.defaultDepositAmount = input.defaultDepositAmount;
@@ -263,10 +260,20 @@ async function assertCatalogReferences(
   categoryId: string,
   variants: CreateProductData['variants'],
 ): Promise<void> {
-  const category = await tx.category.count({ where: { id: categoryId, shopId, isActive: true } });
-  if (!category)
-    throw new CatalogInvariantError('Category does not belong to this shop or is inactive');
+  await assertActiveCategory(tx, shopId, categoryId);
   for (const variant of variants) await assertVariantReferences(tx, shopId, variant);
+}
+async function assertActiveCategory(
+  tx: Prisma.TransactionClient,
+  shopId: string,
+  categoryId: string,
+): Promise<void> {
+  const category = await tx.category.findFirst({
+    where: { id: categoryId, shopId },
+    select: { isActive: true },
+  });
+  if (!category) throw new CatalogCategoryError('CATEGORY_NOT_FOUND');
+  if (!category.isActive) throw new CatalogCategoryError('CATEGORY_INACTIVE');
 }
 async function assertVariantReferences(
   tx: Prisma.TransactionClient,

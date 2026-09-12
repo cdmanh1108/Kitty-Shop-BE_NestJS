@@ -28,14 +28,18 @@ export type CategoryListItem = Pick<
   'id' | 'code' | 'name' | 'description' | 'sortOrder' | 'createdAt' | 'updatedAt'
 > & { status: 'ACTIVE' | 'INACTIVE'; productCount: number };
 export type CategoryPage = PaginatedResult<CategoryListItem>;
-export type CategoryOption = Pick<CategoryRecord, 'id' | 'code' | 'name'>;
+export type CategoryOption = Pick<CategoryRecord, 'id' | 'code' | 'name'> & {
+  status: 'ACTIVE' | 'INACTIVE';
+};
 
 export type ProductPage = PaginatedResult<ProductListItem>;
 
 export type ProductDetails =
   | null
   | (ProductRecord & {
-      category: CategoryRecord;
+      category: Pick<CategoryRecord, 'id' | 'code' | 'name'> & {
+        status: 'ACTIVE' | 'INACTIVE';
+      };
       variants: Array<
         ProductVariantRecord & {
           size: null | SizeRecord;
