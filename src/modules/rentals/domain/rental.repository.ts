@@ -66,6 +66,7 @@ export interface CreateRentalOrderData {
     province?: string;
     shippingFee: number;
   };
+  collateral?: { method: 'CASH' | 'DOCUMENT'; documentType?: 'CCCD' | 'GPLX' };
 }
 
 export const RENTAL_REPOSITORY = Symbol('RENTAL_REPOSITORY');
@@ -85,6 +86,12 @@ export interface RentalRepository {
   transition(input: RentalTransitionData): Promise<RentalOrderDetails>;
   reschedule(input: RentalRescheduleData): Promise<RentalOrderDetails>;
   addCharge(input: RentalAddChargeData): Promise<RentalOrderDetails>;
+  receiveCollateral(
+    shopId: string,
+    orderId: string,
+    changedBy: string,
+  ): Promise<RentalOrderDetails>;
+  returnCollateral(shopId: string, orderId: string, changedBy: string): Promise<RentalOrderDetails>;
   claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
   releaseIdempotency(shopId: string, scope: string, key: string, claimId: string): Promise<void>;
 }

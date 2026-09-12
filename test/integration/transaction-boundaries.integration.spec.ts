@@ -112,6 +112,20 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
     const f = await rentalScenario(prisma);
     const order = await rentals.createOrder(f.data);
     if (!order) throw new Error('Missing order');
+    const finance = new PrismaFinanceRepository(prisma);
+    for (const purpose of ['RENTAL_PAYMENT', 'DEPOSIT'] as const) {
+      await finance.createPayment({
+        shopId: f.shop.id,
+        orderId: order.id,
+        transactionNumber: uniqueCode('PAY'),
+        direction: 'IN',
+        purpose,
+        paymentMethod: 'CASH',
+        amount: 200000,
+        paidAt: fixedClock.now(),
+        createdBy: f.member.id,
+      });
+    }
     const confirmation = {
       shopId: f.shop.id,
       orderId: order.id,
@@ -159,7 +173,7 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
       await prisma.inventoryItem.findUniqueOrThrow({ where: { id: f.inventory.id } }),
     ).toMatchObject({ currentStatus: 'CLEANING', totalRentalCount: 1 });
     expect((await prisma.rentalItemAllocation.findFirstOrThrow()).status).toBe('RETURNED');
-    expect(await prisma.outboxEvent.count()).toBe(4);
+    expect(await prisma.outboxEvent.count()).toBe(6);
   });
 
   it('revenue SQL excludes deposits and voided payments with fixed period and tenant', async () => {

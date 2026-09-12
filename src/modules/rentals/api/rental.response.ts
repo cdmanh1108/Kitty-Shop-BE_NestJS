@@ -1,4 +1,6 @@
 import type { JsonSerialized } from '@common/types/json';
+import { Prisma } from '@prisma/client';
+import { calculateRentalSettlement } from '../domain/rental-settlement';
 import type { RentalOrderDetails, RentalOrderPage } from '../domain/rental.models';
 import type { RentalOrderListItemResDto, RentalOrderResDto } from './rental.dto';
 
@@ -34,20 +36,63 @@ export function toRentalResponse(
   row: RentalOrderDetails | JsonSerialized<RentalOrderDetails>,
 ): RentalOrderResDto | null {
   if (!row) return null;
-  const paidAmount = row.payments.reduce((total, payment) => {
-    if (payment.purpose === 'DEPOSIT' || payment.purpose === 'DEPOSIT_REFUND') return total;
-    const amount = Number(payment.amount);
-    return total + (payment.direction === 'IN' ? amount : -amount);
-  }, 0);
-  const remainingAmount = Math.max(0, Number(row.grandTotal) - paidAmount);
+  let paidAmount = new Prisma.Decimal(0);
+  let depositIn = new Prisma.Decimal(0);
+  let depositOut = new Prisma.Decimal(0);
+  for (const payment of row.payments) {
+    const amount = new Prisma.Decimal(payment.amount.toString());
+    if (payment.purpose === 'DEPOSIT' || payment.purpose === 'DEPOSIT_REFUND') {
+      if (payment.direction === 'IN') depositIn = depositIn.plus(amount);
+      else depositOut = depositOut.plus(amount);
+    } else {
+      paidAmount = payment.direction === 'IN' ? paidAmount.plus(amount) : paidAmount.minus(amount);
+    }
+  }
+  const remainingAmount = Prisma.Decimal.max(
+    new Prisma.Decimal(0),
+    new Prisma.Decimal(row.grandTotal.toString()).minus(paidAmount),
+  );
+  const settlement = calculateRentalSettlement({
+    completed: row.status === 'COMPLETED',
+    grandTotal: row.grandTotal.toString(),
+    paidRental: paidAmount.toString(),
+    depositIn: depositIn.toString(),
+    depositOut: depositOut.toString(),
+  });
+  const cashReceivedAt = row.payments.find(
+    (payment) => payment.purpose === 'DEPOSIT' && payment.direction === 'IN',
+  )?.paidAt;
+  const cashReturnedAt = [...row.payments]
+    .reverse()
+    .find((payment) => payment.purpose === 'DEPOSIT_REFUND' && payment.direction === 'OUT')?.paidAt;
   return {
     ...toRentalSummary(row),
     rentalSubtotal: row.rentalSubtotal.toString(),
     chargesTotal: row.chargesTotal.toString(),
     discountTotal: row.discountTotal.toString(),
     depositRequired: row.depositRequired.toString(),
+    collateralMethod: row.collateralMethod,
+    documentType: row.documentType,
+    collateralStatus: row.collateralMethod === 'CASH' ? row.depositStatus : row.collateralStatus,
+    collateralReceivedAt:
+      row.collateralMethod === 'CASH'
+        ? cashReceivedAt
+          ? timestamp(cashReceivedAt)
+          : null
+        : row.collateralReceivedAt
+          ? timestamp(row.collateralReceivedAt)
+          : null,
+    collateralReturnedAt:
+      row.collateralMethod === 'CASH'
+        ? cashReturnedAt
+          ? timestamp(cashReturnedAt)
+          : null
+        : row.collateralReturnedAt
+          ? timestamp(row.collateralReturnedAt)
+          : null,
     paidAmount: paidAmount.toString(),
     remainingAmount: remainingAmount.toString(),
+    settlement,
     note: row.note,
     internalNote: row.internalNote,
     items: row.items.map((item) => ({

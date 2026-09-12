@@ -6,7 +6,7 @@ import {
   disconnectTestDatabase,
   resetTestDatabase,
 } from '../helpers/test-database';
-import { rentalScenario, fixedClock } from '../fixtures/rental.fixture';
+import { rentalScenario, fixedClock, payRentalForConfirmation } from '../fixtures/rental.fixture';
 import { uniqueCode } from '../fixtures/test-factories';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
@@ -47,10 +47,12 @@ describe('Inventory occupancy persistence and read models', () => {
       rentalEndAt: new Date('2026-11-03T00:00:00Z'),
     });
     if (!order) throw new Error('Expected order');
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 400000, depositAmount: 400000 });
+    await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
     await repo.transition({
       shopId: f.shop.id,
       orderId: order.id,
-      fromStatuses: ['RESERVED'],
+      fromStatuses: ['CONFIRMED'],
       toStatus: 'ACTIVE',
       changedBy: f.member.id,
     });

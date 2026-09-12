@@ -13,17 +13,29 @@ import {
   canTransitionRental,
 } from '../domain/rental-policy';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
+import {
+  assertRentalConfirmation,
+  calculateLateCharges,
+  rewardForCompletedRental,
+} from '../domain/rental-settlement';
+import { RentalInvariantError } from '../domain/rental-errors';
+import type { Clock } from '@common/clock/clock';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { CHARGE_TYPE } from '../domain/charge-type';
 import { RentalOverlapError, type RentalRepository } from '../domain/rental.repository';
+import type { RentalOrderDetails } from '../domain/rental.models';
 import { getWithTx } from './rental-queries';
 import { isOverlapError } from './rental-errors';
 
 export async function transition(
   prisma: PrismaService,
   input: Parameters<RentalRepository['transition']>[0],
+  policy: RentalPolicy,
+  clock: Clock,
 ): ReturnType<RentalRepository['transition']> {
   return serializableTransaction(prisma, async (tx) => {
     const order = await tx.rentalOrder.findFirst({
@@ -31,6 +43,29 @@ export async function transition(
     });
     if (!order || !input.fromStatuses.some((status) => status === order.status)) return null;
     if (!canTransitionRental(order.status, input.toStatus)) return null;
+    if (input.toStatus === RENTAL_STATUS.CONFIRMED) {
+      const transactions = await tx.paymentTransaction.findMany({
+        where: {
+          shopId: input.shopId,
+          orderId: order.id,
+          status: TRANSACTION_STATUS.COMPLETED,
+          voidedAt: null,
+        },
+        select: { direction: true, purpose: true, amount: true },
+      });
+      assertRentalConfirmation({
+        rentalDue: order.grandTotal.toString(),
+        depositRequired: order.depositRequired.toString(),
+        collateralMethod: order.collateralMethod,
+        documentType: order.documentType,
+        collateralStatus: order.collateralStatus,
+        payments: transactions.map((payment) => ({
+          ...payment,
+          amount: payment.amount.toString(),
+        })),
+        policy,
+      });
+    }
     if (input.toStatus === RENTAL_STATUS.ACTIVE || input.toStatus === RENTAL_STATUS.CONFIRMED) {
       const allocations = await tx.rentalItemAllocation.findMany({
         where: { orderId: order.id, releasedAt: null },
@@ -42,7 +77,7 @@ export async function transition(
         excludeOrderId: order.id,
       });
     }
-    const now = new Date();
+    const now = clock.now();
     const updateData: Prisma.RentalOrderUpdateManyMutationInput = {
       status: input.toStatus,
       updatedBy: input.changedBy,
@@ -99,6 +134,56 @@ export async function transition(
         });
       }
     } else if (input.toStatus === RENTAL_STATUS.COMPLETED) {
+      const itemCount = await tx.rentalOrderItem.aggregate({
+        where: { orderId: order.id },
+        _sum: { quantity: true },
+      });
+      const late = calculateLateCharges({
+        dueAt: order.rentalEndAt,
+        returnedAt: now,
+        itemCount: itemCount._sum.quantity ?? 0,
+        rentalSubtotal: order.rentalSubtotal.toString(),
+        policy,
+      });
+      if (late.lateDays > 0) {
+        const lateAmount = new Prisma.Decimal(late.lateFee);
+        const additionalAmount = new Prisma.Decimal(late.additionalRental);
+        if (lateAmount.greaterThan(0))
+          await tx.rentalOrderCharge.create({
+            data: {
+              shopId: input.shopId,
+              orderId: order.id,
+              chargeType: CHARGE_TYPE.LATE,
+              amount: lateAmount,
+              quantity: 1,
+              createdBy: input.changedBy,
+              metadata: { source: 'AUTO_LATE_RETURN', lateDays: late.lateDays },
+            },
+          });
+        if (additionalAmount.greaterThan(0))
+          await tx.rentalOrderCharge.create({
+            data: {
+              shopId: input.shopId,
+              orderId: order.id,
+              chargeType: CHARGE_TYPE.RENTAL_EXTRA,
+              amount: additionalAmount,
+              quantity: 1,
+              createdBy: input.changedBy,
+              metadata: {
+                source: 'AUTO_LATE_RETURN',
+                thresholdDay: policy.lateReturn.newRentalChargeFromLateDay,
+              },
+            },
+          });
+        const total = lateAmount.plus(additionalAmount);
+        if (total.greaterThan(0)) {
+          await tx.rentalOrder.update({
+            where: { id: order.id },
+            data: { chargesTotal: { increment: total }, grandTotal: { increment: total } },
+          });
+          await recomputeOrderPaymentState(tx, order.id);
+        }
+      }
       await tx.rentalItemAllocation.updateMany({
         where: { orderId: order.id, status: ALLOCATION_STATUS.ACTIVE },
         data: { status: ALLOCATION_STATUS.RETURNED, releasedAt: now },
@@ -134,6 +219,31 @@ export async function transition(
             reason: 'ORDER_RETURNED',
           },
         });
+      }
+      if (policy.loyalty.enabled) {
+        const completedCount = await tx.customerLoyaltyEntry.count({
+          where: { shopId: input.shopId, customerId: order.customerId, entryType: 'QUALIFIED' },
+        });
+        const rewardValue = rewardForCompletedRental(completedCount, policy);
+        await tx.customerLoyaltyEntry.create({
+          data: {
+            shopId: input.shopId,
+            customerId: order.customerId,
+            orderId: order.id,
+            entryType: 'QUALIFIED',
+            rewardValue,
+          },
+        });
+        if (rewardValue > 0)
+          await tx.outboxEvent.create({
+            data: {
+              shopId: input.shopId,
+              eventType: 'LOYALTY_REWARD_EARNED',
+              aggregateType: 'rental_order',
+              aggregateId: order.id,
+              payload: { orderId: order.id, customerId: order.customerId, rewardValue },
+            },
+          });
       }
     } else if (input.toStatus === RENTAL_STATUS.CANCELLED) {
       await tx.rentalItemAllocation.updateMany({
@@ -257,5 +367,59 @@ export async function addCharge(
     });
     await recomputeOrderPaymentState(tx, input.orderId);
     return getWithTx(tx, input.shopId, input.orderId);
+  });
+}
+
+export async function setDocumentCollateral(
+  prisma: PrismaService,
+  shopId: string,
+  orderId: string,
+  changedBy: string,
+  action: 'RECEIVE' | 'RETURN',
+  clock: Clock,
+): Promise<RentalOrderDetails> {
+  return serializableTransaction(prisma, async (tx) => {
+    const order = await tx.rentalOrder.findFirst({ where: { id: orderId, shopId } });
+    if (!order) return null;
+    if (order.collateralMethod !== 'DOCUMENT')
+      throw new RentalInvariantError(
+        'COLLATERAL_METHOD_NOT_ALLOWED',
+        'Order does not use document collateral',
+      );
+    if (action === 'RECEIVE') {
+      if (order.status !== RENTAL_STATUS.RESERVED || order.collateralStatus !== 'REQUIRED')
+        throw new RentalInvariantError(
+          'COLLATERAL_TRANSITION_NOT_ALLOWED',
+          'Document cannot be received in this state',
+        );
+      await tx.rentalOrder.update({
+        where: { id: order.id },
+        data: { collateralStatus: 'HELD', collateralReceivedAt: clock.now(), updatedBy: changedBy },
+      });
+    } else {
+      if (order.status !== RENTAL_STATUS.COMPLETED || order.collateralStatus !== 'HELD')
+        throw new RentalInvariantError(
+          'COLLATERAL_TRANSITION_NOT_ALLOWED',
+          'Document cannot be returned in this state',
+        );
+      await tx.rentalOrder.update({
+        where: { id: order.id },
+        data: {
+          collateralStatus: 'RETURNED',
+          collateralReturnedAt: clock.now(),
+          updatedBy: changedBy,
+        },
+      });
+    }
+    await tx.outboxEvent.create({
+      data: {
+        shopId,
+        eventType: `RENTAL_COLLATERAL_${action === 'RECEIVE' ? 'RECEIVED' : 'RETURNED'}`,
+        aggregateType: 'rental_order',
+        aggregateId: order.id,
+        payload: { orderId: order.id },
+      },
+    });
+    return getWithTx(tx, shopId, order.id);
   });
 }

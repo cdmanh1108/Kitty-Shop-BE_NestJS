@@ -19,11 +19,35 @@ import {
 } from '../domain/rental.repository';
 import { getWithTx } from './rental-queries';
 import { isOverlapError } from './rental-errors';
+import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import { RentalInvariantError } from '../domain/rental-errors';
 
 export async function createOrder(
   prisma: PrismaService,
   data: CreateRentalOrderData,
+  policy: RentalPolicy,
 ): ReturnType<RentalRepository['createOrder']> {
+  const collateral = data.collateral ?? { method: 'CASH' as const };
+  if (!policy.deposit.allowedMethods.includes(collateral.method))
+    throw new RentalInvariantError(
+      'COLLATERAL_METHOD_NOT_ALLOWED',
+      'Collateral method is not allowed by shop policy',
+    );
+  if (collateral.method === 'DOCUMENT') {
+    if (
+      !collateral.documentType ||
+      !policy.deposit.allowedDocumentTypes.includes(collateral.documentType)
+    )
+      throw new RentalInvariantError(
+        'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED',
+        'Document type is not allowed by shop policy',
+      );
+  } else if (collateral.documentType) {
+    throw new RentalInvariantError(
+      'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED',
+      'Cash collateral cannot specify a document type',
+    );
+  }
   try {
     return await serializableTransaction(prisma, async (tx) => {
       if (data.idempotency) await lockRentalClaim(tx, data.shopId, data.idempotency);
@@ -62,6 +86,8 @@ export async function createOrder(
           chargesTotal,
           discountTotal: data.discountTotal,
           depositRequired,
+          collateralMethod: data.collateral?.method ?? 'CASH',
+          documentType: data.collateral?.documentType,
           grandTotal,
           note: data.note,
           internalNote: data.internalNote,

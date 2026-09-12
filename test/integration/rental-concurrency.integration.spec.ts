@@ -14,7 +14,7 @@ import {
 } from '../fixtures/test-factories';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
-import { fixedClock, rentalScenario } from '../fixtures/rental.fixture';
+import { fixedClock, rentalScenario, payRentalForConfirmation } from '../fixtures/rental.fixture';
 import { RentalOverlapError } from '../../src/modules/rentals/domain/rental.repository';
 import { RentalInventoryUnavailableError } from '../../src/modules/rentals/domain/rental-errors';
 import { CatalogInvariantError } from '../../src/modules/catalog/domain/catalog.repository';
@@ -263,14 +263,17 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
         rentalEndAt: new Date('2000-01-02T00:00:00Z'),
       });
       if (!order) throw new Error('Expected order');
-      if (status !== 'RESERVED')
+      if (status !== 'RESERVED') {
+        await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
         await repo.transition({
           shopId: f.shop.id,
           orderId: order.id,
           fromStatuses: ['RESERVED'],
-          toStatus: status,
+          toStatus: 'CONFIRMED',
           changedBy: f.member.id,
         });
+        if (status === 'ACTIVE') await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['CONFIRMED'], toStatus: 'ACTIVE', changedBy: f.member.id });
+      }
       await expect(
         catalogRepo.updateInventoryStatus({
           shopId: f.shop.id,
@@ -320,10 +323,14 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       where: { id: second.id },
       data: { createdAt: new Date('2026-11-20T00:00:00Z') },
     });
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: first.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
+    await repo.transition({ shopId: f.shop.id, orderId: first.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: second.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
+    await repo.transition({ shopId: f.shop.id, orderId: second.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
     await repo.transition({
       shopId: f.shop.id,
       orderId: first.id,
-      fromStatuses: ['RESERVED'],
+      fromStatuses: ['CONFIRMED'],
       toStatus: 'ACTIVE',
       changedBy: f.member.id,
     });
@@ -331,7 +338,7 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       repo.transition({
         shopId: f.shop.id,
         orderId: second.id,
-        fromStatuses: ['RESERVED'],
+        fromStatuses: ['CONFIRMED'],
         toStatus: 'ACTIVE',
         changedBy: f.member.id,
       }),
@@ -345,7 +352,7 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
         changedBy: f.member.id,
       }),
     ).rejects.toBeInstanceOf(RentalInventoryUnavailableError);
-    expect((await repo.get(f.shop.id, second.id))?.status).toBe('RESERVED');
+    expect((await repo.get(f.shop.id, second.id))?.status).toBe('CONFIRMED');
   });
 
   it('allows cleaning completion before the next reservation but refuses handover while dirty', async () => {
@@ -358,10 +365,14 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       rentalEndAt: new Date('2026-11-03T00:00:00Z'),
     });
     if (!first || !next) throw new Error('Expected orders');
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: first.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: next.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
+    await repo.transition({ shopId: f.shop.id, orderId: first.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+    await repo.transition({ shopId: f.shop.id, orderId: next.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
     await repo.transition({
       shopId: f.shop.id,
       orderId: first.id,
-      fromStatuses: ['RESERVED'],
+      fromStatuses: ['CONFIRMED'],
       toStatus: 'ACTIVE',
       changedBy: f.member.id,
     });
@@ -375,7 +386,7 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
     const activate = {
       shopId: f.shop.id,
       orderId: next.id,
-      fromStatuses: ['RESERVED'] as const,
+      fromStatuses: ['CONFIRMED'] as const,
       toStatus: 'ACTIVE' as const,
       changedBy: f.member.id,
     };

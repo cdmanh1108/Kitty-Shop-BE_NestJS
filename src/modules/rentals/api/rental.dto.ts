@@ -77,6 +77,16 @@ export class RentalDeliveryReqDto {
   shippingFee = 0;
 }
 
+export class RentalCollateralReqDto {
+  @ApiProperty({ enum: ['CASH', 'DOCUMENT'] }) @IsIn(['CASH', 'DOCUMENT']) method!:
+    | 'CASH'
+    | 'DOCUMENT';
+  @ApiPropertyOptional({ enum: ['CCCD', 'GPLX'] })
+  @IsIn(['CCCD', 'GPLX'])
+  @IsOptional()
+  documentType?: 'CCCD' | 'GPLX';
+}
+
 export class CreateRentalOrderReqDto {
   @ApiProperty() @IsUUID() customerId!: string;
   @ApiPropertyOptional() @IsUUID() @IsOptional() locationId?: string;
@@ -107,6 +117,11 @@ export class CreateRentalOrderReqDto {
   @Type(() => RentalDeliveryReqDto)
   @IsOptional()
   delivery?: RentalDeliveryReqDto;
+  @ApiPropertyOptional({ type: () => RentalCollateralReqDto })
+  @ValidateNested()
+  @Type(() => RentalCollateralReqDto)
+  @IsOptional()
+  collateral?: RentalCollateralReqDto;
 }
 
 export class RentalListQueryDto extends PaginationQueryDto {
@@ -223,14 +238,32 @@ export class RentalOrderListItemResDto {
   @ApiProperty({ type: [RentalItemSummaryResDto] }) items!: RentalItemSummaryResDto[];
 }
 
+export class RentalSettlementResDto {
+  @ApiProperty({ type: String }) depositReceived!: string;
+  @ApiProperty({ type: String }) refundAmount!: string;
+  @ApiProperty({ type: String }) amountStillDue!: string;
+  @ApiProperty({ enum: ['PENDING', 'REFUND_DUE', 'AMOUNT_DUE', 'BALANCED'] })
+  settlementStatus!: string;
+}
+
 export class RentalOrderResDto extends RentalOrderListItemResDto {
   @ApiProperty({ type: [RentalItemResDto] }) declare items: RentalItemResDto[];
   @ApiProperty({ type: String, example: '450000.00' }) rentalSubtotal!: string;
   @ApiProperty({ type: String, example: '50000.00' }) chargesTotal!: string;
   @ApiProperty({ type: String, example: '0.00' }) discountTotal!: string;
   @ApiProperty({ type: String, example: '1000000.00' }) depositRequired!: string;
+  @ApiProperty() collateralMethod!: string;
+  @ApiProperty({ type: String, nullable: true }) documentType!: string | null;
+  @ApiProperty() collateralStatus!: string;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) collateralReceivedAt!:
+    | string
+    | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) collateralReturnedAt!:
+    | string
+    | null;
   @ApiProperty({ type: String, example: '250000.00' }) paidAmount!: string;
   @ApiProperty({ type: String, example: '250000.00' }) remainingAmount!: string;
+  @ApiProperty({ type: () => RentalSettlementResDto }) settlement!: RentalSettlementResDto;
   @ApiProperty({ type: String, nullable: true }) note!: string | null;
   @ApiProperty({ type: String, nullable: true }) internalNote!: string | null;
   @ApiProperty({ type: [RentalChargeResDto] }) charges!: RentalChargeResDto[];

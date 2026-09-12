@@ -129,13 +129,14 @@ export async function createTestCustomer(
   override?: Partial<Prisma.CustomerUncheckedCreateInput>,
 ) {
   const code = uniqueCode('cust');
+  const phone = `09${nextCounter().toString().padStart(8, '0')}`;
   return prisma.customer.create({
     data: {
       shopId,
       customerCode: code,
       fullName: `Customer ${code}`,
-      phone: '0901234567',
-      normalizedPhone: '0901234567',
+      phone,
+      normalizedPhone: phone,
       status: 'ACTIVE',
       ...override,
     },

@@ -7,7 +7,7 @@ import {
   disconnectTestDatabase,
   resetTestDatabase,
 } from '../helpers/test-database';
-import { fixedClock, rentalScenario } from '../fixtures/rental.fixture';
+import { fixedClock, rentalScenario, payRentalForConfirmation } from '../fixtures/rental.fixture';
 import { createTestCustomer, uniqueCode } from '../fixtures/test-factories';
 
 describe('Rental policy transaction enforcement', () => {
@@ -135,5 +135,72 @@ describe('Rental policy transaction enforcement', () => {
     expect((await repo.list(criteria)).items.map((row) => row.id)).toEqual([f.order.id]);
     expect((await repo.list({ ...criteria, customerId: other.id })).items).toEqual([]);
     expect((await repo.list({ ...criteria, search: 'NoSuchCustomer' })).items).toEqual([]);
+  });
+
+  it('requires settled rental payment and cash deposit before confirmation', async () => {
+    const f = await booking();
+    const confirm = () => repo.transition({ shopId: f.shop.id, orderId: f.order.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+    await expect(confirm()).rejects.toMatchObject({ code: 'ORDER_NOT_FULLY_PAID' });
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: f.order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 0 });
+    await expect(confirm()).rejects.toMatchObject({ code: 'DEPOSIT_NOT_RECEIVED' });
+    expect(await prisma.rentalOrderStatusHistory.count({ where: { orderId: f.order.id } })).toBe(1);
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: f.order.id, memberId: f.member.id, rentalAmount: 0, depositAmount: 200000 });
+    expect((await confirm())?.status).toBe('CONFIRMED');
+    expect(await confirm()).toBeNull();
+    expect(await prisma.rentalOrderStatusHistory.count({ where: { orderId: f.order.id } })).toBe(2);
+  });
+
+  it('holds document collateral without storing document numbers and returns it once', async () => {
+    const f = await rentalScenario(prisma);
+    const order = await repo.createOrder({ ...f.data, collateral: { method: 'DOCUMENT', documentType: 'CCCD' } });
+    if (!order) throw new Error('Missing fixture order');
+    const confirm = () => repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 0 });
+    await expect(confirm()).rejects.toMatchObject({ code: 'COLLATERAL_NOT_RECEIVED' });
+    expect((await repo.receiveCollateral(f.shop.id, order.id, f.member.id))?.collateralStatus).toBe('HELD');
+    expect((await confirm())?.status).toBe('CONFIRMED');
+    await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['CONFIRMED'], toStatus: 'ACTIVE', changedBy: f.member.id });
+    await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['ACTIVE'], toStatus: 'COMPLETED', changedBy: f.member.id });
+    expect((await repo.returnCollateral(f.shop.id, order.id, f.member.id))?.collateralStatus).toBe('RETURNED');
+    await expect(repo.returnCollateral(f.shop.id, order.id, f.member.id)).rejects.toMatchObject({ code: 'COLLATERAL_TRANSITION_NOT_ALLOWED' });
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, eventType: 'RENTAL_COLLATERAL_RETURNED' } })).toBe(1);
+  });
+
+  it('persists late fees and customer loyalty exactly once on completion', async () => {
+    const f = await rentalScenario(prisma);
+    const lateClock = { now: () => new Date('2026-10-15T00:00:00.000Z') };
+    const lateRepo = new PrismaRentalRepository(prisma, lateClock, settings);
+    const order = await repo.createOrder(f.data);
+    if (!order) throw new Error('Missing fixture order');
+    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
+    await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+    await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['CONFIRMED'], toStatus: 'ACTIVE', changedBy: f.member.id });
+    const complete = () => lateRepo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['ACTIVE'], toStatus: 'COMPLETED', changedBy: f.member.id });
+    expect((await complete())?.status).toBe('COMPLETED');
+    expect(await complete()).toBeNull();
+    const charges = await prisma.rentalOrderCharge.findMany({ where: { orderId: order.id }, orderBy: { chargeType: 'asc' } });
+    expect(charges.map((charge) => [charge.chargeType, charge.amount.toString()])).toEqual([['LATE', '30000'], ['RENTAL_EXTRA', '200000']]);
+    expect((await prisma.rentalOrder.findUniqueOrThrow({ where: { id: order.id } })).grandTotal.toString()).toBe('430000');
+    expect(await prisma.customerLoyaltyEntry.count({ where: { customerId: f.customer.id, orderId: order.id } })).toBe(1);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: order.id, eventType: 'RENTAL_ORDER_COMPLETED' } })).toBe(1);
+  });
+
+  it('earns the configured loyalty reward on the fifth completed rental, not bookings', async () => {
+    const f = await rentalScenario(prisma);
+    const pending = await repo.createOrder(f.data);
+    if (!pending) throw new Error('Missing fixture order');
+    expect((await repo.transition({ shopId: f.shop.id, orderId: pending.id, fromStatuses: ['RESERVED'], toStatus: 'CANCELLED', changedBy: f.member.id }))?.status).toBe('CANCELLED');
+    for (let index = 0; index < 5; index += 1) {
+      const order = await repo.createOrder({ ...f.data, orderNumber: uniqueCode('RT') });
+      if (!order) throw new Error('Missing fixture order');
+      await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
+      await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+      await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['CONFIRMED'], toStatus: 'ACTIVE', changedBy: f.member.id });
+      await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['ACTIVE'], toStatus: 'COMPLETED', changedBy: f.member.id });
+      expect(await prisma.customerLoyaltyEntry.count({ where: { customerId: f.customer.id, rewardValue: { gt: 0 } } })).toBe(index === 4 ? 1 : 0);
+      await prisma.inventoryItem.update({ where: { id: f.inventory.id }, data: { currentStatus: 'AVAILABLE' } });
+    }
+    expect(await prisma.customerLoyaltyEntry.count({ where: { customerId: f.customer.id } })).toBe(5);
+    expect(await prisma.outboxEvent.count({ where: { eventType: 'LOYALTY_REWARD_EARNED' } })).toBe(1);
   });
 });

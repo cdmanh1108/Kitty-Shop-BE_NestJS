@@ -7,7 +7,7 @@ import {
   disconnectTestDatabase,
   resetTestDatabase,
 } from '../helpers/test-database';
-import { rentalScenario, fixedClock } from '../fixtures/rental.fixture';
+import { rentalScenario, fixedClock, payRentalForConfirmation } from '../fixtures/rental.fixture';
 import { createTestShop, uniqueCode } from '../fixtures/test-factories';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
@@ -42,14 +42,17 @@ describe('Catalog persistence invariants', () => {
         rentalEndAt: new Date('2000-01-02T00:00:00Z'),
       });
       if (!order) throw new Error('Expected order');
-      if (status !== 'RESERVED')
+      if (status !== 'RESERVED') {
+        await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
         await rentals.transition({
           shopId: f.shop.id,
           orderId: order.id,
           fromStatuses: ['RESERVED'],
-          toStatus: status,
+          toStatus: 'CONFIRMED',
           changedBy: f.member.id,
         });
+        if (status === 'ACTIVE') await rentals.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['CONFIRMED'], toStatus: 'ACTIVE', changedBy: f.member.id });
+      }
       await expect(catalog.archiveProduct(f.shop.id, f.product.id)).rejects.toBeInstanceOf(
         CatalogInvariantError,
       );
@@ -75,14 +78,17 @@ describe('Catalog persistence invariants', () => {
       const f = await rentalScenario(prisma);
       const order = await rentals.createOrder(f.data);
       if (!order) throw new Error('Expected order');
-      if (status === 'COMPLETED')
+      if (status === 'COMPLETED') {
+        await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
+        await rentals.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
         await rentals.transition({
           shopId: f.shop.id,
           orderId: order.id,
-          fromStatuses: ['RESERVED'],
+          fromStatuses: ['CONFIRMED'],
           toStatus: 'ACTIVE',
           changedBy: f.member.id,
         });
+      }
       await rentals.transition({
         shopId: f.shop.id,
         orderId: order.id,

@@ -108,6 +108,20 @@ export class RentalController {
     return this.service.start(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
   }
 
+  @Post(':id/collateral/receive')
+  @Permissions(PERMISSIONS.RENTALS_UPDATE)
+  @ApiOkResponse({ type: RentalOrderResDto })
+  receiveCollateral(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.receiveCollateral(user, id).then(toRentalResponse);
+  }
+
+  @Post(':id/collateral/return')
+  @Permissions(PERMISSIONS.RENTALS_UPDATE)
+  @ApiOkResponse({ type: RentalOrderResDto })
+  returnCollateral(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.returnCollateral(user, id).then(toRentalResponse);
+  }
+
   @Post(':id/complete')
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
   @ApiOperation({ summary: 'Complete order; returned inventory moves to CLEANING by default' })

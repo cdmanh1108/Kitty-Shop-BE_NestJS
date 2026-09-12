@@ -19,6 +19,7 @@ import type {
   RentalRepository,
 } from '../src/modules/rentals/domain/rental.repository';
 import { createOrder } from '../src/modules/rentals/infrastructure/rental-booking';
+import { DEFAULT_RENTAL_POLICY } from '../src/modules/settings/domain/rental-policy';
 import {
   claimIdempotency,
   completeRentalClaim,
@@ -72,6 +73,11 @@ function orderDetails(): NonNullable<RentalOrderDetails> {
     chargesTotal: new Prisma.Decimal(0),
     discountTotal: new Prisma.Decimal(0),
     depositRequired: new Prisma.Decimal(200000),
+    collateralMethod: 'CASH',
+    documentType: null,
+    collateralStatus: 'REQUIRED',
+    collateralReceivedAt: null,
+    collateralReturnedAt: null,
     grandTotal: new Prisma.Decimal(50000),
     note: null,
     internalNote: null,
@@ -455,10 +461,36 @@ function bookingTransaction(prisma: PrismaService) {
 }
 
 describe('booking transaction ordering and failure propagation', () => {
+  it('rejects disallowed collateral methods and document types before persistence', async () => {
+    const prisma = new PrismaService();
+    const transaction = jest.spyOn(prisma, '$transaction');
+    await expect(
+      createOrder(
+        prisma,
+        { ...bookingInput(), collateral: { method: 'DOCUMENT', documentType: 'CCCD' } },
+        {
+          ...DEFAULT_RENTAL_POLICY,
+          deposit: { ...DEFAULT_RENTAL_POLICY.deposit, allowedMethods: ['CASH'] },
+        },
+      ),
+    ).rejects.toMatchObject({ code: 'COLLATERAL_METHOD_NOT_ALLOWED' });
+    await expect(
+      createOrder(
+        prisma,
+        { ...bookingInput(), collateral: { method: 'DOCUMENT', documentType: 'GPLX' } },
+        {
+          ...DEFAULT_RENTAL_POLICY,
+          deposit: { ...DEFAULT_RENTAL_POLICY.deposit, allowedDocumentTypes: ['CCCD'] },
+        },
+      ),
+    ).rejects.toMatchObject({ code: 'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED' });
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
   it('locks ownership before writing, then completes after outbox on the same transaction', async () => {
     const prisma = new PrismaService();
     const tx = bookingTransaction(prisma);
-    const result = await createOrder(prisma, bookingInput());
+    const result = await createOrder(prisma, bookingInput(), DEFAULT_RENTAL_POLICY);
     expect(result?.id).toBe('order');
     expect(tx.claim.mock.calls).toHaveLength(2);
     expect(tx.claim.mock.invocationCallOrder[0]).toBeLessThan(
@@ -477,7 +509,9 @@ describe('booking transaction ordering and failure propagation', () => {
     const prisma = new PrismaService();
     const tx = bookingTransaction(prisma);
     tx.claim.mockResolvedValue({ count: 0 });
-    await expect(createOrder(prisma, bookingInput())).rejects.toBeInstanceOf(RentalClaimLostError);
+    await expect(createOrder(prisma, bookingInput(), DEFAULT_RENTAL_POLICY)).rejects.toBeInstanceOf(
+      RentalClaimLostError,
+    );
     expect(tx.create.mock.calls).toHaveLength(0);
     expect(tx.outbox.mock.calls).toHaveLength(0);
   });
@@ -486,7 +520,7 @@ describe('booking transaction ordering and failure propagation', () => {
     const tx = bookingTransaction(prisma);
     const failure = new Error('outbox unavailable');
     tx.outbox.mockRejectedValue(failure);
-    await expect(createOrder(prisma, bookingInput())).rejects.toBe(failure);
+    await expect(createOrder(prisma, bookingInput(), DEFAULT_RENTAL_POLICY)).rejects.toBe(failure);
     expect(tx.claim.mock.calls).toHaveLength(1);
   });
   it('does not write an event if the order insert fails', async () => {
@@ -494,14 +528,16 @@ describe('booking transaction ordering and failure propagation', () => {
     const tx = bookingTransaction(prisma);
     const failure = new Error('order unavailable');
     tx.create.mockRejectedValue(failure);
-    await expect(createOrder(prisma, bookingInput())).rejects.toBe(failure);
+    await expect(createOrder(prisma, bookingInput(), DEFAULT_RENTAL_POLICY)).rejects.toBe(failure);
     expect(tx.outbox.mock.calls).toHaveLength(0);
   });
   it('rejects completion failure rather than committing without replay data', async () => {
     const prisma = new PrismaService();
     const tx = bookingTransaction(prisma);
     tx.claim.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
-    await expect(createOrder(prisma, bookingInput())).rejects.toBeInstanceOf(RentalClaimLostError);
+    await expect(createOrder(prisma, bookingInput(), DEFAULT_RENTAL_POLICY)).rejects.toBeInstanceOf(
+      RentalClaimLostError,
+    );
     expect(tx.outbox.mock.calls).toHaveLength(1);
   });
 });
@@ -519,6 +555,8 @@ function repositoryFake(): jest.Mocked<RentalRepository> {
     transition: jest.fn(),
     reschedule: jest.fn(),
     addCharge: jest.fn(),
+    receiveCollateral: jest.fn(),
+    returnCollateral: jest.fn(),
     claimIdempotency: jest.fn(),
     releaseIdempotency: jest.fn().mockResolvedValue(undefined),
   };

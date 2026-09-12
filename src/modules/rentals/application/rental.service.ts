@@ -204,6 +204,7 @@ export class RentalService {
                 : undefined,
             }
           : undefined,
+        collateral: input.collateral,
       });
 
       await this.audit.log({
@@ -277,6 +278,34 @@ export class RentalService {
       RENTAL_STATUS.CANCELLED,
       input.reason,
     );
+  }
+
+  async receiveCollateral(user: CurrentUser, id: string) {
+    const order = await this.repository.receiveCollateral(user.shopId, id, user.memberId);
+    if (!order) throw new NotFoundException('Rental order not found');
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'COLLATERAL_RECEIVED',
+      entityType: 'rental_order',
+      entityId: id,
+    });
+    return order;
+  }
+
+  async returnCollateral(user: CurrentUser, id: string) {
+    const order = await this.repository.returnCollateral(user.shopId, id, user.memberId);
+    if (!order) throw new NotFoundException('Rental order not found');
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'COLLATERAL_RETURNED',
+      entityType: 'rental_order',
+      entityId: id,
+    });
+    return order;
   }
 
   async reschedule(user: CurrentUser, id: string, input: RescheduleRentalInput) {

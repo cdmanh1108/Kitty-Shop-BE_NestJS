@@ -17,7 +17,7 @@ import {
 import { getBookableVariant } from './rental-availability';
 import { createOrder } from './rental-booking';
 import { claimIdempotency, releaseIdempotency } from './rental-idempotency';
-import { transition, reschedule, addCharge } from './rental-lifecycle';
+import { transition, reschedule, addCharge, setDocumentCollateral } from './rental-lifecycle';
 
 @Injectable()
 export class PrismaRentalRepository implements RentalRepository {
@@ -45,10 +45,11 @@ export class PrismaRentalRepository implements RentalRepository {
     return getBookableVariant(this.prisma, ...args);
   }
 
-  createOrder(
+  async createOrder(
     ...args: Parameters<RentalRepository['createOrder']>
   ): ReturnType<RentalRepository['createOrder']> {
-    return createOrder(this.prisma, ...args);
+    const policy = await this.policies.getPolicy(args[0].shopId);
+    return createOrder(this.prisma, args[0], policy);
   }
 
   list(...args: Parameters<RentalRepository['list']>): ReturnType<RentalRepository['list']> {
@@ -71,10 +72,11 @@ export class PrismaRentalRepository implements RentalRepository {
     return getSchedule(this.prisma, ...args);
   }
 
-  transition(
+  async transition(
     ...args: Parameters<RentalRepository['transition']>
   ): ReturnType<RentalRepository['transition']> {
-    return transition(this.prisma, ...args);
+    const policy = await this.policies.getPolicy(args[0].shopId);
+    return transition(this.prisma, args[0], policy, this.clock);
   }
 
   async reschedule(
@@ -88,6 +90,14 @@ export class PrismaRentalRepository implements RentalRepository {
     ...args: Parameters<RentalRepository['addCharge']>
   ): ReturnType<RentalRepository['addCharge']> {
     return addCharge(this.prisma, ...args);
+  }
+
+  receiveCollateral(shopId: string, orderId: string, changedBy: string) {
+    return setDocumentCollateral(this.prisma, shopId, orderId, changedBy, 'RECEIVE', this.clock);
+  }
+
+  returnCollateral(shopId: string, orderId: string, changedBy: string) {
+    return setDocumentCollateral(this.prisma, shopId, orderId, changedBy, 'RETURN', this.clock);
   }
 
   claimIdempotency(
