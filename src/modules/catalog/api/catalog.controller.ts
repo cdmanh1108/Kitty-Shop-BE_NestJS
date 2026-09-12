@@ -1,3 +1,9 @@
+import {
+  ProductLookupPageResDto,
+  InventorySummaryResDto,
+  InventoryHistoryQueryDto,
+  InventoryHistoryPageResDto,
+} from './catalog-read.dto';
 import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
@@ -12,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { CatalogService } from '../application/catalog.service';
 import {
+  ProductLookupQueryDto,
   AddInventoryReqDto,
   AddVariantReqDto,
   AvailabilityQueryDto,
@@ -87,6 +94,16 @@ export class CatalogController {
     return this.service.listProducts(user, toProductListQuery(query));
   }
 
+  @Get('products/lookup')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOkResponse({ type: ProductLookupPageResDto })
+  lookupProducts(@CurrentUser() user: CurrentUserType, @Query() query: ProductLookupQueryDto) {
+    return this.service.lookupProducts(user, {
+      ...toProductListQuery(query),
+      productId: query.productId,
+    });
+  }
+
   @Get('products/:id')
   @Permissions(PERMISSIONS.CATALOG_VIEW)
   @ApiOkResponse({ type: ProductResDto })
@@ -148,11 +165,29 @@ export class CatalogController {
     return this.service.listInventory(user, toInventoryListQuery(query));
   }
 
+  @Get('inventory/summary')
+  @Permissions(PERMISSIONS.INVENTORY_VIEW)
+  @ApiOkResponse({ type: InventorySummaryResDto })
+  inventorySummary(@CurrentUser() user: CurrentUserType) {
+    return this.service.inventorySummary(user);
+  }
+
+  @Get('inventory/history')
+  @Permissions(PERMISSIONS.INVENTORY_VIEW)
+  @ApiOkResponse({ type: InventoryHistoryPageResDto })
+  inventoryHistory(@CurrentUser() user: CurrentUserType, @Query() query: InventoryHistoryQueryDto) {
+    return this.service.inventoryHistory(user, {
+      page: query.page,
+      limit: query.limit,
+      productId: query.productId,
+      inventoryItemId: query.inventoryItemId,
+    });
+  }
+
   @Get('inventory/:id')
   @Permissions(PERMISSIONS.INVENTORY_VIEW)
   @ApiOperation({
-    summary:
-      'Physical inventory detail with status history, service history and upcoming allocations',
+    summary: 'Physical inventory detail with status history and unreleased allocations',
   })
   @ApiOkResponse({ type: InventoryItemResDto })
   getInventory(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {

@@ -33,36 +33,119 @@ export async function listProducts(
   const [items, total] = await prisma.$transaction([
     prisma.product.findMany({
       where,
-      include: {
-        category: true,
-        media: { where: { isPrimary: true }, take: 1 },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        status: true,
+        categoryId: true,
+        defaultDepositAmount: true,
+        category: { select: { name: true } },
+        media: { where: { isPrimary: true }, take: 1, select: { storageKey: true, url: true } },
         variants: {
-          include: {
-            size: true,
-            color: true,
-            rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
-            _count: { select: { inventoryItems: true } },
-          },
+          where: { archivedAt: null },
+          select: { size: { select: { name: true } }, color: { select: { name: true } } },
+          orderBy: { variantCode: 'asc' },
         },
-        rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (input.page - 1) * input.limit,
       take: input.limit,
     }),
     prisma.product.count({ where }),
   ]);
-
+  // One aggregation for the page, never one query per product. Preserve the
+  // existing list's range over active rates, without transmitting rate rows.
+  const prices = items.length
+    ? await prisma.rentalRate.groupBy({
+        by: ['productId'],
+        where: {
+          shopId: input.shopId,
+          productId: { in: items.map((p) => p.id) },
+          isActive: true,
+          OR: [{ variantId: null }, { variant: { archivedAt: null } }],
+        },
+        _min: { price: true },
+        _max: { price: true },
+      })
+    : [];
+  const priceMap = new Map(prices.map((p) => [p.productId, p]));
   const publicBaseUrl = process.env.OBJECT_STORAGE_PUBLIC_BASE_URL;
-  const mappedItems = items.map((product) => ({
-    ...product,
-    media: product.media.map((m) => ({
-      ...m,
-      url: m.storageKey ? resolvePublicUrl(publicBaseUrl, m.storageKey) : m.url,
+  return {
+    items: items.map(({ category, media, variants, ...product }) => ({
+      ...product,
+      categoryName: category.name,
+      imageUrl: media[0]
+        ? media[0].storageKey
+          ? resolvePublicUrl(publicBaseUrl, media[0].storageKey)
+          : media[0].url
+        : null,
+      variantCount: variants.length,
+      sizes: [...new Set(variants.flatMap((v) => (v.size ? [v.size.name] : [])))],
+      colors: [...new Set(variants.flatMap((v) => (v.color ? [v.color.name] : [])))],
+      minPrice: priceMap.get(product.id)?._min.price ?? null,
+      maxPrice: priceMap.get(product.id)?._max.price ?? null,
     })),
-  }));
+    meta: paginateMeta(input.page, input.limit, total),
+  };
+}
 
-  return { items: mappedItems, meta: paginateMeta(input.page, input.limit, total) };
+export async function lookupProducts(
+  prisma: PrismaService,
+  input: Parameters<CatalogRepository['lookupProducts']>[0],
+): ReturnType<CatalogRepository['lookupProducts']> {
+  const where = {
+    shopId: input.shopId,
+    archivedAt: null,
+    ...(input.productId ? { id: input.productId } : {}),
+    ...(input.status ? { status: input.status } : {}),
+    ...(input.categoryId ? { categoryId: input.categoryId } : {}),
+    ...(input.search
+      ? {
+          OR: [
+            { code: { contains: input.search, mode: 'insensitive' as const } },
+            { name: { contains: input.search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}),
+  };
+  const limit = Math.min(50, Math.max(1, input.limit));
+  const [items, total] = await prisma.$transaction([
+    prisma.product.findMany({
+      where,
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        status: true,
+        variants: {
+          where: { archivedAt: null },
+          orderBy: { variantCode: 'asc' },
+          select: {
+            id: true,
+            variantCode: true,
+            size: { select: { name: true } },
+            color: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      skip: (input.page - 1) * limit,
+      take: limit,
+    }),
+    prisma.product.count({ where }),
+  ]);
+  return {
+    items: items.map((p) => ({
+      ...p,
+      variants: p.variants.map(({ size, color, ...v }) => ({
+        ...v,
+        sizeName: size?.name ?? null,
+        colorName: color?.name ?? null,
+      })),
+    })),
+    meta: paginateMeta(input.page, limit, total),
+  };
 }
 
 export async function findProduct(

@@ -249,13 +249,20 @@ export async function listInventory(
     archivedAt: null,
     ...(input.status ? { currentStatus: input.status } : {}),
     ...(input.variantId ? { variantId: input.variantId } : {}),
-    ...(input.productId ? { variant: { productId: input.productId } } : {}),
-    ...(input.categoryId ? { variant: { product: { categoryId: input.categoryId } } } : {}),
+    variant: {
+      ...(input.productId ? { productId: input.productId } : {}),
+      ...(input.categoryId ? { product: { categoryId: input.categoryId } } : {}),
+    },
     ...(input.search
       ? {
           OR: [
             { sku: { contains: input.search, mode: 'insensitive' as const } },
             { barcode: { contains: input.search, mode: 'insensitive' as const } },
+            {
+              variant: {
+                product: { code: { contains: input.search, mode: 'insensitive' as const } },
+              },
+            },
             { variant: { variantCode: { contains: input.search, mode: 'insensitive' as const } } },
             {
               variant: {
@@ -270,15 +277,32 @@ export async function listInventory(
   const [rawItems, total] = await prisma.$transaction([
     prisma.inventoryItem.findMany({
       where,
-      include: {
-        variant: { include: { product: true, size: true, color: true } },
-        location: true,
+      select: {
+        id: true,
+        variantId: true,
+        sku: true,
+        currentStatus: true,
+        condition: true,
+        updatedAt: true,
+        variant: {
+          select: {
+            id: true,
+            variantCode: true,
+            sizeId: true,
+            colorId: true,
+            product: { select: { id: true, code: true, name: true, categoryId: true } },
+            size: { select: { id: true, code: true, name: true, sortOrder: true } },
+            color: { select: { id: true, code: true, name: true, hexColor: true } },
+          },
+        },
         allocations: {
           where: activeOccupyingAllocationWhere(),
-          include: {
-            order: {
-              select: { id: true, orderNumber: true, status: true },
-            },
+          select: {
+            id: true,
+            status: true,
+            reservedFrom: true,
+            reservedUntil: true,
+            order: { select: { id: true, orderNumber: true, status: true } },
           },
           orderBy: [{ status: 'asc' }, { reservedFrom: 'asc' }],
           take: 1,
@@ -331,7 +355,6 @@ export async function findInventoryItem(
         },
       },
       statusHistory: { orderBy: { changedAt: 'desc' }, take: 100 },
-      serviceRecords: { orderBy: { createdAt: 'desc' }, take: 50 },
       allocations: {
         where: activeOccupyingAllocationWhere(),
         include: {

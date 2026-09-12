@@ -36,6 +36,9 @@ describe('CatalogService - Inventory', () => {
     auditLogMock = jest.fn().mockResolvedValue(undefined);
 
     repository = {
+      lookupProducts: jest.fn(),
+      inventorySummary: jest.fn(),
+      inventoryHistory: jest.fn(),
       listLookups: jest.fn(),
       createCategory: jest.fn(),
       createSize: jest.fn(),
@@ -99,8 +102,22 @@ describe('CatalogService - Inventory', () => {
               createdAt: new Date(),
               updatedAt: new Date(),
               archivedAt: null,
-              size: { id: 'size-1', shopId: 'shop-1', code: 'M', name: 'Size M', sortOrder: 1, createdAt: new Date() },
-              color: { id: 'color-1', shopId: 'shop-1', code: 'TRANG', name: 'Trắng', hexColor: '#ffffff', createdAt: new Date() },
+              size: {
+                id: 'size-1',
+                shopId: 'shop-1',
+                code: 'M',
+                name: 'Size M',
+                sortOrder: 1,
+                createdAt: new Date(),
+              },
+              color: {
+                id: 'color-1',
+                shopId: 'shop-1',
+                code: 'TRANG',
+                name: 'Trắng',
+                hexColor: '#ffffff',
+                createdAt: new Date(),
+              },
               product: {
                 id: 'prod-1',
                 shopId: 'shop-1',
@@ -124,7 +141,13 @@ describe('CatalogService - Inventory', () => {
             },
             location: null,
             occupancyStatus: 'FREE' as const,
-            allowedManualTransitions: [INVENTORY_STATUS.CLEANING, INVENTORY_STATUS.REPAIRING, INVENTORY_STATUS.DAMAGED, INVENTORY_STATUS.LOST, INVENTORY_STATUS.RETIRED],
+            allowedManualTransitions: [
+              INVENTORY_STATUS.CLEANING,
+              INVENTORY_STATUS.REPAIRING,
+              INVENTORY_STATUS.DAMAGED,
+              INVENTORY_STATUS.LOST,
+              INVENTORY_STATUS.RETIRED,
+            ],
             currentRental: null,
           },
         ],
@@ -216,11 +239,16 @@ describe('CatalogService - Inventory', () => {
         },
         location: null,
         occupancyStatus: 'FREE' as const,
-        allowedManualTransitions: [INVENTORY_STATUS.CLEANING, INVENTORY_STATUS.REPAIRING, INVENTORY_STATUS.DAMAGED, INVENTORY_STATUS.LOST, INVENTORY_STATUS.RETIRED],
+        allowedManualTransitions: [
+          INVENTORY_STATUS.CLEANING,
+          INVENTORY_STATUS.REPAIRING,
+          INVENTORY_STATUS.DAMAGED,
+          INVENTORY_STATUS.LOST,
+          INVENTORY_STATUS.RETIRED,
+        ],
         currentRental: null,
         allocations: [],
         statusHistory: [],
-        serviceRecords: [],
       };
 
       findInventoryItemMock.mockResolvedValue(detail);
@@ -267,10 +295,13 @@ describe('CatalogService - Inventory', () => {
       });
 
       expect(res.sku).toBe('SP001-M-TRANG-002');
-      expect(addInventoryItemMock).toHaveBeenCalledWith('shop-1', expect.objectContaining({
-        variantId: 'var-1',
-        notes: 'Mua thêm 1 cái',
-      }));
+      expect(addInventoryItemMock).toHaveBeenCalledWith(
+        'shop-1',
+        expect.objectContaining({
+          variantId: 'var-1',
+          notes: 'Mua thêm 1 cái',
+        }),
+      );
     });
 
     it('throws NotFoundException if variant does not exist', async () => {
@@ -333,12 +364,17 @@ describe('CatalogService - Inventory', () => {
         notes: undefined,
         changedBy: 'member-1',
       });
-      expect(auditLogMock).toHaveBeenCalledWith(expect.objectContaining({
-        action: 'STATUS_CHANGE',
-        entityType: 'inventory_item',
-        entityId: 'item-1',
-        newValues: { status: INVENTORY_STATUS.CLEANING, reason: 'Gửi giặt hấp sau khi khách trả' },
-      }));
+      expect(auditLogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'STATUS_CHANGE',
+          entityType: 'inventory_item',
+          entityId: 'item-1',
+          newValues: {
+            status: INVENTORY_STATUS.CLEANING,
+            reason: 'Gửi giặt hấp sau khi khách trả',
+          },
+        }),
+      );
     });
 
     it('rejects unsupported status enum with BadRequestException', async () => {
@@ -413,27 +449,29 @@ describe('CatalogService - Inventory', () => {
         'Đồ cũ hỏng hoàn toàn',
         'member-1',
       );
-      expect(auditLogMock).toHaveBeenCalledWith(expect.objectContaining({
-        action: 'ARCHIVE',
-        entityType: 'inventory_item',
-        entityId: 'item-1',
-      }));
+      expect(auditLogMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'ARCHIVE',
+          entityType: 'inventory_item',
+          entityId: 'item-1',
+        }),
+      );
     });
 
     it('throws NotFoundException if item does not exist', async () => {
       archiveInventoryItemMock.mockResolvedValue(false);
-      await expect(
-        service.archiveInventoryItem(user, 'item-404'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.archiveInventoryItem(user, 'item-404')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws ConflictException if item has active allocation', async () => {
       archiveInventoryItemMock.mockRejectedValue(
-        new CatalogInvariantError('Không thể ngừng sử dụng món đồ đang có lịch đặt hoặc đang được thuê.'),
+        new CatalogInvariantError(
+          'Không thể ngừng sử dụng món đồ đang có lịch đặt hoặc đang được thuê.',
+        ),
       );
-      await expect(
-        service.archiveInventoryItem(user, 'item-1'),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.archiveInventoryItem(user, 'item-1')).rejects.toThrow(ConflictException);
     });
   });
 });

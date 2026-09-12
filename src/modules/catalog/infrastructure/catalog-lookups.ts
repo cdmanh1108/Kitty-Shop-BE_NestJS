@@ -9,19 +9,40 @@ export async function listLookups(
   const [categories, sizes, colors, locations] = await prisma.$transaction([
     prisma.category.findMany({
       where: { shopId, isActive: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        description: true,
+        _count: { select: { products: { where: { shopId, archivedAt: null } } } },
+      },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
     prisma.size.findMany({
       where: { shopId },
+      select: { id: true, code: true, name: true, sortOrder: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
-    prisma.color.findMany({ where: { shopId }, orderBy: { name: 'asc' } }),
+    prisma.color.findMany({
+      where: { shopId },
+      select: { id: true, code: true, name: true, hexColor: true },
+      orderBy: { name: 'asc' },
+    }),
     prisma.shopLocation.findMany({
       where: { shopId, isActive: true },
+      select: { id: true, code: true, name: true, isPrimary: true },
       orderBy: { isPrimary: 'desc' },
     }),
   ]);
-  return { categories, sizes, colors, locations };
+  return {
+    categories: categories.map(({ _count, ...category }) => ({
+      ...category,
+      productCount: _count.products,
+    })),
+    sizes,
+    colors,
+    locations,
+  };
 }
 export async function createCategory(
   prisma: PrismaService,

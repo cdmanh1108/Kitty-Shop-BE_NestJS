@@ -38,6 +38,9 @@ describe('CatalogService - Product Management', () => {
     auditLogMock = jest.fn().mockResolvedValue(undefined);
 
     repository = {
+      lookupProducts: jest.fn(),
+      inventorySummary: jest.fn(),
+      inventoryHistory: jest.fn(),
       listLookups: jest.fn(),
       createCategory: jest.fn(),
       createSize: jest.fn(),

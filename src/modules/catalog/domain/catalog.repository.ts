@@ -1,3 +1,9 @@
+import type {
+  ProductLookupPage,
+  InventorySummary,
+  InventoryHistoryPage,
+  InventoryHistoryCriteria,
+} from './catalog.read-models';
 import type { InventoryStatus } from '@modules/catalog/domain/catalog-status';
 import {
   type ColorRecord,
@@ -24,6 +30,11 @@ export class CatalogInvariantError extends Error {}
 export const CATALOG_REPOSITORY = Symbol('CATALOG_REPOSITORY');
 
 export interface CatalogRepository {
+  lookupProducts(
+    input: CatalogListProductsCriteria & { productId?: string },
+  ): Promise<ProductLookupPage>;
+  inventorySummary(shopId: string): Promise<InventorySummary>;
+  inventoryHistory(input: InventoryHistoryCriteria): Promise<InventoryHistoryPage>;
   listLookups(shopId: string): Promise<CatalogLookups>;
   createCategory(
     shopId: string,

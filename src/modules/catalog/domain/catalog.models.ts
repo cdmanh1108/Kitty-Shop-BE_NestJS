@@ -1,9 +1,9 @@
+import type { ProductListItem } from './catalog.read-models';
 import type { PaginatedResult } from '@common/types/pagination';
 import type {
   CategoryRecord,
   ColorRecord,
   InventoryItemRecord,
-  InventoryServiceRecord,
   InventoryStatusHistoryRecord,
   ProductMediaRecord,
   ProductRecord,
@@ -15,29 +15,15 @@ import type { RentalItemAllocationRecord } from '@modules/rentals/domain/rentals
 import type { ShopLocationRecord } from '@modules/settings/domain/settings.records';
 
 export type CatalogLookups = {
-  categories: Array<CategoryRecord>;
-  sizes: Array<SizeRecord>;
-  colors: Array<ColorRecord>;
-  locations: Array<ShopLocationRecord>;
+  categories: Array<
+    Pick<CategoryRecord, 'id' | 'code' | 'name' | 'description'> & { productCount: number }
+  >;
+  sizes: Array<Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder'>>;
+  colors: Array<Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor'>>;
+  locations: Array<Pick<ShopLocationRecord, 'id' | 'code' | 'name' | 'isPrimary'>>;
 };
 
-export type ProductPage = PaginatedResult<
-  ProductRecord & {
-    category: CategoryRecord;
-    variants: Array<
-      ProductVariantRecord & {
-        size: null | SizeRecord;
-        color: null | ColorRecord;
-        rentalRates: Array<RentalRateRecord>;
-        _count: {
-          inventoryItems: number;
-        };
-      }
-    >;
-    media: Array<ProductMediaRecord>;
-    rentalRates: Array<RentalRateRecord>;
-  }
->;
+export type ProductPage = PaginatedResult<ProductListItem>;
 
 export type ProductDetails =
   | null
@@ -92,13 +78,15 @@ export type InventoryCurrentRentalSummary = {
   reservedUntil: Date;
 };
 
-export type InventoryPageItem = InventoryItemRecord & {
-  variant: ProductVariantRecord & {
-    size: null | SizeRecord;
-    color: null | ColorRecord;
-    product: ProductRecord;
+export type InventoryPageItem = Pick<
+  InventoryItemRecord,
+  'id' | 'variantId' | 'sku' | 'currentStatus' | 'condition' | 'updatedAt'
+> & {
+  variant: Pick<ProductVariantRecord, 'id' | 'variantCode' | 'sizeId' | 'colorId'> & {
+    size: null | Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder'>;
+    color: null | Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor'>;
+    product: Pick<ProductRecord, 'id' | 'code' | 'name' | 'categoryId'>;
   };
-  location: null | ShopLocationRecord;
   occupancyStatus: InventoryOccupancyStatus;
   allowedManualTransitions: Array<string>;
   currentRental: null | InventoryCurrentRentalSummary;
@@ -133,8 +121,6 @@ export type InventoryDetails =
         }
       >;
       statusHistory: Array<InventoryStatusHistoryRecord>;
-      serviceRecords: Array<InventoryServiceRecord>;
     });
 
 export type FindAvailableInventoryResult = Array<InventoryItemRecord>;
-

@@ -1,3 +1,4 @@
+import type { InventoryHistoryCriteria } from '../domain/catalog.read-models';
 import { INVENTORY_STATUS } from '../domain/catalog-status';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
@@ -35,6 +36,18 @@ export class CatalogService {
     @Inject(CATALOG_REPOSITORY) private readonly repository: CatalogRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
+
+  lookupProducts(user: CurrentUser, query: ProductListQuery & { productId?: string }) {
+    return this.repository.lookupProducts({ ...query, shopId: user.shopId });
+  }
+
+  inventorySummary(user: CurrentUser) {
+    return this.repository.inventorySummary(user.shopId);
+  }
+
+  inventoryHistory(user: CurrentUser, query: Omit<InventoryHistoryCriteria, 'shopId'>) {
+    return this.repository.inventoryHistory({ ...query, shopId: user.shopId });
+  }
 
   lookups(user: CurrentUser) {
     return this.repository.listLookups(user.shopId);

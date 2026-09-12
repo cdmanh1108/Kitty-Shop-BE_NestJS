@@ -1,8 +1,9 @@
+import { inventorySummary, inventoryHistory } from './inventory-read-queries';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import type { CatalogRepository } from '../domain/catalog.repository';
 import { listLookups, createCategory, createSize, createColor } from './catalog-lookups';
-import { listProducts, findProduct } from './product-queries';
+import { listProducts, findProduct, lookupProducts } from './product-queries';
 import {
   createProduct,
   addVariant,
@@ -24,6 +25,24 @@ import {
 @Injectable()
 export class PrismaCatalogRepository implements CatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  lookupProducts(
+    ...args: Parameters<CatalogRepository['lookupProducts']>
+  ): ReturnType<CatalogRepository['lookupProducts']> {
+    return lookupProducts(this.prisma, ...args);
+  }
+
+  inventorySummary(
+    ...args: Parameters<CatalogRepository['inventorySummary']>
+  ): ReturnType<CatalogRepository['inventorySummary']> {
+    return inventorySummary(this.prisma, ...args);
+  }
+
+  inventoryHistory(
+    ...args: Parameters<CatalogRepository['inventoryHistory']>
+  ): ReturnType<CatalogRepository['inventoryHistory']> {
+    return inventoryHistory(this.prisma, ...args);
+  }
 
   listLookups(
     ...args: Parameters<CatalogRepository['listLookups']>
