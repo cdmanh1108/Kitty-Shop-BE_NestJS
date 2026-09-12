@@ -19,9 +19,11 @@ import type {
   AddVariantInput,
   AvailabilityQuery,
   CreateCategoryInput,
+  CategoryListQuery,
   CreateColorInput,
   CreateProductInput,
   CreateSizeInput,
+  UpdateCategoryInput,
   InventoryListQuery,
   ProductListQuery,
   ProductMediaInput,
@@ -53,8 +55,85 @@ export class CatalogService {
     return this.repository.listLookups(user.shopId);
   }
 
-  createCategory(user: CurrentUser, input: CreateCategoryInput) {
-    return this.withInvariant(() => this.repository.createCategory(user.shopId, input));
+  listCategories(user: CurrentUser, query: CategoryListQuery) {
+    return this.repository.listCategories({ shopId: user.shopId, ...query });
+  }
+
+  categoryOptions(user: CurrentUser) {
+    return this.repository.categoryOptions(user.shopId);
+  }
+
+  async createCategory(user: CurrentUser, input: CreateCategoryInput) {
+    const name = input.name.trim();
+    const code = (
+      input.code?.trim() ||
+      name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/Đ/g, 'D')
+        .replace(/đ/g, 'd')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+    ).toUpperCase();
+    const created = await this.withInvariant(() =>
+      this.repository.createCategory(user.shopId, {
+        code,
+        name,
+        description: input.description?.trim() || undefined,
+        status: input.status ?? 'ACTIVE',
+        sortOrder: input.sortOrder ?? 0,
+      }),
+    );
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'CREATE',
+      entityType: 'category',
+      entityId: created.id,
+      newValues: { code, name, status: input.status ?? 'ACTIVE', sortOrder: input.sortOrder ?? 0 },
+    });
+    return created;
+  }
+
+  async updateCategory(user: CurrentUser, id: string, input: UpdateCategoryInput) {
+    const updated = await this.repository.updateCategory(user.shopId, id, {
+      ...input,
+      name: input.name?.trim(),
+      description: input.description === null ? null : input.description?.trim() || undefined,
+    });
+    if (!updated)
+      throw new NotFoundException({ code: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: input.status ? 'STATUS_CHANGE' : 'UPDATE',
+      entityType: 'category',
+      entityId: id,
+      newValues: { ...input },
+    });
+    return updated;
+  }
+
+  async deleteCategory(user: CurrentUser, id: string) {
+    const result = await this.repository.deleteCategory(user.shopId, id);
+    if (result === 'not-found')
+      throw new NotFoundException({ code: 'CATEGORY_NOT_FOUND', message: 'Category not found' });
+    if (result === 'in-use')
+      throw new ConflictException({
+        code: 'CATEGORY_IN_USE',
+        message: 'Category is used by products',
+      });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'DELETE',
+      entityType: 'category',
+      entityId: id,
+    });
+    return { deleted: true as const };
   }
 
   createSize(user: CurrentUser, input: CreateSizeInput) {
@@ -290,6 +369,11 @@ export class CatalogService {
       return await action();
     } catch (error) {
       if (error instanceof CatalogInvariantError) {
+        if (error.message === 'CATEGORY_CODE_ALREADY_EXISTS')
+          throw new ConflictException({
+            code: error.message,
+            message: 'Category code already exists',
+          });
         const msg = error.message.toLowerCase();
         if (
           msg.includes('duplicate') ||

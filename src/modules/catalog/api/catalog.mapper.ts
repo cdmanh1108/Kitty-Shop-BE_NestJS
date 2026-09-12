@@ -3,9 +3,11 @@ import type {
   AddVariantInput,
   AvailabilityQuery,
   CreateCategoryInput,
+  CategoryListQuery,
   CreateColorInput,
   CreateProductInput,
   CreateSizeInput,
+  UpdateCategoryInput,
   InventoryListQuery,
   ProductListQuery,
   ProductMediaInput,
@@ -20,9 +22,11 @@ import type {
   AddVariantReqDto,
   AvailabilityQueryDto,
   CreateCategoryReqDto,
+  CategoryListQueryDto,
   CreateColorReqDto,
   CreateProductReqDto,
   CreateSizeReqDto,
+  UpdateCategoryReqDto,
   InventoryListQueryDto,
   ProductListQueryDto,
   ProductMediaReqDto,
@@ -51,6 +55,12 @@ export function toAvailabilityQuery(dto: AvailabilityQueryDto): AvailabilityQuer
   return { ...dto };
 }
 export function toCreateCategoryInput(dto: CreateCategoryReqDto): CreateCategoryInput {
+  return { ...dto };
+}
+export function toCategoryListQuery(dto: CategoryListQueryDto): CategoryListQuery {
+  return { ...dto, search: dto.search?.trim() || undefined };
+}
+export function toUpdateCategoryInput(dto: UpdateCategoryReqDto): UpdateCategoryInput {
   return { ...dto };
 }
 export function toCreateColorInput(dto: CreateColorReqDto): CreateColorInput {

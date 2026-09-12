@@ -23,6 +23,13 @@ export type CatalogLookups = {
   locations: Array<Pick<ShopLocationRecord, 'id' | 'code' | 'name' | 'isPrimary'>>;
 };
 
+export type CategoryListItem = Pick<
+  CategoryRecord,
+  'id' | 'code' | 'name' | 'description' | 'sortOrder' | 'createdAt' | 'updatedAt'
+> & { status: 'ACTIVE' | 'INACTIVE'; productCount: number };
+export type CategoryPage = PaginatedResult<CategoryListItem>;
+export type CategoryOption = Pick<CategoryRecord, 'id' | 'code' | 'name'>;
+
 export type ProductPage = PaginatedResult<ProductListItem>;
 
 export type ProductDetails =

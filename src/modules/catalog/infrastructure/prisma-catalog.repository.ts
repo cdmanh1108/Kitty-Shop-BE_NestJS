@@ -6,7 +6,16 @@ import { inventorySummary, inventoryHistory } from './inventory-read-queries';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CatalogRepository } from '../domain/catalog.repository';
-import { listLookups, createCategory, createSize, createColor } from './catalog-lookups';
+import {
+  listLookups,
+  listCategories,
+  categoryOptions,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  createSize,
+  createColor,
+} from './catalog-lookups';
 import { listProducts, findProduct, lookupProducts } from './product-queries';
 import {
   createProduct,
@@ -56,11 +65,31 @@ export class PrismaCatalogRepository implements CatalogRepository {
   ): ReturnType<CatalogRepository['listLookups']> {
     return listLookups(this.prisma, ...args);
   }
+  listCategories(
+    ...args: Parameters<CatalogRepository['listCategories']>
+  ): ReturnType<CatalogRepository['listCategories']> {
+    return listCategories(this.prisma, ...args);
+  }
+  categoryOptions(
+    ...args: Parameters<CatalogRepository['categoryOptions']>
+  ): ReturnType<CatalogRepository['categoryOptions']> {
+    return categoryOptions(this.prisma, ...args);
+  }
 
   createCategory(
     ...args: Parameters<CatalogRepository['createCategory']>
   ): ReturnType<CatalogRepository['createCategory']> {
     return createCategory(this.prisma, ...args);
+  }
+  updateCategory(
+    ...args: Parameters<CatalogRepository['updateCategory']>
+  ): ReturnType<CatalogRepository['updateCategory']> {
+    return updateCategory(this.prisma, ...args);
+  }
+  deleteCategory(
+    ...args: Parameters<CatalogRepository['deleteCategory']>
+  ): ReturnType<CatalogRepository['deleteCategory']> {
+    return deleteCategory(this.prisma, ...args);
   }
 
   createSize(

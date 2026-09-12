@@ -23,7 +23,12 @@ import {
   AddVariantReqDto,
   AvailabilityQueryDto,
   CatalogLookupsResDto,
+  CategoryListQueryDto,
+  CategoryPageResDto,
+  CategoryOptionResDto,
+  CategoryResDto,
   CreateCategoryReqDto,
+  UpdateCategoryReqDto,
   CreateColorReqDto,
   CreateProductReqDto,
   CreateSizeReqDto,
@@ -44,6 +49,7 @@ import {
   toAddVariantInput,
   toAvailabilityQuery,
   toCreateCategoryInput,
+  toCategoryListQuery,
   toCreateColorInput,
   toCreateProductInput,
   toCreateSizeInput,
@@ -51,6 +57,7 @@ import {
   toProductListQuery,
   toProductMediaInput,
   toUpdateInventoryStatusInput,
+  toUpdateCategoryInput,
   toUpdateProductInput,
   toUpsertRentalRateInput,
 } from './catalog.mapper';
@@ -71,8 +78,42 @@ export class CatalogController {
 
   @Post('catalog/categories')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiCreatedResponse({ type: CategoryResDto })
   createCategory(@CurrentUser() user: CurrentUserType, @Body() body: CreateCategoryReqDto) {
     return this.service.createCategory(user, toCreateCategoryInput(body));
+  }
+
+  @Get('catalog/categories')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOkResponse({ type: CategoryPageResDto })
+  async listCategories(@CurrentUser() user: CurrentUserType, @Query() query: CategoryListQueryDto) {
+    const page = await this.service.listCategories(user, toCategoryListQuery(query));
+    return page;
+  }
+
+  @Get('catalog/categories/options')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOkResponse({ type: [CategoryOptionResDto] })
+  categoryOptions(@CurrentUser() user: CurrentUserType) {
+    return this.service.categoryOptions(user);
+  }
+
+  @Patch('catalog/categories/:id')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ type: CategoryResDto })
+  updateCategory(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: UpdateCategoryReqDto,
+  ) {
+    return this.service.updateCategory(user, id, toUpdateCategoryInput(body));
+  }
+
+  @Delete('catalog/categories/:id')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ schema: { properties: { deleted: { type: 'boolean' } } } })
+  deleteCategory(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.deleteCategory(user, id);
   }
 
   @Post('catalog/sizes')

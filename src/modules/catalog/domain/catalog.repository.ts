@@ -5,17 +5,16 @@ import type {
   InventoryHistoryCriteria,
 } from './catalog.read-models';
 import type { InventoryStatus } from '@modules/catalog/domain/catalog-status';
-import {
-  type ColorRecord,
-  type SizeRecord,
-  type CategoryRecord,
-} from '@modules/catalog/domain/catalog.records';
+import { type ColorRecord, type SizeRecord } from '@modules/catalog/domain/catalog.records';
 
 import type {
   AddInventoryItemResult,
   AddProductMediaResult,
   AddVariantResult,
   CatalogLookups,
+  CategoryListItem,
+  CategoryPage,
+  CategoryOption,
   CreateProductResult,
   FindAvailableInventoryResult,
   InventoryDetails,
@@ -36,10 +35,35 @@ export interface CatalogRepository {
   inventorySummary(shopId: string): Promise<InventorySummary>;
   inventoryHistory(input: InventoryHistoryCriteria): Promise<InventoryHistoryPage>;
   listLookups(shopId: string): Promise<CatalogLookups>;
+  listCategories(input: {
+    shopId: string;
+    page: number;
+    limit: number;
+    search?: string;
+    status?: 'ACTIVE' | 'INACTIVE';
+  }): Promise<CategoryPage>;
+  categoryOptions(shopId: string): Promise<CategoryOption[]>;
   createCategory(
     shopId: string,
-    input: { code: string; name: string; parentId?: string },
-  ): Promise<CategoryRecord>;
+    input: {
+      code: string;
+      name: string;
+      description?: string;
+      status: 'ACTIVE' | 'INACTIVE';
+      sortOrder: number;
+    },
+  ): Promise<CategoryListItem>;
+  updateCategory(
+    shopId: string,
+    id: string,
+    input: {
+      name?: string;
+      description?: string | null;
+      status?: 'ACTIVE' | 'INACTIVE';
+      sortOrder?: number;
+    },
+  ): Promise<CategoryListItem | null>;
+  deleteCategory(shopId: string, id: string): Promise<'deleted' | 'in-use' | 'not-found'>;
   createSize(
     shopId: string,
     input: { code: string; name: string; sortOrder: number },

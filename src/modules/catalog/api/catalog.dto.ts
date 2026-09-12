@@ -6,7 +6,7 @@ import {
 } from '@modules/catalog/domain/catalog-status';
 
 import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Transform, Type, type TransformFnParams } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -14,11 +14,14 @@ import {
   IsDateString,
   IsInt,
   IsIn,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   IsUUID,
+  Matches,
+  MaxLength,
   Max,
   Min,
   ValidateIf,
@@ -26,6 +29,11 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { PaginationMetaResDto } from '@common/dto/response.dto';
+
+const trimString = ({ value }: TransformFnParams): unknown =>
+  typeof value === 'string' ? value.trim() : value;
+const normalizeCode = ({ value }: TransformFnParams): unknown =>
+  typeof value === 'string' ? value.trim().toUpperCase() : value;
 
 export class RentalRateReqDto {
   @ApiProperty({ example: 1 }) @Type(() => Number) @IsInt() @Min(1) @Max(365) durationDays!: number;
@@ -165,9 +173,69 @@ export class UpdateProductReqDto {
 }
 
 export class CreateCategoryReqDto {
-  @ApiProperty() @IsString() code!: string;
-  @ApiProperty() @IsString() name!: string;
-  @ApiPropertyOptional() @IsUUID() @IsOptional() parentId?: string;
+  @ApiPropertyOptional({ example: 'DRESS' })
+  @Transform(normalizeCode)
+  @IsString()
+  @Matches(/^[A-Z0-9_]+$/)
+  @MaxLength(50)
+  @IsOptional()
+  code?: string;
+  @ApiProperty()
+  @Transform(trimString)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  name!: string;
+  @ApiPropertyOptional()
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(2000)
+  @IsOptional()
+  description?: string;
+  @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' })
+  @IsIn(['ACTIVE', 'INACTIVE'])
+  @IsOptional()
+  status?: 'ACTIVE' | 'INACTIVE';
+  @ApiPropertyOptional({ type: Number, default: 0, minimum: 0 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  sortOrder?: number;
+}
+
+export class UpdateCategoryReqDto {
+  @ApiPropertyOptional()
+  @Transform(trimString)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  @IsOptional()
+  name?: string;
+  @ApiPropertyOptional({ nullable: true, type: String })
+  @Transform(trimString)
+  @IsString()
+  @MaxLength(2000)
+  @IsOptional()
+  description?: string | null;
+  @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] })
+  @IsIn(['ACTIVE', 'INACTIVE'])
+  @IsOptional()
+  status?: 'ACTIVE' | 'INACTIVE';
+  @ApiPropertyOptional({ type: Number, minimum: 0 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  sortOrder?: number;
+}
+
+export class CategoryListQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
+  @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] })
+  @IsIn(['ACTIVE', 'INACTIVE'])
+  @IsOptional()
+  status?: 'ACTIVE' | 'INACTIVE';
 }
 
 export class CreateSizeReqDto {
@@ -346,6 +414,25 @@ export class ShopLocationSummaryResDto {
 
 export class CategoryLookupResDto extends CategorySummaryResDto {
   @ApiProperty() productCount!: number;
+}
+
+export class CategoryOptionResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+}
+
+export class CategoryResDto extends CategorySummaryResDto {
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status!: 'ACTIVE' | 'INACTIVE';
+  @ApiProperty() sortOrder!: number;
+  @ApiProperty() productCount!: number;
+  @ApiProperty({ format: 'date-time' }) createdAt!: string;
+  @ApiProperty({ format: 'date-time' }) updatedAt!: string;
+}
+
+export class CategoryPageResDto {
+  @ApiProperty({ type: [CategoryResDto] }) items!: CategoryResDto[];
+  @ApiProperty({ type: PaginationMetaResDto }) meta!: PaginationMetaResDto;
 }
 
 export class CatalogLookupsResDto {

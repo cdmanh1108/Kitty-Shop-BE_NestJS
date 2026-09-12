@@ -232,8 +232,8 @@ describe('repository persistence boundaries', () => {
     ).rejects.toBe(failure);
   });
 
-  it('rejects a category from another shop before creating it', async () => {
-    const lookup = jest.spyOn(prisma.category, 'count').mockResolvedValue(0);
+  it('rejects a duplicate normalized category code before creating it', async () => {
+    const lookup = jest.spyOn(prisma.category, 'count').mockResolvedValue(1);
     const create = jest.spyOn(prisma.category, 'create');
     await expect(
       new PrismaCatalogRepository(
@@ -242,14 +242,11 @@ describe('repository persistence boundaries', () => {
       ).createCategory('shop', {
         code: 'BB',
         name: 'Ba ba',
-        parentId: 'other',
+        status: 'ACTIVE',
+        sortOrder: 0,
       }),
     ).rejects.toBeInstanceOf(CatalogInvariantError);
-    expect(lookup.mock.calls[0]?.[0]?.where).toEqual({
-      id: 'other',
-      shopId: 'shop',
-      isActive: true,
-    });
+    expect(lookup.mock.calls[0]?.[0]?.where).toEqual({ shopId: 'shop', code: 'BB' });
     expect(create.mock.calls).toHaveLength(0);
   });
 

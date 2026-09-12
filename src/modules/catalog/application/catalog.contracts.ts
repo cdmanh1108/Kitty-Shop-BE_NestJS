@@ -29,9 +29,23 @@ export interface AvailabilityQuery {
 }
 
 export interface CreateCategoryInput {
-  code: string;
+  code?: string;
   name: string;
-  parentId?: string;
+  description?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  sortOrder?: number;
+}
+
+export interface CategoryListQuery extends PaginationParams {
+  search?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface UpdateCategoryInput {
+  name?: string;
+  description?: string | null;
+  status?: 'ACTIVE' | 'INACTIVE';
+  sortOrder?: number;
 }
 
 export interface CreateColorInput {
