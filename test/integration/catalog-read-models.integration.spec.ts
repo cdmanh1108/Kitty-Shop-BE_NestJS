@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
@@ -111,7 +112,7 @@ describe('Catalog purpose-specific reads', () => {
 
   it('summarizes the entire shop, counts occupied items once and keeps operational status separate', async () => {
     const scenario = await rentalScenario(prisma);
-    const rentals = new PrismaRentalRepository(prisma, fixedClock);
+    const rentals = new PrismaRentalRepository(prisma, fixedClock, rentalPolicies);
     await rentals.createOrder(scenario.data);
     await rentals.createOrder({
       ...scenario.data,

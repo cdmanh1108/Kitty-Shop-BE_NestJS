@@ -1,5 +1,5 @@
 import { RENTAL_STATUS, type RentalStatus } from './rental-status';
-import { InvalidRentalIntervalError } from './rental-errors';
+import { InvalidRentalIntervalError, RentalInvariantError } from './rental-errors';
 
 export function calculateRentalDurationDays(start: Date, end: Date): number {
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start >= end) {
@@ -16,5 +16,36 @@ export const RENTAL_TRANSITION_FROM = {
   CONFIRMED: [RENTAL_STATUS.RESERVED],
   ACTIVE: [RENTAL_STATUS.RESERVED, RENTAL_STATUS.CONFIRMED],
   COMPLETED: [RENTAL_STATUS.ACTIVE],
-  CANCELLED: [RENTAL_STATUS.RESERVED, RENTAL_STATUS.CONFIRMED],
+  CANCELLED: [RENTAL_STATUS.RESERVED],
 } satisfies Record<'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED', RentalStatus[]>;
+
+export function canTransitionRental(from: string, to: RentalStatus): boolean {
+  const transitions: Partial<Record<RentalStatus, readonly string[]>> = RENTAL_TRANSITION_FROM;
+  return transitions[to]?.includes(from) ?? false;
+}
+
+/** Revalidate against the persisted order inside the allocation transaction. */
+export function assertRentalReschedule(input: {
+  createdAt: Date;
+  rentalStartAt: Date;
+  rentalEndAt: Date;
+  from: Date;
+  until: Date;
+  maxDaysFromBooking: number;
+}): void {
+  const duration = calculateRentalDurationDays(input.from, input.until);
+  if (duration !== calculateRentalDurationDays(input.rentalStartAt, input.rentalEndAt)) {
+    throw new RentalInvariantError(
+      'RENTAL_REPRICING_REQUIRED',
+      'Changing rental duration requires repricing',
+    );
+  }
+  // createdAt is the original booking instant; rescheduling never moves this anchor.
+  const deadline = input.createdAt.getTime() + input.maxDaysFromBooking * 86_400_000;
+  if (input.from.getTime() < input.createdAt.getTime() || input.from.getTime() > deadline) {
+    throw new RentalInvariantError(
+      'RESCHEDULE_LIMIT_EXCEEDED',
+      'The new rental start is outside the booking policy window',
+    );
+  }
+}

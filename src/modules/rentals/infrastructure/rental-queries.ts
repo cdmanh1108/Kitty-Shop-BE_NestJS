@@ -31,8 +31,10 @@ export async function list(
   prisma: PrismaService,
   input: Parameters<RentalRepository['list']>[0],
 ): ReturnType<RentalRepository['list']> {
+  const phoneSearch = input.search?.replace(/\D/g, '');
   const where = {
     shopId: input.shopId,
+    ...(input.customerId ? { customerId: input.customerId } : {}),
     ...(input.status ? { status: input.status } : {}),
     ...(input.paymentStatus ? { paymentStatus: input.paymentStatus } : {}),
     ...(input.from || input.until
@@ -46,7 +48,7 @@ export async function list(
           OR: [
             { orderNumber: { contains: input.search, mode: 'insensitive' as const } },
             { customer: { fullName: { contains: input.search, mode: 'insensitive' as const } } },
-            { customer: { normalizedPhone: { contains: input.search.replace(/\D/g, '') } } },
+            ...(phoneSearch ? [{ customer: { normalizedPhone: { contains: phoneSearch } } }] : []),
           ],
         }
       : {}),
@@ -54,7 +56,16 @@ export async function list(
   const [items, total] = await prisma.$transaction([
     prisma.rentalOrder.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        customerId: true,
+        rentalStartAt: true,
+        rentalEndAt: true,
+        status: true,
+        paymentStatus: true,
+        depositStatus: true,
+        grandTotal: true,
         customer: { select: { id: true, fullName: true, phone: true } },
         items: {
           select: {
@@ -65,7 +76,7 @@ export async function list(
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (input.page - 1) * input.limit,
       take: input.limit,
     }),

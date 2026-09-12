@@ -46,6 +46,13 @@ describe('Rental HTTP command and tenant boundaries', () => {
       .send(a.input)
       .expect(201);
     expect(JSON.parse(replay.text) as object).toEqual(JSON.parse(first.text) as object);
+    const responseBody: unknown = JSON.parse(first.text);
+    expect(responseBody).toMatchObject({
+      items: [{ allocations: [{ sku: a.inventory.sku, operationalStatus: 'AVAILABLE' }] }],
+    });
+    expect(first.text).not.toMatch(
+      /"metadata"|"normalizedPhone"|"createdBy"|"pricingSnapshot"|"purchasePrice"/,
+    );
     const order = await prisma.rentalOrder.findFirstOrThrow({ where: { shopId: a.shop.id } });
     await request(server)
       .post('/api/v1/rental-orders')

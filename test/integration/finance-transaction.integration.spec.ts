@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import {
   connectTestDatabase,
   disconnectTestDatabase,
@@ -30,7 +31,7 @@ describe('Finance Payment Lifecycle, State Recomputation & Rollback Integration'
   beforeAll(async () => {
     prisma = await connectTestDatabase();
     financeRepo = new PrismaFinanceRepository(prisma);
-    rentalRepo = new PrismaRentalRepository(prisma, new SystemClock());
+    rentalRepo = new PrismaRentalRepository(prisma, new SystemClock(), rentalPolicies);
   });
 
   beforeEach(async () => {

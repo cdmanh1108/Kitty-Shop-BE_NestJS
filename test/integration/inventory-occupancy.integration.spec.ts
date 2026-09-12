@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
@@ -30,7 +31,7 @@ describe('Inventory occupancy persistence and read models', () => {
         sku: uniqueCode('SKU'),
       },
     });
-    const repo = new PrismaRentalRepository(prisma, fixedClock);
+    const repo = new PrismaRentalRepository(prisma, fixedClock, rentalPolicies);
     const order = await repo.createOrder({
       ...f.data,
       lines: f.data.lines.map((line) => ({
@@ -67,7 +68,7 @@ describe('Inventory occupancy persistence and read models', () => {
 
   it('migrates legacy occupancy without deleting allocations or historical statuses', async () => {
     const f = await rentalScenario(prisma);
-    const repo = new PrismaRentalRepository(prisma, fixedClock);
+    const repo = new PrismaRentalRepository(prisma, fixedClock, rentalPolicies);
     await repo.createOrder(f.data);
     const orphan = await prisma.inventoryItem.create({
       data: {

@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import {
   connectTestDatabase,
@@ -26,7 +27,7 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
-    repo = new PrismaRentalRepository(prisma, fixedClock);
+    repo = new PrismaRentalRepository(prisma, fixedClock, rentalPolicies);
     catalogRepo = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
@@ -315,6 +316,10 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       rentalEndAt: new Date('2026-11-03T00:00:00Z'),
     });
     if (!first || !second) throw new Error('Expected orders');
+    await prisma.rentalOrder.update({
+      where: { id: second.id },
+      data: { createdAt: new Date('2026-11-20T00:00:00Z') },
+    });
     await repo.transition({
       shopId: f.shop.id,
       orderId: first.id,

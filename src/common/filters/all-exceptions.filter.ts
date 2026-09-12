@@ -13,6 +13,7 @@ import {
   RentalClaimLostError,
   InvalidRentalIntervalError,
   RentalInventoryUnavailableError,
+  RentalInvariantError,
 } from '@modules/rentals/domain/rental-errors';
 import { FinanceInvariantError } from '@modules/finance/domain/finance.repository';
 import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
@@ -39,7 +40,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const errorName =
       exception instanceof Error ? exception.name || exception.constructor?.name : '';
 
-    if (exception instanceof RentalOverlapError || errorName === 'RentalOverlapError') {
+    if (exception instanceof RentalInvariantError) {
+      status = HttpStatus.BAD_REQUEST;
+      code = exception.code;
+      message = exception.message;
+    } else if (exception instanceof RentalOverlapError || errorName === 'RentalOverlapError') {
       status = HttpStatus.CONFLICT;
       code = 'RENTAL_OVERLAP';
       message = (exception as Error).message;

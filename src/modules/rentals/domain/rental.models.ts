@@ -33,7 +33,18 @@ export type RentalOrderDetails =
     });
 
 export type RentalOrderPage = PaginatedResult<
-  RentalOrderRecord & {
+  Pick<
+    RentalOrderRecord,
+    | 'id'
+    | 'orderNumber'
+    | 'customerId'
+    | 'rentalStartAt'
+    | 'rentalEndAt'
+    | 'status'
+    | 'paymentStatus'
+    | 'depositStatus'
+    | 'grandTotal'
+  > & {
     customer: {
       id: string;
       phone: string;

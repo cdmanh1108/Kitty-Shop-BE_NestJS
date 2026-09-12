@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 import type { RentalPolicy } from '../domain/rental-policy';
 import type { SettingsRepository } from '../domain/settings.repository';
 
-const RENTAL_POLICY_SETTING_KEY = 'rental_policy';
+import { RENTAL_POLICY_SETTING_KEY } from '../domain/rental-policy';
 
 @Injectable()
 export class PrismaSettingsRepository implements SettingsRepository {
@@ -57,9 +57,7 @@ export class PrismaSettingsRepository implements SettingsRepository {
     return this.prisma.shop.update({ where: { id: shopId }, data });
   }
 
-  async getRentalPolicy(
-    shopId: string,
-  ): Promise<{ policy: RentalPolicy; updatedAt: Date } | null> {
+  async getRentalPolicy(shopId: string): Promise<{ policy: RentalPolicy; updatedAt: Date } | null> {
     const row = await this.prisma.appSetting.findUnique({
       where: { shopId_key: { shopId, key: RENTAL_POLICY_SETTING_KEY } },
     });

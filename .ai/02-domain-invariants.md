@@ -5,6 +5,8 @@
 - Active allocations for the same InventoryItem may not overlap in time.
 - Rental interval semantics are `[start, end)`.
 - An order stores historical name/price snapshots.
+- Only RESERVED orders can be cancelled; transaction adapters revalidate the canonical state machine independently of supplied source statuses.
+- Rescheduling keeps the priced duration and places the new start between original createdAt and createdAt + rental policy maxDaysFromBooking (inclusive, elapsed 24-hour days). The booking anchor never changes.
 - `OVERDUE` is derived, not a persisted independent lifecycle state.
 - Completing a rental sends returned inventory to CLEANING by default; staff returns it to AVAILABLE after cleaning/inspection.
 - Deposit cash movements are separate from earned rental revenue.

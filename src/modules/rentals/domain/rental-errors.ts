@@ -1,3 +1,13 @@
+export class RentalInvariantError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'RentalInvariantError';
+  }
+}
+
 export class InvalidRentalIntervalError extends Error {
   constructor() {
     super('Invalid rental interval');

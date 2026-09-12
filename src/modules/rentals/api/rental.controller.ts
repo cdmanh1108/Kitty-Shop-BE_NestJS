@@ -1,3 +1,4 @@
+import { toRentalResponse, toRentalSummary } from './rental.response';
 import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
@@ -39,15 +40,16 @@ export class RentalController {
   @Permissions(PERMISSIONS.RENTALS_VIEW)
   @ApiOperation({ summary: 'List/search orders; use from/until for calendar overlap queries' })
   @ApiOkResponse({ type: RentalOrderPageResDto })
-  list(@CurrentUser() user: CurrentUserType, @Query() query: RentalListQueryDto) {
-    return this.service.list(user, toRentalListQuery(query));
+  async list(@CurrentUser() user: CurrentUserType, @Query() query: RentalListQueryDto) {
+    const page = await this.service.list(user, toRentalListQuery(query));
+    return { items: page.items.map(toRentalSummary), meta: page.meta };
   }
 
   @Get(':id')
   @Permissions(PERMISSIONS.RENTALS_VIEW)
   @ApiOkResponse({ type: RentalOrderResDto })
   get(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
-    return this.service.get(user, id);
+    return this.service.get(user, id).then(toRentalResponse);
   }
 
   @Post()
@@ -64,19 +66,24 @@ export class RentalController {
     @Body() body: CreateRentalOrderReqDto,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.service.create(user, toCreateRentalOrderInput(body), idempotencyKey);
+    return this.service
+      .create(user, toCreateRentalOrderInput(body), idempotencyKey)
+      .then(toRentalResponse);
   }
 
   @Patch(':id/schedule')
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
-  @ApiOperation({ summary: 'Reschedule without changing rental duration; DB rechecks overlap' })
+  @ApiOperation({
+    summary:
+      'Reschedule within the policy window from original booking; preserve duration and recheck overlap',
+  })
   @ApiOkResponse({ type: RentalOrderResDto })
   reschedule(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
     @Body() body: RescheduleRentalReqDto,
   ) {
-    return this.service.reschedule(user, id, toRescheduleRentalInput(body));
+    return this.service.reschedule(user, id, toRescheduleRentalInput(body)).then(toRentalResponse);
   }
 
   @Post(':id/confirm')
@@ -87,7 +94,7 @@ export class RentalController {
     @Param('id') id: string,
     @Body() body: TransitionRentalReqDto,
   ) {
-    return this.service.confirm(user, id, toTransitionRentalInput(body));
+    return this.service.confirm(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
   }
 
   @Post(':id/start')
@@ -98,7 +105,7 @@ export class RentalController {
     @Param('id') id: string,
     @Body() body: TransitionRentalReqDto,
   ) {
-    return this.service.start(user, id, toTransitionRentalInput(body));
+    return this.service.start(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
   }
 
   @Post(':id/complete')
@@ -110,18 +117,21 @@ export class RentalController {
     @Param('id') id: string,
     @Body() body: TransitionRentalReqDto,
   ) {
-    return this.service.complete(user, id, toTransitionRentalInput(body));
+    return this.service.complete(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
   }
 
   @Post(':id/cancel')
   @Permissions(PERMISSIONS.RENTALS_CANCEL)
+  @ApiOperation({
+    summary: 'Cancel a RESERVED order; confirmed and active orders cannot be cancelled',
+  })
   @ApiOkResponse({ type: RentalOrderResDto })
   cancel(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
     @Body() body: TransitionRentalReqDto,
   ) {
-    return this.service.cancel(user, id, toTransitionRentalInput(body));
+    return this.service.cancel(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
   }
 
   @Post(':id/charges')
@@ -132,6 +142,6 @@ export class RentalController {
     @Param('id') id: string,
     @Body() body: AddRentalChargeReqDto,
   ) {
-    return this.service.addCharge(user, id, toAddRentalChargeInput(body));
+    return this.service.addCharge(user, id, toAddRentalChargeInput(body)).then(toRentalResponse);
   }
 }

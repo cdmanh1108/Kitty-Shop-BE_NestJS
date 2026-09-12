@@ -1,7 +1,10 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { OpenAPIObject } from '@nestjs/swagger';
-import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
+import type {
+  SchemaObject,
+  ReferenceObject,
+} from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 describe('OpenAPI Contract Baseline', () => {
   const openApiPath = resolve(__dirname, '../generated/openapi.json');
@@ -76,5 +79,35 @@ describe('OpenAPI Contract Baseline', () => {
     expect(schemas?.LoginReqDto).toBeDefined();
     expect(schemas?.LoginResDto).toBeDefined();
     expect(schemas?.AuthUserResDto).toBeDefined();
+  });
+
+  it('defines every nested rental response instead of generic objects', () => {
+    const schemas = loadDocument().components?.schemas ?? {};
+    const visited = new Set<string>();
+    function inspect(schema: SchemaObject | ReferenceObject): void {
+      if ('$ref' in schema) {
+        const name = schema.$ref.replace('#/components/schemas/', '');
+        if (visited.has(name)) return;
+        visited.add(name);
+        const referenced = schemas[name];
+        if (!referenced) throw new Error(`Missing response schema ${name}`);
+        inspect(referenced);
+        return;
+      }
+      if (schema.type === 'object') expect(schema.properties).toBeDefined();
+      if (schema.type === 'array') {
+        if (!schema.items) throw new Error('Array response must define items');
+        inspect(schema.items);
+      }
+      for (const property of Object.values(schema.properties ?? {})) inspect(property);
+      for (const child of [
+        ...(schema.allOf ?? []),
+        ...(schema.oneOf ?? []),
+        ...(schema.anyOf ?? []),
+      ])
+        inspect(child);
+    }
+    inspect({ $ref: '#/components/schemas/RentalOrderPageResDto' });
+    inspect({ $ref: '#/components/schemas/RentalOrderResDto' });
   });
 });

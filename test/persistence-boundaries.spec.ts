@@ -1,3 +1,4 @@
+import { rentalPolicies } from './fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../src/common/storage/public-url.resolver';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../src/database/prisma/prisma.service';
@@ -163,7 +164,10 @@ describe('repository persistence boundaries', () => {
       ).findProduct('shop', 'missing'),
     ).toBeNull();
     expect(
-      await new PrismaRentalRepository(prisma, { now: () => new Date() }).get('shop', 'missing'),
+      await new PrismaRentalRepository(prisma, { now: () => new Date() }, rentalPolicies).get(
+        'shop',
+        'missing',
+      ),
     ).toBeNull();
     expect(product.mock.calls[0]?.[0]?.where).toEqual({
       id: 'missing',
@@ -203,7 +207,7 @@ describe('repository persistence boundaries', () => {
       .spyOn(prisma, '$transaction')
       .mockRejectedValue(new Error('rental_item_no_overlap'));
     await expect(
-      new PrismaRentalRepository(prisma, { now: () => new Date() }).reschedule({
+      new PrismaRentalRepository(prisma, { now: () => new Date() }, rentalPolicies).reschedule({
         shopId: 'shop',
         orderId: 'order',
         from: now,
@@ -218,7 +222,7 @@ describe('repository persistence boundaries', () => {
     const failure = new Error('connection unavailable');
     jest.spyOn(prisma, '$transaction').mockRejectedValue(failure);
     await expect(
-      new PrismaRentalRepository(prisma, { now: () => new Date() }).reschedule({
+      new PrismaRentalRepository(prisma, { now: () => new Date() }, rentalPolicies).reschedule({
         shopId: 'shop',
         orderId: 'order',
         from: now,
@@ -284,7 +288,7 @@ describe('repository persistence boundaries', () => {
     const outbox = jest.spyOn(tx.outboxEvent, 'create');
     jest.spyOn(prisma, '$transaction').mockImplementation((operation) => operation(tx));
     await expect(
-      new PrismaRentalRepository(prisma, { now: () => new Date() }).createOrder({
+      new PrismaRentalRepository(prisma, { now: () => new Date() }, rentalPolicies).createOrder({
         shopId: 'shop',
         customerId: 'customer',
         orderNumber: 'R-01',

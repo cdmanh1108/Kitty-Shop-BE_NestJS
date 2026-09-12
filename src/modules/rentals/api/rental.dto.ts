@@ -106,6 +106,7 @@ export class CreateRentalOrderReqDto {
 }
 
 export class RentalListQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional() @IsUUID() @IsOptional() customerId?: string;
   @ApiPropertyOptional() @IsString() @IsOptional() search?: string;
   @ApiPropertyOptional({ enum: Object.values(RENTAL_STATUS) })
   @IsIn(Object.values(RENTAL_STATUS))
@@ -130,6 +131,80 @@ export class RescheduleRentalReqDto {
 
 export class AddRentalChargeReqDto extends RentalChargeReqDto {}
 
+export class RentalCustomerResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() fullName!: string;
+  @ApiProperty() phone!: string;
+}
+
+export class RentalItemSummaryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() productNameSnapshot!: string;
+  @ApiProperty() variantNameSnapshot!: string;
+  @ApiProperty() quantity!: number;
+}
+
+export class RentalAllocationResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() inventoryItemId!: string;
+  @ApiProperty() sku!: string;
+  @ApiProperty() operationalStatus!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty({ format: 'date-time' }) reservedFrom!: string;
+  @ApiProperty({ format: 'date-time' }) reservedUntil!: string;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) releasedAt!: string | null;
+}
+
+export class RentalItemResDto extends RentalItemSummaryResDto {
+  @ApiProperty() productId!: string;
+  @ApiProperty() variantId!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty({ type: String }) unitRentalPrice!: string;
+  @ApiProperty({ type: String }) depositAmount!: string;
+  @ApiProperty({ type: String }) lineTotal!: string;
+  @ApiProperty({ type: [RentalAllocationResDto] }) allocations!: RentalAllocationResDto[];
+}
+
+export class RentalChargeResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() chargeType!: string;
+  @ApiProperty({ type: String, nullable: true }) description!: string | null;
+  @ApiProperty({ type: String }) amount!: string;
+  @ApiProperty() quantity!: number;
+  @ApiProperty() currency!: string;
+}
+
+export class RentalPaymentResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() transactionNumber!: string;
+  @ApiProperty() direction!: string;
+  @ApiProperty() purpose!: string;
+  @ApiProperty() paymentMethod!: string;
+  @ApiProperty({ type: String }) amount!: string;
+  @ApiProperty() currency!: string;
+  @ApiProperty({ format: 'date-time' }) paidAt!: string;
+}
+
+export class RentalDeliveryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() direction!: string;
+  @ApiProperty() method!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) scheduledAt!: string | null;
+  @ApiProperty({ type: String, nullable: true }) recipientName!: string | null;
+  @ApiProperty({ type: String, nullable: true }) recipientPhone!: string | null;
+  @ApiProperty({ type: String, nullable: true }) addressLine!: string | null;
+  @ApiProperty({ type: String }) shippingFee!: string;
+}
+
+export class RentalStatusHistoryResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ type: String, nullable: true }) fromStatus!: string | null;
+  @ApiProperty() toStatus!: string;
+  @ApiProperty({ type: String, nullable: true }) reason!: string | null;
+  @ApiProperty({ format: 'date-time' }) changedAt!: string;
+}
+
 export class RentalOrderListItemResDto {
   @ApiProperty() id!: string;
   @ApiProperty() orderNumber!: string;
@@ -140,21 +215,22 @@ export class RentalOrderListItemResDto {
   @ApiProperty() paymentStatus!: string;
   @ApiProperty() depositStatus!: string;
   @ApiProperty({ type: String, example: '500000.00' }) grandTotal!: string;
-  @ApiProperty({ type: Object }) customer!: object;
-  @ApiProperty({ type: [Object] }) items!: object[];
+  @ApiProperty({ type: RentalCustomerResDto }) customer!: RentalCustomerResDto;
+  @ApiProperty({ type: [RentalItemSummaryResDto] }) items!: RentalItemSummaryResDto[];
 }
 
 export class RentalOrderResDto extends RentalOrderListItemResDto {
+  @ApiProperty({ type: [RentalItemResDto] }) declare items: RentalItemResDto[];
   @ApiProperty({ type: String, example: '450000.00' }) rentalSubtotal!: string;
   @ApiProperty({ type: String, example: '50000.00' }) chargesTotal!: string;
   @ApiProperty({ type: String, example: '0.00' }) discountTotal!: string;
   @ApiProperty({ type: String, example: '1000000.00' }) depositRequired!: string;
-  @ApiPropertyOptional({ nullable: true }) note!: string | null;
-  @ApiPropertyOptional({ nullable: true }) internalNote!: string | null;
-  @ApiProperty({ type: [Object] }) charges!: object[];
-  @ApiProperty({ type: [Object] }) payments!: object[];
-  @ApiProperty({ type: [Object] }) deliveries!: object[];
-  @ApiProperty({ type: [Object] }) statusHistory!: object[];
+  @ApiProperty({ type: String, nullable: true }) note!: string | null;
+  @ApiProperty({ type: String, nullable: true }) internalNote!: string | null;
+  @ApiProperty({ type: [RentalChargeResDto] }) charges!: RentalChargeResDto[];
+  @ApiProperty({ type: [RentalPaymentResDto] }) payments!: RentalPaymentResDto[];
+  @ApiProperty({ type: [RentalDeliveryResDto] }) deliveries!: RentalDeliveryResDto[];
+  @ApiProperty({ type: [RentalStatusHistoryResDto] }) statusHistory!: RentalStatusHistoryResDto[];
 }
 
 export class RentalOrderPageResDto {

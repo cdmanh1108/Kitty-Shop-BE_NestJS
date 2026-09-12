@@ -4,6 +4,7 @@ import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   DEFAULT_RENTAL_POLICY,
+  RENTAL_POLICY_SETTING_KEY,
   type RentalPolicy,
   type RentalPolicyProvider,
 } from '../domain/rental-policy';
@@ -172,41 +173,27 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     throw new BadRequestException('New rental charge from late day must be at least 1');
   }
 
-  if (
-    !Number.isInteger(policy.specialCleaning.feeMin) ||
-    policy.specialCleaning.feeMin < 0
-  ) {
+  if (!Number.isInteger(policy.specialCleaning.feeMin) || policy.specialCleaning.feeMin < 0) {
     throw new BadRequestException('Special cleaning minimum fee must be a non-negative integer');
   }
 
-  if (
-    !Number.isInteger(policy.specialCleaning.feeMax) ||
-    policy.specialCleaning.feeMax < 0
-  ) {
+  if (!Number.isInteger(policy.specialCleaning.feeMax) || policy.specialCleaning.feeMax < 0) {
     throw new BadRequestException('Special cleaning maximum fee must be a non-negative integer');
   }
 
   if (policy.specialCleaning.feeMax < policy.specialCleaning.feeMin) {
-    throw new BadRequestException(
-      'Special cleaning maximum fee cannot be less than minimum fee',
-    );
+    throw new BadRequestException('Special cleaning maximum fee cannot be less than minimum fee');
   }
 
   if (typeof policy.loyalty.enabled !== 'boolean') {
     throw new BadRequestException('Loyalty enabled must be a boolean');
   }
 
-  if (
-    !Number.isInteger(policy.loyalty.rentalsRequired) ||
-    policy.loyalty.rentalsRequired < 1
-  ) {
+  if (!Number.isInteger(policy.loyalty.rentalsRequired) || policy.loyalty.rentalsRequired < 1) {
     throw new BadRequestException('Loyalty required rentals must be at least 1');
   }
 
-  if (
-    !Number.isInteger(policy.loyalty.rewardRentalValue) ||
-    policy.loyalty.rewardRentalValue < 0
-  ) {
+  if (!Number.isInteger(policy.loyalty.rewardRentalValue) || policy.loyalty.rewardRentalValue < 0) {
     throw new BadRequestException('Loyalty reward rental value must be a non-negative integer');
   }
 
@@ -250,6 +237,12 @@ export class SettingsService implements RentalPolicyProvider {
   }
 
   async upsert(user: CurrentUser, key: string, input: UpsertSettingInput) {
+    if (key === RENTAL_POLICY_SETTING_KEY) {
+      throw new BadRequestException({
+        code: 'RENTAL_POLICY_REQUIRES_VALIDATED_UPDATE',
+        message: 'Use the rental policy endpoint to update business rules',
+      });
+    }
     const setting = await this.repository.upsert({
       shopId: user.shopId,
       key,
@@ -288,7 +281,9 @@ export class SettingsService implements RentalPolicyProvider {
 
   async getPolicy(shopId: string): Promise<RentalPolicy> {
     const saved = await this.repository.getRentalPolicy(shopId);
-    return buildEffectivePolicy(saved?.policy);
+    const policy = buildEffectivePolicy(saved?.policy);
+    validateResultingPolicy(policy);
+    return policy;
   }
 
   async getRentalPolicy(user: CurrentUser): Promise<RentalPolicy> {
@@ -300,7 +295,10 @@ export class SettingsService implements RentalPolicyProvider {
     };
   }
 
-  async updateRentalPolicy(user: CurrentUser, input: UpdateRentalPolicyInput): Promise<RentalPolicy> {
+  async updateRentalPolicy(
+    user: CurrentUser,
+    input: UpdateRentalPolicyInput,
+  ): Promise<RentalPolicy> {
     const current = await this.getPolicy(user.shopId);
     const merged = mergePolicyInput(current, input);
     validateResultingPolicy(merged);

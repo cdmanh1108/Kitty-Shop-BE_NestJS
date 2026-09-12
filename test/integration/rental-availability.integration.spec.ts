@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import {
   connectTestDatabase,
   disconnectTestDatabase,
@@ -21,7 +22,7 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
-    repo = new PrismaRentalRepository(prisma, new SystemClock());
+    repo = new PrismaRentalRepository(prisma, new SystemClock(), rentalPolicies);
   });
 
   beforeEach(async () => {
@@ -308,6 +309,10 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
     expect(order2).not.toBeNull();
 
     // Valid reschedule: Order 1 shifts to Sep 22 -> Sep 24 (free window, does not conflict with self or Order 2)
+    await prisma.rentalOrder.updateMany({
+      where: { id: { in: [order1!.id, order2!.id] } },
+      data: { createdAt: new Date('2026-09-10T00:00:00Z') },
+    });
     const rescheduledOrder1 = await repo.reschedule({
       shopId: shop.id,
       orderId: order1!.id,

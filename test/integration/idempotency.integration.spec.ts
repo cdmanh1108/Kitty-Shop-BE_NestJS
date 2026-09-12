@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { rentalScenario } from '../fixtures/rental.fixture';
 import {
   connectTestDatabase,
@@ -44,7 +45,7 @@ describe('Idempotency Integration with PostgreSQL', () => {
   beforeAll(async () => {
     prisma = await connectTestDatabase();
     testClock = new TestClock(new Date('2026-10-01T08:00:00.000Z'));
-    repo = new PrismaRentalRepository(prisma, testClock);
+    repo = new PrismaRentalRepository(prisma, testClock, rentalPolicies);
     auditLogMock = jest.fn().mockResolvedValue(undefined);
     auditMock = {
       log: auditLogMock,

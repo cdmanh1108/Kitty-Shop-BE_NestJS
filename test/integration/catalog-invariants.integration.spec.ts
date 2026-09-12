@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,7 +25,7 @@ describe('Catalog persistence invariants', () => {
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
     );
-    rentals = new PrismaRentalRepository(prisma, fixedClock);
+    rentals = new PrismaRentalRepository(prisma, fixedClock, rentalPolicies);
   });
   beforeEach(async () => {
     await resetTestDatabase(prisma);

@@ -45,9 +45,13 @@ export class RentalService {
   ) {}
 
   list(user: CurrentUser, query: RentalListQuery) {
+    if (query.from && query.until) {
+      calculateRentalDurationDays(new Date(query.from), new Date(query.until));
+    }
     return this.repository.list({
       shopId: user.shopId,
       page: query.page,
+      customerId: query.customerId,
       limit: query.limit,
       search: query.search,
       status: query.status,
@@ -353,7 +357,10 @@ export class RentalService {
     const currentStatus = await this.repository.getStatus(user.shopId, id);
     if (!currentStatus) throw new NotFoundException('Rental order not found');
     if (!allowedFrom.some((status) => status === currentStatus)) {
-      throw new BadRequestException(`Cannot change order from ${currentStatus} to ${toStatus}`);
+      throw new BadRequestException({
+        code: 'RENTAL_TRANSITION_NOT_ALLOWED',
+        message: `Cannot change order from ${currentStatus} to ${toStatus}`,
+      });
     }
     const order = await this.repository.transition({
       shopId: user.shopId,

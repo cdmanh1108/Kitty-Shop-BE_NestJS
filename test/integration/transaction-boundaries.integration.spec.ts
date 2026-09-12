@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import {
   connectTestDatabase,
   disconnectTestDatabase,
@@ -21,7 +22,7 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
   let rentals: PrismaRentalRepository;
   beforeAll(async () => {
     prisma = await connectTestDatabase();
-    rentals = new PrismaRentalRepository(prisma, fixedClock);
+    rentals = new PrismaRentalRepository(prisma, fixedClock, rentalPolicies);
   });
   beforeEach(async () => {
     await resetTestDatabase(prisma);

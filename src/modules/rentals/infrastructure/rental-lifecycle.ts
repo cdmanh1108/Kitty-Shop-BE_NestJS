@@ -7,7 +7,12 @@ import {
   RENTAL_STATUS,
 } from '@modules/rentals/domain/rental-status';
 
-import { canRescheduleRental } from '../domain/rental-policy';
+import {
+  assertRentalReschedule,
+  canRescheduleRental,
+  canTransitionRental,
+} from '../domain/rental-policy';
+import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
@@ -25,6 +30,7 @@ export async function transition(
       where: { id: input.orderId, shopId: input.shopId },
     });
     if (!order || !input.fromStatuses.some((status) => status === order.status)) return null;
+    if (!canTransitionRental(order.status, input.toStatus)) return null;
     if (input.toStatus === RENTAL_STATUS.ACTIVE || input.toStatus === RENTAL_STATUS.CONFIRMED) {
       const allocations = await tx.rentalItemAllocation.findMany({
         where: { orderId: order.id, releasedAt: null },
@@ -158,6 +164,7 @@ export async function transition(
 export async function reschedule(
   prisma: PrismaService,
   input: Parameters<RentalRepository['reschedule']>[0],
+  policy: RentalPolicy,
 ): ReturnType<RentalRepository['reschedule']> {
   try {
     return await serializableTransaction(prisma, async (tx) => {
@@ -165,6 +172,14 @@ export async function reschedule(
         where: { id: input.orderId, shopId: input.shopId },
       });
       if (!order || !canRescheduleRental(order.status)) return null;
+      assertRentalReschedule({
+        createdAt: order.createdAt,
+        rentalStartAt: order.rentalStartAt,
+        rentalEndAt: order.rentalEndAt,
+        from: input.from,
+        until: input.until,
+        maxDaysFromBooking: policy.reschedule.maxDaysFromBooking,
+      });
       const rescheduled = await tx.rentalOrder.updateMany({
         where: { id: order.id, shopId: input.shopId, status: order.status },
         data: { rentalStartAt: input.from, rentalEndAt: input.until, updatedBy: input.changedBy },

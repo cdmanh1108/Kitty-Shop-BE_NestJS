@@ -47,6 +47,7 @@ export interface RentalDeliveryInput {
 }
 
 export interface RentalListQuery extends PaginationParams {
+  customerId?: string;
   search?: string;
   status?: string;
   paymentStatus?: string;

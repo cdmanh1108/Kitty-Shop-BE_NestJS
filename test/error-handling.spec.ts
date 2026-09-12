@@ -14,6 +14,7 @@ import { RentalOverlapError } from '../src/modules/rentals/domain/rental.reposit
 import {
   InvalidRentalIntervalError,
   RentalClaimLostError,
+  RentalInvariantError,
 } from '../src/modules/rentals/domain/rental-errors';
 import { FinanceInvariantError } from '../src/modules/finance/domain/finance.repository';
 import { CatalogInvariantError } from '../src/modules/catalog/domain/catalog.repository';
@@ -81,6 +82,18 @@ describe('AllExceptionsFilter', () => {
   describe('canonical domain error mapping', () => {
     beforeEach(() => {
       filter = new AllExceptionsFilter(true);
+    });
+
+    it('preserves the semantic rental code without interpreting the message', () => {
+      filter.catch(
+        new RentalInvariantError('RESCHEDULE_LIMIT_EXCEEDED', 'Booking window exceeded'),
+        mockHost,
+      );
+      expect(sentPayload).toMatchObject({
+        statusCode: 400,
+        code: 'RESCHEDULE_LIMIT_EXCEEDED',
+        message: 'Booking window exceeded',
+      });
     });
 
     it('maps exhausted serialization retries to a sanitized conflict', () => {

@@ -99,6 +99,7 @@ export interface RentalGetBookableVariantData {
 
 export interface RentalListCriteria {
   shopId: string;
+  customerId?: string;
   page: number;
   limit: number;
   search?: string;

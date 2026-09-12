@@ -1,4 +1,5 @@
 export type DepositMethod = 'CASH' | 'DOCUMENT';
+export const RENTAL_POLICY_SETTING_KEY = 'rental_policy';
 export type DepositDocumentType = 'CCCD' | 'GPLX';
 
 export interface CategoryDepositOverride {

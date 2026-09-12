@@ -1,4 +1,8 @@
 import { CLOCK, type Clock } from '@common/clock/clock';
+import {
+  RENTAL_POLICY_PROVIDER,
+  type RentalPolicyProvider,
+} from '@modules/settings/domain/rental-policy';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable, Inject } from '@nestjs/common';
 import type { RentalRepository } from '../domain/rental.repository';
@@ -20,6 +24,7 @@ export class PrismaRentalRepository implements RentalRepository {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(RENTAL_POLICY_PROVIDER) private readonly policies: RentalPolicyProvider,
   ) {}
 
   customerExists(
@@ -72,10 +77,11 @@ export class PrismaRentalRepository implements RentalRepository {
     return transition(this.prisma, ...args);
   }
 
-  reschedule(
+  async reschedule(
     ...args: Parameters<RentalRepository['reschedule']>
   ): ReturnType<RentalRepository['reschedule']> {
-    return reschedule(this.prisma, ...args);
+    const policy = await this.policies.getPolicy(args[0].shopId);
+    return reschedule(this.prisma, args[0], policy);
   }
 
   addCharge(

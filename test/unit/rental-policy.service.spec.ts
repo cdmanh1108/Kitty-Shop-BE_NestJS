@@ -42,6 +42,15 @@ describe('SettingsService - Rental Policy', () => {
   });
 
   describe('getRentalPolicy / getPolicy', () => {
+    it('prevents generic settings writes from bypassing policy validation', async () => {
+      const upsert = jest.fn();
+      repository.upsert = upsert;
+      await expect(service.upsert(mockUser, 'rental_policy', { value: {} })).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(upsert).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
     it('returns deterministic defaults when no persisted policy exists', async () => {
       getRentalPolicyMock.mockResolvedValue(null);
 
