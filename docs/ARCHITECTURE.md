@@ -26,7 +26,7 @@ Allowed dependency direction:
 - `infrastructure` implements domain ports and may import Prisma/external SDKs.
 - Modules communicate through exported application services or explicit ports, never by reaching into another module's Prisma repository.
 
-The current repository is intentionally pragmatic rather than “pure DDD”: Prisma models are returned from infrastructure where a separate domain entity adds no value, while important business boundaries are still protected by ports and use-case services.
+Repository ports expose explicit domain-owned records and read models. Prisma payload types remain inside infrastructure; application contracts do not depend on generated Prisma models. See [Application contracts](APPLICATION_CONTRACTS.md).
 
 Application services consume plain `application/*.contracts.ts` inputs mapped by the API, never transport DTOs. Repository ports expose independent records/read models from `domain/*.records.ts` and `*.models.ts`. Generic pagination is transport-independent. See [Application contracts](APPLICATION_CONTRACTS.md) for ownership, JSON/Decimal compatibility and idempotency replay semantics.
 

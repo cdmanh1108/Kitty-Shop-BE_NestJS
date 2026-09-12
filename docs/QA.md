@@ -10,15 +10,17 @@ npm run build
 npm run openapi:export
 ```
 
-For DB changes also run against a disposable PostgreSQL database:
+For database/concurrency changes use only a disposable test database:
 
 ```bash
 npm run db:generate
-npm run db:migrate
-npm run db:seed
+# Supply TEST_DATABASE_URL naming a dedicated test database first
+npm run test:db:migrate
+npm run test:integration
+npm run test:e2e
 ```
 
-The repository includes a GitHub Actions workflow that provisions PostgreSQL 17 and executes these gates.
+The existing GitHub Actions workflow is manual-only (workflow_dispatch). It runs install, Prisma generation, migration/seed and quality; it does not currently execute integration/E2E. Those gates must be run explicitly before merging relevant changes. No CI behavior was changed by this stabilization.
 
 ## Test database & test suites
 

@@ -60,3 +60,10 @@ When uncertain, prefer a small explicit module/port over cross-module imports or
 - Prefer critical behavior coverage over raw coverage percentage.
 
 Testing setup and actual suite boundaries: see docs/TESTING.md. Never use DATABASE_URL as fallback for destructive tests; use the owned, explicitly guarded TEST_DATABASE_URL client.
+
+## Current boundary references
+
+- Inventory operational condition is separate from occupancy. Unreleased allocation states own occupancy; elapsed dates do not release an ACTIVE rental. Archive and rate constraints: `docs/DATABASE.md`.
+- Media storage keys are canonical for managed objects; retain external legacy sources and derive serving URLs through the injected resolver. CLI import is outside HTTP runtime: `docs/OBJECT_STORAGE.md`, `docs/LEGACY_CATALOG_IMPORT.md`.
+- After a clean install, run `npm run db:generate` before checks. Run real PostgreSQL suites for transaction/concurrency changes: `docs/TESTING.md`.
+- Export OpenAPI in BE, then run `npm run api:sync` and `npm run api:check` in FE. Never edit generated artifacts manually. FE integration status is in `../kitty-admin-fe/docs/API_MIGRATION.md`.

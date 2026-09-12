@@ -62,6 +62,6 @@ Sync remains dry-run by default, supports local cache/resume, bounded concurrenc
 
 `object-storage:check` performs PUT/HEAD/DELETE against the configured bucket: it is a live mutation diagnostic, not an offline dry-run. It no longer prints any part of the access key. Run it only against an authorized target.
 
-Current download implementation validates the 15 MB limit after buffering and clears its timeout after headers. Those existing limits do not guarantee a bounded streamed response/body deadline; changing the downloader is outside this boundary cleanup.
+Current download implementation validates the 15 MB limit after buffering and keeps its timeout active through body consumption. The post-buffer size limit does not guarantee bounded streaming memory; changing the downloader is outside this boundary cleanup.
 
 See [Task 6 report](STORAGE_CLI_BOUNDARIES.md) for verification and remaining limitations.

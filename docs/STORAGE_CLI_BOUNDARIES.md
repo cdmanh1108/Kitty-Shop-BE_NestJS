@@ -1,5 +1,7 @@
 # Task 6 — Object storage and legacy CLI boundaries
 
+Historical snapshot. [Task 7](STABILIZATION.md) adds actual CLI regression coverage, fixes body timeout and dry-run precedence, and removes private-workbook test dependencies.
+
 ## Root causes and final architecture
 
 Catalog read/command projections constructed public URLs from raw environment values. StorageModule looked up uppercase environment names rather than the camelCase configuration loader output, then silently bypassed typed configuration. Missing public configuration produced relative URLs, and disabled storage HEAD returned a misleading missing-object result. CatalogModule registered/exported the XLSX importer, pulling CLI dependencies into HTTP startup.
@@ -19,13 +21,13 @@ The importer remains infrastructure tooling and retains its existing per-product
 
 No database migration. The schema comment now documents the existing transition model:
 
-| Path | Persistence | Serving |
-| --- | --- | --- |
-| Product create/add-media | External URL; no runtime upload endpoint exists | External URL while storageKey is null |
-| Legacy importer | Original external URL and legacy metadata | Same external fallback |
-| Media sync | Upload/HEAD first, then storageKey and migration metadata; original URL retained | Derived public URL from the key |
-| Product list/detail/media-command response | No URL write | Shared injected resolver |
-| Seed | No new managed upload path | Existing fixture semantics |
+| Path                                       | Persistence                                                                      | Serving                               |
+| ------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------- |
+| Product create/add-media                   | External URL; no runtime upload endpoint exists                                  | External URL while storageKey is null |
+| Legacy importer                            | Original external URL and legacy metadata                                        | Same external fallback                |
+| Media sync                                 | Upload/HEAD first, then storageKey and migration metadata; original URL retained | Derived public URL from the key       |
+| Product list/detail/media-command response | No URL write                                                                     | Shared injected resolver              |
+| Seed                                       | No new managed upload path                                                       | Existing fixture semantics            |
 
 For managed media, storageKey is canonical; retained url is migration provenance, not a fallback if public configuration is missing. New migration writes do not persist provider-derived URLs. Existing key/URL data remain untouched. No automatic object deletion, new upload endpoint or private-document workflow was added.
 

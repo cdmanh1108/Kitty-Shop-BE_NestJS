@@ -40,4 +40,4 @@ Endpoint paths, HTTP methods, permissions, request validation, response fields, 
 
 `test/application-boundaries.spec.ts` covers DTO defaults/nested copies, idempotency bytes/replay, query timezone/tenant mapping, report response preservation, errors and pagination. A TypeScript AST test prevents API/Prisma/decorator imports and untyped contracts in application/domain modules.
 
-Remaining work is deliberately separate: splitting large Prisma repositories, deeper persistence mappers, Money/status/domain errors, idempotency schema/versioning, and database-backed concurrency/e2e tests. Existing broad Swagger `Object` response fields were not redesigned in this task.
+Current repository decomposition, domain vocabularies and PostgreSQL integration/E2E coverage are documented in ARCHITECTURE.md, BUSINESS_TYPES.md and TESTING.md. Money precision redesign and versioned idempotency replay schemas remain separate work.

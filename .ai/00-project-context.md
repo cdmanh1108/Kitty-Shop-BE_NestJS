@@ -7,7 +7,7 @@ Current admin responsibilities:
 - dashboard: revenue/order/overdue/near-return KPIs.
 - rental calendar: day/week/month data with customer/order/items/status.
 - catalog: product, size, color, rental prices, deposit, images.
-- physical inventory: available/reserved/rented/cleaning/repair/damaged/lost state + history.
+- physical inventory: AVAILABLE/CLEANING/REPAIRING/DAMAGED/LOST/RETIRED operational condition + history; rental allocations own reservation/occupancy.
 - customer CRM: contact data, history and notes.
 - rental orders: date range, allocated physical items, charges, deposit/payment state.
 - finance: rental money, accessories, late/cleaning/damage/shipping fees, expenses/profit.

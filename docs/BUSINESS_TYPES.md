@@ -2,15 +2,15 @@
 
 ## Vocabulary ownership
 
-| Concept | Canonical owner | Persistence / API |
-| --- | --- | --- |
-| Rental lifecycle, item state, allocation state | `rentals/domain/rental-status.ts` | Existing uppercase strings; separate concepts even when values overlap |
-| Rental charge type | `rentals/domain/charge-type.ts` | Existing charge values |
-| Order payment, deposit, transaction and expense states | `finance/domain/payment-status.ts` | Separate vocabularies, not one generic payment status |
-| Payment direction, purpose and method | `finance/domain/payment-types.ts` | Existing values and validation |
-| Product and inventory state | `catalog/domain/catalog-status.ts` | Product and physical inventory remain separate |
-| Delivery state, direction and method | `deliveries/domain/delivery-status.ts` | Existing values and validation |
-| Customer state | `customers/domain/customer-status.ts` | ACTIVE / BLOCKED |
+| Concept                                                | Canonical owner                        | Persistence / API                                                      |
+| ------------------------------------------------------ | -------------------------------------- | ---------------------------------------------------------------------- |
+| Rental lifecycle, item state, allocation state         | `rentals/domain/rental-status.ts`      | Existing uppercase strings; separate concepts even when values overlap |
+| Rental charge type                                     | `rentals/domain/charge-type.ts`        | Existing charge values                                                 |
+| Order payment, deposit, transaction and expense states | `finance/domain/payment-status.ts`     | Separate vocabularies, not one generic payment status                  |
+| Payment direction, purpose and method                  | `finance/domain/payment-types.ts`      | Existing values and validation                                         |
+| Product and inventory state                            | `catalog/domain/catalog-status.ts`     | Product and physical inventory remain separate                         |
+| Delivery state, direction and method                   | `deliveries/domain/delivery-status.ts` | Existing values and validation                                         |
+| Customer state                                         | `customers/domain/customer-status.ts`  | ACTIVE / BLOCKED                                                       |
 
 DTO validation and Swagger reuse these constants without changing enum ordering or
 defaults. Validated payment creation, delivery and inventory mutation inputs carry
@@ -81,4 +81,5 @@ place to preserve response behavior; no global exception filter redesign is incl
 thresholds/refunds, rental policy, typed interval errors, reference format and all three
 Clock consumers. The existing persistence and architecture tests continue to guard
 transaction delegation and inner-layer import boundaries. No database is mutated by
-these tests; PostgreSQL integration/concurrency coverage needs a separate harness.
+these tests; PostgreSQL integration/concurrency coverage runs through the existing
+guarded test harness described in [TESTING.md](TESTING.md).

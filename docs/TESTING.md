@@ -32,7 +32,7 @@ These are local test credentials, never production defaults. Wait until PostgreS
 
 ## Database safety and lifecycle
 
-`test/helpers/test-database.ts` requires NODE_ENV=test and an explicit PostgreSQL URL naming `test_*` or `*_test`, with public schema. It rejects misleading names such as `contest`, target overrides and arbitrary clients. Before truncation it checks current_database/current_schema against the owned connection; it never trusts a separately supplied Prisma client just because an environment variable looks safe.
+`test/helpers/test-database.ts` requires NODE*ENV=test and an explicit PostgreSQL URL naming `test*_`or`_\_test`, with public schema. It rejects misleading names such as `contest`, target overrides and arbitrary clients. Before truncation it checks current_database/current_schema against the owned connection; it never trusts a separately supplied Prisma client just because an environment variable looks safe.
 
 A dedicated one-connection Prisma client holds a PostgreSQL advisory session lock for the suite. A second process targeting the same DB fails instead of resetting another suite's fixtures. The test Prisma client retains multiple connections for real concurrent transactions. Do not put a transaction-pooling proxy between tests and PostgreSQL because the lease requires session affinity.
 
@@ -48,19 +48,19 @@ E2E uses AppModule and the shared `configureApplication` bootstrap for middlewar
 
 ## Critical coverage matrix
 
-| Area | Verified behavior |
-| --- | --- |
-| Rentals | Application validation/not-found/state decisions; real create, reschedule and lifecycle writes |
-| Overlap | Half-open adjacent boundaries accepted, overlapping intervals denied by availability query and PostgreSQL exclusion constraint |
-| Concurrency | Conflicting booking has one winner; concurrent confirmation/completion has one winner and one rental-count increment |
-| Transactions/outbox | Allocation failure rolls back rental writes; forced outbox failure rolls back rental + idempotency completion or payment + payment state |
-| Payments | Partial/full/void state, deposit held/refund ceiling; revenue SQL excludes deposits and voided records |
-| Idempotency | Replay, payload mismatch, tenant-separated keys, concurrent same-key one mutation, fresh/stale lease and stale owner's release fencing |
-| Auth | Real login/rotation/logout; concurrent refresh one winner, hash-only storage, expired token rejection and rollback on replacement insertion failure |
-| Tenant | Rental/payment/catalog/customer reads/lists/writes scoped; HTTP cross-shop read/update denied and injected shopId rejected |
-| Audit | Persisted actor/shop/request correlation, one audit on replay; existing best-effort failure and sanitization regression tests retained |
-| HTTP security | 400/401/403/429, valid permissions, token response hygiene, health public, rental create/replay/overlap |
-| Configuration/errors | Existing invalid config and production unknown-error sanitization tests retained |
+| Area                 | Verified behavior                                                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rentals              | Application validation/not-found/state decisions; real create, reschedule and lifecycle writes                                                      |
+| Overlap              | Half-open adjacent boundaries accepted, overlapping intervals denied by availability query and PostgreSQL exclusion constraint                      |
+| Concurrency          | Conflicting booking has one winner; concurrent confirmation/completion has one winner and one rental-count increment                                |
+| Transactions/outbox  | Allocation failure rolls back rental writes; forced outbox failure rolls back rental + idempotency completion or payment + payment state            |
+| Payments             | Partial/full/void state, deposit held/refund ceiling; revenue SQL excludes deposits and voided records                                              |
+| Idempotency          | Replay, payload mismatch, tenant-separated keys, concurrent same-key one mutation, fresh/stale lease and stale owner's release fencing              |
+| Auth                 | Real login/rotation/logout; concurrent refresh one winner, hash-only storage, expired token rejection and rollback on replacement insertion failure |
+| Tenant               | Rental/payment/catalog/customer reads/lists/writes scoped; HTTP cross-shop read/update denied and injected shopId rejected                          |
+| Audit                | Persisted actor/shop/request correlation, one audit on replay; existing best-effort failure and sanitization regression tests retained              |
+| HTTP security        | 400/401/403/429, valid permissions, token response hygiene, health public, rental create/replay/overlap                                             |
+| Configuration/errors | Existing invalid config and production unknown-error sanitization tests retained                                                                    |
 
 Outbox has no dispatcher/consumer, so there are no invented delivery/exactly-once tests. Financial endpoints currently do not implement idempotency; no unsupported guarantee was added. Meaningful remaining expansion areas are delivery transitions, dashboard queries, product/customer performance reports, and refresh versus password-change session revocation races.
 
@@ -140,3 +140,18 @@ SQL trigger. Direct/import uniqueness is enforced by SQL indexes. CLI imports re
 their per-product transaction and may report conflict rather than silently merge
 competing prices or physical identities. Production duplicate data must be reconciled
 before deploying migration 202609110004; tests do not assert that production is clean.
+
+## Clean dependency verification
+
+```bash
+npm ci
+npm run db:generate
+npm run typecheck
+npm run quality
+```
+
+`db:generate` is required after a clean install; npm ci alone may leave the generic Prisma client stub. `quality` covers lint, unit tests, build and OpenAPI export; it does not run PostgreSQL integration/E2E. Follow TESTING.md for an isolated TEST_DATABASE_URL, migrate with `test:db:migrate`, then run `test:integration` and `test:e2e` sequentially. Migration deploy changes the selected database; never use the application database for test cleanup.
+
+See [Task 7 stabilization](STABILIZATION.md) for the latest verification. Earlier dated counts are historical, not the current suite contract.
+
+Metadata-only OpenAPI export still validates application configuration. Without a configured local .env, provide an explicit synthetic JWT_ACCESS_SECRET of at least 32 characters for verification. The export command itself sets SKIP_DATABASE_CONNECT; let test harnesses manage their own NODE_ENV. Never reuse the synthetic signing key in a deployment. No database connection is needed for export.

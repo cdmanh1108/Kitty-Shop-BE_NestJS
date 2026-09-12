@@ -169,6 +169,37 @@ describe('Catalog persistence invariants', () => {
     },
   );
 
+  it('DB admits only one concurrent product-level active rate with a NULL variant', async () => {
+    const f = await rentalScenario(prisma);
+    const data = {
+      shopId: f.shop.id,
+      productId: f.product.id,
+      variantId: null,
+      durationDays: 27,
+      price: 100000,
+    };
+    const results = await Promise.allSettled([
+      prisma.rentalRate.create({ data }),
+      prisma.rentalRate.create({ data }),
+    ]);
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    const failures = results.filter((r) => r.status === 'rejected');
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.reason).toMatchObject({ code: 'P2002' });
+
+    expect(
+      await prisma.rentalRate.count({
+        where: {
+          shopId: f.shop.id,
+          productId: f.product.id,
+          variantId: null,
+          durationDays: 27,
+          isActive: true,
+        },
+      }),
+    ).toBe(1);
+  });
+
   it.each([false, true])(
     'DB protects active rate scope (product-level=%s) while preserving inactive history',
     async (productLevel) => {

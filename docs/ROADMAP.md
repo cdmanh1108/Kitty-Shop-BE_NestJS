@@ -20,7 +20,7 @@ Before selling the platform to unrelated shops: PostgreSQL RLS/composite tenant 
 
 ## Storage
 
-`product_media` already stores storage keys/URLs. Add an object-storage adapter (S3/R2/etc.) and signed upload flow when admin image upload is implemented.
+`product_media` already stores storage keys/URLs. A provider-neutral S3-compatible adapter and public URL resolver are implemented. Admin upload UX and private authorized document access remain future work; see OBJECT_STORAGE.md.
 
 ## Observability
 

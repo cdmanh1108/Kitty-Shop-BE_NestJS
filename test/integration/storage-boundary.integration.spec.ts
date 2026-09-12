@@ -14,6 +14,7 @@ import {
   disconnectTestDatabase,
 } from '../helpers/test-database';
 import { createTestShop, createTestProductWithVariant } from '../fixtures/test-factories';
+import { createLegacyWorkbookFixture } from '../fixtures/legacy-workbook';
 
 describe('Storage persistence and CLI isolation', () => {
   let prisma: PrismaService;
@@ -24,6 +25,37 @@ describe('Storage persistence and CLI isolation', () => {
     await resetTestDatabase(prisma);
   });
   afterAll(disconnectTestDatabase);
+
+  it('reruns the same synthetic import without duplicating canonical records', async () => {
+    const shop = await createTestShop(prisma);
+    const workbook = createLegacyWorkbookFixture();
+    const importer = new LegacyCatalogImportService(prisma, { log: () => Promise.resolve() });
+    try {
+      const options = { filePath: workbook.filePath, shopCode: shop.code, apply: true };
+      expect((await importer.execute(options)).success).toBe(true);
+      const before = await prisma.product.findMany({
+        where: { shopId: shop.id },
+        include: {
+          variants: { include: { inventoryItems: true, rentalRates: true } },
+          media: true,
+        },
+      });
+      expect(before).toHaveLength(1);
+      expect(before[0]?.variants[0]?.inventoryItems).toHaveLength(1);
+      expect((await importer.execute(options)).mutations.productsCreated).toBe(0);
+      expect(
+        await prisma.product.findMany({
+          where: { shopId: shop.id },
+          include: {
+            variants: { include: { inventoryItems: true, rentalRates: true } },
+            media: true,
+          },
+        }),
+      ).toEqual(before);
+    } finally {
+      workbook.cleanup();
+    }
+  });
 
   it('changes catalog URLs through configuration without rewriting stored media', async () => {
     const shop = await createTestShop(prisma);

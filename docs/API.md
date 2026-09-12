@@ -46,14 +46,20 @@ Send an `Idempotency-Key` header for retries. The backend creates the order, his
 
 ## FE code generation
 
-The portable contract is `generated/openapi.json`. Common FE choices:
+The portable contract is `generated/openapi.json`. In this workspace:
 
 ```bash
-npx openapi-typescript generated/openapi.json -o src/api/schema.d.ts
+# kitty-be
+npm run openapi:export
+# kitty-admin-fe
+npm run api:sync
+npm run api:check
 ```
 
-or point Orval/OpenAPI Generator at the same file. Regenerate the OpenAPI artifact in CI whenever controller/DTO contracts change.
+Do not hand-edit BE generated/openapi.json, FE openapi/kitty-api.json or FE src/api/generated/schema.ts. The FE uses openapi-typescript and openapi-fetch. api:check validates snapshot-to-TypeScript consistency; compare parsed BE/FE JSON or sync to verify cross-repository equality. Swagger HTTP exposure is controlled by SWAGGER_ENABLED and defaults off in production.
 
 ## API versioning
 
 The first stable contract is URL-prefixed as `/api/v1`. Add `/api/v2` only for breaking transport changes; business evolution should usually be backward-compatible inside v1.
+
+OpenAPI info.title is generated from APP_NAME. Use the same APP_NAME (Kitty Shop API for the committed snapshot) when comparing complete documents; distinguish configuration metadata from endpoint/schema drift.

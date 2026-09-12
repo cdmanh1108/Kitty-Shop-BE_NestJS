@@ -105,3 +105,18 @@ See [docs/API.md](docs/API.md) for endpoint groups and [docs/ROADMAP.md](docs/RO
 ## Storage and import boundaries
 
 Catalog media reads use an injected public URL resolver and centrally validated storage configuration. Key-backed objects retain provider-neutral identity; external legacy URLs remain supported. Legacy Excel import runs in its own CLI context, outside HTTP CatalogModule. See [Object storage](docs/OBJECT_STORAGE.md) and [Task 6 verification](docs/STORAGE_CLI_BOUNDARIES.md).
+
+## Clean dependency verification
+
+```bash
+npm ci
+npm run db:generate
+npm run typecheck
+npm run quality
+```
+
+`db:generate` is required after a clean install; npm ci alone may leave the generic Prisma client stub. `quality` covers lint, unit tests, build and OpenAPI export; it does not run PostgreSQL integration/E2E. Follow TESTING.md for an isolated TEST_DATABASE_URL, migrate with `test:db:migrate`, then run `test:integration` and `test:e2e` sequentially. Migration deploy changes the selected database; never use the application database for test cleanup.
+
+See [Task 7 stabilization](docs/STABILIZATION.md) for the latest verification. Earlier dated counts are historical, not the current suite contract.
+
+Metadata-only OpenAPI export still validates application configuration. Without a configured local .env, provide an explicit synthetic JWT_ACCESS_SECRET of at least 32 characters for verification. The export command itself sets SKIP_DATABASE_CONNECT; let test harnesses manage their own NODE_ENV. Never reuse the synthetic signing key in a deployment. No database connection is needed for export.

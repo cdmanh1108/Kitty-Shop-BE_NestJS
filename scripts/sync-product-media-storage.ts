@@ -1,6 +1,5 @@
 import { parseObjectStorageConfiguration } from '../src/config/object-storage.configuration';
 import { config } from 'dotenv';
-config();
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -21,7 +20,7 @@ interface CliArgs {
   cacheDir: string;
 }
 
-function parseCliArgs(args: string[]): CliArgs {
+export function parseCliArgs(args: string[]): CliArgs {
   const result: CliArgs = {
     apply: false,
     dryRun: true,
@@ -52,6 +51,13 @@ function parseCliArgs(args: string[]): CliArgs {
     }
   }
 
+  if (args.includes('--dry-run')) {
+    result.apply = false;
+    result.dryRun = true;
+  }
+  if (!Number.isInteger(result.concurrency)) throw new Error('--concurrency must be an integer');
+  if (result.limit !== undefined && (!Number.isInteger(result.limit) || result.limit < 1))
+    throw new Error('--limit must be a positive integer');
   return result;
 }
 
@@ -84,7 +90,7 @@ async function sleep(ms: number): Promise<void> {
 /**
  * Downloads resource from external URL with retry, exponential backoff, jitter, and timeout.
  */
-async function downloadWithRetry(
+export async function downloadWithRetry(
   url: string,
   cachePath: string,
   maxRetries = 3,
@@ -100,10 +106,9 @@ async function downloadWithRetry(
   let attempt = 0;
   while (attempt < maxRetries) {
     attempt++;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
       const response = await fetch(url, {
         signal: controller.signal,
         redirect: 'follow',
@@ -111,8 +116,6 @@ async function downloadWithRetry(
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) KittyRentalShop/1.0',
         },
       });
-
-      clearTimeout(timeoutId);
 
       const status = response.status;
       const contentType = response.headers.get('content-type') || undefined;
@@ -171,13 +174,16 @@ async function downloadWithRetry(
       }
       const delay = Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 500);
       await sleep(delay);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   throw new Error(`Failed to download after ${maxRetries} attempts`);
 }
 
-async function main() {
+export async function main() {
+  config();
   const args = parseCliArgs(process.argv.slice(2));
 
   console.log('====================================================');
@@ -409,7 +415,8 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('[FATAL]', err);
-  process.exit(1);
-});
+if (require.main === module)
+  main().catch((err) => {
+    console.error('[FATAL]', err);
+    process.exit(1);
+  });

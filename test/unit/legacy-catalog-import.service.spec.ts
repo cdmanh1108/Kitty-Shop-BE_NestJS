@@ -1,3 +1,4 @@
+import { createLegacyWorkbookFixture } from '../fixtures/legacy-workbook';
 import { LegacyCatalogImportService } from '../../src/cli/legacy-catalog/legacy-catalog-import.service';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
@@ -16,6 +17,11 @@ interface MockPrismaService {
 }
 
 describe('LegacyCatalogImportService Unit Tests', () => {
+  let workbook: ReturnType<typeof createLegacyWorkbookFixture>;
+  beforeAll(() => {
+    workbook = createLegacyWorkbookFixture();
+  });
+  afterAll(() => workbook.cleanup());
   let service: LegacyCatalogImportService;
   let mockPrisma: MockPrismaService;
   let auditLogMock: jest.Mock;
@@ -102,7 +108,7 @@ describe('LegacyCatalogImportService Unit Tests', () => {
 
     await expect(
       service.execute({
-        filePath: './private-data/legacy/Quản lý lịch thuê KITTY.xlsx',
+        filePath: workbook.filePath,
         shopCode: 'NON_EXISTENT_SHOP',
         dryRun: true,
       }),
@@ -111,16 +117,16 @@ describe('LegacyCatalogImportService Unit Tests', () => {
 
   it('performs dry-run with zero database mutations', async () => {
     const report = await service.execute({
-      filePath: './private-data/legacy/Quản lý lịch thuê KITTY.xlsx',
+      filePath: workbook.filePath,
       shopCode: 'MAIN',
       dryRun: true,
     });
 
     expect(report.mode).toBe('DRY_RUN');
     expect(report.success).toBe(true);
-    expect(report.reconciliation.totalProductRows).toBe(116);
-    expect(report.reconciliation.uniqueProductCodes).toBe(116);
-    expect(report.reconciliation.legacyQuantitySum).toBe(117);
+    expect(report.reconciliation.totalProductRows).toBe(1);
+    expect(report.reconciliation.uniqueProductCodes).toBe(1);
+    expect(report.reconciliation.legacyQuantitySum).toBe(1);
 
     // Assert zero database write calls occurred in dry-run
     expect(mockPrisma.product.create).not.toHaveBeenCalled();
@@ -136,7 +142,7 @@ describe('LegacyCatalogImportService Unit Tests', () => {
         id: 'prod-SP001',
         shopId: 'shop-uuid-1',
         code: 'SP001',
-        name: 'Bikini sọc đỏ',
+        name: 'Synthetic red dress',
         variants: [
           {
             id: 'var-SP001-M-DO',
@@ -150,7 +156,7 @@ describe('LegacyCatalogImportService Unit Tests', () => {
     ]);
 
     const report = await service.execute({
-      filePath: './private-data/legacy/Quản lý lịch thuê KITTY.xlsx',
+      filePath: workbook.filePath,
       shopCode: 'MAIN',
       dryRun: true,
     });
@@ -174,7 +180,7 @@ describe('LegacyCatalogImportService Unit Tests', () => {
     ]);
 
     const report = await service.execute({
-      filePath: './private-data/legacy/Quản lý lịch thuê KITTY.xlsx',
+      filePath: workbook.filePath,
       shopCode: 'MAIN',
       dryRun: true,
     });

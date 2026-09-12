@@ -70,7 +70,7 @@ Cold-cache counts below are derived from consumer calls and verified with mocked
 
 Product lookup keys normalize filters/defaults and share a five-minute stale time. Category selectors and the category screen share the same catalog lookup cache. Inventory list keys capture normalized immutable request parameters. Product mutation invalidation adds lookup and category counts to the existing fan-out. Inventory mutation invalidation is centralized for list/detail/summary/history and product detail; archive uses the cached product ID, with product-details prefix fallback if identity is unavailable. No global cache clear is used.
 
-The real product list uses a small list mapper; editor raw DTO behavior from Task 3 is retained. Global search's product portion uses server lookup. `useAllProducts` remains only for unmigrated Order/Calendar consumers and now reads their mock product dataset through `services.productCompatibility`, never a fake full real catalog. Existing mock rental history and compatibility pricing are not canonical real product pricing and remain outside this task.
+The real Product list uses a small list mapper; editor queries preserve raw generated DTOs. Global Search uses server Product lookup. Orders/Calendar use the separate `useMockOrderCatalog` hook through `mock-services.ts`. Real Product detail does not join mock rental history or fabricate compatibility pricing. See the frontend API_MIGRATION.md for current migration status.
 
 ## Files and verification
 
