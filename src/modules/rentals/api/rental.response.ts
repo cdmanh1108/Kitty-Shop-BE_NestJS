@@ -8,7 +8,7 @@ function timestamp(value: Date | string): string {
   return typeof value === 'string' ? value : value.toISOString();
 }
 
-type Summary = RentalOrderPage['items'][number];
+type Summary = RentalOrderPage['items'][number] | NonNullable<RentalOrderDetails>;
 
 export function toRentalSummary(row: Summary | JsonSerialized<Summary>): RentalOrderListItemResDto {
   return {
@@ -21,13 +21,9 @@ export function toRentalSummary(row: Summary | JsonSerialized<Summary>): RentalO
     paymentStatus: row.paymentStatus,
     depositStatus: row.depositStatus,
     grandTotal: row.grandTotal.toString(),
+    itemCount: 'itemCount' in row ? row.itemCount : row.items.reduce((sum, item) => sum + item.quantity, 0),
+    productCount: 'productCount' in row ? row.productCount : row.items.length,
     customer: { id: row.customer.id, fullName: row.customer.fullName, phone: row.customer.phone },
-    items: row.items.map((item) => ({
-      id: item.id,
-      productNameSnapshot: item.productNameSnapshot,
-      variantNameSnapshot: item.variantNameSnapshot,
-      quantity: item.quantity,
-    })),
   };
 }
 

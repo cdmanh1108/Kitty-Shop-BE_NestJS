@@ -67,14 +67,6 @@ export async function list(
         depositStatus: true,
         grandTotal: true,
         customer: { select: { id: true, fullName: true, phone: true } },
-        items: {
-          select: {
-            id: true,
-            productNameSnapshot: true,
-            variantNameSnapshot: true,
-            quantity: true,
-          },
-        },
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (input.page - 1) * input.limit,
@@ -82,7 +74,20 @@ export async function list(
     }),
     prisma.rentalOrder.count({ where }),
   ]);
-  return { items, meta: paginateMeta(input.page, input.limit, total) };
+  const counts = items.length
+    ? await prisma.rentalOrderItem.groupBy({
+        by: ['orderId'],
+        where: { shopId: input.shopId, orderId: { in: items.map((item) => item.id) } },
+        orderBy: { orderId: 'asc' },
+        _sum: { quantity: true },
+        _count: { _all: true },
+      })
+    : [];
+  const countByOrder = new Map(counts.map((row) => [row.orderId, { itemCount: row._sum.quantity ?? 0, productCount: row._count._all }]));
+  return {
+    items: items.map((item) => ({ ...item, itemCount: countByOrder.get(item.id)?.itemCount ?? 0, productCount: countByOrder.get(item.id)?.productCount ?? 0 })),
+    meta: paginateMeta(input.page, input.limit, total),
+  };
 }
 export function get(
   prisma: PrismaService,

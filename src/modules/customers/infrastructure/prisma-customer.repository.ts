@@ -31,6 +31,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
     const [customers, total] = await this.prisma.$transaction([
       this.prisma.customer.findMany({
         where,
+        select: { id: true, customerCode: true, fullName: true, phone: true, facebook: true, zalo: true },
         orderBy: { createdAt: 'desc' },
         skip: (input.page - 1) * input.limit,
         take: input.limit,
@@ -111,17 +112,21 @@ export class PrismaCustomerRepository implements CustomerRepository {
   async findById(shopId: string, id: string) {
     const customer = await this.prisma.customer.findFirst({
       where: { id, shopId, archivedAt: null },
-      include: {
-        addresses: { orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }] },
-        notes: { orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }] },
-        tags: { include: { tag: true } },
+      select: {
+        id: true,
+        customerCode: true,
+        fullName: true,
+        phone: true,
+        facebook: true,
+        zalo: true,
+        addresses: { orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }], select: { id: true, addressLine: true, isDefault: true } },
+        notes: { orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }], select: { id: true, content: true, createdAt: true } },
       },
     });
     if (!customer) return null;
 
-    const [totalOrders, completedRentalCount, lastRental, payments, recentOrders] =
+    const [completedRentalCount, lastRental, payments] =
       await this.prisma.$transaction([
-        this.prisma.rentalOrder.count({ where: { shopId, customerId: id } }),
         this.prisma.rentalOrder.count({ where: { shopId, customerId: id, status: 'COMPLETED' } }),
         this.prisma.rentalOrder.findFirst({
           where: { shopId, customerId: id, status: 'COMPLETED' },
@@ -133,20 +138,6 @@ export class PrismaCustomerRepository implements CustomerRepository {
           where: { shopId, customerId: id, status: 'COMPLETED', voidedAt: null },
           orderBy: [{ direction: 'asc' }, { purpose: 'asc' }],
           _sum: { amount: true },
-        }),
-        this.prisma.rentalOrder.findMany({
-          where: { shopId, customerId: id },
-          select: {
-            id: true,
-            orderNumber: true,
-            rentalStartAt: true,
-            rentalEndAt: true,
-            status: true,
-            paymentStatus: true,
-            grandTotal: true,
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
         }),
       ]);
 
@@ -171,15 +162,12 @@ export class PrismaCustomerRepository implements CustomerRepository {
 
     return {
       ...customer,
-      tags: customer.tags.map((item) => item.tag),
       stats: {
-        totalOrders,
         completedRentalCount,
         totalPaid: netNonDepositPaid,
         depositHeld,
         lastRentalAt: lastRental?.rentalStartAt ?? null,
       },
-      recentOrders,
     };
   }
 

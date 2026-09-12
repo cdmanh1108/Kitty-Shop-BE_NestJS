@@ -55,7 +55,10 @@ describe('Catalog and customer persistence boundaries', () => {
     });
     if (!product) throw new Error('Missing product');
     const detail = await repo.findProduct(shop.id, product.id);
-    expect(detail?.variants[0]?.inventoryItems).toHaveLength(2);
+    expect(detail?.variants[0]?._count.inventoryItems).toBe(2);
+    expect(detail?.variants[0]).not.toHaveProperty('inventoryItems');
+    expect(detail).not.toHaveProperty('metadata');
+    expect(detail?.media).toEqual([]);
     expect(detail?.variants[0]?.rentalRates[0]?.price.toString()).toBe('50000');
     expect(JSON.stringify(detail)).toContain('"price":"50000"');
     expect(await repo.findProduct(other.id, product.id)).toBeNull();
@@ -81,6 +84,9 @@ describe('Catalog and customer persistence boundaries', () => {
         (row) => row.id,
       ),
     ).toEqual([customer.id]);
+    expect(Object.keys((await repo.list({ shopId: f.shop.id, search: 'Alice', page: 1, limit: 10 })).items[0] ?? {}).sort()).toEqual([
+      'completedRentalCount', 'customerCode', 'facebook', 'fullName', 'id', 'lastRentalAt', 'phone', 'totalPaid', 'zalo',
+    ]);
     expect(
       (
         await repo.list({ shopId: f.shop.id, search: 'Alice Updated', page: 1, limit: 10 })
@@ -90,6 +96,11 @@ describe('Catalog and customer persistence boundaries', () => {
       (await repo.list({ shopId: other.id, search: 'Alice', page: 1, limit: 10 })).items,
     ).toEqual([]);
     expect(await repo.findById(other.id, customer.id)).toBeNull();
+    const detail = await repo.findById(f.shop.id, customer.id);
+    expect(Object.keys(detail ?? {}).sort()).toEqual([
+      'addresses', 'customerCode', 'facebook', 'fullName', 'id', 'notes', 'phone', 'stats', 'zalo',
+    ]);
+    expect(detail).not.toHaveProperty('recentOrders');
     expect(await repo.update(other.id, customer.id, { fullName: 'Spoof' })).toBeNull();
 
     await expect(

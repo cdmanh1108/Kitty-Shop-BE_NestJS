@@ -235,7 +235,8 @@ export class RentalOrderListItemResDto {
   @ApiProperty() depositStatus!: string;
   @ApiProperty({ type: String, example: '500000.00' }) grandTotal!: string;
   @ApiProperty({ type: RentalCustomerResDto }) customer!: RentalCustomerResDto;
-  @ApiProperty({ type: [RentalItemSummaryResDto] }) items!: RentalItemSummaryResDto[];
+  @ApiProperty() itemCount!: number;
+  @ApiProperty() productCount!: number;
 }
 
 export class RentalSettlementResDto {
@@ -247,7 +248,7 @@ export class RentalSettlementResDto {
 }
 
 export class RentalOrderResDto extends RentalOrderListItemResDto {
-  @ApiProperty({ type: [RentalItemResDto] }) declare items: RentalItemResDto[];
+  @ApiProperty({ type: [RentalItemResDto] }) items!: RentalItemResDto[];
   @ApiProperty({ type: String, example: '450000.00' }) rentalSubtotal!: string;
   @ApiProperty({ type: String, example: '50000.00' }) chargesTotal!: string;
   @ApiProperty({ type: String, example: '0.00' }) discountTotal!: string;

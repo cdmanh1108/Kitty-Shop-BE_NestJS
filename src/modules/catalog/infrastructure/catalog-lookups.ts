@@ -77,8 +77,6 @@ export async function createCategory(
         description: true,
         sortOrder: true,
         isActive: true,
-        createdAt: true,
-        updatedAt: true,
       },
     });
   } catch (error) {
@@ -122,8 +120,6 @@ export async function listCategories(
         description: true,
         sortOrder: true,
         isActive: true,
-        createdAt: true,
-        updatedAt: true,
         _count: { select: { products: { where: { shopId: input.shopId, archivedAt: null } } } },
       },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -196,8 +192,6 @@ export async function updateCategory(
       description: true,
       sortOrder: true,
       isActive: true,
-      createdAt: true,
-      updatedAt: true,
       _count: { select: { products: { where: { shopId, archivedAt: null } } } },
     },
   });

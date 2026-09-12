@@ -87,7 +87,13 @@ export class CustomerResDto {
   @ApiProperty() updatedAt!: Date;
 }
 
-export class CustomerListItemResDto extends CustomerResDto {
+export class CustomerListItemResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() customerCode!: string;
+  @ApiProperty() fullName!: string;
+  @ApiProperty() phone!: string;
+  @ApiPropertyOptional({ nullable: true, type: String }) facebook!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) zalo!: string | null;
   @ApiProperty() completedRentalCount!: number;
   @ApiProperty({ example: 2500000 }) totalPaid!: number;
   @ApiPropertyOptional({ nullable: true, type: Date }) lastRentalAt!: Date | null;
@@ -118,7 +124,6 @@ export class CustomerAddressReqDto {
 export class UpdateCustomerAddressReqDto extends PartialType(CustomerAddressReqDto) {}
 
 export class CustomerStatsResDto {
-  @ApiProperty() totalOrders!: number;
   @ApiProperty() completedRentalCount!: number;
   @ApiProperty({ example: 2500000 }) totalPaid!: number;
   @ApiProperty({ example: 1000000 }) depositHeld!: number;
@@ -152,30 +157,28 @@ export class CustomerNoteResDto {
   @ApiProperty() updatedAt!: Date;
 }
 
-export class CustomerTagResDto {
+export class CustomerDetailAddressResDto {
   @ApiProperty() id!: string;
-  @ApiProperty() shopId!: string;
-  @ApiProperty() name!: string;
-  @ApiPropertyOptional({ nullable: true, type: String }) color!: string | null;
+  @ApiProperty() addressLine!: string;
+  @ApiProperty() isDefault!: boolean;
+}
+
+export class CustomerDetailNoteResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() content!: string;
   @ApiProperty() createdAt!: Date;
 }
 
-export class CustomerOrderSummaryResDto {
+export class CustomerDetailResDto {
   @ApiProperty() id!: string;
-  @ApiProperty() orderNumber!: string;
-  @ApiProperty() rentalStartAt!: Date;
-  @ApiProperty() rentalEndAt!: Date;
-  @ApiProperty() status!: string;
-  @ApiProperty() paymentStatus!: string;
-  @ApiProperty({ type: String, example: '1500000.00' }) grandTotal!: string;
-}
-
-export class CustomerDetailResDto extends CustomerResDto {
-  @ApiProperty({ type: [CustomerAddressResDto] }) addresses!: CustomerAddressResDto[];
-  @ApiProperty({ type: [CustomerNoteResDto] }) notes!: CustomerNoteResDto[];
-  @ApiProperty({ type: [CustomerTagResDto] }) tags!: CustomerTagResDto[];
+  @ApiProperty() customerCode!: string;
+  @ApiProperty() fullName!: string;
+  @ApiProperty() phone!: string;
+  @ApiPropertyOptional({ nullable: true, type: String }) facebook!: string | null;
+  @ApiPropertyOptional({ nullable: true, type: String }) zalo!: string | null;
+  @ApiProperty({ type: [CustomerDetailAddressResDto] }) addresses!: CustomerDetailAddressResDto[];
+  @ApiProperty({ type: [CustomerDetailNoteResDto] }) notes!: CustomerDetailNoteResDto[];
   @ApiProperty({ type: CustomerStatsResDto }) stats!: CustomerStatsResDto;
-  @ApiProperty({ type: [CustomerOrderSummaryResDto] }) recentOrders!: CustomerOrderSummaryResDto[];
 }
 
 export class CustomerPageResDto {

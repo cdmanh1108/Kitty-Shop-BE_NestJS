@@ -187,16 +187,16 @@ describe('repository persistence boundaries', () => {
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
     ).findProduct('shop', 'product');
-    expect(find.mock.calls[0]?.[0]?.include).toEqual({
+    expect(find.mock.calls[0]?.[0]?.select).toMatchObject({
       category: { select: { id: true, code: true, name: true, isActive: true } },
-      media: { orderBy: { sortOrder: 'asc' } },
+      media: { orderBy: { sortOrder: 'asc' }, select: { storageKey: true, url: true } },
       rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
       variants: {
-        include: {
-          size: true,
-          color: true,
+        select: {
+          size: { select: { name: true } },
+          color: { select: { name: true, hexColor: true } },
           rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
-          inventoryItems: { where: { isActive: true }, orderBy: { sku: 'asc' } },
+          _count: { select: { inventoryItems: { where: { isActive: true } } } },
         },
       },
     });

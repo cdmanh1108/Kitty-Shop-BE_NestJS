@@ -221,5 +221,15 @@ describe('Rental policy transaction enforcement', () => {
     }
     const result = await repo.list({ shopId: f.shop.id, page: 1, limit: 20, from: new Date('2026-09-10T00:00:00Z'), until: new Date('2026-09-20T00:00:00Z') });
     expect(result.items.map((order) => order.id).sort()).toEqual(ids.slice(0, 3).sort());
+    expect(result.items[0]).toMatchObject({ itemCount: 0, productCount: 0 });
+    expect(result.items[0]).not.toHaveProperty('items');
+  });
+
+  it('aggregates rental list counts without returning item rows', async () => {
+    const f = await booking();
+    const result = await repo.list({ shopId: f.shop.id, page: 1, limit: 10 });
+    const row = result.items.find((item) => item.id === f.order.id);
+    expect(row).toMatchObject({ itemCount: 1, productCount: 1 });
+    expect(row).not.toHaveProperty('items');
   });
 });

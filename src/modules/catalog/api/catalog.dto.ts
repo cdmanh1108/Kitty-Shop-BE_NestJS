@@ -450,8 +450,6 @@ export class CategoryResDto extends CategorySummaryResDto {
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status!: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() sortOrder!: number;
   @ApiProperty() productCount!: number;
-  @ApiProperty({ format: 'date-time' }) createdAt!: string;
-  @ApiProperty({ format: 'date-time' }) updatedAt!: string;
 }
 
 export class CategoryPageResDto {

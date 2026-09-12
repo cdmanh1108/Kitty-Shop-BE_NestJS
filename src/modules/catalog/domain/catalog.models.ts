@@ -25,7 +25,7 @@ export type CatalogLookups = {
 
 export type CategoryListItem = Pick<
   CategoryRecord,
-  'id' | 'code' | 'name' | 'description' | 'sortOrder' | 'createdAt' | 'updatedAt'
+  'id' | 'code' | 'name' | 'description' | 'sortOrder'
 > & { status: 'ACTIVE' | 'INACTIVE'; productCount: number };
 export type CategoryPage = PaginatedResult<CategoryListItem>;
 export type CategoryOption = Pick<CategoryRecord, 'id' | 'code' | 'name'> & {
@@ -36,20 +36,20 @@ export type ProductPage = PaginatedResult<ProductListItem>;
 
 export type ProductDetails =
   | null
-  | (ProductRecord & {
+  | (Pick<ProductRecord, 'id' | 'code' | 'name' | 'categoryId' | 'description' | 'defaultDepositAmount' | 'replacementValue' | 'facebookPostUrl' | 'status' | 'isRentable' | 'isPublic' | 'createdAt' | 'updatedAt'> & {
       category: Pick<CategoryRecord, 'id' | 'code' | 'name'> & {
         status: 'ACTIVE' | 'INACTIVE';
       };
       variants: Array<
-        ProductVariantRecord & {
-          size: null | SizeRecord;
-          color: null | ColorRecord;
-          inventoryItems: Array<InventoryItemRecord>;
-          rentalRates: Array<RentalRateRecord>;
+        Pick<ProductVariantRecord, 'id' | 'variantCode' | 'sizeId' | 'colorId' | 'depositAmountOverride' | 'status'> & {
+          size: null | Pick<SizeRecord, 'name'>;
+          color: null | Pick<ColorRecord, 'name' | 'hexColor'>;
+          _count: { inventoryItems: number };
+          rentalRates: Array<Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>>;
         }
       >;
-      media: Array<ProductMediaRecord>;
-      rentalRates: Array<RentalRateRecord>;
+      media: Array<Pick<ProductMediaRecord, 'id' | 'url' | 'altText' | 'isPrimary' | 'sortOrder'>>;
+      rentalRates: Array<Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>>;
     });
 
 export type CreateProductResult = ProductRecord & {

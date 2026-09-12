@@ -1,38 +1,16 @@
-import type { DecimalValue } from '@common/types/decimal';
-import type {
-  CustomerAddressRecord,
-  CustomerNoteRecord,
-  CustomerRecord,
-} from '@modules/customers/domain/customers.records';
+import type { CustomerAddressRecord, CustomerRecord } from '@modules/customers/domain/customers.records';
 
 export type CustomerDetails =
   | null
-  | (CustomerRecord & {
-      tags: Array<{
-        id: string;
-        shopId: string;
-        createdAt: Date;
-        name: string;
-        color: null | string;
-      }>;
+  | (Pick<CustomerRecord, 'id' | 'customerCode' | 'fullName' | 'phone' | 'facebook' | 'zalo'> & {
       stats: {
-        totalOrders: number;
         completedRentalCount: number;
         totalPaid: number;
         depositHeld: number;
         lastRentalAt: Date | null;
       };
-      recentOrders: Array<{
-        id: string;
-        status: string;
-        orderNumber: string;
-        rentalStartAt: Date;
-        rentalEndAt: Date;
-        paymentStatus: string;
-        grandTotal: DecimalValue;
-      }>;
-      notes: Array<CustomerNoteRecord>;
-      addresses: Array<CustomerAddressRecord>;
+      notes: Array<{ id: string; content: string; createdAt: Date }>;
+      addresses: Array<Pick<CustomerAddressRecord, 'id' | 'addressLine' | 'isDefault'>>;
     });
 
 export type CustomerAddressResult = null | CustomerAddressRecord;

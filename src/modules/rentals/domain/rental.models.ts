@@ -50,11 +50,7 @@ export type RentalOrderPage = PaginatedResult<
       phone: string;
       fullName: string;
     };
-    items: Array<{
-      id: string;
-      quantity: number;
-      productNameSnapshot: string;
-      variantNameSnapshot: string;
-    }>;
+    itemCount: number;
+    productCount: number;
   }
 >;

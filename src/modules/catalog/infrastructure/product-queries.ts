@@ -152,16 +152,35 @@ export async function findProduct(
 ): ReturnType<CatalogRepository['findProduct']> {
   const product = await prisma.product.findFirst({
     where: { id, shopId, archivedAt: null },
-    include: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      categoryId: true,
+      description: true,
+      defaultDepositAmount: true,
+      replacementValue: true,
+      facebookPostUrl: true,
+      status: true,
+      isRentable: true,
+      isPublic: true,
+      createdAt: true,
+      updatedAt: true,
       category: { select: { id: true, code: true, name: true, isActive: true } },
-      media: { orderBy: { sortOrder: 'asc' } },
-      rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
+      media: { orderBy: { sortOrder: 'asc' }, select: { id: true, storageKey: true, url: true, altText: true, isPrimary: true, sortOrder: true } },
+      rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' }, select: { id: true, durationDays: true, price: true, currency: true, isActive: true } },
       variants: {
-        include: {
-          size: true,
-          color: true,
-          rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
-          inventoryItems: { where: { isActive: true }, orderBy: { sku: 'asc' } },
+        select: {
+          id: true,
+          variantCode: true,
+          sizeId: true,
+          colorId: true,
+          depositAmountOverride: true,
+          status: true,
+          size: { select: { name: true } },
+          color: { select: { name: true, hexColor: true } },
+          rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' }, select: { id: true, durationDays: true, price: true, currency: true, isActive: true } },
+          _count: { select: { inventoryItems: { where: { isActive: true } } } },
         },
       },
     },
@@ -178,8 +197,11 @@ export async function findProduct(
       status: product.category.isActive ? 'ACTIVE' : 'INACTIVE',
     },
     media: product.media.map((m) => ({
-      ...m,
+      id: m.id,
       url: mediaUrls.resolve(m),
+      altText: m.altText,
+      isPrimary: m.isPrimary,
+      sortOrder: m.sortOrder,
     })),
   };
 }
