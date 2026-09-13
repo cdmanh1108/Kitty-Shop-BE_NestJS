@@ -47,8 +47,22 @@ describe('Inventory occupancy persistence and read models', () => {
       rentalEndAt: new Date('2026-11-03T00:00:00Z'),
     });
     if (!order) throw new Error('Expected order');
-    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 400000, depositAmount: 400000 });
-    await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+    await payRentalForConfirmation(prisma, {
+      shopId: f.shop.id,
+      orderId: order.id,
+      memberId: f.member.id,
+      rentalAmount: 400000,
+      depositAmount: 400000,
+    });
+    await repo.confirm({
+      shopId: f.shop.id,
+      orderId: order.id,
+      actorMemberId: f.member.id,
+      actorUserId: f.user.id,
+      actorName: f.user.fullName,
+      collateralMethod: 'CASH',
+      collateralAmount: 200000,
+    });
     await repo.transition({
       shopId: f.shop.id,
       orderId: order.id,

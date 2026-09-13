@@ -17,6 +17,15 @@ describe('Object storage configuration boundary', () => {
     });
     expect(parseObjectStorageConfiguration({}).bucket).toBe('');
   });
+  it('requires a separate bucket for private evidence', () => {
+    expect(() =>
+      parseObjectStorageConfiguration({ ...env, OBJECT_STORAGE_PRIVATE_BUCKET: 'assets' }),
+    ).toThrow('phải khác bucket');
+    expect(
+      parseObjectStorageConfiguration({ ...env, OBJECT_STORAGE_PRIVATE_BUCKET: 'evidence' })
+        .privateBucket,
+    ).toBe('evidence');
+  });
   it.each([
     'OBJECT_STORAGE_BUCKET',
     'OBJECT_STORAGE_ACCESS_KEY_ID',

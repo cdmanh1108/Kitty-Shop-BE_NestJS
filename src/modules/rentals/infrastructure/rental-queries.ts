@@ -83,9 +83,18 @@ export async function list(
         _count: { _all: true },
       })
     : [];
-  const countByOrder = new Map(counts.map((row) => [row.orderId, { itemCount: row._sum.quantity ?? 0, productCount: row._count._all }]));
+  const countByOrder = new Map(
+    counts.map((row) => [
+      row.orderId,
+      { itemCount: row._sum.quantity ?? 0, productCount: row._count._all },
+    ]),
+  );
   return {
-    items: items.map((item) => ({ ...item, itemCount: countByOrder.get(item.id)?.itemCount ?? 0, productCount: countByOrder.get(item.id)?.productCount ?? 0 })),
+    items: items.map((item) => ({
+      ...item,
+      itemCount: countByOrder.get(item.id)?.itemCount ?? 0,
+      productCount: countByOrder.get(item.id)?.productCount ?? 0,
+    })),
     meta: paginateMeta(input.page, input.limit, total),
   };
 }
@@ -125,6 +134,7 @@ export function getWithTx(
   return tx.rentalOrder.findFirst({
     where: { id, shopId },
     include: {
+      confirmation: true,
       customer: true,
       location: true,
       items: { include: { allocations: { include: { inventoryItem: true } } } },

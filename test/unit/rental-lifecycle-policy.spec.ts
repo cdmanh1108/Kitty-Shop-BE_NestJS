@@ -1,91 +1,17 @@
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 import { canTransitionRental } from '../../src/modules/rentals/domain/rental-policy';
-import { RentalInvariantError } from '../../src/modules/rentals/domain/rental-errors';
+
 import {
-  assertRentalConfirmation,
   calculateLateCharges,
   rewardForCompletedRental,
 } from '../../src/modules/rentals/domain/rental-settlement';
 
 const policy = DEFAULT_RENTAL_POLICY;
-const payment = (amount: string, purpose = 'RENTAL_PAYMENT') => ({
-  amount,
-  purpose,
-  direction: 'IN',
-});
-const confirm = (overrides: Partial<Parameters<typeof assertRentalConfirmation>[0]> = {}) => ({
-  rentalDue: '200000.00',
-  depositRequired: '100000.00',
-  collateralMethod: 'CASH',
-  documentType: null,
-  collateralStatus: 'REQUIRED',
-  payments: [payment('200000.00'), payment('100000.00', 'DEPOSIT')],
-  policy,
-  ...overrides,
-});
-
 describe('rental lifecycle policy', () => {
   it('never starts RESERVED directly; only CONFIRMED may start', () => {
     expect(canTransitionRental('RESERVED', 'ACTIVE')).toBe(false);
     expect(canTransitionRental('CONFIRMED', 'ACTIVE')).toBe(true);
     expect(canTransitionRental('ACTIVE', 'ACTIVE')).toBe(false);
-  });
-
-  it.each([[[]], [[payment('199999.00')]], [[payment('100000.00', 'DEPOSIT')]]])(
-    'rejects missing or partial rental payment',
-    (payments) => {
-      expect(() => assertRentalConfirmation(confirm({ payments }))).toThrow(
-        RentalInvariantError,
-      );
-    },
-  );
-
-  it('accepts overpayment and excludes deposit from rental payment', () => {
-    expect(() =>
-      assertRentalConfirmation(
-        confirm({ payments: [payment('220000.00'), payment('100000.00', 'DEPOSIT')] }),
-      ),
-    ).not.toThrow();
-    expect(() =>
-      assertRentalConfirmation(
-        confirm({ payments: [payment('100000.00'), payment('200000.00', 'DEPOSIT')] }),
-      ),
-    ).toThrow(RentalInvariantError);
-  });
-
-  it('requires held cash deposit for pickup and delivery', () => {
-    expect(() => assertRentalConfirmation(confirm({ payments: [payment('200000.00')] }))).toThrow(
-      RentalInvariantError,
-    );
-    expect(() => assertRentalConfirmation(confirm())).not.toThrow();
-  });
-
-  it('validates document method, allowed type and physical receipt', () => {
-    expect(() => assertRentalConfirmation(confirm({ collateralMethod: 'UNKNOWN' }))).toThrow(
-      RentalInvariantError,
-    );
-    expect(() =>
-      assertRentalConfirmation(
-        confirm({
-          collateralMethod: 'DOCUMENT',
-          documentType: 'PASSPORT',
-          collateralStatus: 'HELD',
-        }),
-      ),
-    ).toThrow(RentalInvariantError);
-    expect(() =>
-      assertRentalConfirmation(confirm({ collateralMethod: 'DOCUMENT', documentType: 'CCCD' })),
-    ).toThrow(RentalInvariantError);
-    expect(() =>
-      assertRentalConfirmation(
-        confirm({
-          collateralMethod: 'DOCUMENT',
-          documentType: 'GPLX',
-          collateralStatus: 'HELD',
-          payments: [payment('200000.00')],
-        }),
-      ),
-    ).not.toThrow();
   });
 
   it('uses configured late fee, item count and one threshold rental charge', () => {

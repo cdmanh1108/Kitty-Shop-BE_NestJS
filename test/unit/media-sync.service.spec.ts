@@ -22,6 +22,7 @@ describe('MediaSync & Idempotency Logic', () => {
     getPublicUrlMock = jest.fn((key) => `https://assets.example.com/${key}`);
 
     mockStorage = {
+      getObject: jest.fn(),
       putObject: putObjectMock,
       headObject: headObjectMock,
       deleteObject: deleteObjectMock,

@@ -1,4 +1,4 @@
-﻿import { Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Prisma, type IdempotencyRecord } from '@prisma/client';
 import type { Clock } from '../src/common/clock/clock';
 import {
@@ -87,6 +87,7 @@ function orderDetails(): NonNullable<RentalOrderDetails> {
     createdAt: now,
     updatedAt: now,
     location: null,
+    confirmation: null,
     statusHistory: [],
     items: [],
     charges: [],
@@ -544,6 +545,7 @@ describe('booking transaction ordering and failure propagation', () => {
 
 function repositoryFake(): jest.Mocked<RentalRepository> {
   return {
+    confirm: jest.fn(),
     customerExists: jest.fn().mockResolvedValue(true),
     locationExists: jest.fn().mockResolvedValue(true),
     getBookableVariant: jest.fn(),
@@ -555,7 +557,6 @@ function repositoryFake(): jest.Mocked<RentalRepository> {
     transition: jest.fn(),
     reschedule: jest.fn(),
     addCharge: jest.fn(),
-    receiveCollateral: jest.fn(),
     returnCollateral: jest.fn(),
     claimIdempotency: jest.fn(),
     releaseIdempotency: jest.fn().mockResolvedValue(undefined),

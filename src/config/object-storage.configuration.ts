@@ -3,6 +3,7 @@ export interface ObjectStorageConfiguration {
   endpoint: string;
   region: string;
   bucket: string;
+  privateBucket?: string;
   accessKeyId: string;
   secretAccessKey: string;
   publicBaseUrl: string;
@@ -23,11 +24,14 @@ export function parseObjectStorageConfiguration(
     endpoint: read('ENDPOINT'),
     region: read('REGION', 'auto'),
     bucket: read('BUCKET'),
+    privateBucket: read('PRIVATE_BUCKET'),
     accessKeyId: read('ACCESS_KEY_ID'),
     secretAccessKey: read('SECRET_ACCESS_KEY'),
     publicBaseUrl: read('PUBLIC_BASE_URL'),
   };
   if (config.provider !== 's3') throw new Error('OBJECT_STORAGE_PROVIDER phải là s3.');
+  if (config.privateBucket && config.privateBucket === config.bucket)
+    throw new Error('OBJECT_STORAGE_PRIVATE_BUCKET phải khác bucket hình ảnh công khai.');
   for (const [name, value] of [
     ['ENDPOINT', config.endpoint],
     ['PUBLIC_BASE_URL', config.publicBaseUrl],
@@ -50,7 +54,13 @@ export function parseObjectStorageConfiguration(
     }
   }
   // Public read-only serving may be configured without upload credentials.
-  if (config.bucket || config.accessKeyId || config.secretAccessKey || config.endpoint) {
+  if (
+    config.bucket ||
+    config.privateBucket ||
+    config.accessKeyId ||
+    config.secretAccessKey ||
+    config.endpoint
+  ) {
     for (const [name, value] of [
       ['BUCKET', config.bucket],
       ['REGION', config.region],

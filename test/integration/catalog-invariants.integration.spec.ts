@@ -43,15 +43,30 @@ describe('Catalog persistence invariants', () => {
       });
       if (!order) throw new Error('Expected order');
       if (status !== 'RESERVED') {
-        await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
-        await rentals.transition({
+        await payRentalForConfirmation(prisma, {
           shopId: f.shop.id,
           orderId: order.id,
-          fromStatuses: ['RESERVED'],
-          toStatus: 'CONFIRMED',
-          changedBy: f.member.id,
+          memberId: f.member.id,
+          rentalAmount: 200000,
+          depositAmount: 200000,
         });
-        if (status === 'ACTIVE') await rentals.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['CONFIRMED'], toStatus: 'ACTIVE', changedBy: f.member.id });
+        await rentals.confirm({
+          shopId: f.shop.id,
+          orderId: order.id,
+          actorMemberId: f.member.id,
+          actorUserId: f.user.id,
+          actorName: f.user.fullName,
+          collateralMethod: 'CASH',
+          collateralAmount: 200000,
+        });
+        if (status === 'ACTIVE')
+          await rentals.transition({
+            shopId: f.shop.id,
+            orderId: order.id,
+            fromStatuses: ['CONFIRMED'],
+            toStatus: 'ACTIVE',
+            changedBy: f.member.id,
+          });
       }
       await expect(catalog.archiveProduct(f.shop.id, f.product.id)).rejects.toBeInstanceOf(
         CatalogInvariantError,
@@ -79,8 +94,22 @@ describe('Catalog persistence invariants', () => {
       const order = await rentals.createOrder(f.data);
       if (!order) throw new Error('Expected order');
       if (status === 'COMPLETED') {
-        await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
-        await rentals.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+        await payRentalForConfirmation(prisma, {
+          shopId: f.shop.id,
+          orderId: order.id,
+          memberId: f.member.id,
+          rentalAmount: 200000,
+          depositAmount: 200000,
+        });
+        await rentals.confirm({
+          shopId: f.shop.id,
+          orderId: order.id,
+          actorMemberId: f.member.id,
+          actorUserId: f.user.id,
+          actorName: f.user.fullName,
+          collateralMethod: 'CASH',
+          collateralAmount: 200000,
+        });
         await rentals.transition({
           shopId: f.shop.id,
           orderId: order.id,

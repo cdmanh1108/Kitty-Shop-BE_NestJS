@@ -29,6 +29,7 @@ const user: CurrentUser = {
 };
 function rentalRepository(): jest.Mocked<RentalRepository> {
   return {
+    confirm: jest.fn(),
     customerExists: jest.fn().mockResolvedValue(true),
     locationExists: jest.fn().mockResolvedValue(true),
     getBookableVariant: jest.fn(),
@@ -40,7 +41,6 @@ function rentalRepository(): jest.Mocked<RentalRepository> {
     transition: jest.fn(),
     reschedule: jest.fn(),
     addCharge: jest.fn(),
-    receiveCollateral: jest.fn(),
     returnCollateral: jest.fn(),
     claimIdempotency: jest.fn(),
     releaseIdempotency: jest.fn(),

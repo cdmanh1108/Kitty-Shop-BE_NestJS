@@ -1,5 +1,8 @@
 # Object storage and Product media
 
+Private rental evidence reuses this storage port with a separate private bucket;
+see [Admin confirmation](ADMIN_CONFIRMATION.md) for configuration and access rules.
+
 ## Architecture
 
 ```text

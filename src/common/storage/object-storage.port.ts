@@ -20,6 +20,7 @@ export interface PutObjectInput {
 }
 
 export interface ObjectStoragePort {
+  getObject(key: string): Promise<Uint8Array>;
   putObject(input: PutObjectInput): Promise<StoredObject>;
   headObject(key: string): Promise<StoredObjectMetadata | null>;
   deleteObject(key: string): Promise<void>;

@@ -18,55 +18,6 @@ function money(value: bigint): string {
   return `${sign}${absolute / 100n}.${(absolute % 100n).toString().padStart(2, '0')}`;
 }
 
-export function assertRentalConfirmation(input: {
-  rentalDue: string;
-  depositRequired: string;
-  collateralMethod: string;
-  documentType: string | null;
-  collateralStatus: string;
-  payments: Array<{ amount: string; direction: string; purpose: string }>;
-  policy: RentalPolicy;
-}): void {
-  let paidRental = 0n;
-  let heldDeposit = 0n;
-  for (const payment of input.payments) {
-    const signed = payment.direction === 'IN' ? cents(payment.amount) : -cents(payment.amount);
-    if (payment.purpose === 'DEPOSIT' || payment.purpose === 'DEPOSIT_REFUND')
-      heldDeposit += signed;
-    else paidRental += signed;
-  }
-  if (paidRental < cents(input.rentalDue))
-    throw new RentalInvariantError(
-      'ORDER_NOT_FULLY_PAID',
-      'Cần thanh toán đủ tiền thuê trước khi xác nhận đơn.',
-    );
-  if (!input.policy.deposit.allowedMethods.includes(input.collateralMethod as 'CASH' | 'DOCUMENT'))
-    throw new RentalInvariantError(
-      'COLLATERAL_METHOD_NOT_ALLOWED',
-      'Phương thức đặt cọc không được chính sách cửa hàng cho phép.',
-    );
-  if (input.collateralMethod === 'DOCUMENT') {
-    if (
-      !input.documentType ||
-      !input.policy.deposit.allowedDocumentTypes.includes(input.documentType as 'CCCD' | 'GPLX')
-    )
-      throw new RentalInvariantError(
-        'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED',
-        'Loại giấy tờ đặt cọc không được chính sách cửa hàng cho phép.',
-      );
-    if (input.collateralStatus !== 'HELD')
-      throw new RentalInvariantError(
-        'COLLATERAL_NOT_RECEIVED',
-        'Cần nhận giấy tờ đặt cọc trước khi xác nhận đơn.',
-      );
-  } else if (heldDeposit < cents(input.depositRequired)) {
-    throw new RentalInvariantError(
-      'DEPOSIT_NOT_RECEIVED',
-      'Cần nhận đủ tiền cọc trước khi xác nhận đơn.',
-    );
-  }
-}
-
 export function calculateLateCharges(input: {
   dueAt: Date;
   returnedAt: Date;

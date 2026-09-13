@@ -254,16 +254,6 @@ export class RentalService {
     }
   }
 
-  confirm(user: CurrentUser, id: string, input: TransitionRentalInput) {
-    return this.transition(
-      user,
-      id,
-      RENTAL_TRANSITION_FROM.CONFIRMED,
-      RENTAL_STATUS.CONFIRMED,
-      input.reason,
-    );
-  }
-
   start(user: CurrentUser, id: string, input: TransitionRentalInput) {
     return this.transition(
       user,
@@ -292,20 +282,6 @@ export class RentalService {
       RENTAL_STATUS.CANCELLED,
       input.reason,
     );
-  }
-
-  async receiveCollateral(user: CurrentUser, id: string) {
-    const order = await this.repository.receiveCollateral(user.shopId, id, user.memberId);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
-    await this.audit.log({
-      shopId: user.shopId,
-      actorUserId: user.userId,
-      actorMemberId: user.memberId,
-      action: 'COLLATERAL_RECEIVED',
-      entityType: 'rental_order',
-      entityId: id,
-    });
-    return order;
   }
 
   async returnCollateral(user: CurrentUser, id: string) {

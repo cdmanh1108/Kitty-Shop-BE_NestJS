@@ -15,18 +15,16 @@ const command = {
 function fakeTransaction() {
   const tx = {
     rentalOrder: {
-      findFirst: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'order-a',
-          shopId: 'shop-a',
-          status: 'RESERVED',
-          grandTotal: { toString: () => '200000.00' },
-          depositRequired: { toString: () => '100000.00' },
-          collateralMethod: 'CASH',
-          documentType: null,
-          collateralStatus: 'REQUIRED',
-        }),
+      findFirst: jest.fn().mockResolvedValue({
+        id: 'order-a',
+        shopId: 'shop-a',
+        status: 'RESERVED',
+        grandTotal: { toString: () => '200000.00' },
+        depositRequired: { toString: () => '100000.00' },
+        collateralMethod: 'CASH',
+        documentType: null,
+        collateralStatus: 'REQUIRED',
+      }),
       updateMany: jest.fn(),
     },
     paymentTransaction: { findMany: jest.fn().mockResolvedValue([]) },
@@ -40,15 +38,12 @@ function fakeTransaction() {
 }
 
 describe('rental transition transaction gates', () => {
-  it('rejects unpaid confirmation after querying only persisted settled tenant payments', async () => {
+  it('rejects generic confirmation without querying payment transactions', async () => {
     const { prisma, tx } = fakeTransaction();
     await expect(transition(prisma, command, DEFAULT_RENTAL_POLICY, clock)).rejects.toMatchObject({
-      code: 'ORDER_NOT_FULLY_PAID',
+      code: 'CONFIRMATION_REQUIRED',
     });
-    expect(tx.paymentTransaction.findMany).toHaveBeenCalledWith({
-      where: { shopId: 'shop-a', orderId: 'order-a', status: 'COMPLETED', voidedAt: null },
-      select: { direction: true, purpose: true, amount: true },
-    });
+    expect(tx.paymentTransaction.findMany).not.toHaveBeenCalled();
     expect(tx.rentalOrder.updateMany).not.toHaveBeenCalled();
   });
 

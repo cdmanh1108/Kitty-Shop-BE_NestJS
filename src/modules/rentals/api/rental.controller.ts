@@ -3,7 +3,27 @@ import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Patch,
+  Post,
+  Query,
+  HttpCode,
+  Header,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { ConfirmationUploadInterceptor } from './confirmation-upload.interceptor';
+import {
+  RentalConfirmationService,
+  type ConfirmationImage,
+} from '../application/rental-confirmation.service';
+import { ConfirmRentalReqDto, ConfirmationOptionsResDto } from './rental-confirmation.dto';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -11,6 +31,12 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiConsumes,
+  ApiBadRequestResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiUnauthorizedResponse,
+  ApiPayloadTooLargeResponse,
 } from '@nestjs/swagger';
 import { RentalService } from '../application/rental.service';
 import {
@@ -34,7 +60,10 @@ import {
 @ApiBearerAuth('access-token')
 @Controller('rental-orders')
 export class RentalController {
-  constructor(private readonly service: RentalService) {}
+  constructor(
+    private readonly service: RentalService,
+    private readonly confirmations: RentalConfirmationService,
+  ) {}
 
   @Get()
   @Permissions(PERMISSIONS.RENTALS_VIEW)
@@ -87,14 +116,69 @@ export class RentalController {
   }
 
   @Post(':id/confirm')
-  @Permissions(PERMISSIONS.RENTALS_UPDATE)
+  @Permissions(PERMISSIONS.RENTALS_CONFIRM)
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Manually acknowledge receipt and collateral; atomically confirm without Payment API. Requires rentals.confirm.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(ConfirmationUploadInterceptor)
+  @ApiBadRequestResponse({
+    description: 'Invalid collateral, evidence, or order state (including repeated confirmation).',
+  })
+  @ApiForbiddenResponse({ description: 'Requires rentals.confirm.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required.' })
+  @ApiPayloadTooLargeResponse({ description: 'Evidence exceeds 15 MiB.' })
+  @ApiNotFoundResponse({ description: 'Order does not exist in authenticated shop.' })
   @ApiOkResponse({ type: RentalOrderResDto })
   confirm(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
-    @Body() body: TransitionRentalReqDto,
+    @Body() body: ConfirmRentalReqDto,
+    @UploadedFile() file?: ConfirmationImage,
   ) {
-    return this.service.confirm(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
+    return this.confirmations
+      .confirm(
+        user,
+        id,
+        {
+          collateralMethod: body.collateralMethod,
+          collateralAmount: body.collateralAmount,
+          documentType: body.documentType,
+          note: body.note?.trim(),
+        },
+        file,
+      )
+      .then(toRentalResponse);
+  }
+
+  @Get(':id/confirmation-options')
+  @Permissions(PERMISSIONS.RENTALS_CONFIRM)
+  @ApiForbiddenResponse({ description: 'Requires rentals.confirm.' })
+  @ApiNotFoundResponse({ description: 'Order does not exist in authenticated shop.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required.' })
+  @ApiOkResponse({ type: ConfirmationOptionsResDto })
+  confirmationOptions(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.confirmations.options(user, id);
+  }
+
+  @Get(':id/confirmation/evidence')
+  @ApiForbiddenResponse({ description: 'Requires rentals.confirm.' })
+  @ApiNotFoundResponse({ description: 'Order or evidence does not exist in authenticated shop.' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required.' })
+  @Header('Cache-Control', 'private, no-store')
+  @Permissions(PERMISSIONS.RENTALS_CONFIRM)
+  @ApiOkResponse({
+    schema: { type: 'string', format: 'binary' },
+    description: 'Evidence image; requires rentals.confirm. Private, no-store.',
+  })
+  async evidence(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    const image = await this.confirmations.evidence(user, id);
+    return new StreamableFile(image.body, {
+      type: image.mimeType,
+      disposition: 'attachment; filename="evidence"',
+    });
   }
 
   @Post(':id/start')
@@ -106,13 +190,6 @@ export class RentalController {
     @Body() body: TransitionRentalReqDto,
   ) {
     return this.service.start(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
-  }
-
-  @Post(':id/collateral/receive')
-  @Permissions(PERMISSIONS.RENTALS_UPDATE)
-  @ApiOkResponse({ type: RentalOrderResDto })
-  receiveCollateral(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
-    return this.service.receiveCollateral(user, id).then(toRentalResponse);
   }
 
   @Post(':id/collateral/return')

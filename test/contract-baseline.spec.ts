@@ -98,7 +98,10 @@ describe('OpenAPI Contract Baseline', () => {
         inspect(referenced);
         return;
       }
-      if (schema.type === 'object') expect(schema.properties).toBeDefined();
+      // Swagger represents nullable DTOs as an object composed from a referenced schema.
+      // Inspect those schemas recursively below, while still rejecting untyped objects.
+      if (schema.type === 'object' && !schema.properties)
+        expect((schema.allOf ?? schema.oneOf ?? schema.anyOf ?? []).length).toBeGreaterThan(0);
       if (schema.type === 'array') {
         if (!schema.items) throw new Error('Array response must define items');
         inspect(schema.items);

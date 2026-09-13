@@ -17,10 +17,19 @@ import {
 import { getBookableVariant } from './rental-availability';
 import { createOrder } from './rental-booking';
 import { claimIdempotency, releaseIdempotency } from './rental-idempotency';
-import { transition, reschedule, addCharge, setDocumentCollateral } from './rental-lifecycle';
+import { transition, reschedule, addCharge, returnDocumentCollateral } from './rental-lifecycle';
+import { confirmOrder } from './rental-confirmation';
 
 @Injectable()
 export class PrismaRentalRepository implements RentalRepository {
+  async confirm(input: Parameters<RentalRepository['confirm']>[0]) {
+    return confirmOrder(
+      this.prisma,
+      input,
+      await this.policies.getPolicy(input.shopId),
+      this.clock,
+    );
+  }
   constructor(
     private readonly prisma: PrismaService,
     @Inject(CLOCK) private readonly clock: Clock,
@@ -92,12 +101,8 @@ export class PrismaRentalRepository implements RentalRepository {
     return addCharge(this.prisma, ...args);
   }
 
-  receiveCollateral(shopId: string, orderId: string, changedBy: string) {
-    return setDocumentCollateral(this.prisma, shopId, orderId, changedBy, 'RECEIVE', this.clock);
-  }
-
   returnCollateral(shopId: string, orderId: string, changedBy: string) {
-    return setDocumentCollateral(this.prisma, shopId, orderId, changedBy, 'RETURN', this.clock);
+    return returnDocumentCollateral(this.prisma, shopId, orderId, changedBy, this.clock);
   }
 
   claimIdempotency(

@@ -264,15 +264,30 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       });
       if (!order) throw new Error('Expected order');
       if (status !== 'RESERVED') {
-        await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: order.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
-        await repo.transition({
+        await payRentalForConfirmation(prisma, {
           shopId: f.shop.id,
           orderId: order.id,
-          fromStatuses: ['RESERVED'],
-          toStatus: 'CONFIRMED',
-          changedBy: f.member.id,
+          memberId: f.member.id,
+          rentalAmount: 200000,
+          depositAmount: 200000,
         });
-        if (status === 'ACTIVE') await repo.transition({ shopId: f.shop.id, orderId: order.id, fromStatuses: ['CONFIRMED'], toStatus: 'ACTIVE', changedBy: f.member.id });
+        await repo.confirm({
+          shopId: f.shop.id,
+          orderId: order.id,
+          actorMemberId: f.member.id,
+          actorUserId: f.user.id,
+          actorName: f.user.fullName,
+          collateralMethod: 'CASH',
+          collateralAmount: 200000,
+        });
+        if (status === 'ACTIVE')
+          await repo.transition({
+            shopId: f.shop.id,
+            orderId: order.id,
+            fromStatuses: ['CONFIRMED'],
+            toStatus: 'ACTIVE',
+            changedBy: f.member.id,
+          });
       }
       await expect(
         catalogRepo.updateInventoryStatus({
@@ -323,10 +338,38 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       where: { id: second.id },
       data: { createdAt: new Date('2026-11-20T00:00:00Z') },
     });
-    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: first.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
-    await repo.transition({ shopId: f.shop.id, orderId: first.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
-    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: second.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
-    await repo.transition({ shopId: f.shop.id, orderId: second.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+    await payRentalForConfirmation(prisma, {
+      shopId: f.shop.id,
+      orderId: first.id,
+      memberId: f.member.id,
+      rentalAmount: 200000,
+      depositAmount: 200000,
+    });
+    await repo.confirm({
+      shopId: f.shop.id,
+      orderId: first.id,
+      actorMemberId: f.member.id,
+      actorUserId: f.user.id,
+      actorName: f.user.fullName,
+      collateralMethod: 'CASH',
+      collateralAmount: 200000,
+    });
+    await payRentalForConfirmation(prisma, {
+      shopId: f.shop.id,
+      orderId: second.id,
+      memberId: f.member.id,
+      rentalAmount: 200000,
+      depositAmount: 200000,
+    });
+    await repo.confirm({
+      shopId: f.shop.id,
+      orderId: second.id,
+      actorMemberId: f.member.id,
+      actorUserId: f.user.id,
+      actorName: f.user.fullName,
+      collateralMethod: 'CASH',
+      collateralAmount: 200000,
+    });
     await repo.transition({
       shopId: f.shop.id,
       orderId: first.id,
@@ -365,10 +408,38 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       rentalEndAt: new Date('2026-11-03T00:00:00Z'),
     });
     if (!first || !next) throw new Error('Expected orders');
-    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: first.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
-    await payRentalForConfirmation(prisma, { shopId: f.shop.id, orderId: next.id, memberId: f.member.id, rentalAmount: 200000, depositAmount: 200000 });
-    await repo.transition({ shopId: f.shop.id, orderId: first.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
-    await repo.transition({ shopId: f.shop.id, orderId: next.id, fromStatuses: ['RESERVED'], toStatus: 'CONFIRMED', changedBy: f.member.id });
+    await payRentalForConfirmation(prisma, {
+      shopId: f.shop.id,
+      orderId: first.id,
+      memberId: f.member.id,
+      rentalAmount: 200000,
+      depositAmount: 200000,
+    });
+    await payRentalForConfirmation(prisma, {
+      shopId: f.shop.id,
+      orderId: next.id,
+      memberId: f.member.id,
+      rentalAmount: 200000,
+      depositAmount: 200000,
+    });
+    await repo.confirm({
+      shopId: f.shop.id,
+      orderId: first.id,
+      actorMemberId: f.member.id,
+      actorUserId: f.user.id,
+      actorName: f.user.fullName,
+      collateralMethod: 'CASH',
+      collateralAmount: 200000,
+    });
+    await repo.confirm({
+      shopId: f.shop.id,
+      orderId: next.id,
+      actorMemberId: f.member.id,
+      actorUserId: f.user.id,
+      actorName: f.user.fullName,
+      collateralMethod: 'CASH',
+      collateralAmount: 200000,
+    });
     await repo.transition({
       shopId: f.shop.id,
       orderId: first.id,

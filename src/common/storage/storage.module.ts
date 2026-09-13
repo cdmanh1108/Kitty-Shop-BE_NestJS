@@ -24,12 +24,20 @@ import {
       provide: OBJECT_STORAGE_PORT,
       inject: [ConfigService],
       useFactory: (configService: ConfigService<AppConfiguration, true>): ObjectStoragePort => {
-        const { bucket, endpoint, region, accessKeyId, secretAccessKey, publicBaseUrl } =
-          configService.get('objectStorage', { infer: true });
+        const {
+          bucket,
+          privateBucket,
+          endpoint,
+          region,
+          accessKeyId,
+          secretAccessKey,
+          publicBaseUrl,
+        } = configService.get('objectStorage', { infer: true });
 
         if (!bucket) {
           // Return a fallback port that allows public URL resolution and fails cleanly on mutation
           return {
+            getObject: () => Promise.reject(new Error('Chưa cấu hình kho lưu trữ.')),
             putObject: () =>
               Promise.reject(new Error('Chưa cấu hình kho lưu trữ: thiếu OBJECT_STORAGE_BUCKET.')),
             headObject: () => Promise.reject(new Error('Chưa cấu hình kho lưu trữ.')),
@@ -41,6 +49,7 @@ import {
 
         return new S3ObjectStorageAdapter({
           bucket,
+          privateBucket,
           endpoint,
           region,
           accessKeyId,

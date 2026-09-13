@@ -91,6 +91,7 @@ describe('RentalService Unit Tests', () => {
     charges: [],
     deliveries: [],
     payments: [],
+    confirmation: null,
     statusHistory: [],
     ...override,
   });
@@ -101,6 +102,7 @@ describe('RentalService Unit Tests', () => {
     auditLogMock = jest.fn().mockResolvedValue(undefined);
 
     repo = {
+      confirm: jest.fn(),
       customerExists: jest.fn().mockResolvedValue(true),
       locationExists: jest.fn().mockResolvedValue(true),
       getBookableVariant: jest.fn(),
@@ -116,7 +118,6 @@ describe('RentalService Unit Tests', () => {
       transition: jest.fn().mockResolvedValue(createSampleOrder()),
       reschedule: rescheduleMock,
       addCharge: jest.fn().mockResolvedValue(createSampleOrder()),
-      receiveCollateral: jest.fn().mockResolvedValue(createSampleOrder()),
       returnCollateral: jest.fn().mockResolvedValue(createSampleOrder()),
       claimIdempotency: jest.fn(),
       releaseIdempotency: jest.fn().mockResolvedValue(undefined),
@@ -323,24 +324,8 @@ describe('RentalService Unit Tests', () => {
       repo.transition.mockResolvedValueOnce(null);
 
       await expect(
-        service.confirm(currentUser, 'order-1', { reason: 'Ready to confirm' }),
+        service.start(currentUser, 'order-1', { reason: 'Ready to start' }),
       ).rejects.toThrow(BadRequestException);
-    });
-
-    it('confirms order when in RESERVED status', async () => {
-      repo.getStatus.mockResolvedValueOnce(RENTAL_STATUS.RESERVED);
-      repo.transition.mockResolvedValueOnce(createSampleOrder({ status: RENTAL_STATUS.CONFIRMED }));
-
-      const confirmed = await service.confirm(currentUser, 'order-1', {
-        reason: 'Customer called',
-      });
-      expect(confirmed.status).toBe(RENTAL_STATUS.CONFIRMED);
-      expect(auditLogMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: 'STATUS_CHANGE',
-          entityId: 'order-1',
-        }),
-      );
     });
 
     it('cancels order when in RESERVED status', async () => {

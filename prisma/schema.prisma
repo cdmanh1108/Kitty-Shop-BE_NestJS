@@ -8,6 +8,7 @@ datasource db {
 }
 
 model Shop {
+  rentalConfirmations RentalConfirmation[]
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code         String   @unique @db.VarChar(50)
   name         String   @db.VarChar(255)
@@ -86,6 +87,7 @@ model ShopLocation {
 }
 
 model User {
+  rentalConfirmations RentalConfirmation[]
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email        String?   @unique @db.VarChar(255)
   phone        String?   @db.VarChar(30)
@@ -105,6 +107,7 @@ model User {
 }
 
 model ShopMember {
+  rentalConfirmations RentalConfirmation[]
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId       String   @map("shop_id") @db.Uuid
   userId       String   @map("user_id") @db.Uuid
@@ -546,11 +549,40 @@ model RentalOrder {
   expenses               Expense[]
   loyaltyEntries         CustomerLoyaltyEntry[]
 
+  confirmation           RentalConfirmation?
+
   @@unique([shopId, orderNumber])
   @@index([shopId, rentalStartAt, rentalEndAt])
   @@index([shopId, status])
   @@index([customerId, createdAt])
   @@map("rental_orders")
+}
+
+model RentalConfirmation {
+  orderId          String   @id @map("order_id") @db.Uuid
+  shopId           String   @map("shop_id") @db.Uuid
+  confirmedAt      DateTime @map("confirmed_at") @db.Timestamptz(6)
+  confirmedBy      String   @map("confirmed_by") @db.Uuid
+  actorUserId      String   @map("actor_user_id") @db.Uuid
+  actorName        String   @map("actor_name") @db.VarChar(255)
+  rentalAmount     Decimal  @map("rental_amount") @db.Decimal(18, 2)
+  collateralMethod String   @map("collateral_method") @db.VarChar(20)
+  documentType     String?  @map("document_type") @db.VarChar(20)
+  collateralAmount Decimal? @map("collateral_amount") @db.Decimal(18, 2)
+  note             String?  @db.VarChar(2000)
+  evidenceKey      String?  @unique @map("evidence_key") @db.VarChar(500)
+  evidenceFilename String?  @map("evidence_filename") @db.VarChar(255)
+  evidenceMimeType String?  @map("evidence_mime_type") @db.VarChar(100)
+  evidenceSize     Int?     @map("evidence_size")
+
+  order RentalOrder @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  shop Shop @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  actorUser User @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  actorMember ShopMember @relation(fields: [confirmedBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([shopId, confirmedAt])
+  @@map("rental_confirmations")
 }
 
 model CustomerLoyaltyEntry {

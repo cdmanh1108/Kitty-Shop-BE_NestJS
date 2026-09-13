@@ -28,7 +28,7 @@ export async function createOrder(
   policy: RentalPolicy,
 ): ReturnType<RentalRepository['createOrder']> {
   const collateral = data.collateral ?? { method: 'CASH' as const };
-  if (!policy.deposit.allowedMethods.includes(collateral.method))
+  if (data.collateral && !policy.deposit.allowedMethods.includes(collateral.method))
     throw new RentalInvariantError(
       'COLLATERAL_METHOD_NOT_ALLOWED',
       'Phương thức đặt cọc không được chính sách cửa hàng cho phép.',

@@ -1,4 +1,5 @@
 import type { PaginatedResult } from '@common/types/pagination';
+import type { RentalConfirmationRecord } from './rental-confirmation';
 import type { InventoryItemRecord } from '@modules/catalog/domain/catalog.records';
 import type { CustomerRecord } from '@modules/customers/domain/customers.records';
 import type { DeliveryJobRecord } from '@modules/deliveries/domain/deliveries.records';
@@ -15,6 +16,7 @@ import type { ShopLocationRecord } from '@modules/settings/domain/settings.recor
 export type RentalOrderDetails =
   | null
   | (RentalOrderRecord & {
+      confirmation: RentalConfirmationRecord | null;
       location: null | ShopLocationRecord;
       statusHistory: Array<RentalOrderStatusHistoryRecord>;
       customer: CustomerRecord;

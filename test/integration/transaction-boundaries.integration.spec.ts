@@ -129,15 +129,17 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
     const confirmation = {
       shopId: f.shop.id,
       orderId: order.id,
-      fromStatuses: ['RESERVED'] as const,
-      toStatus: 'CONFIRMED' as const,
-      changedBy: f.member.id,
+      actorMemberId: f.member.id,
+      actorUserId: f.user.id,
+      actorName: f.user.fullName,
+      collateralMethod: 'CASH' as const,
+      collateralAmount: 200000,
     };
-    const results = await Promise.all([
-      rentals.transition({ ...confirmation, fromStatuses: [...confirmation.fromStatuses] }),
-      rentals.transition({ ...confirmation, fromStatuses: [...confirmation.fromStatuses] }),
+    const results = await Promise.allSettled([
+      rentals.confirm(confirmation),
+      rentals.confirm(confirmation),
     ]);
-    expect(results.filter(Boolean)).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     await rentals.transition({
       shopId: f.shop.id,
       orderId: order.id,

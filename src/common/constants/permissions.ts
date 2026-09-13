@@ -10,6 +10,7 @@ export const PERMISSIONS = {
   RENTALS_VIEW: 'rentals.view',
   RENTALS_CREATE: 'rentals.create',
   RENTALS_UPDATE: 'rentals.update',
+  RENTALS_CONFIRM: 'rentals.confirm',
   RENTALS_CANCEL: 'rentals.cancel',
   PAYMENTS_VIEW: 'payments.view',
   PAYMENTS_CREATE: 'payments.create',

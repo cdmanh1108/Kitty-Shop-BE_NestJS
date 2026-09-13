@@ -1,4 +1,5 @@
 import type { RentalStatus } from './rental-status';
+import type { ConfirmRentalData } from './rental-confirmation';
 import type { JsonSerialized } from '@common/types/json';
 import type { RentalOrderDetails, RentalOrderPage } from './rental.models';
 
@@ -72,6 +73,7 @@ export interface CreateRentalOrderData {
 export const RENTAL_REPOSITORY = Symbol('RENTAL_REPOSITORY');
 
 export interface RentalRepository {
+  confirm(input: ConfirmRentalData): Promise<RentalOrderDetails>;
   customerExists(shopId: string, customerId: string): Promise<boolean>;
   locationExists(shopId: string, locationId: string): Promise<boolean>;
   getBookableVariant(input: RentalGetBookableVariantData): Promise<BookableVariant | null>;
@@ -86,11 +88,6 @@ export interface RentalRepository {
   transition(input: RentalTransitionData): Promise<RentalOrderDetails>;
   reschedule(input: RentalRescheduleData): Promise<RentalOrderDetails>;
   addCharge(input: RentalAddChargeData): Promise<RentalOrderDetails>;
-  receiveCollateral(
-    shopId: string,
-    orderId: string,
-    changedBy: string,
-  ): Promise<RentalOrderDetails>;
   returnCollateral(shopId: string, orderId: string, changedBy: string): Promise<RentalOrderDetails>;
   claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
   releaseIdempotency(shopId: string, scope: string, key: string, claimId: string): Promise<void>;

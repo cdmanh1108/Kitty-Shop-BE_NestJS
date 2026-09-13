@@ -1,5 +1,7 @@
 # Database design
 
+Manual confirmation storage and transaction invariants: [Admin confirmation](ADMIN_CONFIRMATION.md).
+
 PostgreSQL is the source of truth. Prisma is the application ORM, while committed SQL migrations may contain PostgreSQL-specific constraints Prisma cannot express (notably booking exclusion constraints).
 
 ## High-level ERD

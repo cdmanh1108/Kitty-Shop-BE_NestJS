@@ -21,7 +21,8 @@ export function toRentalSummary(row: Summary | JsonSerialized<Summary>): RentalO
     paymentStatus: row.paymentStatus,
     depositStatus: row.depositStatus,
     grandTotal: row.grandTotal.toString(),
-    itemCount: 'itemCount' in row ? row.itemCount : row.items.reduce((sum, item) => sum + item.quantity, 0),
+    itemCount:
+      'itemCount' in row ? row.itemCount : row.items.reduce((sum, item) => sum + item.quantity, 0),
     productCount: 'productCount' in row ? row.productCount : row.items.length,
     customer: { id: row.customer.id, fullName: row.customer.fullName, phone: row.customer.phone },
   };
@@ -63,15 +64,33 @@ export function toRentalResponse(
     .find((payment) => payment.purpose === 'DEPOSIT_REFUND' && payment.direction === 'OUT')?.paidAt;
   return {
     ...toRentalSummary(row),
+    confirmation: row.confirmation
+      ? {
+          confirmedAt: timestamp(row.confirmation.confirmedAt),
+          confirmedBy: row.confirmation.confirmedBy,
+          actorName: row.confirmation.actorName,
+          rentalAmount: row.confirmation.rentalAmount.toString(),
+          collateralMethod: row.confirmation.collateralMethod,
+          documentType: row.confirmation.documentType,
+          collateralAmount: row.confirmation.collateralAmount?.toString() ?? null,
+          note: row.confirmation.note,
+          hasEvidence: Boolean(row.confirmation.evidenceKey),
+          evidenceFilename: row.confirmation.evidenceFilename,
+        }
+      : null,
     rentalSubtotal: row.rentalSubtotal.toString(),
     chargesTotal: row.chargesTotal.toString(),
     discountTotal: row.discountTotal.toString(),
     depositRequired: row.depositRequired.toString(),
     collateralMethod: row.collateralMethod,
     documentType: row.documentType,
-    collateralStatus: row.collateralMethod === 'CASH' ? row.depositStatus : row.collateralStatus,
+    collateralStatus: row.confirmation
+      ? row.collateralStatus
+      : row.collateralMethod === 'CASH'
+        ? row.depositStatus
+        : row.collateralStatus,
     collateralReceivedAt:
-      row.collateralMethod === 'CASH'
+      row.collateralMethod === 'CASH' && !row.confirmation
         ? cashReceivedAt
           ? timestamp(cashReceivedAt)
           : null
@@ -79,7 +98,7 @@ export function toRentalResponse(
           ? timestamp(row.collateralReceivedAt)
           : null,
     collateralReturnedAt:
-      row.collateralMethod === 'CASH'
+      row.collateralMethod === 'CASH' && !row.confirmation
         ? cashReturnedAt
           ? timestamp(cashReturnedAt)
           : null

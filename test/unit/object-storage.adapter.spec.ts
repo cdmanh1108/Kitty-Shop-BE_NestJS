@@ -4,6 +4,7 @@ import {
   PutObjectCommand,
   HeadObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from '@aws-sdk/client-s3';
 
 jest.mock('@aws-sdk/client-s3');
@@ -153,5 +154,36 @@ describe('S3ObjectStorageAdapter', () => {
       const url = adapter.getPublicUrl('shops/main/products/sp001/hash.jpg');
       expect(url).toBe('https://assets.test.com/shops/main/products/sp001/hash.jpg');
     });
+  });
+
+  it('keeps evidence in the private bucket through upload, read and deletion', async () => {
+    adapter = new S3ObjectStorageAdapter({ ...config, privateBucket: 'private-evidence' });
+    const key = 'private/rental-confirmations/shop/order/image.jpg';
+    const body = Buffer.from('image');
+    mockSend.mockResolvedValueOnce({});
+    expect(await adapter.putObject({ key, body, contentType: 'image/jpeg' })).toMatchObject({
+      publicUrl: '',
+    });
+    expect(PutObjectCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ Bucket: 'private-evidence', CacheControl: 'private, no-store' }),
+    );
+    mockSend.mockResolvedValueOnce({ Body: { transformToByteArray: () => Promise.resolve(body) } });
+    expect(await adapter.getObject(key)).toEqual(body);
+    expect(GetObjectCommand).toHaveBeenCalledWith({ Bucket: 'private-evidence', Key: key });
+    mockSend.mockResolvedValueOnce({});
+    await adapter.deleteObject(key);
+    expect(DeleteObjectCommand).toHaveBeenCalledWith({ Bucket: 'private-evidence', Key: key });
+    expect(() => adapter.getPublicUrl('/' + key)).toThrow('không có liên kết công khai');
+  });
+
+  it('refuses to upload evidence without a separate private bucket', async () => {
+    await expect(
+      adapter.putObject({
+        key: 'private/evidence.jpg',
+        body: Buffer.from('image'),
+        contentType: 'image/jpeg',
+      }),
+    ).rejects.toThrow('bucket riêng tư');
+    expect(mockSend).not.toHaveBeenCalled();
   });
 });

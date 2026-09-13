@@ -13,12 +13,8 @@ import {
   canTransitionRental,
 } from '../domain/rental-policy';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
-import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
-import {
-  assertRentalConfirmation,
-  calculateLateCharges,
-  rewardForCompletedRental,
-} from '../domain/rental-settlement';
+
+import { calculateLateCharges, rewardForCompletedRental } from '../domain/rental-settlement';
 import { RentalInvariantError } from '../domain/rental-errors';
 import type { Clock } from '@common/clock/clock';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
@@ -42,31 +38,13 @@ export async function transition(
       where: { id: input.orderId, shopId: input.shopId },
     });
     if (!order || !input.fromStatuses.some((status) => status === order.status)) return null;
+    if (input.toStatus === RENTAL_STATUS.CONFIRMED)
+      throw new RentalInvariantError(
+        'CONFIRMATION_REQUIRED',
+        'Vui lòng sử dụng thao tác xác nhận đơn với thông tin đặt cọc.',
+      );
     if (!canTransitionRental(order.status, input.toStatus)) return null;
-    if (input.toStatus === RENTAL_STATUS.CONFIRMED) {
-      const transactions = await tx.paymentTransaction.findMany({
-        where: {
-          shopId: input.shopId,
-          orderId: order.id,
-          status: TRANSACTION_STATUS.COMPLETED,
-          voidedAt: null,
-        },
-        select: { direction: true, purpose: true, amount: true },
-      });
-      assertRentalConfirmation({
-        rentalDue: order.grandTotal.toString(),
-        depositRequired: order.depositRequired.toString(),
-        collateralMethod: order.collateralMethod,
-        documentType: order.documentType,
-        collateralStatus: order.collateralStatus,
-        payments: transactions.map((payment) => ({
-          ...payment,
-          amount: payment.amount.toString(),
-        })),
-        policy,
-      });
-    }
-    if (input.toStatus === RENTAL_STATUS.ACTIVE || input.toStatus === RENTAL_STATUS.CONFIRMED) {
+    if (input.toStatus === RENTAL_STATUS.ACTIVE) {
       const allocations = await tx.rentalItemAllocation.findMany({
         where: { orderId: order.id, releasedAt: null },
         select: { inventoryItemId: true },
@@ -102,16 +80,7 @@ export async function transition(
       },
     });
 
-    if (input.toStatus === RENTAL_STATUS.CONFIRMED) {
-      await tx.rentalItemAllocation.updateMany({
-        where: { orderId: order.id, status: ALLOCATION_STATUS.HELD },
-        data: { status: ALLOCATION_STATUS.CONFIRMED },
-      });
-      await tx.rentalOrderItem.updateMany({
-        where: { orderId: order.id },
-        data: { status: RENTAL_ITEM_STATUS.CONFIRMED },
-      });
-    } else if (input.toStatus === RENTAL_STATUS.ACTIVE) {
+    if (input.toStatus === RENTAL_STATUS.ACTIVE) {
       await tx.rentalItemAllocation.updateMany({
         where: {
           orderId: order.id,
@@ -370,12 +339,12 @@ export async function addCharge(
   });
 }
 
-export async function setDocumentCollateral(
+export async function returnDocumentCollateral(
   prisma: PrismaService,
   shopId: string,
   orderId: string,
   changedBy: string,
-  action: 'RECEIVE' | 'RETURN',
+
   clock: Clock,
 ): Promise<RentalOrderDetails> {
   return serializableTransaction(prisma, async (tx) => {
@@ -386,35 +355,23 @@ export async function setDocumentCollateral(
         'COLLATERAL_METHOD_NOT_ALLOWED',
         'Đơn thuê này không đặt cọc bằng giấy tờ.',
       );
-    if (action === 'RECEIVE') {
-      if (order.status !== RENTAL_STATUS.RESERVED || order.collateralStatus !== 'REQUIRED')
-        throw new RentalInvariantError(
-          'COLLATERAL_TRANSITION_NOT_ALLOWED',
-          'Không thể nhận giấy tờ đặt cọc ở trạng thái hiện tại.',
-        );
-      await tx.rentalOrder.update({
-        where: { id: order.id },
-        data: { collateralStatus: 'HELD', collateralReceivedAt: clock.now(), updatedBy: changedBy },
-      });
-    } else {
-      if (order.status !== RENTAL_STATUS.COMPLETED || order.collateralStatus !== 'HELD')
-        throw new RentalInvariantError(
-          'COLLATERAL_TRANSITION_NOT_ALLOWED',
-          'Không thể trả giấy tờ đặt cọc ở trạng thái hiện tại.',
-        );
-      await tx.rentalOrder.update({
-        where: { id: order.id },
-        data: {
-          collateralStatus: 'RETURNED',
-          collateralReturnedAt: clock.now(),
-          updatedBy: changedBy,
-        },
-      });
-    }
+    if (order.status !== RENTAL_STATUS.COMPLETED || order.collateralStatus !== 'HELD')
+      throw new RentalInvariantError(
+        'COLLATERAL_TRANSITION_NOT_ALLOWED',
+        'Không thể trả giấy tờ đặt cọc ở trạng thái hiện tại.',
+      );
+    await tx.rentalOrder.update({
+      where: { id: order.id },
+      data: {
+        collateralStatus: 'RETURNED',
+        collateralReturnedAt: clock.now(),
+        updatedBy: changedBy,
+      },
+    });
     await tx.outboxEvent.create({
       data: {
         shopId,
-        eventType: `RENTAL_COLLATERAL_${action === 'RECEIVE' ? 'RECEIVED' : 'RETURNED'}`,
+        eventType: 'RENTAL_COLLATERAL_RETURNED',
         aggregateType: 'rental_order',
         aggregateId: order.id,
         payload: { orderId: order.id },

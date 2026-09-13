@@ -1,3 +1,4 @@
+import { RentalConfirmationResDto } from './rental-confirmation.dto';
 import { CHARGE_TYPE } from '@modules/rentals/domain/charge-type';
 import { DELIVERY_DIRECTION, DELIVERY_METHOD } from '@modules/deliveries/domain/delivery-status';
 
@@ -329,6 +330,8 @@ export class RentalSettlementResDto {
 }
 
 export class RentalOrderResDto extends RentalOrderListItemResDto {
+  @ApiProperty({ type: () => RentalConfirmationResDto, nullable: true })
+  confirmation!: RentalConfirmationResDto | null;
   @ApiProperty({ type: [RentalItemResDto] }) items!: RentalItemResDto[];
   @ApiProperty({ type: String, example: '450000.00' }) rentalSubtotal!: string;
   @ApiProperty({ type: String, example: '50000.00' }) chargesTotal!: string;
