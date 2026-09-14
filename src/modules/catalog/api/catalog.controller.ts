@@ -270,19 +270,21 @@ export class CatalogController {
   @Post('inventory')
   @Permissions(PERMISSIONS.INVENTORY_MANAGE)
   @ApiCreatedResponse({ type: InventoryItemResDto })
-  addInventory(@CurrentUser() user: CurrentUserType, @Body() body: AddInventoryReqDto) {
-    return this.service.addInventory(user, toAddInventoryInput(body));
+  async addInventory(@CurrentUser() user: CurrentUserType, @Body() body: AddInventoryReqDto) {
+    const item = await this.service.addInventory(user, toAddInventoryInput(body));
+    return this.service.getInventory(user, item.id);
   }
 
   @Patch('inventory/:id/status')
   @Permissions(PERMISSIONS.INVENTORY_MANAGE)
   @ApiOkResponse({ type: InventoryItemResDto })
-  updateInventoryStatus(
+  async updateInventoryStatus(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
     @Body() body: UpdateInventoryStatusReqDto,
   ) {
-    return this.service.updateInventoryStatus(user, id, toUpdateInventoryStatusInput(body));
+    await this.service.updateInventoryStatus(user, id, toUpdateInventoryStatusInput(body));
+    return this.service.getInventory(user, id);
   }
 
   @Delete('inventory/:id')
