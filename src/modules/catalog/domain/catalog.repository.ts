@@ -39,6 +39,13 @@ export class CatalogCategoryError extends CatalogInvariantError {
     );
   }
 }
+export class CatalogCategoryInvalidParentError extends CatalogInvariantError {
+  readonly code = 'CATEGORY_INVALID_PARENT';
+
+  constructor(message = 'Danh mục không thể chọn chính nó làm danh mục cha.') {
+    super(message);
+  }
+}
 
 export const CATALOG_REPOSITORY = Symbol('CATALOG_REPOSITORY');
 
@@ -60,6 +67,7 @@ export interface CatalogRepository {
   createCategory(
     shopId: string,
     input: {
+      parentId?: string | null;
       code: string;
       name: string;
       description?: string;
@@ -71,6 +79,7 @@ export interface CatalogRepository {
     shopId: string,
     id: string,
     input: {
+      parentId?: string | null;
       code?: string;
       name?: string;
       description?: string | null;

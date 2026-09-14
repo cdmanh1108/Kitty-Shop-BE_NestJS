@@ -12,6 +12,7 @@ import {
 import {
   CATALOG_REPOSITORY,
   CatalogCategoryError,
+  CatalogCategoryInvalidParentError,
   CatalogInvariantError,
   CatalogCategoryCodeAlreadyExistsError,
   type CatalogRepository,
@@ -79,6 +80,7 @@ export class CatalogService {
     ).toUpperCase();
     const created = await this.withInvariant(() =>
       this.repository.createCategory(user.shopId, {
+        parentId: input.parentId || null,
         code,
         name,
         description: input.description?.trim() || undefined,
@@ -93,16 +95,24 @@ export class CatalogService {
       action: 'CREATE',
       entityType: 'category',
       entityId: created.id,
-      newValues: { code, name, status: input.status ?? 'ACTIVE', sortOrder: input.sortOrder ?? 0 },
+      newValues: {
+        parentId: input.parentId || null,
+        code,
+        name,
+        status: input.status ?? 'ACTIVE',
+        sortOrder: input.sortOrder ?? 0,
+      },
     });
     return created;
   }
 
   async updateCategory(user: CurrentUser, id: string, input: UpdateCategoryInput) {
     const code = input.code?.trim() ? input.code.trim().toUpperCase() : undefined;
+    const parentId = input.parentId === undefined ? undefined : input.parentId || null;
     const updated = await this.withInvariant(() =>
       this.repository.updateCategory(user.shopId, id, {
         ...input,
+        parentId,
         code,
         name: input.name?.trim(),
         description: input.description === null ? null : input.description?.trim() || undefined,
@@ -393,6 +403,11 @@ export class CatalogService {
           throw new ConflictException({
             code: error.code,
             message: 'Mã danh mục đã tồn tại.',
+          });
+        if (error instanceof CatalogCategoryInvalidParentError)
+          throw new BadRequestException({
+            code: error.code,
+            message: error.message,
           });
         const msg = error.message.toLowerCase();
         if (

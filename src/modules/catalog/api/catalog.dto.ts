@@ -226,6 +226,11 @@ export class UpdateProductReqDto {
 }
 
 export class CreateCategoryReqDto {
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid', example: 'd1964177-3e91-4475-ab1b-2661001a1829' })
+  @IsUUID(undefined, { message: 'Mã danh mục cha phải là UUID hợp lệ.' })
+  @IsOptional()
+  parentId?: string | null;
+
   @ApiPropertyOptional({ example: 'DRESS' })
   @Transform(normalizeCode)
   @IsString({ message: 'Mã phải là chuỗi ký tự.' })
@@ -258,6 +263,11 @@ export class CreateCategoryReqDto {
 }
 
 export class UpdateCategoryReqDto {
+  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid', example: 'd1964177-3e91-4475-ab1b-2661001a1829' })
+  @IsUUID(undefined, { message: 'Mã danh mục cha phải là UUID hợp lệ.' })
+  @IsOptional()
+  parentId?: string | null;
+
   @ApiPropertyOptional({ example: 'DRESS' })
   @Transform(normalizeCode)
   @IsString({ message: 'Mã phải là chuỗi ký tự.' })
@@ -446,6 +456,7 @@ export class CategorySummaryResDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) parentId?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
 }
 
@@ -559,6 +570,7 @@ export class CategoryLookupResDto extends CategorySummaryResDto {
 
 export class CategoryOptionResDto {
   @ApiProperty() id!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) parentId?: string | null;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status!: 'ACTIVE' | 'INACTIVE';
@@ -573,6 +585,8 @@ export class CategoryOptionsQueryDto {
 }
 
 export class CategoryResDto extends CategorySummaryResDto {
+  @ApiPropertyOptional({ type: CategorySummaryResDto, nullable: true })
+  parent?: CategorySummaryResDto | null;
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE'] }) status!: 'ACTIVE' | 'INACTIVE';
   @ApiProperty() sortOrder!: number;
   @ApiProperty() productCount!: number;

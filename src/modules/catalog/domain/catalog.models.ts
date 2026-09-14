@@ -16,7 +16,7 @@ import type { ShopLocationRecord } from '@modules/settings/domain/settings.recor
 
 export type CatalogLookups = {
   categories: Array<
-    Pick<CategoryRecord, 'id' | 'code' | 'name' | 'description'> & { productCount: number }
+    Pick<CategoryRecord, 'id' | 'parentId' | 'code' | 'name' | 'description'> & { productCount: number }
   >;
   sizes: Array<Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder'>>;
   colors: Array<Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor'>>;
@@ -25,10 +25,14 @@ export type CatalogLookups = {
 
 export type CategoryListItem = Pick<
   CategoryRecord,
-  'id' | 'code' | 'name' | 'description' | 'sortOrder'
-> & { status: 'ACTIVE' | 'INACTIVE'; productCount: number };
+  'id' | 'parentId' | 'code' | 'name' | 'description' | 'sortOrder'
+> & {
+  status: 'ACTIVE' | 'INACTIVE';
+  productCount: number;
+  parent?: { id: string; code: string; name: string } | null;
+};
 export type CategoryPage = PaginatedResult<CategoryListItem>;
-export type CategoryOption = Pick<CategoryRecord, 'id' | 'code' | 'name'> & {
+export type CategoryOption = Pick<CategoryRecord, 'id' | 'parentId' | 'code' | 'name'> & {
   status: 'ACTIVE' | 'INACTIVE';
 };
 

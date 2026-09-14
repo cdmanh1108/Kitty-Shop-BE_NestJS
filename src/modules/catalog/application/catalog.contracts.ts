@@ -29,6 +29,7 @@ export interface AvailabilityQuery {
 }
 
 export interface CreateCategoryInput {
+  parentId?: string | null;
   code?: string;
   name: string;
   description?: string;
@@ -42,6 +43,7 @@ export interface CategoryListQuery extends PaginationParams {
 }
 
 export interface UpdateCategoryInput {
+  parentId?: string | null;
   code?: string;
   name?: string;
   description?: string | null;

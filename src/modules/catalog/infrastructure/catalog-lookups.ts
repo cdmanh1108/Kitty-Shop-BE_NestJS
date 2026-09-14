@@ -1,6 +1,9 @@
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { CatalogRepository } from '../domain/catalog.repository';
-import { CatalogCategoryCodeAlreadyExistsError } from '../domain/catalog.repository';
+import {
+  CatalogCategoryCodeAlreadyExistsError,
+  CatalogCategoryInvalidParentError,
+} from '../domain/catalog.repository';
 import { Prisma } from '@prisma/client';
 
 export async function listLookups(
@@ -12,6 +15,7 @@ export async function listLookups(
       where: { shopId, isActive: true },
       select: {
         id: true,
+        parentId: true,
         code: true,
         name: true,
         description: true,
@@ -49,6 +53,7 @@ export async function createCategory(
   prisma: PrismaService,
   shopId: string,
   input: {
+    parentId?: string | null;
     code: string;
     name: string;
     description?: string;
@@ -59,11 +64,21 @@ export async function createCategory(
   if (await prisma.category.count({ where: { shopId, code: input.code } })) {
     throw new CatalogCategoryCodeAlreadyExistsError();
   }
+  if (input.parentId) {
+    const parent = await prisma.category.findFirst({
+      where: { id: input.parentId, shopId },
+      select: { id: true },
+    });
+    if (!parent) {
+      throw new CatalogCategoryInvalidParentError('Danh mục cha không tồn tại.');
+    }
+  }
   let created;
   try {
     created = await prisma.category.create({
       data: {
         shopId,
+        parentId: input.parentId || null,
         code: input.code,
         name: input.name,
         description: input.description,
@@ -72,11 +87,19 @@ export async function createCategory(
       },
       select: {
         id: true,
+        parentId: true,
         code: true,
         name: true,
         description: true,
         sortOrder: true,
         isActive: true,
+        parent: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
       },
     });
   } catch (error) {
@@ -115,11 +138,19 @@ export async function listCategories(
       where,
       select: {
         id: true,
+        parentId: true,
         code: true,
         name: true,
         description: true,
         sortOrder: true,
         isActive: true,
+        parent: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
         _count: { select: { products: { where: { shopId: input.shopId, archivedAt: null } } } },
       },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -151,7 +182,7 @@ export function categoryOptions(
   return prisma.category
     .findMany({
       where: { shopId, ...(!includeInactive ? { isActive: true } : {}) },
-      select: { id: true, code: true, name: true, isActive: true },
+      select: { id: true, parentId: true, code: true, name: true, isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     })
     .then((items) =>
@@ -167,6 +198,7 @@ export async function updateCategory(
   shopId: string,
   id: string,
   input: {
+    parentId?: string | null;
     code?: string;
     name?: string;
     description?: string | null;
@@ -174,10 +206,24 @@ export async function updateCategory(
     sortOrder?: number;
   },
 ): ReturnType<CatalogRepository['updateCategory']> {
+  if (input.parentId !== undefined && input.parentId !== null) {
+    if (input.parentId === id) {
+      throw new CatalogCategoryInvalidParentError('Danh mục không thể chọn chính nó làm danh mục cha.');
+    }
+    const parent = await prisma.category.findFirst({
+      where: { id: input.parentId, shopId },
+      select: { id: true },
+    });
+    if (!parent) {
+      throw new CatalogCategoryInvalidParentError('Danh mục cha không tồn tại.');
+    }
+  }
+
   const result = await prisma.category
     .updateMany({
       where: { id, shopId },
       data: {
+        ...(input.parentId !== undefined ? { parentId: input.parentId || null } : {}),
         code: input.code,
         name: input.name,
         description: input.description,
@@ -195,11 +241,19 @@ export async function updateCategory(
     where: { id, shopId },
     select: {
       id: true,
+      parentId: true,
       code: true,
       name: true,
       description: true,
       sortOrder: true,
       isActive: true,
+      parent: {
+        select: {
+          id: true,
+          code: true,
+          name: true,
+        },
+      },
       _count: { select: { products: { where: { shopId, archivedAt: null } } } },
     },
   });
