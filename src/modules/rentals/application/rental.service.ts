@@ -7,11 +7,13 @@ import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { PERMISSIONS } from '@common/constants/permissions';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import { createHash } from 'node:crypto';
 import {
@@ -30,6 +32,7 @@ import type {
   CreateRentalOrderInput,
   RentalListQuery,
   RescheduleRentalInput,
+  ReturnRentalOrderInput,
   TransitionRentalInput,
 } from './rental.contracts';
 
@@ -39,6 +42,7 @@ const RENTAL_STATUS_LABELS: Readonly<Record<string, string>> = {
   RESERVED: 'đã đặt trước',
   CONFIRMED: 'đã xác nhận',
   ACTIVE: 'đang thuê',
+  RETURNED: 'đã nhận trả',
   COMPLETED: 'đã hoàn thành',
   CANCELLED: 'đã hủy',
 };
@@ -264,16 +268,6 @@ export class RentalService {
     );
   }
 
-  complete(user: CurrentUser, id: string, input: TransitionRentalInput) {
-    return this.transition(
-      user,
-      id,
-      RENTAL_TRANSITION_FROM.COMPLETED,
-      RENTAL_STATUS.COMPLETED,
-      input.reason,
-    );
-  }
-
   cancel(user: CurrentUser, id: string, input: TransitionRentalInput) {
     return this.transition(
       user,
@@ -345,6 +339,14 @@ export class RentalService {
   async addCharge(user: CurrentUser, id: string, input: AddRentalChargeInput) {
     if (!CHARGE_TYPES.has(input.chargeType))
       throw new BadRequestException('Loại phụ phí không hợp lệ.');
+    const current = await this.repository.get(user.shopId, id);
+    if (!current) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (current.status === RENTAL_STATUS.COMPLETED || current.status === RENTAL_STATUS.CANCELLED) {
+      throw new BadRequestException('Không thể thêm phụ phí cho đơn thuê đã đóng hoặc đã hủy.');
+    }
+    if (current.settlement) {
+      throw new BadRequestException('Không thể thêm phụ phí sau khi đã kết toán đơn thuê.');
+    }
     const order = await this.repository.addCharge({
       shopId: user.shopId,
       orderId: id,
@@ -365,6 +367,74 @@ export class RentalService {
       newValues: { ...input },
     });
     return order;
+  }
+
+  async getReturnPreview(user: CurrentUser, id: string, returnedAt?: Date) {
+    this.authorizeReturn(user);
+    const order = await this.repository.get(user.shopId, id);
+    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    const preview = await this.repository.getReturnPreview(user.shopId, id, returnedAt);
+    const items = order.items.flatMap((item) =>
+      item.allocations.map((alloc) => ({
+        inventoryItemId: alloc.inventoryItemId,
+        sku: alloc.inventoryItem.sku,
+        productName: item.productNameSnapshot,
+        variantTitle: item.variantNameSnapshot,
+      })),
+    );
+    return {
+      rentalEndAt: preview.dueAt.toISOString(),
+      actualReturnedAt: preview.actualReturnedAt.toISOString(),
+      lateDays: preview.lateDays,
+      dailyLateFeePerSet: preview.dailyLateFeePerSet,
+      lateFee: preview.lateFee,
+      additionalRentalFee: preview.additionalRental,
+      items,
+    };
+  }
+
+  async receiveReturn(user: CurrentUser, id: string, input: ReturnRentalOrderInput) {
+    this.authorizeReturn(user);
+    const order = await this.repository.get(user.shopId, id);
+    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (order.status !== RENTAL_STATUS.ACTIVE) {
+      throw new BadRequestException('Chỉ có thể nhận trả cho đơn thuê đang hoạt động (ACTIVE).');
+    }
+    const result = await this.repository.receiveReturn({
+      shopId: user.shopId,
+      orderId: id,
+      actualReturnedAt: input.actualReturnedAt,
+      actorMemberId: user.memberId,
+      actorUserId: user.userId,
+      actorName: user.fullName,
+      items: input.inspections.map((item) => ({
+        inventoryItemId: item.inventoryItemId,
+        condition: item.condition,
+        note: item.note,
+      })),
+      manualCharges: input.manualCharges,
+      note: input.note,
+    });
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'RECEIVE_RETURN',
+      entityType: 'rental_order',
+      entityId: id,
+      newValues: {
+        actualReturnedAt: input.actualReturnedAt ? input.actualReturnedAt.toISOString() : null,
+        itemCount: input.inspections.length,
+        note: input.note ?? null,
+      },
+    });
+    return result;
+  }
+
+  private authorizeReturn(user: CurrentUser) {
+    if (!user.permissions?.includes(PERMISSIONS.RENTALS_RETURN)) {
+      throw new ForbiddenException('Bạn không có quyền nhận trả đồ.');
+    }
   }
 
   private async transition(

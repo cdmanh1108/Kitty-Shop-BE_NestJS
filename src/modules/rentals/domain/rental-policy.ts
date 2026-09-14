@@ -15,9 +15,8 @@ export function canRescheduleRental(status: string): boolean {
 export const RENTAL_TRANSITION_FROM = {
   CONFIRMED: [RENTAL_STATUS.RESERVED],
   ACTIVE: [RENTAL_STATUS.CONFIRMED],
-  COMPLETED: [RENTAL_STATUS.ACTIVE],
   CANCELLED: [RENTAL_STATUS.RESERVED],
-} satisfies Record<'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED', RentalStatus[]>;
+} satisfies Record<'CONFIRMED' | 'ACTIVE' | 'CANCELLED', RentalStatus[]>;
 
 export function canTransitionRental(from: string, to: RentalStatus): boolean {
   const transitions: Partial<Record<RentalStatus, readonly string[]>> = RENTAL_TRANSITION_FROM;

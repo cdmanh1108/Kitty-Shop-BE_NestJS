@@ -26,6 +26,7 @@ export interface RentalOrderRecord {
   rentalStartAt: Date;
   rentalEndAt: Date;
   actualStartedAt: Date | null;
+  actualReturnedAt: Date | null;
   completedAt: Date | null;
   cancelledAt: Date | null;
   status: string;

@@ -17,7 +17,15 @@ import {
 import { getBookableVariant } from './rental-availability';
 import { createOrder } from './rental-booking';
 import { claimIdempotency, releaseIdempotency } from './rental-idempotency';
-import { transition, reschedule, addCharge, returnDocumentCollateral } from './rental-lifecycle';
+import {
+  transition,
+  reschedule,
+  addCharge,
+  returnDocumentCollateral,
+  receiveReturn,
+  settleOrder,
+  getReturnPreview,
+} from './rental-lifecycle';
 import { confirmOrder } from './rental-confirmation';
 
 @Injectable()
@@ -99,6 +107,21 @@ export class PrismaRentalRepository implements RentalRepository {
     ...args: Parameters<RentalRepository['addCharge']>
   ): ReturnType<RentalRepository['addCharge']> {
     return addCharge(this.prisma, ...args);
+  }
+
+  async receiveReturn(input: Parameters<RentalRepository['receiveReturn']>[0]) {
+    const policy = await this.policies.getPolicy(input.shopId);
+    return receiveReturn(this.prisma, input, policy, this.clock);
+  }
+
+  async settleOrder(input: Parameters<RentalRepository['settleOrder']>[0]) {
+    const policy = await this.policies.getPolicy(input.shopId);
+    return settleOrder(this.prisma, input, policy, this.clock);
+  }
+
+  async getReturnPreview(shopId: string, orderId: string, returnedAt?: Date) {
+    const policy = await this.policies.getPolicy(shopId);
+    return getReturnPreview(this.prisma, shopId, orderId, returnedAt, policy, this.clock);
   }
 
   returnCollateral(shopId: string, orderId: string, changedBy: string) {

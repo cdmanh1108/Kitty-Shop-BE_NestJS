@@ -135,6 +135,8 @@ export function getWithTx(
     where: { id, shopId },
     include: {
       confirmation: true,
+      returnRecord: { include: { inspections: true } },
+      settlement: true,
       customer: true,
       location: true,
       items: { include: { allocations: { include: { inventoryItem: true } } } },

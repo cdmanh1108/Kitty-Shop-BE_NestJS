@@ -6,6 +6,7 @@ import type {
   RentalDeliveryInput,
   RentalListQuery,
   RescheduleRentalInput,
+  ReturnRentalOrderInput,
   TransitionRentalInput,
 } from '../application/rental.contracts';
 import type {
@@ -16,6 +17,7 @@ import type {
   RentalDeliveryReqDto,
   RentalListQueryDto,
   RescheduleRentalReqDto,
+  ReturnRentalOrderReqDto,
   TransitionRentalReqDto,
 } from './rental.dto';
 
@@ -47,4 +49,22 @@ export function toRescheduleRentalInput(dto: RescheduleRentalReqDto): Reschedule
 }
 export function toTransitionRentalInput(dto: TransitionRentalReqDto): TransitionRentalInput {
   return { ...dto };
+}
+
+export function toReturnRentalOrderInput(dto: ReturnRentalOrderReqDto): ReturnRentalOrderInput {
+  return {
+    actualReturnedAt: dto.actualReturnedAt ? new Date(dto.actualReturnedAt) : undefined,
+    inspections: dto.inspections.map((item) => ({
+      inventoryItemId: item.inventoryItemId,
+      condition: item.condition as ReturnRentalOrderInput['inspections'][number]['condition'],
+      note: item.note,
+    })),
+    manualCharges: dto.manualCharges?.map((charge) => ({
+      chargeType: charge.chargeType,
+      description: charge.description,
+      amount: charge.amount,
+      quantity: charge.quantity,
+    })),
+    note: dto.note,
+  };
 }

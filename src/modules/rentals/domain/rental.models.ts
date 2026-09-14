@@ -13,10 +13,14 @@ import type {
 } from '@modules/rentals/domain/rentals.records';
 import type { ShopLocationRecord } from '@modules/settings/domain/settings.records';
 
+import type { RentalReturnRecord, RentalSettlementRecord } from './rental-return';
+
 export type RentalOrderDetails =
   | null
   | (RentalOrderRecord & {
       confirmation: RentalConfirmationRecord | null;
+      returnRecord: RentalReturnRecord | null;
+      settlement: RentalSettlementRecord | null;
       location: null | ShopLocationRecord;
       statusHistory: Array<RentalOrderStatusHistoryRecord>;
       customer: CustomerRecord;

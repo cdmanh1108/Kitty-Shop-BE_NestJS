@@ -9,6 +9,8 @@ datasource db {
 
 model Shop {
   rentalConfirmations RentalConfirmation[]
+  rentalReturns       RentalReturn[]
+  rentalSettlements   RentalSettlement[]
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code         String   @unique @db.VarChar(50)
   name         String   @db.VarChar(255)
@@ -88,6 +90,8 @@ model ShopLocation {
 
 model User {
   rentalConfirmations RentalConfirmation[]
+  rentalReturns       RentalReturn[]
+  rentalSettlements   RentalSettlement[]
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email        String?   @unique @db.VarChar(255)
   phone        String?   @db.VarChar(30)
@@ -108,6 +112,8 @@ model User {
 
 model ShopMember {
   rentalConfirmations RentalConfirmation[]
+  rentalReturns       RentalReturn[]
+  rentalSettlements   RentalSettlement[]
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId       String   @map("shop_id") @db.Uuid
   userId       String   @map("user_id") @db.Uuid
@@ -468,6 +474,7 @@ model InventoryItem {
   statusHistory  InventoryStatusHistory[]
   serviceRecords InventoryServiceRecord[]
   expenses       Expense[]
+  inspections    RentalReturnInspection[]
 
   @@unique([shopId, sku])
   @@unique([shopId, barcode])
@@ -509,6 +516,7 @@ model RentalOrder {
   rentalStartAt        DateTime  @map("rental_start_at") @db.Timestamptz(6)
   rentalEndAt          DateTime  @map("rental_end_at") @db.Timestamptz(6)
   actualStartedAt      DateTime? @map("actual_started_at") @db.Timestamptz(6)
+  actualReturnedAt     DateTime? @map("actual_returned_at") @db.Timestamptz(6)
   completedAt          DateTime? @map("completed_at") @db.Timestamptz(6)
   cancelledAt          DateTime? @map("cancelled_at") @db.Timestamptz(6)
   status               String    @default("RESERVED") @db.VarChar(30)
@@ -550,6 +558,8 @@ model RentalOrder {
   loyaltyEntries         CustomerLoyaltyEntry[]
 
   confirmation           RentalConfirmation?
+  returnRecord           RentalReturn?
+  settlement             RentalSettlement?
 
   @@unique([shopId, orderNumber])
   @@index([shopId, rentalStartAt, rentalEndAt])
@@ -583,6 +593,74 @@ model RentalConfirmation {
 
   @@index([shopId, confirmedAt])
   @@map("rental_confirmations")
+}
+
+model RentalReturn {
+  orderId          String   @id @map("order_id") @db.Uuid
+  shopId           String   @map("shop_id") @db.Uuid
+  returnedAt       DateTime @map("returned_at") @db.Timestamptz(6)
+  receivedBy       String   @map("received_by") @db.Uuid
+  actorUserId      String   @map("actor_user_id") @db.Uuid
+  actorName        String   @map("actor_name") @db.VarChar(255)
+  lateDays         Int      @default(0) @map("late_days")
+  lateFee          Decimal  @default(0) @map("late_fee") @db.Decimal(18, 2)
+  additionalRental Decimal  @default(0) @map("additional_rental") @db.Decimal(18, 2)
+  note             String?  @db.VarChar(2000)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order       RentalOrder              @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  shop        Shop                     @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  actorUser   User                     @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  actorMember ShopMember               @relation(fields: [receivedBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  inspections RentalReturnInspection[]
+
+  @@index([shopId, returnedAt])
+  @@map("rental_returns")
+}
+
+model RentalReturnInspection {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId         String   @map("order_id") @db.Uuid
+  inventoryItemId String   @map("inventory_item_id") @db.Uuid
+  condition       String   @db.VarChar(30)
+  note            String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  returnRecord  RentalReturn  @relation(fields: [orderId], references: [orderId], onDelete: Cascade, onUpdate: NoAction)
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([orderId])
+  @@index([inventoryItemId])
+  @@map("rental_return_inspections")
+}
+
+model RentalSettlement {
+  orderId          String   @id @map("order_id") @db.Uuid
+  shopId           String   @map("shop_id") @db.Uuid
+  settledAt        DateTime @map("settled_at") @db.Timestamptz(6)
+  settledBy        String   @map("settled_by") @db.Uuid
+  actorUserId      String   @map("actor_user_id") @db.Uuid
+  actorName        String   @map("actor_name") @db.VarChar(255)
+  settlementType   String   @map("settlement_type") @db.VarChar(30)
+  amount           Decimal  @default(0) @db.Decimal(18, 2)
+  depositAmount    Decimal  @default(0) @map("deposit_amount") @db.Decimal(18, 2)
+  totalCharges     Decimal  @default(0) @map("total_charges") @db.Decimal(18, 2)
+  refundAmount     Decimal  @default(0) @map("refund_amount") @db.Decimal(18, 2)
+  amountDue        Decimal  @default(0) @map("amount_due") @db.Decimal(18, 2)
+  note             String?  @db.VarChar(2000)
+  evidenceKey      String?  @unique @map("evidence_key") @db.VarChar(500)
+  evidenceFilename String?  @map("evidence_filename") @db.VarChar(255)
+  evidenceMimeType String?  @map("evidence_mime_type") @db.VarChar(100)
+  evidenceSize     Int?     @map("evidence_size")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  order       RentalOrder @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  shop        Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  actorUser   User        @relation(fields: [actorUserId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  actorMember ShopMember  @relation(fields: [settledBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([shopId, settledAt])
+  @@map("rental_settlements")
 }
 
 model CustomerLoyaltyEntry {

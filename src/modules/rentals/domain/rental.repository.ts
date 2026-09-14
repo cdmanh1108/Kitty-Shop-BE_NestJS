@@ -86,11 +86,70 @@ export interface RentalRepository {
     id: string,
   ): Promise<{ status: string; rentalStartAt: Date; rentalEndAt: Date } | null>;
   transition(input: RentalTransitionData): Promise<RentalOrderDetails>;
+  receiveReturn(input: ReceiveRentalReturnData): Promise<RentalOrderDetails>;
+  settleOrder(input: SettleRentalOrderData): Promise<RentalOrderDetails>;
+  getReturnPreview(shopId: string, orderId: string, returnedAt?: Date): Promise<ReturnPreviewData>;
   reschedule(input: RentalRescheduleData): Promise<RentalOrderDetails>;
   addCharge(input: RentalAddChargeData): Promise<RentalOrderDetails>;
   returnCollateral(shopId: string, orderId: string, changedBy: string): Promise<RentalOrderDetails>;
   claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
   releaseIdempotency(shopId: string, scope: string, key: string, claimId: string): Promise<void>;
+}
+
+export interface ReceiveRentalReturnData {
+  shopId: string;
+  orderId: string;
+  actualReturnedAt?: Date;
+  actorMemberId: string;
+  actorUserId: string;
+  actorName: string;
+  items: Array<{
+    inventoryItemId: string;
+    condition: string;
+    note?: string;
+    charge?: {
+      chargeType: string;
+      amount: number;
+      description?: string;
+    };
+  }>;
+  manualCharges?: Array<{
+    chargeType: string;
+    amount: number;
+    description?: string;
+  }>;
+  note?: string;
+}
+
+export interface SettleRentalOrderData {
+  shopId: string;
+  orderId: string;
+  actorMemberId: string;
+  actorUserId: string;
+  actorName: string;
+  settlementType?: string;
+  note?: string;
+  returnDocument?: boolean;
+  evidence?: {
+    key: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+  };
+}
+
+export interface ReturnPreviewData {
+  dueAt: Date;
+  actualReturnedAt: Date;
+  lateDays: number;
+  dailyLateFeePerSet: number;
+  lateFee: string;
+  additionalRental: string;
+  itemCount: number;
+  rentalSubtotal: string;
+  depositHeld: string;
+  collateralMethod: string;
+  documentType: string | null;
 }
 
 export interface RentalGetBookableVariantData {

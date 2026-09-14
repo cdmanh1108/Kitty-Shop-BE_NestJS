@@ -2,7 +2,7 @@ export interface RentalSettlement {
   depositReceived: string;
   refundAmount: string;
   amountStillDue: string;
-  settlementStatus: 'PENDING' | 'REFUND_DUE' | 'AMOUNT_DUE' | 'BALANCED';
+  settlementStatus: 'PENDING' | 'REFUND_DUE' | 'AMOUNT_DUE' | 'BALANCED' | 'SETTLED';
 }
 
 function cents(value: string): bigint {
@@ -57,7 +57,8 @@ export function rewardForCompletedRental(completedBefore: number, policy: Rental
 }
 
 export function calculateRentalSettlement(input: {
-  completed: boolean;
+  status: string;
+  hasSettlement?: boolean;
   grandTotal: string;
   paidRental: string;
   depositIn: string;
@@ -70,17 +71,26 @@ export function calculateRentalSettlement(input: {
   const depositAvailable = received - refunded > 0n ? received - refunded : 0n;
   const refundDue = depositAvailable > remaining ? depositAvailable - remaining : 0n;
   const amountDue = remaining > depositAvailable ? remaining - depositAvailable : 0n;
+  const isPostReturn = input.status === 'RETURNED' || input.status === 'COMPLETED';
+
+  let settlementStatus: RentalSettlement['settlementStatus'];
+  if (input.hasSettlement || input.status === 'COMPLETED') {
+    settlementStatus = 'SETTLED';
+  } else if (!isPostReturn) {
+    settlementStatus = 'PENDING';
+  } else if (refundDue > 0n) {
+    settlementStatus = 'REFUND_DUE';
+  } else if (amountDue > 0n) {
+    settlementStatus = 'AMOUNT_DUE';
+  } else {
+    settlementStatus = 'BALANCED';
+  }
+
   return {
     depositReceived: money(received),
-    refundAmount: money(input.completed ? refundDue : 0n),
-    amountStillDue: money(input.completed ? amountDue : remaining),
-    settlementStatus: !input.completed
-      ? 'PENDING'
-      : refundDue > 0n
-        ? 'REFUND_DUE'
-        : amountDue > 0n
-          ? 'AMOUNT_DUE'
-          : 'BALANCED',
+    refundAmount: money(isPostReturn && !input.hasSettlement && input.status !== 'COMPLETED' ? refundDue : 0n),
+    amountStillDue: money(isPostReturn && !input.hasSettlement && input.status !== 'COMPLETED' ? amountDue : input.hasSettlement ? 0n : remaining),
+    settlementStatus,
   };
 }
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';

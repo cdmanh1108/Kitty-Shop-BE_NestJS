@@ -13,3 +13,4 @@ openapi.json
 .vscode/
 .idea/
 private-data/
+powershell.cmd

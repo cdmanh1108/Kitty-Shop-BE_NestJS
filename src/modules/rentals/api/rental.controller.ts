@@ -19,10 +19,15 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ConfirmationUploadInterceptor } from './confirmation-upload.interceptor';
+import { SettlementUploadInterceptor } from './settlement-upload.interceptor';
 import {
   RentalConfirmationService,
   type ConfirmationImage,
 } from '../application/rental-confirmation.service';
+import {
+  RentalSettlementService,
+  type SettlementImage,
+} from '../application/rental-settlement.service';
 import { ConfirmRentalReqDto, ConfirmationOptionsResDto } from './rental-confirmation.dto';
 import {
   ApiBearerAuth,
@@ -32,6 +37,7 @@ import {
   ApiOperation,
   ApiTags,
   ApiConsumes,
+  ApiQuery,
   ApiBadRequestResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -46,6 +52,9 @@ import {
   RentalOrderPageResDto,
   RentalOrderResDto,
   RescheduleRentalReqDto,
+  ReturnPreviewResDto,
+  ReturnRentalOrderReqDto,
+  SettleRentalOrderReqDto,
   TransitionRentalReqDto,
 } from './rental.dto';
 import {
@@ -53,6 +62,7 @@ import {
   toCreateRentalOrderInput,
   toRentalListQuery,
   toRescheduleRentalInput,
+  toReturnRentalOrderInput,
   toTransitionRentalInput,
 } from './rental.mapper';
 
@@ -63,6 +73,7 @@ export class RentalController {
   constructor(
     private readonly service: RentalService,
     private readonly confirmations: RentalConfirmationService,
+    private readonly settlements: RentalSettlementService,
   ) {}
 
   @Get()
@@ -199,16 +210,66 @@ export class RentalController {
     return this.service.returnCollateral(user, id).then(toRentalResponse);
   }
 
-  @Post(':id/complete')
-  @Permissions(PERMISSIONS.RENTALS_UPDATE)
-  @ApiOperation({ summary: 'Complete order; returned inventory moves to CLEANING by default' })
-  @ApiOkResponse({ type: RentalOrderResDto })
-  complete(
+  @Get(':id/return-preview')
+  @Permissions(PERMISSIONS.RENTALS_RETURN)
+  @ApiOperation({ summary: 'Preview return details, calculate late fees and list items for inspection' })
+  @ApiQuery({ name: 'returnedAt', required: false, type: String, description: 'ISO-8601 string of actual return timestamp' })
+  @ApiOkResponse({ type: ReturnPreviewResDto })
+  returnPreview(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
-    @Body() body: TransitionRentalReqDto,
+    @Query('returnedAt') returnedAt?: string,
   ) {
-    return this.service.complete(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
+    return this.service.getReturnPreview(user, id, returnedAt ? new Date(returnedAt) : undefined);
+  }
+
+  @Post(':id/return')
+  @Permissions(PERMISSIONS.RENTALS_RETURN)
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Receive rental return with per-item inspection and optional manual charges' })
+  @ApiOkResponse({ type: RentalOrderResDto })
+  receiveReturn(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: ReturnRentalOrderReqDto,
+  ) {
+    return this.service
+      .receiveReturn(user, id, toReturnRentalOrderInput(body))
+      .then(toRentalResponse);
+  }
+
+  @Post(':id/settle')
+  @Permissions(PERMISSIONS.RENTALS_SETTLE)
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Settle returned rental order; offsets charges against cash deposit, releases document collateral if requested, and completes order',
+  })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(SettlementUploadInterceptor)
+  @ApiOkResponse({ type: RentalOrderResDto })
+  settle(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: SettleRentalOrderReqDto,
+    @UploadedFile() file?: SettlementImage,
+  ) {
+    return this.settlements.settle(user, id, body, file).then(toRentalResponse);
+  }
+
+  @Get(':id/settlement/evidence')
+  @Permissions(PERMISSIONS.RENTALS_SETTLE)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOkResponse({
+    schema: { type: 'string', format: 'binary' },
+    description: 'Settlement evidence image; requires rentals.settle. Private, no-store.',
+  })
+  async settlementEvidence(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    const image = await this.settlements.evidence(user, id);
+    return new StreamableFile(image.body, {
+      type: image.mimeType,
+      disposition: 'attachment; filename="settlement-evidence"',
+    });
   }
 
   @Post(':id/cancel')

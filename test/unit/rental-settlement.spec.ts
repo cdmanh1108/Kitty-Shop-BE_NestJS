@@ -2,7 +2,7 @@ import { calculateRentalSettlement } from '../../src/modules/rentals/domain/rent
 
 describe('rental deposit settlement', () => {
   const base = {
-    completed: true,
+    status: 'RETURNED',
     grandTotal: '120000.00',
     paidRental: '100000.00',
     depositOut: '0.00',
@@ -40,6 +40,27 @@ describe('rental deposit settlement', () => {
       refundAmount: '0.00',
       amountStillDue: '0.00',
       settlementStatus: 'BALANCED',
+    });
+  });
+
+  it('marks settlementStatus as SETTLED when settled or completed', () => {
+    expect(
+      calculateRentalSettlement({ ...base, depositIn: '50000.00', hasSettlement: true }),
+    ).toMatchObject({
+      settlementStatus: 'SETTLED',
+    });
+    expect(
+      calculateRentalSettlement({ ...base, status: 'COMPLETED', depositIn: '50000.00' }),
+    ).toMatchObject({
+      settlementStatus: 'SETTLED',
+    });
+  });
+
+  it('marks settlementStatus as PENDING when order is still ACTIVE', () => {
+    expect(
+      calculateRentalSettlement({ ...base, status: 'ACTIVE', depositIn: '50000.00' }),
+    ).toMatchObject({
+      settlementStatus: 'PENDING',
     });
   });
 });

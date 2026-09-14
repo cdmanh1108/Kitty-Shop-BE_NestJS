@@ -64,3 +64,25 @@ export interface RescheduleRentalInput {
 export interface TransitionRentalInput {
   reason?: string;
 }
+
+export interface ReturnRentalOrderInput {
+  actualReturnedAt?: Date;
+  inspections: Array<{
+    inventoryItemId: string;
+    condition: 'NORMAL' | 'CLEANING_REQUIRED' | 'REPAIR_REQUIRED' | 'DAMAGED' | 'LOST';
+    note?: string;
+  }>;
+  manualCharges?: Array<{
+    chargeType: string;
+    amount: number;
+    description?: string;
+    quantity?: number;
+  }>;
+  note?: string;
+}
+
+export interface SettleRentalOrderInput {
+  settlementType?: string;
+  note?: string;
+  returnDocumentCollateral?: boolean;
+}

@@ -50,7 +50,8 @@ export function toRentalResponse(
     new Prisma.Decimal(row.grandTotal.toString()).minus(paidAmount),
   );
   const settlement = calculateRentalSettlement({
-    completed: row.status === 'COMPLETED',
+    status: row.status,
+    hasSettlement: Boolean(row.settlement),
     grandTotal: row.grandTotal.toString(),
     paidRental: paidAmount.toString(),
     depositIn: depositIn.toString(),
@@ -105,9 +106,47 @@ export function toRentalResponse(
         : row.collateralReturnedAt
           ? timestamp(row.collateralReturnedAt)
           : null,
+    actualReturnedAt: row.actualReturnedAt ? timestamp(row.actualReturnedAt) : null,
     paidAmount: paidAmount.toString(),
     remainingAmount: remainingAmount.toString(),
     settlement,
+    returnRecord: row.returnRecord
+      ? {
+          orderId: row.returnRecord.orderId,
+          returnedAt: timestamp(row.returnRecord.returnedAt),
+          receivedBy: row.returnRecord.receivedBy,
+          actorName: row.returnRecord.actorName,
+          lateDays: row.returnRecord.lateDays,
+          lateFee: row.returnRecord.lateFee.toString(),
+          additionalRentalFee: row.returnRecord.additionalRental.toString(),
+          note: row.returnRecord.note,
+          inspections: row.returnRecord.inspections.map((ins) => ({
+            id: ins.id,
+            inventoryItemId: ins.inventoryItemId,
+            condition: ins.condition,
+            note: ins.note,
+          })),
+        }
+      : null,
+    settlementDetails: row.settlement
+      ? {
+          orderId: row.settlement.orderId,
+          settledAt: timestamp(row.settlement.settledAt),
+          settledBy: row.settlement.settledBy,
+          actorName: row.settlement.actorName,
+          settlementType: row.settlement.settlementType,
+          amount: row.settlement.amount.toString(),
+          depositAmount: row.settlement.depositAmount.toString(),
+          totalCharges: row.settlement.totalCharges.toString(),
+          refundAmount: row.settlement.refundAmount.toString(),
+          amountDue: row.settlement.amountDue.toString(),
+          note: row.settlement.note,
+          evidenceKey: row.settlement.evidenceKey,
+          evidenceFilename: row.settlement.evidenceFilename,
+          evidenceMimeType: row.settlement.evidenceMimeType,
+          evidenceSize: row.settlement.evidenceSize,
+        }
+      : null,
     note: row.note,
     internalNote: row.internalNote,
     items: row.items.map((item) => ({

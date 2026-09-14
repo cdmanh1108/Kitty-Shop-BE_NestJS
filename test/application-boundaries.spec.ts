@@ -42,6 +42,9 @@ function rentalRepository(): jest.Mocked<RentalRepository> {
     reschedule: jest.fn(),
     addCharge: jest.fn(),
     returnCollateral: jest.fn(),
+    receiveReturn: jest.fn(),
+    settleOrder: jest.fn(),
+    getReturnPreview: jest.fn(),
     claimIdempotency: jest.fn(),
     releaseIdempotency: jest.fn(),
   };

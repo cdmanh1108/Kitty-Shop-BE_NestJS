@@ -232,6 +232,68 @@ export class RescheduleRentalReqDto {
 
 export class AddRentalChargeReqDto extends RentalChargeReqDto {}
 
+export class ReturnInspectionItemReqDto {
+  @ApiProperty({ description: 'ID của món đồ (physical inventory item)' })
+  @IsUUID('4', { message: 'Mã món đồ phải là UUID hợp lệ.' })
+  inventoryItemId!: string;
+
+  @ApiProperty({
+    enum: ['NORMAL', 'CLEANING_REQUIRED', 'REPAIR_REQUIRED', 'DAMAGED', 'LOST'],
+    example: 'NORMAL',
+  })
+  @IsIn(['NORMAL', 'CLEANING_REQUIRED', 'REPAIR_REQUIRED', 'DAMAGED', 'LOST'], {
+    message: 'Tình trạng kiểm tra không hợp lệ.',
+  })
+  condition!: string;
+
+  @ApiPropertyOptional({ description: 'Ghi chú hiện trạng' })
+  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsOptional()
+  note?: string;
+}
+
+export class ReturnRentalOrderReqDto {
+  @ApiPropertyOptional({
+    format: 'date-time',
+    description: 'Thời điểm trả thực tế (mặc định là hiện tại)',
+  })
+  @IsDateString(undefined, { message: 'Thời gian trả đồ không hợp lệ.' })
+  @IsOptional()
+  actualReturnedAt?: string;
+
+  @ApiProperty({ type: [ReturnInspectionItemReqDto] })
+  @IsArray({ message: 'Danh sách kiểm tra phải là danh sách.' })
+  @ArrayMinSize(1, { message: 'Phải có ít nhất 1 món đồ để kiểm tra.' })
+  @ValidateNested({ each: true })
+  @Type(() => ReturnInspectionItemReqDto)
+  inspections!: ReturnInspectionItemReqDto[];
+
+  @ApiPropertyOptional({ type: [RentalChargeReqDto] })
+  @IsArray({ message: 'Danh sách phụ phí phải là danh sách.' })
+  @ValidateNested({ each: true })
+  @Type(() => RentalChargeReqDto)
+  @IsOptional()
+  manualCharges?: RentalChargeReqDto[];
+
+  @ApiPropertyOptional({ description: 'Ghi chú trả hàng' })
+  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsOptional()
+  note?: string;
+}
+
+export class SettleRentalOrderReqDto {
+  @ApiPropertyOptional({ example: 'Đã hoàn cọc qua tiền mặt' })
+  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsOptional()
+  note?: string;
+
+  @ApiPropertyOptional({
+    description: 'Xác nhận đã trả lại giấy tờ CCCD/GPLX cho khách (nếu đơn giữ giấy tờ)',
+  })
+  @IsOptional()
+  returnDocumentCollateral?: boolean;
+}
+
 export class RentalCustomerResDto {
   @ApiProperty() id!: string;
   @ApiProperty() fullName!: string;
@@ -321,11 +383,69 @@ export class RentalOrderListItemResDto {
   @ApiProperty() productCount!: number;
 }
 
+export class ReturnPreviewItemDto {
+  @ApiProperty() inventoryItemId!: string;
+  @ApiProperty() sku!: string;
+  @ApiProperty() productName!: string;
+  @ApiProperty() variantTitle!: string;
+}
+
+export class ReturnPreviewResDto {
+  @ApiProperty({ format: 'date-time' }) rentalEndAt!: string;
+  @ApiProperty({ format: 'date-time' }) actualReturnedAt!: string;
+  @ApiProperty() lateDays!: number;
+  @ApiProperty() dailyLateFeePerSet!: number;
+  @ApiProperty({ type: String, example: '20000.00' }) lateFee!: string;
+  @ApiProperty({ type: String, example: '0.00' }) additionalRentalFee!: string;
+  @ApiProperty({ type: [ReturnPreviewItemDto] }) items!: ReturnPreviewItemDto[];
+}
+
+export class RentalReturnInspectionResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() inventoryItemId!: string;
+  @ApiProperty({
+    enum: ['NORMAL', 'CLEANING_REQUIRED', 'REPAIR_REQUIRED', 'DAMAGED', 'LOST'],
+  })
+  condition!: string;
+  @ApiProperty({ type: String, nullable: true }) note!: string | null;
+}
+
+export class RentalReturnResDto {
+  @ApiProperty() orderId!: string;
+  @ApiProperty({ format: 'date-time' }) returnedAt!: string;
+  @ApiProperty() receivedBy!: string;
+  @ApiProperty({ type: String, nullable: true }) actorName!: string | null;
+  @ApiProperty() lateDays!: number;
+  @ApiProperty({ type: String, example: '20000.00' }) lateFee!: string;
+  @ApiProperty({ type: String, example: '0.00' }) additionalRentalFee!: string;
+  @ApiProperty({ type: String, nullable: true }) note!: string | null;
+  @ApiProperty({ type: [RentalReturnInspectionResDto] }) inspections!: RentalReturnInspectionResDto[];
+}
+
+export class RentalSettlementDetailsResDto {
+  @ApiProperty() orderId!: string;
+  @ApiProperty({ format: 'date-time' }) settledAt!: string;
+  @ApiProperty() settledBy!: string;
+  @ApiProperty({ type: String, nullable: true }) actorName!: string | null;
+  @ApiProperty({ enum: ['REFUND', 'COLLECTION', 'BALANCED', 'COLLATERAL_ONLY'] })
+  settlementType!: string;
+  @ApiProperty({ type: String, example: '0.00' }) amount!: string;
+  @ApiProperty({ type: String, example: '300000.00' }) depositAmount!: string;
+  @ApiProperty({ type: String, example: '70000.00' }) totalCharges!: string;
+  @ApiProperty({ type: String, example: '230000.00' }) refundAmount!: string;
+  @ApiProperty({ type: String, example: '0.00' }) amountDue!: string;
+  @ApiProperty({ type: String, nullable: true }) note!: string | null;
+  @ApiProperty({ type: String, nullable: true }) evidenceKey!: string | null;
+  @ApiProperty({ type: String, nullable: true }) evidenceFilename!: string | null;
+  @ApiProperty({ type: String, nullable: true }) evidenceMimeType!: string | null;
+  @ApiProperty({ type: Number, nullable: true }) evidenceSize!: number | null;
+}
+
 export class RentalSettlementResDto {
   @ApiProperty({ type: String }) depositReceived!: string;
   @ApiProperty({ type: String }) refundAmount!: string;
   @ApiProperty({ type: String }) amountStillDue!: string;
-  @ApiProperty({ enum: ['PENDING', 'REFUND_DUE', 'AMOUNT_DUE', 'BALANCED'] })
+  @ApiProperty({ enum: ['PENDING', 'REFUND_DUE', 'AMOUNT_DUE', 'BALANCED', 'SETTLED'] })
   settlementStatus!: string;
 }
 
@@ -346,9 +466,16 @@ export class RentalOrderResDto extends RentalOrderListItemResDto {
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) collateralReturnedAt!:
     | string
     | null;
+  @ApiProperty({ type: String, format: 'date-time', nullable: true }) actualReturnedAt!:
+    | string
+    | null;
   @ApiProperty({ type: String, example: '250000.00' }) paidAmount!: string;
   @ApiProperty({ type: String, example: '250000.00' }) remainingAmount!: string;
   @ApiProperty({ type: () => RentalSettlementResDto }) settlement!: RentalSettlementResDto;
+  @ApiProperty({ type: () => RentalReturnResDto, nullable: true })
+  returnRecord!: RentalReturnResDto | null;
+  @ApiProperty({ type: () => RentalSettlementDetailsResDto, nullable: true })
+  settlementDetails!: RentalSettlementDetailsResDto | null;
   @ApiProperty({ type: String, nullable: true }) note!: string | null;
   @ApiProperty({ type: String, nullable: true }) internalNote!: string | null;
   @ApiProperty({ type: [RentalChargeResDto] }) charges!: RentalChargeResDto[];

@@ -5,6 +5,7 @@ export const CHARGE_TYPE = {
   LATE: 'LATE',
   CLEANING: 'CLEANING',
   DAMAGE: 'DAMAGE',
+  REPAIR: 'REPAIR',
   LOST_ITEM: 'LOST_ITEM',
   OTHER: 'OTHER',
 } as const;
