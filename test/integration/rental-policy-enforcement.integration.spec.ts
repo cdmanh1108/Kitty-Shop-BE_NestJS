@@ -1,3 +1,4 @@
+import { returnAndSettle } from '../fixtures/return.fixture';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { SettingsService } from '../../src/modules/settings/application/settings.service';
@@ -170,22 +171,14 @@ describe('Rental policy transaction enforcement', () => {
       toStatus: 'ACTIVE',
       changedBy: f.member.id,
     });
-    await repo.transition({
-      shopId: f.shop.id,
-      orderId: order.id,
-      fromStatuses: ['ACTIVE'],
-      toStatus: 'COMPLETED',
-      changedBy: f.member.id,
-    });
-    expect((await repo.returnCollateral(f.shop.id, order.id, f.member.id))?.collateralStatus).toBe(
-      'RETURNED',
-    );
+    await returnAndSettle(repo, f, order.id);
+    expect((await repo.get(f.shop.id, order.id))?.collateralStatus).toBe('RETURNED');
     await expect(repo.returnCollateral(f.shop.id, order.id, f.member.id)).rejects.toMatchObject({
       code: 'COLLATERAL_TRANSITION_NOT_ALLOWED',
     });
     expect(
       await prisma.outboxEvent.count({
-        where: { aggregateId: order.id, eventType: 'RENTAL_COLLATERAL_RETURNED' },
+        where: { aggregateId: order.id, eventType: 'RENTAL_ORDER_COMPLETED' },
       }),
     ).toBe(1);
   });
@@ -219,16 +212,9 @@ describe('Rental policy transaction enforcement', () => {
       toStatus: 'ACTIVE',
       changedBy: f.member.id,
     });
-    const complete = () =>
-      lateRepo.transition({
-        shopId: f.shop.id,
-        orderId: order.id,
-        fromStatuses: ['ACTIVE'],
-        toStatus: 'COMPLETED',
-        changedBy: f.member.id,
-      });
+    const complete = () => returnAndSettle(lateRepo, f, order.id, lateClock.now());
     expect((await complete())?.status).toBe('COMPLETED');
-    expect(await complete()).toBeNull();
+    await expect(complete()).rejects.toThrow();
     const charges = await prisma.rentalOrderCharge.findMany({
       where: { orderId: order.id },
       orderBy: { chargeType: 'asc' },
@@ -295,13 +281,7 @@ describe('Rental policy transaction enforcement', () => {
         toStatus: 'ACTIVE',
         changedBy: f.member.id,
       });
-      await repo.transition({
-        shopId: f.shop.id,
-        orderId: order.id,
-        fromStatuses: ['ACTIVE'],
-        toStatus: 'COMPLETED',
-        changedBy: f.member.id,
-      });
+      await returnAndSettle(repo, f, order.id);
       expect(
         await prisma.customerLoyaltyEntry.count({
           where: { customerId: f.customer.id, rewardValue: { gt: 0 } },

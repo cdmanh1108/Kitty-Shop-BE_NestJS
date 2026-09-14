@@ -11,6 +11,7 @@ describe('rental deposit settlement', () => {
   it('marks excess held deposit refundable after unpaid charges', () => {
     expect(calculateRentalSettlement({ ...base, depositIn: '50000.00' })).toEqual({
       depositReceived: '50000.00',
+      depositAvailable: '50000.00',
       refundAmount: '30000.00',
       amountStillDue: '0.00',
       settlementStatus: 'REFUND_DUE',

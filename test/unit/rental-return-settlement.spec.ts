@@ -206,12 +206,13 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
       const settlement = calculateRentalSettlement({
         status: 'RETURNED',
         grandTotal: '270000.00', // rental 200k + charges 70k
-        paidRental: '200000.00',  // rent already paid
-        depositIn: '300000.00',   // 300k deposit received
+        paidRental: '200000.00', // rent already paid
+        depositIn: '300000.00', // 300k deposit received
         depositOut: '0.00',
       });
       expect(settlement).toEqual({
         depositReceived: '300000.00',
+        depositAvailable: '300000.00',
         refundAmount: '230000.00',
         amountStillDue: '0.00',
         settlementStatus: 'REFUND_DUE',
@@ -222,12 +223,13 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
       const settlement = calculateRentalSettlement({
         status: 'RETURNED',
         grandTotal: '270000.00',
-        paidRental: '200000.00',  // 70k unpaid charges
-        depositIn: '70000.00',    // exactly 70k deposit
+        paidRental: '200000.00', // 70k unpaid charges
+        depositIn: '70000.00', // exactly 70k deposit
         depositOut: '0.00',
       });
       expect(settlement).toEqual({
         depositReceived: '70000.00',
+        depositAvailable: '70000.00',
         refundAmount: '0.00',
         amountStillDue: '0.00',
         settlementStatus: 'BALANCED',
@@ -238,12 +240,13 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
       const settlement = calculateRentalSettlement({
         status: 'RETURNED',
         grandTotal: '400000.00',
-        paidRental: '200000.00',  // 200k unpaid charges
-        depositIn: '50000.00',    // 50k deposit
+        paidRental: '200000.00', // 200k unpaid charges
+        depositIn: '50000.00', // 50k deposit
         depositOut: '0.00',
       });
       expect(settlement).toEqual({
         depositReceived: '50000.00',
+        depositAvailable: '50000.00',
         refundAmount: '0.00',
         amountStillDue: '150000.00',
         settlementStatus: 'AMOUNT_DUE',
@@ -254,12 +257,13 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
       const settlement = calculateRentalSettlement({
         status: 'RETURNED',
         grandTotal: '280000.00',
-        paidRental: '200000.00',  // 80k unpaid charges
-        depositIn: '0.00',        // 0 cash deposit
+        paidRental: '200000.00', // 80k unpaid charges
+        depositIn: '0.00', // 0 cash deposit
         depositOut: '0.00',
       });
       expect(settlement).toEqual({
         depositReceived: '0.00',
+        depositAvailable: '0.00',
         refundAmount: '0.00',
         amountStillDue: '80000.00',
         settlementStatus: 'AMOUNT_DUE',
@@ -380,9 +384,9 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
       const mockStorage = { putObject: jest.fn() } as unknown as ObjectStoragePort;
       const settlementService = new RentalSettlementService(mockRepo, mockStorage);
 
-      await expect(
-        settlementService.settle(userWithSettle, 'order-1', {}),
-      ).rejects.toThrow('Chỉ có thể kết toán đơn ở trạng thái đã nhận trả.');
+      await expect(settlementService.settle(userWithSettle, 'order-1', {})).rejects.toThrow(
+        'Chỉ có thể kết toán đơn ở trạng thái đã nhận trả.',
+      );
     });
 
     it('rejects settle if order is already settled', async () => {
@@ -396,9 +400,9 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
       const mockStorage = { putObject: jest.fn() } as unknown as ObjectStoragePort;
       const settlementService = new RentalSettlementService(mockRepo, mockStorage);
 
-      await expect(
-        settlementService.settle(userWithSettle, 'order-1', {}),
-      ).rejects.toThrow('Đơn thuê này đã được kết toán.');
+      await expect(settlementService.settle(userWithSettle, 'order-1', {})).rejects.toThrow(
+        'Đơn thuê này đã được kết toán.',
+      );
     });
   });
 });

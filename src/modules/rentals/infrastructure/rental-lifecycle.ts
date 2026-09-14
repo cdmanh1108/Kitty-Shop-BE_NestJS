@@ -1,3 +1,4 @@
+import { rentalLedger, recordRentalReceipt } from './rental-ledger';
 import { assertInventoryRentable } from './rental-inventory';
 import type { RentalOutboxEvent } from '../domain/rental.events';
 import {
@@ -445,47 +446,28 @@ export async function settleOrder(
       throw new RentalInvariantError('ORDER_ALREADY_SETTLED', 'Đơn thuê này đã được kết toán.');
     }
 
-    let depositAmount = new Prisma.Decimal(0);
-    if (order.confirmation?.collateralMethod === 'CASH' && order.confirmation.collateralAmount) {
-      depositAmount = order.confirmation.collateralAmount;
-    } else {
-      for (const payment of order.payments) {
-        if (payment.purpose === 'DEPOSIT') {
-          depositAmount =
-            payment.direction === 'IN'
-              ? depositAmount.plus(payment.amount)
-              : depositAmount.minus(payment.amount);
-        }
-      }
-    }
+    const ledger = rentalLedger(order.payments);
+    const depositAmount = ledger.depositHeld;
+    const totalCharges = order.chargesTotal;
+    const remaining = Prisma.Decimal.max(0, order.grandTotal.minus(ledger.paidRental));
+    const refundAmount = Prisma.Decimal.max(0, depositAmount.minus(remaining));
+    const amountDue = Prisma.Decimal.max(0, remaining.minus(depositAmount));
 
-    const totalCharges = order.charges.reduce(
-      (sum, c) => sum.plus(c.amount.times(c.quantity)),
-      new Prisma.Decimal(0),
-    );
-
-    let refundAmount = new Prisma.Decimal(0);
-    let amountDue = new Prisma.Decimal(0);
-
+    let settlementType: string;
     if (order.collateralMethod === 'DOCUMENT') {
-      amountDue = totalCharges;
-    } else if (depositAmount.greaterThan(totalCharges)) {
-      refundAmount = depositAmount.minus(totalCharges);
-    } else if (totalCharges.greaterThan(depositAmount)) {
-      amountDue = totalCharges.minus(depositAmount);
+      settlementType = amountDue.greaterThan(0) ? 'COLLECTION' : 'COLLATERAL_ONLY';
+    } else if (refundAmount.greaterThan(0)) {
+      settlementType = 'REFUND';
+    } else if (amountDue.greaterThan(0)) {
+      settlementType = 'COLLECTION';
+    } else {
+      settlementType = 'BALANCED';
     }
-
-    let settlementType = input.settlementType;
-    if (!settlementType) {
-      if (order.collateralMethod === 'DOCUMENT') {
-        settlementType = amountDue.greaterThan(0) ? 'COLLECTION' : 'COLLATERAL_ONLY';
-      } else if (refundAmount.greaterThan(0)) {
-        settlementType = 'REFUND';
-      } else if (amountDue.greaterThan(0)) {
-        settlementType = 'COLLECTION';
-      } else {
-        settlementType = 'BALANCED';
-      }
+    if (input.settlementType && input.settlementType !== settlementType) {
+      throw new RentalInvariantError(
+        'SETTLEMENT_CHANGED',
+        'Số tiền kết toán đã thay đổi. Vui lòng tải lại đơn thuê.',
+      );
     }
 
     if (order.collateralMethod === 'DOCUMENT') {
@@ -503,6 +485,50 @@ export async function settleOrder(
       : amountDue.greaterThan(0)
         ? amountDue
         : new Prisma.Decimal(0);
+
+    const receipt = {
+      orderId: order.id,
+      shopId: input.shopId,
+      customerId: order.customerId,
+      actorMemberId: input.actorMemberId,
+      paidAt: now,
+      paymentMethod: input.paymentMethod ?? 'CASH',
+      note: input.note,
+    };
+    const appliedDeposit = Prisma.Decimal.min(depositAmount, remaining);
+    await recordRentalReceipt(tx, {
+      ...receipt,
+      key: 'RS-F-' + order.id,
+      purpose: 'DEPOSIT_REFUND',
+      direction: 'OUT',
+      amount: refundAmount,
+    });
+    await recordRentalReceipt(tx, {
+      ...receipt,
+      key: 'RS-D-' + order.id,
+      purpose: 'DEPOSIT',
+      direction: 'OUT',
+      amount: appliedDeposit,
+      paymentMethod: 'DEPOSIT_OFFSET',
+      source: 'INTERNAL_TRANSFER',
+    });
+    await recordRentalReceipt(tx, {
+      ...receipt,
+      key: 'RS-R-' + order.id,
+      purpose: 'RENTAL_PAYMENT',
+      direction: 'IN',
+      amount: appliedDeposit,
+      paymentMethod: 'DEPOSIT_OFFSET',
+      source: 'INTERNAL_TRANSFER',
+    });
+    await recordRentalReceipt(tx, {
+      ...receipt,
+      key: 'RS-C-' + order.id,
+      purpose: 'RENTAL_PAYMENT',
+      direction: 'IN',
+      amount: amountDue,
+    });
+    await recomputeOrderPaymentState(tx, order.id);
 
     await tx.rentalSettlement.create({
       data: {
@@ -646,21 +672,7 @@ export async function getReturnPreview(
     policy,
   });
 
-  let depositHeld = '0.00';
-  if (order.confirmation?.collateralMethod === 'CASH' && order.confirmation.collateralAmount) {
-    depositHeld = order.confirmation.collateralAmount.toString();
-  } else {
-    let depositSum = new Prisma.Decimal(0);
-    for (const payment of order.payments) {
-      if (payment.purpose === 'DEPOSIT') {
-        depositSum =
-          payment.direction === 'IN'
-            ? depositSum.plus(payment.amount)
-            : depositSum.minus(payment.amount);
-      }
-    }
-    depositHeld = depositSum.toString();
-  }
+  const depositHeld = rentalLedger(order.payments).depositHeld.toString();
 
   return {
     dueAt: order.rentalEndAt,

@@ -165,3 +165,12 @@ migration, resolve it as rolled back only after checking PostgreSQL rollback and
 reconciling duplicates, then redeploy. Dropping the new indexes is the schema
 rollback; it removes protection and must be coordinated with the application.
 There is no data rewrite to undo.
+
+## Manual receipt ledger
+
+Migration `202609140002_manual_payment_ledger` adds receipt source, a unique receipt
+key, and unique provider transaction references. It restores legacy manual receipts
+from confirmation/settlement records without assigning an unknown historical payment
+method. New receipts and lifecycle changes commit atomically. Deposits remain separate
+from revenue; internal deposit offsets use paired entries. See
+[Admin confirmation](ADMIN_CONFIRMATION.md) for reconciliation and deployment details.

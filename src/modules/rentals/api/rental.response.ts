@@ -180,6 +180,9 @@ export function toRentalResponse(
       currency: charge.currency,
     })),
     payments: row.payments.map((payment) => ({
+      source: payment.source,
+      createdBy: payment.createdBy,
+      note: payment.note,
       id: payment.id,
       transactionNumber: payment.transactionNumber,
       direction: payment.direction,

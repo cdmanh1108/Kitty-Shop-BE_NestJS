@@ -282,6 +282,10 @@ export class ReturnRentalOrderReqDto {
 }
 
 export class SettleRentalOrderReqDto {
+  @ApiPropertyOptional({ enum: ['CASH', 'BANK_TRANSFER'] })
+  @IsOptional()
+  @IsIn(['CASH', 'BANK_TRANSFER'], { message: 'Phương thức thanh toán không hợp lệ.' })
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   @ApiPropertyOptional({ example: 'Đã hoàn cọc qua tiền mặt' })
   @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
   @IsOptional()
@@ -338,6 +342,9 @@ export class RentalChargeResDto {
 }
 
 export class RentalPaymentResDto {
+  @ApiProperty() source!: string;
+  @ApiProperty({ type: String, nullable: true }) createdBy!: string | null;
+  @ApiProperty({ type: String, nullable: true }) note!: string | null;
   @ApiProperty() id!: string;
   @ApiProperty() transactionNumber!: string;
   @ApiProperty() direction!: string;
@@ -419,7 +426,8 @@ export class RentalReturnResDto {
   @ApiProperty({ type: String, example: '20000.00' }) lateFee!: string;
   @ApiProperty({ type: String, example: '0.00' }) additionalRentalFee!: string;
   @ApiProperty({ type: String, nullable: true }) note!: string | null;
-  @ApiProperty({ type: [RentalReturnInspectionResDto] }) inspections!: RentalReturnInspectionResDto[];
+  @ApiProperty({ type: [RentalReturnInspectionResDto] })
+  inspections!: RentalReturnInspectionResDto[];
 }
 
 export class RentalSettlementDetailsResDto {
@@ -442,6 +450,7 @@ export class RentalSettlementDetailsResDto {
 }
 
 export class RentalSettlementResDto {
+  @ApiProperty({ type: String }) depositAvailable!: string;
   @ApiProperty({ type: String }) depositReceived!: string;
   @ApiProperty({ type: String }) refundAmount!: string;
   @ApiProperty({ type: String }) amountStillDue!: string;

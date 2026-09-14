@@ -1,4 +1,7 @@
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { returnAndSettle } from '../fixtures/return.fixture';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { RentalConfirmationService } from '../../src/modules/rentals/application/rental-confirmation.service';
 import type { ObjectStoragePort } from '../../src/common/storage/object-storage.port';
@@ -53,7 +56,7 @@ describe('Atomic manual rental confirmation', () => {
   }
 
   it.each(['CASH', 'CCCD', 'GPLX'] as const)(
-    'confirms %s without payments or evidence and persists actor/audit',
+    'confirms %s with actual receipts and without evidence and persists actor/audit',
     async (type) => {
       const f = await fixture();
       const input =
@@ -72,8 +75,8 @@ describe('Atomic manual rental confirmation', () => {
         note: 'Đã nhận tại cửa hàng',
         evidenceKey: null,
       });
-      expect(await prisma.paymentTransaction.count()).toBe(0);
-      expect(confirmed.paymentStatus).toBe('UNPAID');
+      expect(await prisma.paymentTransaction.count()).toBe(type === 'CASH' ? 2 : 1);
+      expect(confirmed.paymentStatus).toBe('PAID');
       expect(await prisma.auditLog.findFirst({ where: { entityId: f.order.id } })).toMatchObject({
         requestId: 'confirm-request',
         action: 'RENTAL_ORDER_CONFIRMED',
@@ -91,6 +94,134 @@ describe('Atomic manual rental confirmation', () => {
       expect(
         await prisma.outboxEvent.count({ where: { eventType: 'RENTAL_ORDER_CONFIRMED' } }),
       ).toBe(1);
+    },
+  );
+
+  it.each([0, 50000, 300000])(
+    'records negotiated deposit %s and settles from the ledger',
+    async (deposit) => {
+      const f = await fixture();
+      const confirmed = await f.service.confirm(f.user, f.order.id, {
+        collateralMethod: 'CASH',
+        collateralAmount: deposit,
+        paymentMethod: 'BANK_TRANSFER',
+      });
+      expect(confirmed.paymentStatus).toBe('PAID');
+      expect(confirmed.actualStartedAt).toBeNull();
+      expect(
+        confirmed.payments.every(
+          (p) => p.source === 'ADMIN_MANUAL' && p.paymentMethod === 'BANK_TRANSFER',
+        ),
+      ).toBe(true);
+      await repository.transition({
+        shopId: f.shop.id,
+        orderId: f.order.id,
+        fromStatuses: ['CONFIRMED'],
+        toStatus: 'ACTIVE',
+        changedBy: f.member.id,
+      });
+      await repository.receiveReturn({
+        shopId: f.shop.id,
+        orderId: f.order.id,
+        actorMemberId: f.member.id,
+        actualReturnedAt: f.data.rentalEndAt,
+        actorUserId: f.user.userId,
+        actorName: f.user.fullName,
+        items: [{ inventoryItemId: f.inventory.id, condition: 'NORMAL' }],
+        manualCharges: [{ chargeType: 'OTHER', amount: 70000, description: 'Phụ phí thực tế' }],
+      });
+      const settled = await repository.settleOrder({
+        shopId: f.shop.id,
+        orderId: f.order.id,
+        actorMemberId: f.member.id,
+        actorUserId: f.user.userId,
+        actorName: f.user.fullName,
+        paymentMethod: 'BANK_TRANSFER',
+      });
+      expect(settled?.status).toBe('COMPLETED');
+      expect(settled?.paymentStatus).toBe('PAID');
+      expect(settled?.settlement?.refundAmount.toString()).toBe(
+        String(Math.max(0, deposit - 70000)),
+      );
+      expect(settled?.settlement?.amountDue.toString()).toBe(String(Math.max(0, 70000 - deposit)));
+      const payments = await prisma.paymentTransaction.findMany({ where: { orderId: f.order.id } });
+      const cashFlow = payments.reduce(
+        (sum, p) => sum + Number(p.amount) * (p.direction === 'IN' ? 1 : -1),
+        0,
+      );
+      expect(cashFlow).toBe(270000);
+      await expect(
+        repository.settleOrder({
+          shopId: f.shop.id,
+          orderId: f.order.id,
+          actorMemberId: f.member.id,
+          actorUserId: f.user.userId,
+          actorName: f.user.fullName,
+        }),
+      ).rejects.toThrow();
+      expect(await prisma.paymentTransaction.count({ where: { orderId: f.order.id } })).toBe(
+        payments.length,
+      );
+    },
+  );
+
+  it.each([false, true])(
+    'backfills historical receipts without duplicates (settled: %s)',
+    async (settled) => {
+      const f = await fixture();
+      await f.service.confirm(f.user, f.order.id, {
+        collateralMethod: 'CASH',
+        collateralAmount: 50000,
+      });
+      if (settled) {
+        await repository.transition({
+          shopId: f.shop.id,
+          orderId: f.order.id,
+          fromStatuses: ['CONFIRMED'],
+          toStatus: 'ACTIVE',
+          changedBy: f.member.id,
+        });
+        await returnAndSettle(
+          repository,
+          { ...f, user: { id: f.user.userId, fullName: f.user.fullName } },
+          f.order.id,
+        );
+      }
+      // Simulate historical confirmation/settlement with only a separate rental receipt.
+      await prisma.paymentTransaction.deleteMany({
+        where: { orderId: f.order.id, purpose: { in: ['DEPOSIT', 'DEPOSIT_REFUND'] } },
+      });
+      await prisma.paymentTransaction.updateMany({
+        where: { orderId: f.order.id },
+        data: { source: 'LEGACY', receiptKey: null },
+      });
+      const sql = readFileSync(
+        join(process.cwd(), 'prisma/migrations/202609140002_manual_payment_ledger/migration.sql'),
+        'utf8',
+      );
+      const dataMigration = sql.slice(
+        sql.indexOf('-- Preserve historical'),
+        sql.indexOf('ALTER TABLE rental_settlements'),
+      );
+      await prisma.$transaction(async (tx) => {
+        for (const statement of dataMigration
+          .replace(/--[^\n]*/g, '')
+          .split(';')
+          .map((s) => s.trim())
+          .filter(Boolean)) {
+          await tx.$executeRawUnsafe(statement);
+        }
+      });
+      const payments = await prisma.paymentTransaction.findMany({ where: { orderId: f.order.id } });
+      expect(payments).toHaveLength(settled ? 3 : 2);
+      expect(payments.find((p) => p.purpose === 'DEPOSIT')).toMatchObject({
+        source: 'LEGACY',
+        paymentMethod: 'UNSPECIFIED',
+      });
+      expect(
+        payments.reduce((sum, p) => sum + Number(p.amount) * (p.direction === 'IN' ? 1 : -1), 0),
+      ).toBe(settled ? 200000 : 250000);
+      expect((await repository.get(f.shop.id, f.order.id))?.paymentStatus).toBe('PAID');
     },
   );
 
@@ -196,7 +327,7 @@ describe('Atomic manual rental confirmation', () => {
     },
   );
 
-  it('rejects insufficient cash, invalid evidence, permissions, tenant and state before mutation', async () => {
+  it('rejects invalid cash, invalid evidence, permissions, tenant and state before mutation', async () => {
     const f = await fixture();
     await expect(
       f.service.confirm({ ...f.user, permissions: ['rentals.update'] }, f.order.id, {
@@ -205,8 +336,8 @@ describe('Atomic manual rental confirmation', () => {
       }),
     ).rejects.toMatchObject({ status: 403 });
     await expect(
-      f.service.confirm(f.user, f.order.id, { collateralMethod: 'CASH', collateralAmount: 1 }),
-    ).rejects.toMatchObject({ code: 'INSUFFICIENT_COLLATERAL' });
+      f.service.confirm(f.user, f.order.id, { collateralMethod: 'CASH', collateralAmount: -1 }),
+    ).rejects.toMatchObject({ code: 'INVALID_COLLATERAL_AMOUNT' });
     await expect(
       f.service.confirm(
         f.user,

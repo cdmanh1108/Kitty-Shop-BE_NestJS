@@ -65,7 +65,7 @@ describe('Admin confirmation HTTP flow', () => {
       expect(response.body).toMatchObject({
         status: 'CONFIRMED',
         confirmation: { confirmedBy: f.member.id, hasEvidence: false },
-        payments: [],
+        paymentStatus: 'PAID',
       });
       expect(response.text).not.toContain('evidenceKey');
       await request(server)
@@ -174,6 +174,6 @@ describe('Admin confirmation HTTP flow', () => {
     expect(file.headers['cache-control']).toBe('private, no-store');
     expect(file.headers['content-type']).toContain('image/jpeg');
     expect(file.body).toEqual(image);
-    expect(await prisma.paymentTransaction.count()).toBe(0);
+    expect(await prisma.paymentTransaction.count()).toBe(1);
   });
 });

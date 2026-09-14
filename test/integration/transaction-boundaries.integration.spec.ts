@@ -159,23 +159,30 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
       ).status,
     ).toBe('ACTIVE');
     expect(await prisma.inventoryStatusHistory.count({ where: { toStatus: 'RENTED' } })).toBe(0);
-    const finish = {
+    const actor = {
       shopId: f.shop.id,
       orderId: order.id,
-      fromStatuses: ['ACTIVE'] as const,
-      toStatus: 'COMPLETED' as const,
-      changedBy: f.member.id,
+      actorMemberId: f.member.id,
+      actorUserId: f.user.id,
+      actorName: f.user.fullName,
     };
-    const completed = await Promise.all([
-      rentals.transition({ ...finish, fromStatuses: [...finish.fromStatuses] }),
-      rentals.transition({ ...finish, fromStatuses: [...finish.fromStatuses] }),
+    await rentals.receiveReturn({
+      ...actor,
+      actualReturnedAt: f.data.rentalEndAt,
+      items: [{ inventoryItemId: f.inventory.id, condition: 'CLEANING_REQUIRED' }],
+    });
+    const completed = await Promise.allSettled([
+      rentals.settleOrder(actor),
+      rentals.settleOrder(actor),
     ]);
-    expect(completed.filter(Boolean)).toHaveLength(1);
+    expect(completed.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(
       await prisma.inventoryItem.findUniqueOrThrow({ where: { id: f.inventory.id } }),
     ).toMatchObject({ currentStatus: 'CLEANING', totalRentalCount: 1 });
     expect((await prisma.rentalItemAllocation.findFirstOrThrow()).status).toBe('RETURNED');
-    expect(await prisma.outboxEvent.count()).toBe(6);
+    expect(await prisma.outboxEvent.count({ where: { eventType: 'RENTAL_ORDER_COMPLETED' } })).toBe(
+      1,
+    );
   });
 
   it('revenue SQL excludes deposits and voided payments with fixed period and tenant', async () => {

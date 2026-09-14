@@ -1,3 +1,4 @@
+import { returnAndSettle } from '../fixtures/return.fixture';
 import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import {
@@ -447,13 +448,7 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       toStatus: 'ACTIVE',
       changedBy: f.member.id,
     });
-    await repo.transition({
-      shopId: f.shop.id,
-      orderId: first.id,
-      fromStatuses: ['ACTIVE'],
-      toStatus: 'COMPLETED',
-      changedBy: f.member.id,
-    });
+    await returnAndSettle(repo, f, first.id);
     const activate = {
       shopId: f.shop.id,
       orderId: next.id,

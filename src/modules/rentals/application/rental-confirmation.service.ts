@@ -62,11 +62,7 @@ export class RentalConfirmationService {
     if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
     if (order.status !== 'RESERVED')
       throw new BadRequestException('Chỉ có thể xác nhận đơn đang ở trạng thái đã đặt trước.');
-    assertManualConfirmation(
-      input,
-      order.depositRequired.toString(),
-      await this.policies.getPolicy(user.shopId),
-    );
+    assertManualConfirmation(input, await this.policies.getPolicy(user.shopId));
     let evidence: { key: string; filename: string; mimeType: string; size: number } | undefined;
     if (file) {
       let image;

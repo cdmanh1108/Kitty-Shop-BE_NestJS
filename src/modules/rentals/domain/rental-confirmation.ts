@@ -7,6 +7,7 @@ import type { DecimalValue } from '@common/types/decimal';
 import { RentalInvariantError } from './rental-errors';
 
 export interface ConfirmRentalInput {
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   collateralMethod: DepositMethod;
   documentType?: DepositDocumentType;
   collateralAmount?: number;
@@ -41,11 +42,7 @@ export interface ConfirmRentalData extends ConfirmRentalInput {
   evidence?: { key: string; filename: string; mimeType: string; size: number };
 }
 
-export function assertManualConfirmation(
-  input: ConfirmRentalInput,
-  expectedDeposit: string,
-  policy: RentalPolicy,
-): void {
+export function assertManualConfirmation(input: ConfirmRentalInput, policy: RentalPolicy): void {
   if (!policy.deposit.allowedMethods.includes(input.collateralMethod))
     throw new RentalInvariantError(
       'COLLATERAL_METHOD_NOT_ALLOWED',
@@ -68,11 +65,6 @@ export function assertManualConfirmation(
       throw new RentalInvariantError(
         'INVALID_COLLATERAL_AMOUNT',
         'Tiền cọc phải từ 0 đến 100.000.000 và có tối đa 2 chữ số thập phân.',
-      );
-    if (input.collateralAmount < Number(expectedDeposit))
-      throw new RentalInvariantError(
-        'INSUFFICIENT_COLLATERAL',
-        `Tiền cọc đã nhận phải ít nhất ${expectedDeposit} đồng.`,
       );
   } else if (input.collateralMethod === 'DOCUMENT') {
     if (!input.documentType || !policy.deposit.allowedDocumentTypes.includes(input.documentType))

@@ -13,6 +13,10 @@ import {
 import type { DepositDocumentType, DepositMethod } from '@modules/settings/domain/rental-policy';
 
 export class ConfirmRentalReqDto {
+  @ApiPropertyOptional({ enum: ['CASH', 'BANK_TRANSFER'] })
+  @IsOptional()
+  @IsIn(['CASH', 'BANK_TRANSFER'], { message: 'Phương thức nhận tiền không hợp lệ.' })
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   @ApiProperty({ enum: ['CASH', 'DOCUMENT'] })
   @IsIn(['CASH', 'DOCUMENT'], { message: 'Phương thức đặt cọc không hợp lệ.' })
   collateralMethod!: DepositMethod;
@@ -28,8 +32,7 @@ export class ConfirmRentalReqDto {
     type: Number,
     minimum: 0,
     maximum: 100000000,
-    description:
-      'Required for CASH. Amount received outside the system; no payment transaction is created.',
+    description: 'Actual deposit received; may be below the suggested deposit, including zero.',
   })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' && value.trim() !== '' ? Number(value) : value,

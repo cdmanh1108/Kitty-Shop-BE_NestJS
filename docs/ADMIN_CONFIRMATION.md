@@ -1,10 +1,11 @@
 # Admin rental confirmation
 
 Admin creates a `RESERVED` booking, then submits confirmation from Order Detail.
-`POST /api/v1/rental-orders/:id/confirm` records the staff acknowledgement that
-the shop received the rental amount outside the system and holds the collateral.
-It does not call the Payment API or create a PaymentTransaction. Payment balances
-and revenue remain derived from the existing transaction ledger.
+`POST /api/v1/rental-orders/:id/confirm` records actual receipts as PaymentTransactions,
+together with confirmation, audit and outbox. Rental and deposit receipts are separate.
+Only the difference from existing net receipts is collected; the confirmation snapshot
+is never added to ledger totals. Confirmation means awaiting handover; `/start` records
+actual handover separately, including for bookings paid in advance.
 
 ## Contract and authorization
 
@@ -17,7 +18,10 @@ MANAGER roles; the seed grants it to those roles for new installations.
 - `POST /rental-orders/:id/confirm`: multipart fields `collateralMethod`
   (`CASH` or `DOCUMENT`), `collateralAmount` for CASH, `documentType` (`CCCD` or
   `GPLX`) for DOCUMENT, optional `note` (2,000 characters) and `evidence` image.
-  CASH must meet the order's expected deposit and the existing monetary limits.
+  Optional `paymentMethod` is CASH or BANK_TRANSFER (defaults to CASH).
+  Actual CASH deposit may be below the suggested amount, including zero, up to
+  100,000,000. The suggested amount is not an unpaid balance. Existing recorded
+  deposits cannot silently be reduced; reconcile/refund those receipts first.
   Returns Order Detail with nullable `confirmation` metadata.
 - `GET /rental-orders/:id/confirmation/evidence`: authenticated binary download,
   `Cache-Control: private, no-store`. No object key or provider URL is exposed.
@@ -56,8 +60,25 @@ references before deleting anything. Never expire referenced evidence blindly.
 
 ## Future Sales Web
 
-Online checkout may record real PaymentTransactions and verify provider events in
-its own authorized use case. Do not infer paid ledger balances from the manual
-confirmation snapshot, turn evidence into a payment, or reopen a generic status
-bypass. Manual acknowledgement and ledger payments represent different facts;
-any future reconciliation should explicitly prevent double counting.
+Receipts distinguish ADMIN_MANUAL, ONLINE_WEBHOOK, INTERNAL_TRANSFER and LEGACY.
+Manual BANK_TRANSFER means staff verified the transfer; it is not a webhook.
+Provider and providerTransactionId have a unique constraint for future verified
+webhook ingestion. No gateway/webhook endpoint is implemented here. Confirmation
+and settlement receipt keys are deterministic and unique per order. Actor, time,
+note and protected evidence provide the audit trail.
+
+## Settlement and migration
+
+Settlement uses net ledger receipts. Unpaid rental/charges = grand total minus net
+rental payments; deposit held = deposits in minus deposits out. Excess deposit is
+refunded, or the shortfall collected. Applied deposit creates an INTERNAL_TRANSFER
+pair (deposit OUT, rental IN), changing revenue classification without inventing
+an external cash movement. Actual collection/refund uses the selected payment method.
+Settlement, receipts, order state, audit and outbox commit atomically.
+
+Migration `202609140002_manual_payment_ledger` backfills existing confirmations and
+settlements, subtracting recorded receipts. Historical methods remain UNSPECIFIED
+with source LEGACY because old records did not capture them. Signed historical
+settlement amounts are preserved rather than recalculated into fictional collections.
+Mixed historical receipts or incorrect old settlements require reconciliation against
+actual cash/bank records; migration cannot establish their missing payment methods.

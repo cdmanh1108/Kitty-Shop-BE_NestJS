@@ -10,7 +10,7 @@ import { MAX_MEDIA_FILE_SIZE_BYTES } from '@common/storage/storage-key.builder';
 
 @Injectable()
 export class ConfirmationUploadInterceptor extends FileInterceptor('evidence', {
-  limits: { fileSize: MAX_MEDIA_FILE_SIZE_BYTES, files: 1, fields: 4, fieldSize: 8192 },
+  limits: { fileSize: MAX_MEDIA_FILE_SIZE_BYTES, files: 1, fields: 5, fieldSize: 8192 },
 }) {
   override async intercept(context: ExecutionContext, next: CallHandler) {
     try {

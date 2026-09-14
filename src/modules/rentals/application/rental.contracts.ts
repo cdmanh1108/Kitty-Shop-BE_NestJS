@@ -82,6 +82,7 @@ export interface ReturnRentalOrderInput {
 }
 
 export interface SettleRentalOrderInput {
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   settlementType?: string;
   note?: string;
   returnDocumentCollateral?: boolean;

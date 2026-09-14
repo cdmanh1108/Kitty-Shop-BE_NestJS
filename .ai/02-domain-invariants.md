@@ -23,3 +23,7 @@
 - Product and inventory archive are blocked by unreleased HELD/CONFIRMED/ACTIVE allocations, even after their planned end.
 - One active rental rate per shop/product/variant/duration; NULL variant means product fallback. SQL partial indexes preserve unrestricted inactive history.
 - Unarchived variant size/color combinations (including NULL) and primary product media have database uniqueness.
+
+- Manual confirmation records actual rental/deposit receipts atomically with audit/outbox; suggested deposit is not a minimum or a debt.
+- Payment balances come from the transaction ledger only, never ledger plus confirmation snapshots. Confirmation and physical handover remain separate.
+- Settlement offsets deposit using paired internal transactions; actual refunds/collections record their payment method and actor. Receipt keys and provider references prevent duplicate recording.

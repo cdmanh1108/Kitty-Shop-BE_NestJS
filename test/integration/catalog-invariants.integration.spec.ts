@@ -1,3 +1,4 @@
+import { returnAndSettle } from '../fixtures/return.fixture';
 import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import { readFileSync } from 'node:fs';
@@ -118,13 +119,15 @@ describe('Catalog persistence invariants', () => {
           changedBy: f.member.id,
         });
       }
-      await rentals.transition({
-        shopId: f.shop.id,
-        orderId: order.id,
-        fromStatuses: ['RESERVED', 'ACTIVE'],
-        toStatus: status,
-        changedBy: f.member.id,
-      });
+      if (status === 'COMPLETED') await returnAndSettle(rentals, f, order.id);
+      else
+        await rentals.transition({
+          shopId: f.shop.id,
+          orderId: order.id,
+          fromStatuses: ['RESERVED'],
+          toStatus: 'CANCELLED',
+          changedBy: f.member.id,
+        });
       expect(
         await catalog.archiveInventoryItem(f.shop.id, f.inventory.id, 'Audit', f.member.id),
       ).toBe(true);

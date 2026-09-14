@@ -12,7 +12,10 @@ export async function recomputeOrderPaymentState(
   tx: Prisma.TransactionClient,
   orderId: string,
 ): Promise<void> {
-  const order = await tx.rentalOrder.findUniqueOrThrow({ where: { id: orderId } });
+  const order = await tx.rentalOrder.findUniqueOrThrow({
+    where: { id: orderId },
+    include: { confirmation: true },
+  });
   const transactions = await tx.paymentTransaction.findMany({
     where: { orderId, status: TRANSACTION_STATUS.COMPLETED, voidedAt: null },
     select: { amount: true, direction: true, purpose: true },
@@ -20,7 +23,9 @@ export async function recomputeOrderPaymentState(
 
   const state = calculateOrderPaymentState({
     grandTotal: decimalToNumber(order.grandTotal),
-    depositRequired: decimalToNumber(order.depositRequired),
+    depositRequired: order.confirmation
+      ? Number(order.confirmation.collateralAmount ?? 0)
+      : decimalToNumber(order.depositRequired),
     transactions: transactions.map((transaction) => ({
       amount: decimalToNumber(transaction.amount),
       direction: transaction.direction,

@@ -94,6 +94,7 @@ export class RentalSettlementService {
         actorUserId: user.userId,
         actorName: user.fullName,
         settlementType: input.settlementType,
+        paymentMethod: input.paymentMethod,
         note: input.note?.trim(),
         returnDocument: input.returnDocumentCollateral,
         evidence,

@@ -830,6 +830,10 @@ model InventoryServiceRecord {
 }
 
 model PaymentTransaction {
+  source            String    @default("ADMIN_MANUAL") @db.VarChar(30)
+  receiptKey        String?   @unique @map("receipt_key") @db.VarChar(100)
+  provider          String?   @db.VarChar(50)
+  providerTransactionId String? @map("provider_transaction_id") @db.VarChar(255)
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId            String    @map("shop_id") @db.Uuid
   orderId           String    @map("order_id") @db.Uuid
@@ -855,6 +859,7 @@ model PaymentTransaction {
   customer Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
   @@unique([shopId, transactionNumber])
+  @@unique([provider, providerTransactionId])
   @@index([orderId, paidAt])
   @@index([shopId, paidAt, status])
   @@map("payment_transactions")

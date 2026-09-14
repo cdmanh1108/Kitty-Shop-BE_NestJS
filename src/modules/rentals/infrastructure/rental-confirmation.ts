@@ -1,3 +1,6 @@
+import { Prisma } from '@prisma/client';
+import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
+import { rentalLedger, recordRentalReceipt } from './rental-ledger';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import type { Clock } from '@common/clock/clock';
@@ -23,7 +26,7 @@ export function confirmOrder(
         'RENTAL_TRANSITION_NOT_ALLOWED',
         'Chỉ có thể xác nhận đơn đang ở trạng thái đã đặt trước.',
       );
-    assertManualConfirmation(input, order.depositRequired.toString(), policy);
+    assertManualConfirmation(input, policy);
     const allocations = await tx.rentalItemAllocation.findMany({
       where: { orderId: order.id, shopId: input.shopId, releasedAt: null },
       select: { inventoryItemId: true },
@@ -69,6 +72,42 @@ export function confirmOrder(
         evidenceSize: input.evidence?.size,
       },
     });
+    const existing = await tx.paymentTransaction.findMany({
+      where: { orderId: order.id, status: 'COMPLETED', voidedAt: null },
+    });
+    const ledger = rentalLedger(existing);
+    const actualDeposit = new Prisma.Decimal(
+      input.collateralMethod === 'CASH' ? (input.collateralAmount ?? 0) : 0,
+    );
+    if (ledger.depositHeld.greaterThan(actualDeposit))
+      throw new RentalInvariantError(
+        'DEPOSIT_ALREADY_RECEIVED',
+        'Cọc đã ghi nhận lớn hơn cọc nhập vào. Vui lòng kiểm tra giao dịch trước khi xác nhận.',
+      );
+    const receipt = {
+      orderId: order.id,
+      shopId: input.shopId,
+      customerId: order.customerId,
+      actorMemberId: input.actorMemberId,
+      paidAt: now,
+      paymentMethod: input.paymentMethod ?? 'CASH',
+      note: input.note,
+    };
+    await recordRentalReceipt(tx, {
+      ...receipt,
+      key: 'RC-R-' + order.id,
+      purpose: 'RENTAL_PAYMENT',
+      direction: 'IN',
+      amount: Prisma.Decimal.max(0, order.grandTotal.minus(ledger.paidRental)),
+    });
+    await recordRentalReceipt(tx, {
+      ...receipt,
+      key: 'RC-D-' + order.id,
+      purpose: 'DEPOSIT',
+      direction: 'IN',
+      amount: actualDeposit.minus(ledger.depositHeld),
+    });
+    await recomputeOrderPaymentState(tx, order.id);
     await tx.rentalOrderItem.updateMany({
       where: { orderId: order.id, shopId: input.shopId },
       data: { status: 'CONFIRMED' },

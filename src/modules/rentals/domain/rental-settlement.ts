@@ -1,5 +1,6 @@
 export interface RentalSettlement {
   depositReceived: string;
+  depositAvailable: string;
   refundAmount: string;
   amountStillDue: string;
   settlementStatus: 'PENDING' | 'REFUND_DUE' | 'AMOUNT_DUE' | 'BALANCED' | 'SETTLED';
@@ -88,8 +89,17 @@ export function calculateRentalSettlement(input: {
 
   return {
     depositReceived: money(received),
-    refundAmount: money(isPostReturn && !input.hasSettlement && input.status !== 'COMPLETED' ? refundDue : 0n),
-    amountStillDue: money(isPostReturn && !input.hasSettlement && input.status !== 'COMPLETED' ? amountDue : input.hasSettlement ? 0n : remaining),
+    depositAvailable: money(depositAvailable),
+    refundAmount: money(
+      isPostReturn && !input.hasSettlement && input.status !== 'COMPLETED' ? refundDue : 0n,
+    ),
+    amountStillDue: money(
+      isPostReturn && !input.hasSettlement && input.status !== 'COMPLETED'
+        ? amountDue
+        : input.hasSettlement
+          ? 0n
+          : remaining,
+    ),
     settlementStatus,
   };
 }

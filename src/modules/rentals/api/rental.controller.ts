@@ -154,6 +154,7 @@ export class RentalController {
         user,
         id,
         {
+          paymentMethod: body.paymentMethod,
           collateralMethod: body.collateralMethod,
           collateralAmount: body.collateralAmount,
           documentType: body.documentType,
@@ -212,8 +213,15 @@ export class RentalController {
 
   @Get(':id/return-preview')
   @Permissions(PERMISSIONS.RENTALS_RETURN)
-  @ApiOperation({ summary: 'Preview return details, calculate late fees and list items for inspection' })
-  @ApiQuery({ name: 'returnedAt', required: false, type: String, description: 'ISO-8601 string of actual return timestamp' })
+  @ApiOperation({
+    summary: 'Preview return details, calculate late fees and list items for inspection',
+  })
+  @ApiQuery({
+    name: 'returnedAt',
+    required: false,
+    type: String,
+    description: 'ISO-8601 string of actual return timestamp',
+  })
   @ApiOkResponse({ type: ReturnPreviewResDto })
   returnPreview(
     @CurrentUser() user: CurrentUserType,
@@ -226,7 +234,9 @@ export class RentalController {
   @Post(':id/return')
   @Permissions(PERMISSIONS.RENTALS_RETURN)
   @HttpCode(200)
-  @ApiOperation({ summary: 'Receive rental return with per-item inspection and optional manual charges' })
+  @ApiOperation({
+    summary: 'Receive rental return with per-item inspection and optional manual charges',
+  })
   @ApiOkResponse({ type: RentalOrderResDto })
   receiveReturn(
     @CurrentUser() user: CurrentUserType,

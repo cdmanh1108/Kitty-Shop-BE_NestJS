@@ -1,6 +1,7 @@
 import type { DecimalValue } from '@common/types/decimal';
 
 export interface PaymentTransactionRecord {
+  source: string;
   id: string;
   shopId: string;
   orderId: string;

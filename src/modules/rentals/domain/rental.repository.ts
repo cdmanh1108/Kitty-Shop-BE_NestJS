@@ -122,6 +122,7 @@ export interface ReceiveRentalReturnData {
 }
 
 export interface SettleRentalOrderData {
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   shopId: string;
   orderId: string;
   actorMemberId: string;
