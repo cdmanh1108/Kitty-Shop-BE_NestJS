@@ -34,6 +34,16 @@ export class CreateRentalItemReqDto {
   @Max(20, { message: 'Số lượng phải nhỏ hơn hoặc bằng $constraint1.' })
   quantity = 1;
   @ApiPropertyOptional({
+    type: Number,
+    description: 'Đơn giá thuê mỗi món do admin ghi đè (VNĐ). Nếu để trống, hệ thống dùng giá cấu hình.',
+    example: 150000,
+  })
+  @Type(() => Number)
+  @IsNumber(undefined, { message: 'Đơn giá thuê ghi đè phải là số hợp lệ.' })
+  @Min(0, { message: 'Đơn giá thuê ghi đè phải lớn hơn hoặc bằng $constraint1.' })
+  @IsOptional()
+  unitRentalPrice?: number;
+  @ApiPropertyOptional({
     type: [String],
     description: 'Optional physical item selection; otherwise backend auto-allocates.',
   })

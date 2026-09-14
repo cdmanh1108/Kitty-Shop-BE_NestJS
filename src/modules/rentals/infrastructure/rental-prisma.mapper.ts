@@ -10,13 +10,17 @@ export function bookableVariantInclude(
     product: {
       include: {
         rentalRates: {
-          where: { variantId: null, isActive: true, durationDays: input.durationDays },
+          where: { variantId: null, isActive: true },
+          orderBy: { durationDays: 'asc' },
         },
       },
     },
     size: true,
     color: true,
-    rentalRates: { where: { isActive: true, durationDays: input.durationDays } },
+    rentalRates: {
+      where: { isActive: true },
+      orderBy: { durationDays: 'asc' },
+    },
     inventoryItems: {
       where: availableInventoryWhere(input),
       orderBy: [{ totalRentalCount: 'asc' }, { sku: 'asc' }],
@@ -28,13 +32,36 @@ type BookableVariantRecord = Prisma.ProductVariantGetPayload<{
   include: ReturnType<typeof bookableVariantInclude>;
 }>;
 
-export function toBookableVariant(variant: BookableVariantRecord | null): BookableVariant | null {
+export function toBookableVariant(
+  variant: BookableVariantRecord | null,
+  durationDays = 1,
+): BookableVariant | null {
   if (!variant) return null;
   // Partial unique indexes guarantee one active row per duration in each scope.
   // Variant-specific pricing takes precedence over the product fallback.
-  const [variantRate] = variant.rentalRates;
-  const [productRate] = variant.product.rentalRates;
-  const rate = variantRate ?? productRate;
+  const days = Math.max(1, durationDays);
+  const findRate = (d: number) =>
+    variant.rentalRates.find((r) => r.durationDays === d) ??
+    variant.product.rentalRates.find((r) => r.durationDays === d);
+
+  const exactRate = findRate(days);
+  let ratePrice: number | null = null;
+
+  if (exactRate) {
+    ratePrice = decimalToNumber(exactRate.price);
+  } else {
+    const dailyRate = findRate(1);
+    if (dailyRate) {
+      ratePrice = decimalToNumber(dailyRate.price) * days;
+    } else {
+      const anyRate = variant.rentalRates[0] ?? variant.product.rentalRates[0];
+      if (anyRate && anyRate.durationDays > 0) {
+        const perDay = decimalToNumber(anyRate.price) / anyRate.durationDays;
+        ratePrice = Math.round(perDay * days);
+      }
+    }
+  }
+
   const deposit = variant.depositAmountOverride ?? variant.product.defaultDepositAmount;
   return {
     id: variant.id,
@@ -44,7 +71,7 @@ export function toBookableVariant(variant: BookableVariantRecord | null): Bookab
     sizeName: variant.size?.name ?? null,
     colorName: variant.color?.name ?? null,
     depositPerItem: decimalToNumber(deposit),
-    ratePrice: rate ? decimalToNumber(rate.price) : null,
+    ratePrice,
     availableInventory: variant.inventoryItems.map((item) => ({ id: item.id, sku: item.sku })),
   };
 }

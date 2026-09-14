@@ -1,6 +1,7 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { CatalogRepository } from '../domain/catalog.repository';
 
 export async function listProducts(
@@ -114,6 +115,10 @@ export async function lookupProducts(
         code: true,
         name: true,
         status: true,
+        rentalRates: {
+          where: { isActive: true },
+          select: { durationDays: true, price: true },
+        },
         variants: {
           where: { archivedAt: null },
           orderBy: { variantCode: 'asc' },
@@ -122,6 +127,10 @@ export async function lookupProducts(
             variantCode: true,
             size: { select: { name: true } },
             color: { select: { name: true } },
+            rentalRates: {
+              where: { isActive: true },
+              select: { durationDays: true, price: true },
+            },
           },
         },
       },
@@ -132,14 +141,27 @@ export async function lookupProducts(
     prisma.product.count({ where }),
   ]);
   return {
-    items: items.map((p) => ({
-      ...p,
-      variants: p.variants.map(({ size, color, ...v }) => ({
-        ...v,
-        sizeName: size?.name ?? null,
-        colorName: color?.name ?? null,
-      })),
-    })),
+    items: items.map((p) => {
+      const productRates = p.rentalRates.map((r) => ({
+        durationDays: r.durationDays,
+        price: decimalToNumber(r.price),
+      }));
+      return {
+        ...p,
+        rentalRates: productRates,
+        variants: p.variants.map(({ size, color, rentalRates, ...v }) => ({
+          ...v,
+          sizeName: size?.name ?? null,
+          colorName: color?.name ?? null,
+          rentalRates: rentalRates.length
+            ? rentalRates.map((r) => ({
+                durationDays: r.durationDays,
+                price: decimalToNumber(r.price),
+              }))
+            : productRates,
+        })),
+      };
+    }),
     meta: paginateMeta(input.page, limit, total),
   };
 }

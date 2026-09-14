@@ -138,7 +138,9 @@ describe('persistence mapping and availability', () => {
     expect(include.product.include.rentalRates.where).toEqual({
       variantId: null,
       isActive: true,
-      durationDays: 2,
+    });
+    expect(include.rentalRates.where).toEqual({
+      isActive: true,
     });
     expect(include.inventoryItems.orderBy).toEqual([{ totalRentalCount: 'asc' }, { sku: 'asc' }]);
   });

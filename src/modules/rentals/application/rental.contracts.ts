@@ -23,6 +23,7 @@ export interface CreateRentalOrderInput {
 export interface CreateRentalItemInput {
   variantId: string;
   quantity: number;
+  unitRentalPrice?: number;
   inventoryItemIds?: Array<string>;
 }
 

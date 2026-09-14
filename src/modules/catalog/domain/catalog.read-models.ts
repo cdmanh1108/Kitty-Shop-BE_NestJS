@@ -17,16 +17,23 @@ export interface ProductListItem {
   maxPrice: DecimalValue | null;
 }
 
+export interface ProductLookupRate {
+  durationDays: number;
+  price: number;
+}
+
 export interface ProductLookupItem {
   id: string;
   code: string;
   name: string;
   status: string;
+  rentalRates?: ProductLookupRate[];
   variants: Array<{
     id: string;
     variantCode: string;
     sizeName: string | null;
     colorName: string | null;
+    rentalRates?: ProductLookupRate[];
   }>;
 }
 

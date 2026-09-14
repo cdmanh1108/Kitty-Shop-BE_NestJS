@@ -16,5 +16,5 @@ export async function getBookableVariant(
     },
     include: bookableVariantInclude(input),
   });
-  return toBookableVariant(variant);
+  return toBookableVariant(variant, input.durationDays);
 }

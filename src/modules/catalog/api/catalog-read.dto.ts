@@ -19,17 +19,26 @@ export class ProductListItemResDto {
   @ApiProperty({ type: String, nullable: true }) maxPrice!: string | null;
 }
 
+export class ProductLookupRateResDto {
+  @ApiProperty() durationDays!: number;
+  @ApiProperty() price!: number;
+}
+
 export class ProductLookupVariantResDto {
   @ApiProperty() id!: string;
   @ApiProperty() variantCode!: string;
   @ApiProperty({ type: String, nullable: true }) sizeName!: string | null;
   @ApiProperty({ type: String, nullable: true }) colorName!: string | null;
+  @ApiPropertyOptional({ type: [ProductLookupRateResDto] })
+  rentalRates?: ProductLookupRateResDto[];
 }
 export class ProductLookupItemResDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
   @ApiProperty() status!: string;
+  @ApiPropertyOptional({ type: [ProductLookupRateResDto] })
+  rentalRates?: ProductLookupRateResDto[];
   @ApiProperty({ type: [ProductLookupVariantResDto] }) variants!: ProductLookupVariantResDto[];
 }
 export class ProductLookupPageResDto {

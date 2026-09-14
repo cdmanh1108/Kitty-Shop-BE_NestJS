@@ -146,9 +146,14 @@ export class RentalService {
         });
         if (!variant)
           throw new NotFoundException(`Biến thể ${item.variantId} không được phép cho thuê.`);
-        if (variant.ratePrice === null) {
+        const effectiveUnitPrice =
+          item.unitRentalPrice !== undefined && item.unitRentalPrice !== null
+            ? item.unitRentalPrice
+            : variant.ratePrice;
+
+        if (effectiveUnitPrice === null || effectiveUnitPrice < 0) {
           throw new BadRequestException(
-            `Chưa cấu hình giá thuê ${durationDays} ngày cho biến thể ${variant.variantCode}.`,
+            `Chưa cấu hình giá thuê ${durationDays} ngày cho biến thể ${variant.variantCode}. Vui lòng nhập giá thuê ghi đè.`,
           );
         }
 
@@ -187,12 +192,12 @@ export class RentalService {
           productName: variant.productName,
           variantName,
           quantity: item.quantity,
-          unitRentalPrice: variant.ratePrice,
+          unitRentalPrice: effectiveUnitPrice,
           depositAmount: variant.depositPerItem * item.quantity,
-          lineTotal: variant.ratePrice * item.quantity,
+          lineTotal: effectiveUnitPrice * item.quantity,
           pricingSnapshot: {
             durationDays,
-            unitRentalPrice: variant.ratePrice,
+            unitRentalPrice: effectiveUnitPrice,
             depositPerItem: variant.depositPerItem,
           },
           inventory: selected,

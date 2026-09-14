@@ -330,6 +330,41 @@ describe('RentalService Unit Tests', () => {
         }),
       );
     });
+
+    it('allows admin to override unitRentalPrice even if ratePrice is null', async () => {
+      const bookableVariant: BookableVariant = {
+        id: 'var-1',
+        variantCode: 'VAR-1',
+        productId: 'prod-1',
+        productName: 'Product One',
+        sizeName: 'M',
+        colorName: 'Red',
+        depositPerItem: 200000,
+        ratePrice: null,
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
+      };
+      repo.getBookableVariant.mockResolvedValueOnce(bookableVariant);
+
+      await service.create(currentUser, {
+        customerId: 'cust-1',
+        rentalStartAt: '2026-10-05T10:00:00.000Z',
+        rentalEndAt: '2026-10-07T10:00:00.000Z',
+        discountTotal: 0,
+        items: [{ variantId: 'var-1', quantity: 1, unitRentalPrice: 150000 }],
+        charges: [],
+      });
+
+      expect(createOrderMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lines: [
+            expect.objectContaining({
+              unitRentalPrice: 150000,
+              lineTotal: 150000,
+            }),
+          ],
+        }),
+      );
+    });
   });
 
   describe('transitions', () => {
