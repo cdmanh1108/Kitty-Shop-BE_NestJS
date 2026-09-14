@@ -99,11 +99,15 @@ export class CatalogService {
   }
 
   async updateCategory(user: CurrentUser, id: string, input: UpdateCategoryInput) {
-    const updated = await this.repository.updateCategory(user.shopId, id, {
-      ...input,
-      name: input.name?.trim(),
-      description: input.description === null ? null : input.description?.trim() || undefined,
-    });
+    const code = input.code?.trim() ? input.code.trim().toUpperCase() : undefined;
+    const updated = await this.withInvariant(() =>
+      this.repository.updateCategory(user.shopId, id, {
+        ...input,
+        code,
+        name: input.name?.trim(),
+        description: input.description === null ? null : input.description?.trim() || undefined,
+      }),
+    );
     if (!updated)
       throw new NotFoundException({
         code: 'CATEGORY_NOT_FOUND',
@@ -116,7 +120,7 @@ export class CatalogService {
       action: input.status ? 'STATUS_CHANGE' : 'UPDATE',
       entityType: 'category',
       entityId: id,
-      newValues: { ...input },
+      newValues: { ...input, ...(code ? { code } : {}) },
     });
     return updated;
   }

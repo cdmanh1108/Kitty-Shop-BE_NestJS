@@ -258,6 +258,14 @@ export class CreateCategoryReqDto {
 }
 
 export class UpdateCategoryReqDto {
+  @ApiPropertyOptional({ example: 'DRESS' })
+  @Transform(normalizeCode)
+  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @Matches(/^[A-Z0-9_]+$/, { message: 'Mã chỉ được chứa chữ in hoa, chữ số và dấu gạch dưới.' })
+  @MaxLength(50, { message: 'Mã không được vượt quá $constraint1 ký tự.' })
+  @IsOptional()
+  code?: string;
+
   @ApiPropertyOptional()
   @Transform(trimString)
   @IsString({ message: 'Tên phải là chuỗi ký tự.' })

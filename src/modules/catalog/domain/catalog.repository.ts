@@ -71,6 +71,7 @@ export interface CatalogRepository {
     shopId: string,
     id: string,
     input: {
+      code?: string;
       name?: string;
       description?: string | null;
       status?: 'ACTIVE' | 'INACTIVE';

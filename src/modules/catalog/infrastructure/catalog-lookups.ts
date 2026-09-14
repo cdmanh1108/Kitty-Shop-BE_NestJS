@@ -167,21 +167,29 @@ export async function updateCategory(
   shopId: string,
   id: string,
   input: {
+    code?: string;
     name?: string;
     description?: string | null;
     status?: 'ACTIVE' | 'INACTIVE';
     sortOrder?: number;
   },
 ): ReturnType<CatalogRepository['updateCategory']> {
-  const result = await prisma.category.updateMany({
-    where: { id, shopId },
-    data: {
-      name: input.name,
-      description: input.description,
-      sortOrder: input.sortOrder,
-      ...(input.status ? { isActive: input.status === 'ACTIVE' } : {}),
-    },
-  });
+  const result = await prisma.category
+    .updateMany({
+      where: { id, shopId },
+      data: {
+        code: input.code,
+        name: input.name,
+        description: input.description,
+        sortOrder: input.sortOrder,
+        ...(input.status ? { isActive: input.status === 'ACTIVE' } : {}),
+      },
+    })
+    .catch((error: unknown) => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
+        throw new CatalogCategoryCodeAlreadyExistsError();
+      throw error;
+    });
   if (!result.count) return null;
   const updated = await prisma.category.findFirst({
     where: { id, shopId },

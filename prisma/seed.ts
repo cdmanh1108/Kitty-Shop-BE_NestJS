@@ -18,12 +18,12 @@ const expenseCategories = [
 ] as const;
 
 const categories = [
-  ['DRESS', 'Váy'],
-  ['TOP', 'Áo'],
-  ['PANTS', 'Quần'],
-  ['ACCESSORY', 'Phụ kiện'],
-  ['BAG', 'Túi'],
-  ['SHOES', 'Giày'],
+  ['VAY', 'Váy'],
+  ['AO', 'Áo'],
+  ['QUAN', 'Quần'],
+  ['PHU_KIEN', 'Phụ kiện'],
+  ['TUI', 'Túi'],
+  ['GIAY', 'Giày'],
 ] as const;
 
 const sizes = [

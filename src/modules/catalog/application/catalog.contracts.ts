@@ -42,6 +42,7 @@ export interface CategoryListQuery extends PaginationParams {
 }
 
 export interface UpdateCategoryInput {
+  code?: string;
   name?: string;
   description?: string | null;
   status?: 'ACTIVE' | 'INACTIVE';
