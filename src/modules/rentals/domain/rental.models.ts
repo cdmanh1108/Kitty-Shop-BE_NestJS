@@ -26,6 +26,13 @@ export type RentalOrderDetails =
       customer: CustomerRecord;
       items: Array<
         RentalOrderItemRecord & {
+          imageUrl?: string | null;
+          variant?: {
+            media?: Array<{ url: string; storageKey?: string | null }>;
+          } | null;
+          product?: {
+            media?: Array<{ url: string; storageKey?: string | null }>;
+          } | null;
           allocations: Array<
             RentalItemAllocationRecord & {
               inventoryItem: InventoryItemRecord;

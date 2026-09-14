@@ -139,7 +139,29 @@ export function getWithTx(
       settlement: true,
       customer: true,
       location: true,
-      items: { include: { allocations: { include: { inventoryItem: true } } } },
+      items: {
+        include: {
+          allocations: { include: { inventoryItem: true } },
+          variant: {
+            include: {
+              media: {
+                where: { mediaType: 'IMAGE' },
+                orderBy: { sortOrder: 'asc' },
+                take: 1,
+              },
+            },
+          },
+          product: {
+            include: {
+              media: {
+                where: { mediaType: 'IMAGE' },
+                orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                take: 1,
+              },
+            },
+          },
+        },
+      },
       charges: { where: { voidedAt: null }, orderBy: { createdAt: 'asc' } },
       payments: {
         where: { status: TRANSACTION_STATUS.COMPLETED, voidedAt: null },

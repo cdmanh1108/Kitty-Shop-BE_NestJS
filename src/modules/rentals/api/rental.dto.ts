@@ -336,6 +336,7 @@ export class RentalItemResDto extends RentalItemSummaryResDto {
   @ApiProperty() productId!: string;
   @ApiProperty() variantId!: string;
   @ApiProperty() status!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) imageUrl?: string | null;
   @ApiProperty({ type: String }) unitRentalPrice!: string;
   @ApiProperty({ type: String }) depositAmount!: string;
   @ApiProperty({ type: String }) lineTotal!: string;

@@ -1,3 +1,4 @@
+import { resolvePublicUrl } from '@common/storage/public-url.resolver';
 import type { JsonSerialized } from '@common/types/json';
 import { Prisma } from '@prisma/client';
 import { calculateRentalSettlement } from '../domain/rental-settlement';
@@ -149,28 +150,53 @@ export function toRentalResponse(
       : null,
     note: row.note,
     internalNote: row.internalNote,
-    items: row.items.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      variantId: item.variantId,
-      productNameSnapshot: item.productNameSnapshot,
-      variantNameSnapshot: item.variantNameSnapshot,
-      quantity: item.quantity,
-      status: item.status,
-      unitRentalPrice: item.unitRentalPrice.toString(),
-      depositAmount: item.depositAmount.toString(),
-      lineTotal: item.lineTotal.toString(),
-      allocations: item.allocations.map((allocation) => ({
-        id: allocation.id,
-        inventoryItemId: allocation.inventoryItemId,
-        sku: allocation.inventoryItem.sku,
-        operationalStatus: allocation.inventoryItem.currentStatus,
-        status: allocation.status,
-        reservedFrom: timestamp(allocation.reservedFrom),
-        reservedUntil: timestamp(allocation.reservedUntil),
-        releasedAt: allocation.releasedAt ? timestamp(allocation.releasedAt) : null,
-      })),
-    })),
+    items: row.items.map((item) => {
+      const itemRecord = item as typeof item & {
+        variant?: { media?: Array<{ url: string; storageKey?: string | null }> } | null;
+        product?: { media?: Array<{ url: string; storageKey?: string | null }> } | null;
+      };
+      const media = itemRecord.variant?.media?.[0] ?? itemRecord.product?.media?.[0];
+      const r2Base =
+        process.env.OBJECT_STORAGE_PUBLIC_BASE_URL?.trim() ||
+        'https://pub-da9772f41ace4dda9871f112ae659353.r2.dev';
+      let resolvedUrl: string | null = null;
+      if (media?.storageKey) {
+        try {
+          resolvedUrl = resolvePublicUrl(r2Base, media.storageKey);
+        } catch {
+          resolvedUrl = media.url || null;
+        }
+      } else if (media?.url) {
+        resolvedUrl = media.url;
+      }
+      const imageUrl =
+        item.imageUrl && !item.imageUrl.includes('drive.google.com')
+          ? item.imageUrl
+          : (resolvedUrl ?? item.imageUrl ?? null);
+      return {
+        id: item.id,
+        productId: item.productId,
+        variantId: item.variantId,
+        productNameSnapshot: item.productNameSnapshot,
+        variantNameSnapshot: item.variantNameSnapshot,
+        quantity: item.quantity,
+        status: item.status,
+        imageUrl,
+        unitRentalPrice: item.unitRentalPrice.toString(),
+        depositAmount: item.depositAmount.toString(),
+        lineTotal: item.lineTotal.toString(),
+        allocations: item.allocations.map((allocation) => ({
+          id: allocation.id,
+          inventoryItemId: allocation.inventoryItemId,
+          sku: allocation.inventoryItem.sku,
+          operationalStatus: allocation.inventoryItem.currentStatus,
+          status: allocation.status,
+          reservedFrom: timestamp(allocation.reservedFrom),
+          reservedUntil: timestamp(allocation.reservedUntil),
+          releasedAt: allocation.releasedAt ? timestamp(allocation.releasedAt) : null,
+        })),
+      };
+    }),
     charges: row.charges.map((charge) => ({
       id: charge.id,
       chargeType: charge.chargeType,
