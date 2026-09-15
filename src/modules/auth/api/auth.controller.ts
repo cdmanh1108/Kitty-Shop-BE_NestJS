@@ -17,7 +17,7 @@ import { toChangePasswordInput, toLoginInput } from './auth.mapper';
 
 @ApiSurface('admin')
 @ApiTags('Auth')
-@Controller('auth')
+@Controller('admin/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

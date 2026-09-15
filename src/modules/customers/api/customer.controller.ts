@@ -40,7 +40,7 @@ import {
 @ApiSurface('admin')
 @ApiTags('Customers')
 @ApiBearerAuth('access-token')
-@Controller('customers')
+@Controller('admin/customers')
 export class CustomerController {
   constructor(private readonly service: CustomerService) {}
 

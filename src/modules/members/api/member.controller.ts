@@ -12,7 +12,7 @@ import { toCreateMemberInput, toUpdateMemberInput } from './member.mapper';
 @ApiSurface('admin')
 @ApiTags('Members & RBAC')
 @ApiBearerAuth('access-token')
-@Controller('members')
+@Controller('admin/members')
 export class MemberController {
   constructor(private readonly service: MemberService) {}
 

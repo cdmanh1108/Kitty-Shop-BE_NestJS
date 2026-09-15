@@ -1,4 +1,4 @@
-﻿import 'reflect-metadata';
+import 'reflect-metadata';
 import { Controller, Get, ValidationPipe, type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -176,7 +176,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
 
   it('logs in without exposing persisted hashes; uses HS256, 900s and a 384-bit opaque refresh token', async () => {
     const response = await request(server)
-      .post('/auth/login')
+      .post('/admin/auth/login')
       .send(credentials)
       .expect(201)
       .expect('Cache-Control', 'no-store');
@@ -201,7 +201,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       if (reason === 'inactive-user') identity.userStatus = 'INACTIVE';
       if (reason === 'inactive-member') identity.memberStatus = 'INACTIVE';
       const response = await request(server)
-        .post('/auth/login')
+        .post('/admin/auth/login')
         .send({ ...credentials, password: reason === 'wrong' ? 'Wrong-password!' : password })
         .expect(401);
       expect(response.text).toContain('Email hoặc mật khẩu không chính xác.');
@@ -213,38 +213,38 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     repository.findIdentityByEmail.mockResolvedValue(null);
     for (let i = 0; i < 10; i++)
       await request(server)
-        .post('/auth/login')
+        .post('/admin/auth/login')
         .set('X-Forwarded-For', `192.0.2.${i}`)
         .send(credentials)
         .expect(401);
-    await request(server).post('/auth/login').send(credentials).expect(429);
-    await request(server).get('/auth/me').set('Authorization', `Bearer ${bearer()}`).expect(200);
+    await request(server).post('/admin/auth/login').send(credentials).expect(429);
+    await request(server).get('/admin/auth/me').set('Authorization', `Bearer ${bearer()}`).expect(200);
   });
 
   it('limits refresh independently to 60 requests/IP/minute', async () => {
     for (let i = 0; i < 60; i++)
       await request(server)
-        .post('/auth/refresh')
+        .post('/admin/auth/refresh')
         .send({ refreshToken: 'x'.repeat(64) })
         .expect(401);
     await request(server)
-      .post('/auth/refresh')
+      .post('/admin/auth/refresh')
       .send({ refreshToken: 'x'.repeat(64) })
       .expect(429);
-    await request(server).post('/auth/login').send(credentials).expect(201);
+    await request(server).post('/admin/auth/login').send(credentials).expect(201);
   });
 
   it('only allows one concurrent refresh and leaves its replacement usable after old-token reuse', async () => {
     const session = await service.login(credentials, {});
     const responses = await Promise.all(
       [1, 2].map(() =>
-        request(server).post('/auth/refresh').send({ refreshToken: session.tokens.refreshToken }),
+        request(server).post('/admin/auth/refresh').send({ refreshToken: session.tokens.refreshToken }),
       ),
     );
     expect(responses.map((r) => r.status).sort()).toEqual([201, 401]);
     expect(rows.size).toBe(2);
     await request(server)
-      .post('/auth/refresh')
+      .post('/admin/auth/refresh')
       .send({ refreshToken: session.tokens.refreshToken })
       .expect(401);
     expect([...rows.values()].filter((row) => !row.revoked)).toHaveLength(1);
@@ -252,7 +252,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     if (!winner) throw new Error('Missing successful rotation');
     const rotated = JSON.parse(winner.text) as LoginResult;
     await request(server)
-      .post('/auth/refresh')
+      .post('/admin/auth/refresh')
       .send({ refreshToken: rotated.tokens.refreshToken })
       .expect(201)
       .expect('Cache-Control', 'no-store');
@@ -268,7 +268,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       if (state === 'revoked') row.revoked = true;
       if (state === 'inactive') identity.memberStatus = 'INACTIVE';
       await request(server)
-        .post('/auth/refresh')
+        .post('/admin/auth/refresh')
         .send({ refreshToken: session.tokens.refreshToken })
         .expect(401);
       expect(rows.size).toBe(1);
@@ -282,22 +282,22 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     if (!row) throw new Error('Missing fixture');
     row.memberId = 'another-member';
     await request(server)
-      .post('/auth/logout')
+      .post('/admin/auth/logout')
       .set('Authorization', `Bearer ${session.tokens.accessToken}`)
       .send({ refreshToken: other.tokens.refreshToken })
       .expect(201);
     expect(row.revoked).toBe(false);
     await request(server)
-      .post('/auth/logout')
+      .post('/admin/auth/logout')
       .set('Authorization', `Bearer ${session.tokens.accessToken}`)
       .send({ refreshToken: session.tokens.refreshToken })
       .expect(201);
     await request(server)
-      .post('/auth/refresh')
+      .post('/admin/auth/refresh')
       .send({ refreshToken: session.tokens.refreshToken })
       .expect(401);
     await request(server)
-      .get('/auth/me')
+      .get('/admin/auth/me')
       .set('Authorization', `Bearer ${session.tokens.accessToken}`)
       .expect(200);
   });
@@ -311,39 +311,39 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
 
   it('uses verified membership tenant; rejects spoofed body fields and mismatched signed tenant', async () => {
     const response = await request(server)
-      .get('/auth/me?shopId=other')
+      .get('/admin/auth/me?shopId=other')
       .set('X-Shop-Id', 'other')
       .set('Authorization', `Bearer ${bearer()}`)
       .expect(200);
     expect(response.text).toContain(ids.sid);
     expect(response.text).not.toContain(passwordHash);
     await request(server)
-      .post('/auth/login')
+      .post('/admin/auth/login')
       .send({ ...credentials, shopId: 'other', permissions: ['members.manage'] })
       .expect(400);
     const token = jwt.sign(
       { ...ids, sid: '00000000-0000-4000-8000-000000000004' },
       { expiresIn: 900 },
     );
-    await request(server).get('/auth/me').set('Authorization', `Bearer ${token}`).expect(401);
+    await request(server).get('/admin/auth/me').set('Authorization', `Bearer ${token}`).expect(401);
   });
 
   it('keeps health public and logout/change-password protected', async () => {
     await request(server).get('/health/live').expect(200);
     await request(server).get('/health/ready').expect(200);
     await request(server)
-      .post('/auth/logout')
+      .post('/admin/auth/logout')
       .send({ refreshToken: 'x'.repeat(64) })
       .expect(401);
     await request(server)
-      .post('/auth/change-password')
+      .post('/admin/auth/change-password')
       .send({ currentPassword: password, newPassword: 'Replacement-password!' })
       .expect(401);
   });
 
   it('hashes password changes at cost 12 and asks persistence to revoke user refresh tokens', async () => {
     await request(server)
-      .post('/auth/change-password')
+      .post('/admin/auth/change-password')
       .set('Authorization', 'Bearer ' + bearer())
       .send({ currentPassword: password, newPassword: 'Replacement-password!' })
       .expect(201);
@@ -357,11 +357,11 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
   it('does not accept access tokens as refresh, or opaque refresh tokens as bearer JWTs', async () => {
     const session = await service.login(credentials, {});
     await request(server)
-      .post('/auth/refresh')
+      .post('/admin/auth/refresh')
       .send({ refreshToken: session.tokens.accessToken })
       .expect(401);
     await request(server)
-      .get('/auth/me')
+      .get('/admin/auth/me')
       .set('Authorization', `Bearer ${session.tokens.refreshToken}`)
       .expect(401);
   });
@@ -379,7 +379,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
                 algorithm: variant === 'HS384' ? 'HS384' : 'HS256',
                 ...(variant === 'wrong-secret' ? { secret: 'other-secret' } : {}),
               });
-      await request(server).get('/auth/me').set('Authorization', `Bearer ${token}`).expect(401);
+      await request(server).get('/admin/auth/me').set('Authorization', `Bearer ${token}`).expect(401);
       expect(membership.mock.calls).toHaveLength(0);
     },
   );

@@ -17,7 +17,7 @@ import {
 @ApiSurface('admin')
 @ApiTags('Settings')
 @ApiBearerAuth('access-token')
-@Controller('settings')
+@Controller('admin/settings')
 export class SettingsController {
   constructor(private readonly service: SettingsService) {}
 

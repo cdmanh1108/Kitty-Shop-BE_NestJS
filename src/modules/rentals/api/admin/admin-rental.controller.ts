@@ -71,7 +71,7 @@ import { ApiSurface } from '@common/decorators/api-surface.decorator';
 @ApiTags('Admin - Rental Orders')
 @ApiSurface('admin')
 @ApiBearerAuth('access-token')
-@Controller(['admin/rental-orders', 'rental-orders'])
+@Controller('admin/rental-orders')
 export class AdminRentalController {
   constructor(
     private readonly service: RentalService,

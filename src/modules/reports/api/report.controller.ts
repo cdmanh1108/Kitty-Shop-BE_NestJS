@@ -18,7 +18,7 @@ import { toPerformanceQuery, toReportRangeQuery } from './report.mapper';
 @ApiSurface('admin')
 @ApiTags('Reports')
 @ApiBearerAuth('access-token')
-@Controller('reports')
+@Controller('admin/reports')
 export class ReportController {
   constructor(private readonly service: ReportService) {}
 

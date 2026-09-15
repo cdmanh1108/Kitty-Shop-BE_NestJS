@@ -16,7 +16,7 @@ import {
 @ApiSurface('admin')
 @ApiTags('Finance')
 @ApiBearerAuth('access-token')
-@Controller('finance')
+@Controller('admin/finance')
 export class FinanceReadController {
   constructor(private readonly service: FinanceReadService) {}
   @ApiOperation({

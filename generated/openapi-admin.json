@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/audit-logs": {
+    "/admin/audit-logs": {
       "get": {
         "operationId": "AuditController_list",
         "parameters": [
@@ -60,7 +60,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/auth/login": {
+    "/admin/auth/login": {
       "post": {
         "operationId": "AuthController_login",
         "parameters": [
@@ -102,7 +102,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/auth/refresh": {
+    "/admin/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh",
         "parameters": [
@@ -144,7 +144,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/auth/logout": {
+    "/admin/auth/logout": {
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
@@ -175,7 +175,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/auth/me": {
+    "/admin/auth/me": {
       "get": {
         "operationId": "AuthController_me",
         "parameters": [],
@@ -203,7 +203,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/auth/change-password": {
+    "/admin/auth/change-password": {
       "post": {
         "operationId": "AuthController_changePassword",
         "parameters": [],
@@ -234,7 +234,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/dashboard/summary": {
+    "/admin/dashboard/summary": {
       "get": {
         "operationId": "DashboardController_summary",
         "parameters": [],
@@ -262,7 +262,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/customers": {
+    "/admin/customers": {
       "get": {
         "operationId": "CustomerController_list",
         "parameters": [
@@ -371,7 +371,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/customers/lookup": {
+    "/admin/customers/lookup": {
       "get": {
         "operationId": "CustomerController_lookup",
         "parameters": [
@@ -422,7 +422,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/customers/{id}": {
+    "/admin/customers/{id}": {
       "get": {
         "operationId": "CustomerController_get",
         "parameters": [
@@ -502,7 +502,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/customers/{id}/notes": {
+    "/admin/customers/{id}/notes": {
       "post": {
         "operationId": "CustomerController_addNote",
         "parameters": [
@@ -548,7 +548,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/customers/{id}/addresses": {
+    "/admin/customers/{id}/addresses": {
       "post": {
         "operationId": "CustomerController_addAddress",
         "parameters": [
@@ -594,7 +594,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/customers/{id}/addresses/{addressId}": {
+    "/admin/customers/{id}/addresses/{addressId}": {
       "patch": {
         "operationId": "CustomerController_updateAddress",
         "parameters": [
@@ -685,35 +685,7 @@
     },
     "/admin/catalog/lookups": {
       "get": {
-        "operationId": "CatalogController_lookups[0]",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CatalogLookupsResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Categories, sizes, colors and locations for admin forms",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/catalog/lookups": {
-      "get": {
-        "operationId": "CatalogController_lookups[1]",
+        "operationId": "CatalogController_lookups",
         "parameters": [],
         "responses": {
           "200": {
@@ -741,7 +713,7 @@
     },
     "/admin/catalog/categories": {
       "post": {
-        "operationId": "CatalogController_createCategory[0]",
+        "operationId": "CatalogController_createCategory",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -776,111 +748,7 @@
         "x-api-surface": "admin"
       },
       "get": {
-        "operationId": "CatalogController_listCategories[0]",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "INACTIVE"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CategoryPageResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/catalog/categories": {
-      "post": {
-        "operationId": "CatalogController_createCategory[1]",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCategoryReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CategoryResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      },
-      "get": {
-        "operationId": "CatalogController_listCategories[1]",
+        "operationId": "CatalogController_listCategories",
         "parameters": [
           {
             "name": "page",
@@ -949,47 +817,7 @@
     },
     "/admin/catalog/categories/options": {
       "get": {
-        "operationId": "CatalogController_categoryOptions[0]",
-        "parameters": [
-          {
-            "name": "includeInactive",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": false,
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CategoryOptionResDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/catalog/categories/options": {
-      "get": {
-        "operationId": "CatalogController_categoryOptions[1]",
+        "operationId": "CatalogController_categoryOptions",
         "parameters": [
           {
             "name": "includeInactive",
@@ -1029,7 +857,7 @@
     },
     "/admin/catalog/categories/{id}": {
       "patch": {
-        "operationId": "CatalogController_updateCategory[0]",
+        "operationId": "CatalogController_updateCategory",
         "parameters": [
           {
             "name": "id",
@@ -1073,91 +901,7 @@
         "x-api-surface": "admin"
       },
       "delete": {
-        "operationId": "CatalogController_deleteCategory[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "deleted": {
-                      "type": "boolean"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/catalog/categories/{id}": {
-      "patch": {
-        "operationId": "CatalogController_updateCategory[1]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCategoryReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CategoryResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      },
-      "delete": {
-        "operationId": "CatalogController_deleteCategory[1]",
+        "operationId": "CatalogController_deleteCategory",
         "parameters": [
           {
             "name": "id",
@@ -1197,37 +941,7 @@
     },
     "/admin/catalog/sizes": {
       "post": {
-        "operationId": "CatalogController_createSize[0]",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateSizeReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/catalog/sizes": {
-      "post": {
-        "operationId": "CatalogController_createSize[1]",
+        "operationId": "CatalogController_createSize",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1257,37 +971,7 @@
     },
     "/admin/catalog/colors": {
       "post": {
-        "operationId": "CatalogController_createColor[0]",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateColorReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/catalog/colors": {
-      "post": {
-        "operationId": "CatalogController_createColor[1]",
+        "operationId": "CatalogController_createColor",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1317,7 +1001,7 @@
     },
     "/admin/products": {
       "get": {
-        "operationId": "CatalogController_listProducts[0]",
+        "operationId": "CatalogController_listProducts",
         "parameters": [
           {
             "name": "page",
@@ -1392,120 +1076,7 @@
         "x-api-surface": "admin"
       },
       "post": {
-        "operationId": "CatalogController_createProduct[0]",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateProductReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Create product, variants, rates and initial physical inventory atomically",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/products": {
-      "get": {
-        "operationId": "CatalogController_listProducts[1]",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "categoryId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "INACTIVE"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductPageResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      },
-      "post": {
-        "operationId": "CatalogController_createProduct[1]",
+        "operationId": "CatalogController_createProduct",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1543,92 +1114,7 @@
     },
     "/admin/products/lookup": {
       "get": {
-        "operationId": "CatalogController_lookupProducts[0]",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 50,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "categoryId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "INACTIVE"
-              ]
-            }
-          },
-          {
-            "name": "productId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductLookupPageResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/products/lookup": {
-      "get": {
-        "operationId": "CatalogController_lookupProducts[1]",
+        "operationId": "CatalogController_lookupProducts",
         "parameters": [
           {
             "name": "page",
@@ -1713,7 +1199,7 @@
     },
     "/admin/products/{id}": {
       "get": {
-        "operationId": "CatalogController_getProduct[0]",
+        "operationId": "CatalogController_getProduct",
         "parameters": [
           {
             "name": "id",
@@ -1747,7 +1233,7 @@
         "x-api-surface": "admin"
       },
       "patch": {
-        "operationId": "CatalogController_updateProduct[0]",
+        "operationId": "CatalogController_updateProduct",
         "parameters": [
           {
             "name": "id",
@@ -1791,115 +1277,7 @@
         "x-api-surface": "admin"
       },
       "delete": {
-        "operationId": "CatalogController_archiveProduct[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Safely archive a product if it has no active rental orders",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/products/{id}": {
-      "get": {
-        "operationId": "CatalogController_getProduct[1]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      },
-      "patch": {
-        "operationId": "CatalogController_updateProduct[1]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateProductReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      },
-      "delete": {
-        "operationId": "CatalogController_archiveProduct[1]",
+        "operationId": "CatalogController_archiveProduct",
         "parameters": [
           {
             "name": "id",
@@ -1929,53 +1307,7 @@
     },
     "/admin/products/{id}/variants": {
       "post": {
-        "operationId": "CatalogController_addVariant[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddVariantReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductVariantResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/products/{id}/variants": {
-      "post": {
-        "operationId": "CatalogController_addVariant[1]",
+        "operationId": "CatalogController_addVariant",
         "parameters": [
           {
             "name": "id",
@@ -2021,53 +1353,7 @@
     },
     "/admin/variants/{id}/rental-rates": {
       "post": {
-        "operationId": "CatalogController_upsertRentalRate[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertRentalRateReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalRateResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/variants/{id}/rental-rates": {
-      "post": {
-        "operationId": "CatalogController_upsertRentalRate[1]",
+        "operationId": "CatalogController_upsertRentalRate",
         "parameters": [
           {
             "name": "id",
@@ -2113,7 +1399,7 @@
     },
     "/admin/inventory": {
       "get": {
-        "operationId": "CatalogController_listInventory[0]",
+        "operationId": "CatalogController_listInventory",
         "parameters": [
           {
             "name": "page",
@@ -2208,139 +1494,7 @@
         "x-api-surface": "admin"
       },
       "post": {
-        "operationId": "CatalogController_addInventory[0]",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddInventoryReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InventoryItemResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/inventory": {
-      "get": {
-        "operationId": "CatalogController_listInventory[1]",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "variantId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "productId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "categoryId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "AVAILABLE",
-                "CLEANING",
-                "REPAIRING",
-                "DAMAGED",
-                "LOST",
-                "RETIRED"
-              ]
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InventoryPageResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      },
-      "post": {
-        "operationId": "CatalogController_addInventory[1]",
+        "operationId": "CatalogController_addInventory",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2377,34 +1531,7 @@
     },
     "/admin/inventory/summary": {
       "get": {
-        "operationId": "CatalogController_inventorySummary[0]",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InventorySummaryResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/inventory/summary": {
-      "get": {
-        "operationId": "CatalogController_inventorySummary[1]",
+        "operationId": "CatalogController_inventorySummary",
         "parameters": [],
         "responses": {
           "200": {
@@ -2431,72 +1558,7 @@
     },
     "/admin/inventory/history": {
       "get": {
-        "operationId": "CatalogController_inventoryHistory[0]",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "productId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "inventoryItemId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InventoryHistoryPageResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/inventory/history": {
-      "get": {
-        "operationId": "CatalogController_inventoryHistory[1]",
+        "operationId": "CatalogController_inventoryHistory",
         "parameters": [
           {
             "name": "page",
@@ -2561,7 +1623,7 @@
     },
     "/admin/inventory/{id}": {
       "get": {
-        "operationId": "CatalogController_getInventory[0]",
+        "operationId": "CatalogController_getInventory",
         "parameters": [
           {
             "name": "id",
@@ -2596,93 +1658,7 @@
         "x-api-surface": "admin"
       },
       "delete": {
-        "operationId": "CatalogController_archiveInventoryItem[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ArchiveInventoryItemReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {
-                    "success": {
-                      "type": "boolean"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Archive/retire physical inventory item safely",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/inventory/{id}": {
-      "get": {
-        "operationId": "CatalogController_getInventory[1]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InventoryItemResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Physical inventory detail with status history and unreleased allocations",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      },
-      "delete": {
-        "operationId": "CatalogController_archiveInventoryItem[1]",
+        "operationId": "CatalogController_archiveInventoryItem",
         "parameters": [
           {
             "name": "id",
@@ -2733,54 +1709,7 @@
     },
     "/admin/products/{id}/media": {
       "post": {
-        "operationId": "CatalogController_addProductMedia[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProductMediaReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductMediaResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Add an image to a product; setting primary clears the previous primary image",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/products/{id}/media": {
-      "post": {
-        "operationId": "CatalogController_addProductMedia[1]",
+        "operationId": "CatalogController_addProductMedia",
         "parameters": [
           {
             "name": "id",
@@ -2827,45 +1756,7 @@
     },
     "/admin/products/{id}/media/{mediaId}": {
       "delete": {
-        "operationId": "CatalogController_removeProductMedia[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "mediaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Remove a product image",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/products/{id}/media/{mediaId}": {
-      "delete": {
-        "operationId": "CatalogController_removeProductMedia[1]",
+        "operationId": "CatalogController_removeProductMedia",
         "parameters": [
           {
             "name": "id",
@@ -2903,53 +1794,7 @@
     },
     "/admin/inventory/{id}/status": {
       "patch": {
-        "operationId": "CatalogController_updateInventoryStatus[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateInventoryStatusReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InventoryItemResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/inventory/{id}/status": {
-      "patch": {
-        "operationId": "CatalogController_updateInventoryStatus[1]",
+        "operationId": "CatalogController_updateInventoryStatus",
         "parameters": [
           {
             "name": "id",
@@ -2995,63 +1840,7 @@
     },
     "/admin/inventory/availability/search": {
       "get": {
-        "operationId": "CatalogController_availability[0]",
-        "parameters": [
-          {
-            "name": "variantId",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "until",
-            "required": true,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/InventoryItemResDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Find physical items not allocated in a half-open [from, until) interval",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/inventory/availability/search": {
-      "get": {
-        "operationId": "CatalogController_availability[1]",
+        "operationId": "CatalogController_availability",
         "parameters": [
           {
             "name": "variantId",
@@ -3107,7 +1896,7 @@
     },
     "/admin/rental-orders": {
       "get": {
-        "operationId": "RentalController_list[0]",
+        "operationId": "RentalController_list",
         "parameters": [
           {
             "name": "page",
@@ -3219,175 +2008,7 @@
         "x-api-surface": "admin"
       },
       "post": {
-        "operationId": "RentalController_create[0]",
-        "parameters": [
-          {
-            "name": "idempotency-key",
-            "required": true,
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "description": "Recommended for retries from admin/FE.",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateRentalOrderReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Create order + price snapshots + physical allocations atomically",
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders": {
-      "get": {
-        "operationId": "RentalController_list[1]",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "customerId",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "DRAFT",
-                "RESERVED",
-                "CONFIRMED",
-                "ACTIVE",
-                "RETURNED",
-                "COMPLETED",
-                "CANCELLED"
-              ]
-            }
-          },
-          {
-            "name": "paymentStatus",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "UNPAID",
-                "PARTIALLY_PAID",
-                "PAID",
-                "REFUNDED",
-                "PARTIALLY_REFUNDED"
-              ]
-            }
-          },
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "until",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderPageResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "List/search orders; use from/until for calendar overlap queries",
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      },
-      "post": {
-        "operationId": "RentalController_create[1]",
+        "operationId": "RentalController_create",
         "parameters": [
           {
             "name": "idempotency-key",
@@ -3443,43 +2064,7 @@
     },
     "/admin/rental-orders/{id}": {
       "get": {
-        "operationId": "RentalController_get[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}": {
-      "get": {
-        "operationId": "RentalController_get[1]",
+        "operationId": "RentalController_get",
         "parameters": [
           {
             "name": "id",
@@ -3515,54 +2100,7 @@
     },
     "/admin/rental-orders/{id}/schedule": {
       "patch": {
-        "operationId": "RentalController_reschedule[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RescheduleRentalReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Reschedule within the policy window from original booking; preserve duration and recheck overlap",
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/schedule": {
-      "patch": {
-        "operationId": "RentalController_reschedule[1]",
+        "operationId": "RentalController_reschedule",
         "parameters": [
           {
             "name": "id",
@@ -3609,69 +2147,7 @@
     },
     "/admin/rental-orders/{id}/confirm": {
       "post": {
-        "operationId": "RentalController_confirm[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/ConfirmRentalReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid collateral, evidence, or order state (including repeated confirmation)."
-          },
-          "401": {
-            "description": "Authentication required."
-          },
-          "403": {
-            "description": "Requires rentals.confirm."
-          },
-          "404": {
-            "description": "Order does not exist in authenticated shop."
-          },
-          "413": {
-            "description": "Evidence exceeds 15 MiB."
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Manually acknowledge receipt and collateral; atomically confirm without Payment API. Requires rentals.confirm.",
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/confirm": {
-      "post": {
-        "operationId": "RentalController_confirm[1]",
+        "operationId": "RentalController_confirm",
         "parameters": [
           {
             "name": "id",
@@ -3733,52 +2209,7 @@
     },
     "/admin/rental-orders/{id}/confirmation-options": {
       "get": {
-        "operationId": "RentalController_confirmationOptions[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfirmationOptionsResDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required."
-          },
-          "403": {
-            "description": "Requires rentals.confirm."
-          },
-          "404": {
-            "description": "Order does not exist in authenticated shop."
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/confirmation-options": {
-      "get": {
-        "operationId": "RentalController_confirmationOptions[1]",
+        "operationId": "RentalController_confirmationOptions",
         "parameters": [
           {
             "name": "id",
@@ -3823,53 +2254,7 @@
     },
     "/admin/rental-orders/{id}/confirmation/evidence": {
       "get": {
-        "operationId": "RentalController_evidence[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Evidence image; requires rentals.confirm. Private, no-store.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication required."
-          },
-          "403": {
-            "description": "Requires rentals.confirm."
-          },
-          "404": {
-            "description": "Order or evidence does not exist in authenticated shop."
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/confirmation/evidence": {
-      "get": {
-        "operationId": "RentalController_evidence[1]",
+        "operationId": "RentalController_evidence",
         "parameters": [
           {
             "name": "id",
@@ -3915,53 +2300,7 @@
     },
     "/admin/rental-orders/{id}/start": {
       "post": {
-        "operationId": "RentalController_start[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransitionRentalReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/start": {
-      "post": {
-        "operationId": "RentalController_start[1]",
+        "operationId": "RentalController_start",
         "parameters": [
           {
             "name": "id",
@@ -4007,43 +2346,7 @@
     },
     "/admin/rental-orders/{id}/collateral/return": {
       "post": {
-        "operationId": "RentalController_returnCollateral[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/collateral/return": {
-      "post": {
-        "operationId": "RentalController_returnCollateral[1]",
+        "operationId": "RentalController_returnCollateral",
         "parameters": [
           {
             "name": "id",
@@ -4079,53 +2382,7 @@
     },
     "/admin/rental-orders/{id}/return-preview": {
       "get": {
-        "operationId": "RentalController_returnPreview[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "returnedAt",
-            "required": false,
-            "in": "query",
-            "description": "ISO-8601 string of actual return timestamp",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReturnPreviewResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Preview return details, calculate late fees and list items for inspection",
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/return-preview": {
-      "get": {
-        "operationId": "RentalController_returnPreview[1]",
+        "operationId": "RentalController_returnPreview",
         "parameters": [
           {
             "name": "id",
@@ -4171,54 +2428,7 @@
     },
     "/admin/rental-orders/{id}/return": {
       "post": {
-        "operationId": "RentalController_receiveReturn[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReturnRentalOrderReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Receive rental return with per-item inspection and optional manual charges",
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/return": {
-      "post": {
-        "operationId": "RentalController_receiveReturn[1]",
+        "operationId": "RentalController_receiveReturn",
         "parameters": [
           {
             "name": "id",
@@ -4265,54 +2475,7 @@
     },
     "/admin/rental-orders/{id}/settle": {
       "post": {
-        "operationId": "RentalController_settle[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/SettleRentalOrderReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Settle returned rental order; offsets charges against cash deposit, releases document collateral if requested, and completes order",
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/settle": {
-      "post": {
-        "operationId": "RentalController_settle[1]",
+        "operationId": "RentalController_settle",
         "parameters": [
           {
             "name": "id",
@@ -4359,44 +2522,7 @@
     },
     "/admin/rental-orders/{id}/settlement/evidence": {
       "get": {
-        "operationId": "RentalController_settlementEvidence[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Settlement evidence image; requires rentals.settle. Private, no-store.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/settlement/evidence": {
-      "get": {
-        "operationId": "RentalController_settlementEvidence[1]",
+        "operationId": "RentalController_settlementEvidence",
         "parameters": [
           {
             "name": "id",
@@ -4433,54 +2559,7 @@
     },
     "/admin/rental-orders/{id}/cancel": {
       "post": {
-        "operationId": "RentalController_cancel[0]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransitionRentalReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Cancel a RESERVED order; confirmed and active orders cannot be cancelled",
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/rental-orders/{id}/cancel": {
-      "post": {
-        "operationId": "RentalController_cancel[1]",
+        "operationId": "RentalController_cancel",
         "parameters": [
           {
             "name": "id",
@@ -4527,7 +2606,7 @@
     },
     "/admin/rental-orders/{id}/charges": {
       "post": {
-        "operationId": "RentalController_addCharge[0]",
+        "operationId": "RentalController_addCharge",
         "parameters": [
           {
             "name": "id",
@@ -4571,53 +2650,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/rental-orders/{id}/charges": {
-      "post": {
-        "operationId": "RentalController_addCharge[1]",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddRentalChargeReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/settings": {
+    "/admin/settings": {
       "get": {
         "operationId": "SettingsController_list",
         "parameters": [],
@@ -4637,7 +2670,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/settings/shop": {
+    "/admin/settings/shop": {
       "get": {
         "operationId": "SettingsController_shop",
         "parameters": [],
@@ -4657,7 +2690,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/settings/rental-policy": {
+    "/admin/settings/rental-policy": {
       "get": {
         "operationId": "SettingsController_getRentalPolicy",
         "parameters": [],
@@ -4721,7 +2754,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/settings/{key}": {
+    "/admin/settings/{key}": {
       "put": {
         "operationId": "SettingsController_upsert",
         "parameters": [
@@ -4760,7 +2793,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/settings/shop/profile": {
+    "/admin/settings/shop/profile": {
       "patch": {
         "operationId": "SettingsController_updateShop",
         "parameters": [],
@@ -4790,7 +2823,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/payments": {
+    "/admin/payments": {
       "get": {
         "operationId": "FinanceController_listPayments",
         "parameters": [
@@ -4881,7 +2914,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/rental-orders/{orderId}/payments": {
+    "/admin/rental-orders/{orderId}/payments": {
       "post": {
         "operationId": "FinanceController_createPayment",
         "parameters": [
@@ -4928,7 +2961,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/payments/{id}/void": {
+    "/admin/payments/{id}/void": {
       "post": {
         "operationId": "FinanceController_voidPayment",
         "parameters": [
@@ -4964,7 +2997,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/expense-categories": {
+    "/admin/expense-categories": {
       "get": {
         "operationId": "FinanceController_expenseCategories",
         "parameters": [],
@@ -4994,7 +3027,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/expenses": {
+    "/admin/expenses": {
       "get": {
         "operationId": "FinanceController_listExpenses",
         "parameters": [
@@ -5115,7 +3148,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/expenses/{id}/void": {
+    "/admin/expenses/{id}/void": {
       "post": {
         "operationId": "FinanceController_voidExpense",
         "parameters": [
@@ -5151,7 +3184,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/finance/summary": {
+    "/admin/finance/summary": {
       "get": {
         "description": "Shop-local inclusive date bounds. Excludes deposits and settlement receipts. Money uses canonical VND decimal strings. See docs/FINANCE.md.",
         "operationId": "FinanceReadController_summary",
@@ -5236,7 +3269,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/finance/transactions": {
+    "/admin/finance/transactions": {
       "get": {
         "description": "Filters apply before pagination; stable source-prefixed IDs. Same recognition source as summary.",
         "operationId": "FinanceReadController_transactions",
@@ -5355,7 +3388,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/deliveries": {
+    "/admin/deliveries": {
       "get": {
         "operationId": "DeliveryController_list",
         "parameters": [],
@@ -5375,7 +3408,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/deliveries/orders/{orderId}": {
+    "/admin/deliveries/orders/{orderId}": {
       "post": {
         "operationId": "DeliveryController_create",
         "parameters": [
@@ -5414,7 +3447,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/deliveries/{id}/status": {
+    "/admin/deliveries/{id}/status": {
       "patch": {
         "operationId": "DeliveryController_updateStatus",
         "parameters": [
@@ -5453,7 +3486,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/reminders": {
+    "/admin/reminders": {
       "get": {
         "operationId": "ReminderController_list",
         "parameters": [
@@ -5482,7 +3515,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/reminders/refresh": {
+    "/admin/reminders/refresh": {
       "post": {
         "operationId": "ReminderController_refresh",
         "parameters": [],
@@ -5502,7 +3535,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/reminders/{id}/dismiss": {
+    "/admin/reminders/{id}/dismiss": {
       "post": {
         "operationId": "ReminderController_dismiss",
         "parameters": [
@@ -5531,7 +3564,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/reports/revenue": {
+    "/admin/reports/revenue": {
       "get": {
         "operationId": "ReportController_revenue",
         "parameters": [
@@ -5579,7 +3612,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/reports/products": {
+    "/admin/reports/products": {
       "get": {
         "operationId": "ReportController_products",
         "parameters": [
@@ -5640,7 +3673,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/reports/customers": {
+    "/admin/reports/customers": {
       "get": {
         "operationId": "ReportController_customerPerformance",
         "parameters": [
@@ -5700,7 +3733,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/members": {
+    "/admin/members": {
       "get": {
         "operationId": "MemberController_list",
         "parameters": [],
@@ -5749,7 +3782,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/members/roles": {
+    "/admin/members/roles": {
       "get": {
         "operationId": "MemberController_roles",
         "parameters": [],
@@ -5769,7 +3802,7 @@
         "x-api-surface": "admin"
       }
     },
-    "/members/{id}": {
+    "/admin/members/{id}": {
       "patch": {
         "operationId": "MemberController_update",
         "parameters": [

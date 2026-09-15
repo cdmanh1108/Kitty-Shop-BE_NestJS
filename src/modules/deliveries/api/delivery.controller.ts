@@ -19,7 +19,7 @@ class DeliveryListQueryDto {
 @ApiSurface('admin')
 @ApiTags('Delivery')
 @ApiBearerAuth('access-token')
-@Controller('deliveries')
+@Controller('admin/deliveries')
 export class DeliveryController {
   constructor(private readonly service: DeliveryService) {}
 

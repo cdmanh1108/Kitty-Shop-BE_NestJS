@@ -29,35 +29,56 @@ describe('OpenAPI Contract Baseline', () => {
     expect(document.components?.schemas).toBeDefined();
   });
 
-  it('documents all required authentication endpoints', () => {
+  it('documents all required authentication endpoints under canonical /admin/auth', () => {
     const document = loadDocument();
 
-    expect(document.paths['/auth/login']?.post).toBeDefined();
-    expect(document.paths['/auth/refresh']?.post).toBeDefined();
-    expect(document.paths['/auth/logout']?.post).toBeDefined();
-    expect(document.paths['/auth/me']?.get).toBeDefined();
+    expect(document.paths['/admin/auth/login']?.post).toBeDefined();
+    expect(document.paths['/admin/auth/refresh']?.post).toBeDefined();
+    expect(document.paths['/admin/auth/logout']?.post).toBeDefined();
+    expect(document.paths['/admin/auth/me']?.get).toBeDefined();
+
+    // Verify legacy non-admin auth routes do not exist
+    expect(document.paths['/auth/login']).toBeUndefined();
+    expect(document.paths['/auth/refresh']).toBeUndefined();
+    expect(document.paths['/auth/logout']).toBeUndefined();
+    expect(document.paths['/auth/me']).toBeUndefined();
   });
 
-  it('documents core domain routes and operations', () => {
+  it('documents core domain routes under canonical /admin/* namespace', () => {
     const document = loadDocument();
     const paths = document.paths;
 
-    expect(paths['/rental-orders']?.get).toBeDefined();
-    expect(paths['/rental-orders']?.post).toBeDefined();
-    expect(paths['/products']?.get).toBeDefined();
-    expect(paths['/customers']?.get).toBeDefined();
-    expect(paths['/customers']?.post).toBeDefined();
-    expect(paths['/customers/lookup']?.get).toBeDefined();
-    expect(paths['/customers/{id}']?.get).toBeDefined();
-    expect(paths['/customers/{id}']?.patch).toBeDefined();
-    expect(paths['/inventory']?.get).toBeDefined();
-    expect(paths['/inventory/availability/search']?.get).toBeDefined();
-    expect(paths['/payments']?.get).toBeDefined();
-    expect(paths['/expenses']?.get).toBeDefined();
-    expect(paths['/deliveries']?.get).toBeDefined();
-    expect(paths['/reminders']?.get).toBeDefined();
-    expect(paths['/reports/revenue']?.get).toBeDefined();
-    expect(paths['/dashboard/summary']?.get).toBeDefined();
+    // Canonical /admin routes exist
+    expect(paths['/admin/rental-orders']?.get).toBeDefined();
+    expect(paths['/admin/rental-orders']?.post).toBeDefined();
+    expect(paths['/admin/products']?.get).toBeDefined();
+    expect(paths['/admin/customers']?.get).toBeDefined();
+    expect(paths['/admin/customers']?.post).toBeDefined();
+    expect(paths['/admin/customers/lookup']?.get).toBeDefined();
+    expect(paths['/admin/customers/{id}']?.get).toBeDefined();
+    expect(paths['/admin/customers/{id}']?.patch).toBeDefined();
+    expect(paths['/admin/inventory']?.get).toBeDefined();
+    expect(paths['/admin/inventory/availability/search']?.get).toBeDefined();
+    expect(paths['/admin/payments']?.get).toBeDefined();
+    expect(paths['/admin/expenses']?.get).toBeDefined();
+    expect(paths['/admin/deliveries']?.get).toBeDefined();
+    expect(paths['/admin/reminders']?.get).toBeDefined();
+    expect(paths['/admin/reports/revenue']?.get).toBeDefined();
+    expect(paths['/admin/dashboard/summary']?.get).toBeDefined();
+
+    // Legacy non-admin routes must NOT exist
+    expect(paths['/rental-orders']).toBeUndefined();
+    expect(paths['/products']).toBeUndefined();
+    expect(paths['/customers']).toBeUndefined();
+    expect(paths['/inventory']).toBeUndefined();
+    expect(paths['/payments']).toBeUndefined();
+    expect(paths['/expenses']).toBeUndefined();
+    expect(paths['/deliveries']).toBeUndefined();
+    expect(paths['/reminders']).toBeUndefined();
+    expect(paths['/reports/revenue']).toBeUndefined();
+    expect(paths['/dashboard/summary']).toBeUndefined();
+
+    // System routes must not be in admin contract
     expect(paths['/health/live']).toBeUndefined();
     expect(paths['/health/ready']).toBeUndefined();
   });

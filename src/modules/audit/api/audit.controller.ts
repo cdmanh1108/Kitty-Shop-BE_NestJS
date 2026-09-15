@@ -23,7 +23,7 @@ class AuditQueryDto extends PaginationQueryDto {
 @ApiSurface('admin')
 @ApiTags('Audit')
 @ApiBearerAuth('access-token')
-@Controller('audit-logs')
+@Controller('admin/audit-logs')
 export class AuditController {
   constructor(private readonly audit: AuditService) {}
 

@@ -71,7 +71,7 @@ import { ApiSurface } from '@common/decorators/api-surface.decorator';
 @ApiTags('Admin - Catalog')
 @ApiSurface('admin')
 @ApiBearerAuth('access-token')
-@Controller(['admin', ''])
+@Controller('admin')
 export class AdminCatalogController {
   constructor(private readonly service: CatalogService) {}
 

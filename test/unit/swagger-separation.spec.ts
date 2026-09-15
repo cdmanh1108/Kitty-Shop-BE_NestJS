@@ -34,9 +34,12 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(adminDoc.info.title).toContain('Admin API');
     });
 
-    it('contains only non-web paths and zero /web/ routes', () => {
+    it('contains only canonical /admin/ paths and zero /web/ routes', () => {
       const paths = Object.keys(adminDoc.paths);
       expect(paths.length).toBeGreaterThan(0);
+
+      const nonAdminPaths = paths.filter((p) => !p.startsWith('/admin/'));
+      expect(nonAdminPaths).toEqual([]);
 
       const webLeakedPaths = paths.filter(
         (p) => p.includes('/web/') || p.endsWith('/web'),

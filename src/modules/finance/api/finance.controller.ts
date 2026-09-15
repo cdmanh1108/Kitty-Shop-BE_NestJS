@@ -34,7 +34,7 @@ import {
 @ApiSurface('admin')
 @ApiTags('Finance')
 @ApiBearerAuth('access-token')
-@Controller()
+@Controller('admin')
 export class FinanceController {
   constructor(private readonly service: FinanceService) {}
 

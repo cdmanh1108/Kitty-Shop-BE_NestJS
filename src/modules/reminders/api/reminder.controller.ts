@@ -18,7 +18,7 @@ class ReminderQueryDto {
 @ApiSurface('admin')
 @ApiTags('Reminders')
 @ApiBearerAuth('access-token')
-@Controller('reminders')
+@Controller('admin/reminders')
 export class ReminderController {
   constructor(private readonly service: ReminderService) {}
 

@@ -11,7 +11,7 @@ import { DashboardSummaryResDto } from './dashboard.dto';
 @ApiSurface('admin')
 @ApiTags('Dashboard')
 @ApiBearerAuth('access-token')
-@Controller('dashboard')
+@Controller('admin/dashboard')
 export class DashboardController {
   constructor(private readonly service: DashboardService) {}
 
