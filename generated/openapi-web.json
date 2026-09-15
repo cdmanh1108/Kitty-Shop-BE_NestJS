@@ -3,11 +3,11 @@
   "paths": {
     "/web/categories": {
       "get": {
-        "operationId": "WebCatalogController_listCategories",
+        "operationId": "getWebCategories",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Danh sách danh mục sản phẩm công khai",
             "content": {
               "application/json": {
                 "schema": {
@@ -28,7 +28,7 @@
     },
     "/web/products": {
       "get": {
-        "operationId": "WebCatalogController_listProducts",
+        "operationId": "getWebProducts",
         "parameters": [
           {
             "name": "q",
@@ -108,11 +108,21 @@
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Danh sách sản phẩm kèm siêu dữ liệu phân trang",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WebProductListResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Tham số bộ lọc hoặc phân trang không hợp lệ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
                 }
               }
             }
@@ -126,7 +136,7 @@
     },
     "/web/products/{slug}": {
       "get": {
-        "operationId": "WebCatalogController_getProduct",
+        "operationId": "getWebProductBySlug",
         "parameters": [
           {
             "name": "slug",
@@ -139,11 +149,21 @@
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Thông tin chi tiết sản phẩm và các biến thể",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WebProductDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy sản phẩm với slug tương ứng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
                 }
               }
             }
@@ -157,7 +177,7 @@
     },
     "/web/availability": {
       "get": {
-        "operationId": "WebRentalController_checkAvailability",
+        "operationId": "getWebAvailability",
         "parameters": [
           {
             "name": "productId",
@@ -200,11 +220,21 @@
         ],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Tình trạng còn hàng của sản phẩm hoặc biến thể",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WebAvailabilityResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Khoảng thời gian thuê không hợp lệ hoặc thiếu productId/variantId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
                 }
               }
             }
@@ -218,7 +248,7 @@
     },
     "/web/rental/quote": {
       "post": {
-        "operationId": "WebRentalController_calculateQuote",
+        "operationId": "createWebRentalQuote",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -232,11 +262,21 @@
         },
         "responses": {
           "200": {
-            "description": "",
+            "description": "Báo giá thuê tạm tính chính thức từ server",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WebRentalQuoteResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu tính báo giá không hợp lệ hoặc khoảng ngày không đúng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
                 }
               }
             }
@@ -250,7 +290,7 @@
     },
     "/web/rental-orders": {
       "post": {
-        "operationId": "WebRentalController_createOrder",
+        "operationId": "createWebRentalOrder",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -264,11 +304,41 @@
         },
         "responses": {
           "201": {
-            "description": "",
+            "description": "Đơn đặt thuê tạo thành công (trạng thái chờ thanh toán)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WebCreateOrderResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu người thuê, khoảng ngày hoặc phương thức thế chân không hợp lệ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sản phẩm hoặc biến thể không khả dụng",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sản phẩm không đủ tồn kho khả dụng trong khoảng ngày đã chọn",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
                 }
               }
             }
@@ -282,7 +352,7 @@
     },
     "/web/rental-orders/lookup": {
       "post": {
-        "operationId": "WebRentalController_lookupOrder",
+        "operationId": "lookupWebRentalOrder",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -296,11 +366,31 @@
         },
         "responses": {
           "200": {
-            "description": "",
+            "description": "Thông tin tóm tắt đơn thuê",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/WebOrderLookupResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mã đơn hoặc số điện thoại không hợp lệ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy đơn thuê hoặc số điện thoại không khớp",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
                 }
               }
             }
@@ -314,11 +404,11 @@
     },
     "/web/policies": {
       "get": {
-        "operationId": "WebPolicyController_getPolicies",
+        "operationId": "getWebPolicies",
         "parameters": [],
         "responses": {
           "200": {
-            "description": "",
+            "description": "Chính sách cọc, phí trễ hạn và vận chuyển công khai cho storefront",
             "content": {
               "application/json": {
                 "schema": {
@@ -411,6 +501,43 @@
         "required": [
           "items",
           "meta"
+        ]
+      },
+      "ErrorResDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "code": {
+            "type": "string",
+            "example": "HTTP_400"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "nullable": true
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
         ]
       },
       "WebProductDetailDto": {
@@ -1090,43 +1217,6 @@
           "name",
           "imageUrl",
           "quantity"
-        ]
-      },
-      "ErrorResDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 400
-          },
-          "code": {
-            "type": "string",
-            "example": "HTTP_400"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {
-            "type": "object",
-            "nullable": true
-          },
-          "requestId": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "statusCode",
-          "code",
-          "message",
-          "path",
-          "timestamp"
         ]
       }
     }

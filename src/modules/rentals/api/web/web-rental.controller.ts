@@ -1,8 +1,17 @@
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
+import { ErrorResDto } from '@common/dto/response.dto';
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import type { Request } from 'express';
 import { WebRentalService } from '../../application/web-rental.service';
 import {
@@ -27,8 +36,15 @@ export class WebRentalController {
   ) {}
 
   @Get('availability')
-  @ApiOperation({ summary: 'Kiểm tra tình trạng trống của sản phẩm hoặc biến thể' })
-  @ApiResponse({ status: 200, type: WebAvailabilityResDto })
+  @ApiOperation({
+    operationId: 'getWebAvailability',
+    summary: 'Kiểm tra tình trạng trống của sản phẩm hoặc biến thể',
+  })
+  @ApiOkResponse({ type: WebAvailabilityResDto, description: 'Tình trạng còn hàng của sản phẩm hoặc biến thể' })
+  @ApiBadRequestResponse({
+    type: ErrorResDto,
+    description: 'Khoảng thời gian thuê không hợp lệ hoặc thiếu productId/variantId',
+  })
   async checkAvailability(
     @Req() request: Request,
     @Query() query: WebAvailabilityQueryDto,
@@ -38,8 +54,15 @@ export class WebRentalController {
   }
 
   @Post('rental/quote')
-  @ApiOperation({ summary: 'Tính báo giá thuê tạm tính chính thức từ server' })
-  @ApiResponse({ status: 200, type: WebRentalQuoteResDto })
+  @ApiOperation({
+    operationId: 'createWebRentalQuote',
+    summary: 'Tính báo giá thuê tạm tính chính thức từ server',
+  })
+  @ApiOkResponse({ type: WebRentalQuoteResDto, description: 'Báo giá thuê tạm tính chính thức từ server' })
+  @ApiBadRequestResponse({
+    type: ErrorResDto,
+    description: 'Dữ liệu tính báo giá không hợp lệ hoặc khoảng ngày không đúng',
+  })
   async calculateQuote(
     @Req() request: Request,
     @Body() body: WebRentalQuoteReqDto,
@@ -49,8 +72,26 @@ export class WebRentalController {
   }
 
   @Post('rental-orders')
-  @ApiOperation({ summary: 'Tạo đơn đặt thuê từ Web Storefront' })
-  @ApiResponse({ status: 201, type: WebCreateOrderResDto })
+  @ApiOperation({
+    operationId: 'createWebRentalOrder',
+    summary: 'Tạo đơn đặt thuê từ Web Storefront',
+  })
+  @ApiCreatedResponse({
+    type: WebCreateOrderResDto,
+    description: 'Đơn đặt thuê tạo thành công (trạng thái chờ thanh toán)',
+  })
+  @ApiBadRequestResponse({
+    type: ErrorResDto,
+    description: 'Dữ liệu người thuê, khoảng ngày hoặc phương thức thế chân không hợp lệ',
+  })
+  @ApiNotFoundResponse({
+    type: ErrorResDto,
+    description: 'Sản phẩm hoặc biến thể không khả dụng',
+  })
+  @ApiConflictResponse({
+    type: ErrorResDto,
+    description: 'Sản phẩm không đủ tồn kho khả dụng trong khoảng ngày đã chọn',
+  })
   async createOrder(
     @Req() request: Request,
     @Body() body: WebCreateOrderReqDto,
@@ -60,8 +101,19 @@ export class WebRentalController {
   }
 
   @Post('rental-orders/lookup')
-  @ApiOperation({ summary: 'Tra cứu trạng thái đơn thuê bảo mật bằng mã đơn và SĐT' })
-  @ApiResponse({ status: 200, type: WebOrderLookupResDto })
+  @ApiOperation({
+    operationId: 'lookupWebRentalOrder',
+    summary: 'Tra cứu trạng thái đơn thuê bảo mật bằng mã đơn và SĐT',
+  })
+  @ApiOkResponse({ type: WebOrderLookupResDto, description: 'Thông tin tóm tắt đơn thuê' })
+  @ApiBadRequestResponse({
+    type: ErrorResDto,
+    description: 'Mã đơn hoặc số điện thoại không hợp lệ',
+  })
+  @ApiNotFoundResponse({
+    type: ErrorResDto,
+    description: 'Không tìm thấy đơn thuê hoặc số điện thoại không khớp',
+  })
   async lookupOrder(
     @Req() request: Request,
     @Body() body: WebOrderLookupReqDto,

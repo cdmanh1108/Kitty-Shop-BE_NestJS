@@ -2,7 +2,7 @@ import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import { Controller, Get, Inject, Req } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import {
   RENTAL_POLICY_PROVIDER,
@@ -21,8 +21,14 @@ export class WebPolicyController {
   ) {}
 
   @Get('policies')
-  @ApiOperation({ summary: 'Lấy các điều khoản và chính sách thuê công khai' })
-  @ApiResponse({ status: 200, type: WebRentalPolicyDto })
+  @ApiOperation({
+    operationId: 'getWebPolicies',
+    summary: 'Lấy các điều khoản và chính sách thuê công khai',
+  })
+  @ApiOkResponse({
+    type: WebRentalPolicyDto,
+    description: 'Chính sách cọc, phí trễ hạn và vận chuyển công khai cho storefront',
+  })
   async getPolicies(@Req() request: Request): Promise<WebRentalPolicyDto> {
     const shopId = await this.shopResolver.resolveShopId(request);
     const policy = await this.policyProvider.getPolicy(shopId);
