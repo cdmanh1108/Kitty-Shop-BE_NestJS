@@ -51,10 +51,7 @@ describe('Dashboard PostgreSQL read model', () => {
       revenueMonth: 0,
       ordersToday: 0,
       rentingProducts: 0,
-      dueSoon: 0,
-      overdueOrders: 0,
       outstandingAmount: 0,
-      actionRequiredOrders: 0,
       upcomingOrders: [],
       attentionOrders: [],
     });
@@ -128,9 +125,6 @@ describe('Dashboard PostgreSQL read model', () => {
     await order(f, { status: 'RESERVED', rentalStartAt: new Date('2026-10-01T17:00:00Z') });
     const result = await service().summary(f.principal);
     expect(result.ordersToday).toBe(7);
-    expect(result.dueSoon).toBe(2);
-    expect(result.overdueOrders).toBe(1);
-    expect(result.actionRequiredOrders).toBe(7);
     expect(result.attentionOrders).toHaveLength(6);
     expect(result.attentionOrders[0]?.type).toBe('OVERDUE');
     expect(result.attentionOrders[1]).toMatchObject({
@@ -194,7 +188,6 @@ describe('Dashboard PostgreSQL read model', () => {
     expect(result.upcomingOrders.every((row) => row.customerName === f.customer.fullName)).toBe(
       true,
     );
-    expect(result.overdueOrders).toBe(0);
     expect(result.ordersToday).toBe(8);
     expect(result.outstandingAmount).toBe(1000);
     expect(Object.keys(result.upcomingOrders[0] ?? {}).sort()).toEqual([

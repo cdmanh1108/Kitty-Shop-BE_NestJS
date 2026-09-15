@@ -31,14 +31,7 @@ export class DashboardSummaryResDto {
   @ApiProperty({ description: 'Non-draft, non-cancelled orders scheduled for pickup today' })
   ordersToday!: number;
   @ApiProperty({ description: 'Unreleased ACTIVE physical allocations' }) rentingProducts!: number;
-  @ApiProperty({
-    description: 'ACTIVE rentals due from now through the end of tomorrow in shop timezone',
-  })
-  dueSoon!: number;
-  @ApiProperty() overdueOrders!: number;
   @ApiProperty() outstandingAmount!: number;
-  @ApiProperty({ description: 'Total attention orders, independent of list limit' })
-  actionRequiredOrders!: number;
   @ApiProperty({ type: [DashboardRentalResDto], maxItems: 6 })
   upcomingOrders!: DashboardRentalResDto[];
   @ApiProperty({ type: [DashboardAttentionResDto], maxItems: 6 })

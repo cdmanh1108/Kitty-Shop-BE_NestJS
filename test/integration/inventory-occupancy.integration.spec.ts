@@ -79,7 +79,6 @@ describe('Inventory occupancy persistence and read models', () => {
       monthEnd: new Date('2026-11-01T00:00:00Z'),
       timezone: 'Asia/Ho_Chi_Minh',
       seriesStart: new Date('2026-10-04T17:00:00Z'),
-      dueSoonEnd: f.data.rentalEndAt,
     });
     expect(summary.rentingProducts).toBe(2);
   });

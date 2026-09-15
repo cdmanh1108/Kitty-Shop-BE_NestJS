@@ -21,10 +21,7 @@ export type DashboardSummary = {
   revenueMonth: number;
   ordersToday: number;
   rentingProducts: number;
-  dueSoon: number;
-  overdueOrders: number;
   outstandingAmount: number;
-  actionRequiredOrders: number;
   upcomingOrders: DashboardRental[];
   attentionOrders: DashboardAttention[];
   revenueSeries: Array<{ date: string; revenue: number }>;

@@ -15,5 +15,4 @@ export interface DashboardSummaryData {
   monthEnd: Date;
   timezone: string;
   seriesStart: Date;
-  dueSoonEnd: Date;
 }

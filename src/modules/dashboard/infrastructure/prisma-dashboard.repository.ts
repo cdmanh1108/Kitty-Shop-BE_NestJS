@@ -98,10 +98,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
           AND rental_start_at >= ${input.dayStart} AND rental_start_at < ${input.dayEnd}) AS "ordersToday",
         (SELECT COUNT(*)::int FROM rental_item_allocations WHERE shop_id = ${input.shopId}::uuid
           AND status = ${ALLOCATION_STATUS.ACTIVE} AND released_at IS NULL) AS "rentingProducts",
-        COUNT(*) FILTER (WHERE status = ${active} AND rental_end_at >= ${input.now} AND rental_end_at < ${input.dueSoonEnd})::int AS "dueSoon",
-        COUNT(*) FILTER (WHERE action = 'OVERDUE')::int AS "overdueOrders",
         COALESCE(SUM(outstanding), 0)::float8 AS "outstandingAmount",
-        COUNT(*) FILTER (WHERE action IS NOT NULL)::int AS "actionRequiredOrders",
         COALESCE((SELECT jsonb_agg(jsonb_build_object(
           'id', u.id, 'code', u.order_number, 'customerName', c.full_name,
           'pickupDate', u.rental_start_at, 'status', u.status, 'itemCount', COALESCE(q.quantity, 0)

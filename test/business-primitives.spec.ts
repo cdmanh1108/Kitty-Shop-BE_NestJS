@@ -1,4 +1,4 @@
-﻿import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { decimalToNumber } from '../src/database/prisma/decimal-mapping';
 import { generateDatedReference } from '../src/common/utils/reference-number';
 import type { Clock } from '../src/common/clock/clock';
@@ -158,7 +158,6 @@ describe('business Clock consumers', () => {
       monthEnd: new Date('2026-09-30T17:00:00Z'),
       timezone: 'Asia/Ho_Chi_Minh',
       seriesStart: new Date('2026-09-04T17:00:00Z'),
-      dueSoonEnd: new Date('2026-09-12T17:00:00Z'),
     });
   });
   it('defaults reports to exactly the preceding 30 days and preserves explicit offsets', async () => {

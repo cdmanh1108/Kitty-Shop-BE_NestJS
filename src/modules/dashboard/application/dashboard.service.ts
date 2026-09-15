@@ -29,7 +29,6 @@ export class DashboardService {
       monthEnd: month.end,
       timezone,
       seriesStart,
-      dueSoonEnd: zonedDayRange(day.end, timezone).end,
     });
   }
 }
