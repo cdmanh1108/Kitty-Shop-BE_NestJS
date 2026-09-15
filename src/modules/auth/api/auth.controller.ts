@@ -12,8 +12,10 @@ import {
   LoginResDto,
   RefreshTokenReqDto,
 } from './auth.dto';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { toChangePasswordInput, toLoginInput } from './auth.mapper';
 
+@ApiSurface('admin')
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {

@@ -23,7 +23,8 @@
         "summary": "Danh sách danh mục sản phẩm cho storefront",
         "tags": [
           "Web - Catalog"
-        ]
+        ],
+        "x-api-surface": "web"
       }
     },
     "/web/products": {
@@ -131,7 +132,8 @@
         "summary": "Danh sách sản phẩm công khai cho storefront có phân trang",
         "tags": [
           "Web - Catalog"
-        ]
+        ],
+        "x-api-surface": "web"
       }
     },
     "/web/products/{slug}": {
@@ -172,7 +174,8 @@
         "summary": "Chi tiết sản phẩm cho trang chi tiết storefront",
         "tags": [
           "Web - Catalog"
-        ]
+        ],
+        "x-api-surface": "web"
       }
     },
     "/web/availability": {
@@ -243,7 +246,8 @@
         "summary": "Kiểm tra tình trạng trống của sản phẩm hoặc biến thể",
         "tags": [
           "Web - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "web"
       }
     },
     "/web/rental/quote": {
@@ -285,7 +289,8 @@
         "summary": "Tính báo giá thuê tạm tính chính thức từ server",
         "tags": [
           "Web - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "web"
       }
     },
     "/web/rental-orders": {
@@ -347,7 +352,8 @@
         "summary": "Tạo đơn đặt thuê từ Web Storefront",
         "tags": [
           "Web - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "web"
       }
     },
     "/web/rental-orders/lookup": {
@@ -399,7 +405,8 @@
         "summary": "Tra cứu trạng thái đơn thuê bảo mật bằng mã đơn và SĐT",
         "tags": [
           "Web - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "web"
       }
     },
     "/web/policies": {
@@ -421,7 +428,8 @@
         "summary": "Lấy các điều khoản và chính sách thuê công khai",
         "tags": [
           "Web - Policies"
-        ]
+        ],
+        "x-api-surface": "web"
       }
     }
   },

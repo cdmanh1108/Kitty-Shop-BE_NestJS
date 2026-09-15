@@ -1,6 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 import { ErrorResDto } from '../dto/response.dto';
+import {
+  API_SURFACE_METADATA_KEY,
+  type ApiSurfaceType,
+} from '../decorators/api-surface.decorator';
 
 export interface OpenApiOptions {
   appName: string;
@@ -8,37 +12,38 @@ export interface OpenApiOptions {
   appUrl?: string;
 }
 
-export const WEB_SURFACE_TAGS = new Set([
-  'Web - Catalog',
-  'Web - Rental Orders',
-  'Web - Policies',
-]);
-
-export const ADMIN_SURFACE_TAGS = new Set([
-  'Admin - Catalog',
-  'Admin - Rental Orders',
-  'Auth',
-  'Customers',
-  'Finance',
-  'Dashboard',
-  'Settings',
-  'Reports',
-  'Reminders',
-  'Delivery',
-  'Members & RBAC',
-  'Health',
-  'Audit',
-]);
+export type ApiSurfaceFilter = ApiSurfaceType;
 
 interface SurfaceSpecConfig {
-  surface: 'admin' | 'web';
-  allowedTags: Set<string>;
-  pathMatcher: (path: string) => boolean;
+  surface: ApiSurfaceFilter;
   meta: { title: string; description: string };
   includeAuth: boolean;
 }
 
-function filterOpenApiDocument(
+const HTTP_METHODS = [
+  'get',
+  'post',
+  'put',
+  'delete',
+  'patch',
+  'options',
+  'head',
+  'trace',
+] as const;
+
+function operationMatchesSurface(
+  operation: unknown,
+  targetSurface: ApiSurfaceFilter,
+): boolean {
+  if (!operation || typeof operation !== 'object') return false;
+  const surface = (operation as Record<string, unknown>)[API_SURFACE_METADATA_KEY];
+  if (Array.isArray(surface)) {
+    return surface.includes(targetSurface);
+  }
+  return surface === targetSurface;
+}
+
+export function filterOpenApiDocument(
   baseDoc: OpenAPIObject,
   config: SurfaceSpecConfig,
 ): OpenAPIObject {
@@ -46,39 +51,36 @@ function filterOpenApiDocument(
   const usedTags = new Set<string>();
   const usedSchemas = new Set<string>();
 
-  const methods = [
-    'get',
-    'post',
-    'put',
-    'delete',
-    'patch',
-    'options',
-    'head',
-    'trace',
-  ] as const;
-
   for (const [pathKey, pathItem] of Object.entries(baseDoc.paths || {})) {
-    if (!config.pathMatcher(pathKey) || !pathItem) continue;
+    if (!pathItem) continue;
 
-    // Check operations on this path
-    let hasMatchingOperation = false;
-    for (const m of methods) {
+    // Filter operations strictly by @ApiSurface metadata (x-api-surface)
+    const matchingOperations: Record<string, unknown> = {};
+    for (const m of HTTP_METHODS) {
       const op = pathItem[m];
-      if (op?.tags) {
-        const matchesSurface = op.tags.some((t) => config.allowedTags.has(t));
-        if (matchesSurface) {
-          hasMatchingOperation = true;
+      if (op && operationMatchesSurface(op, config.surface)) {
+        matchingOperations[m] = op;
+        if (op.tags) {
           for (const t of op.tags) {
-            if (config.allowedTags.has(t)) {
-              usedTags.add(t);
-            }
+            usedTags.add(t);
           }
         }
       }
     }
 
-    if (hasMatchingOperation) {
-      filteredPaths[pathKey] = pathItem;
+    if (Object.keys(matchingOperations).length > 0) {
+      // Preserve path-level items (parameters, summary, etc.) along with matching operations
+      const filteredPathItem: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(pathItem)) {
+        if (HTTP_METHODS.includes(key as (typeof HTTP_METHODS)[number])) {
+          if (matchingOperations[key]) {
+            filteredPathItem[key] = matchingOperations[key];
+          }
+        } else {
+          filteredPathItem[key] = val;
+        }
+      }
+      filteredPaths[pathKey] = filteredPathItem as OpenAPIObject['paths'][string];
     }
   }
 
@@ -87,12 +89,14 @@ function filterOpenApiDocument(
     return existing || { name };
   });
 
+  // Extract schemas referenced by filtered paths
   const jsonStr = JSON.stringify(filteredPaths);
   const refMatches = jsonStr.matchAll(/"#\/components\/schemas\/([^"]+)"/g);
   for (const match of refMatches) {
     if (match[1]) usedSchemas.add(match[1]);
   }
 
+  // Transitive schema dependencies resolution
   let prevSize = 0;
   while (usedSchemas.size > prevSize) {
     prevSize = usedSchemas.size;
@@ -173,15 +177,6 @@ export function createBaseOpenApiDocument(
   });
 }
 
-function isWebPath(path: string): boolean {
-  return /(?:^|\/)web(?:\/|$)/.test(path);
-}
-
-function isAdminPath(path: string): boolean {
-  // Matches all admin endpoints, compatibility paths, and private endpoints
-  return !isWebPath(path);
-}
-
 export function createAdminOpenApiDocument(
   app: INestApplication,
   options: OpenApiOptions,
@@ -189,8 +184,6 @@ export function createAdminOpenApiDocument(
   const baseDoc = createBaseOpenApiDocument(app, options);
   return filterOpenApiDocument(baseDoc, {
     surface: 'admin',
-    allowedTags: ADMIN_SURFACE_TAGS,
-    pathMatcher: isAdminPath,
     meta: {
       title: `${options.appName} - Admin API`,
       description:
@@ -207,12 +200,25 @@ export function createWebOpenApiDocument(
   const baseDoc = createBaseOpenApiDocument(app, options);
   return filterOpenApiDocument(baseDoc, {
     surface: 'web',
-    allowedTags: WEB_SURFACE_TAGS,
-    pathMatcher: isWebPath,
     meta: {
       title: `${options.appName} - Web Sale API`,
       description:
         'Public Web Storefront & Sale API for customer storefront (kitty-web-nextjs). Authoritative server-side pricing and inventory availability.',
+    },
+    includeAuth: false,
+  });
+}
+
+export function createSystemOpenApiDocument(
+  app: INestApplication,
+  options: OpenApiOptions,
+): OpenAPIObject {
+  const baseDoc = createBaseOpenApiDocument(app, options);
+  return filterOpenApiDocument(baseDoc, {
+    surface: 'system',
+    meta: {
+      title: `${options.appName} - System API`,
+      description: 'System health, liveness, and infrastructure probes.',
     },
     includeAuth: false,
   });

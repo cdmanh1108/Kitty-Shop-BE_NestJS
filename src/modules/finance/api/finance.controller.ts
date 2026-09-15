@@ -23,6 +23,7 @@ import {
   PaymentPageResDto,
   PaymentResDto,
 } from './finance.dto';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import {
   toCreateExpenseInput,
   toCreatePaymentInput,
@@ -30,6 +31,7 @@ import {
   toPaymentListQuery,
 } from './finance.mapper';
 
+@ApiSurface('admin')
 @ApiTags('Finance')
 @ApiBearerAuth('access-token')
 @Controller()

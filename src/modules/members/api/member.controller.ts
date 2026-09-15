@@ -4,10 +4,12 @@ import { Permissions } from '@common/decorators/permissions.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { MemberService } from '../application/member.service';
 import { CreateMemberReqDto, UpdateMemberReqDto } from './member.dto';
 import { toCreateMemberInput, toUpdateMemberInput } from './member.mapper';
 
+@ApiSurface('admin')
 @ApiTags('Members & RBAC')
 @ApiBearerAuth('access-token')
 @Controller('members')

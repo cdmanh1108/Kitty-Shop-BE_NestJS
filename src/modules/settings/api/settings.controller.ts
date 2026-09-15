@@ -7,12 +7,14 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swa
 import { SettingsService } from '../application/settings.service';
 import { RentalPolicyResDto, UpdateRentalPolicyReqDto } from './rental-policy.dto';
 import { UpdateShopReqDto, UpsertSettingReqDto } from './settings.dto';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import {
   toUpdateRentalPolicyInput,
   toUpdateShopInput,
   toUpsertSettingInput,
 } from './settings.mapper';
 
+@ApiSurface('admin')
 @ApiTags('Settings')
 @ApiBearerAuth('access-token')
 @Controller('settings')

@@ -56,7 +56,8 @@
         "summary": "List audit logs",
         "tags": [
           "Audit"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/auth/login": {
@@ -97,7 +98,8 @@
         "summary": "Admin login",
         "tags": [
           "Auth"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/auth/refresh": {
@@ -138,7 +140,8 @@
         "summary": "Rotate refresh token and issue a new access token",
         "tags": [
           "Auth"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/auth/logout": {
@@ -168,7 +171,8 @@
         "summary": "Revoke a refresh token",
         "tags": [
           "Auth"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/auth/me": {
@@ -195,7 +199,8 @@
         "summary": "Current admin identity and permissions",
         "tags": [
           "Auth"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/auth/change-password": {
@@ -225,51 +230,8 @@
         "summary": "Change current admin password and revoke all refresh sessions",
         "tags": [
           "Auth"
-        ]
-      }
-    },
-    "/health/live": {
-      "get": {
-        "operationId": "HealthController_live",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LiveHealthResDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Process liveness probe",
-        "tags": [
-          "Health"
-        ]
-      }
-    },
-    "/health/ready": {
-      "get": {
-        "operationId": "HealthController_ready",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReadyHealthResDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Readiness probe including PostgreSQL",
-        "tags": [
-          "Health"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/dashboard/summary": {
@@ -296,7 +258,8 @@
         "summary": "Shop dashboard revenue, rental KPIs and bounded operational lists",
         "tags": [
           "Dashboard"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/customers": {
@@ -369,7 +332,8 @@
         "summary": "Search and list customers",
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "CustomerController_create",
@@ -403,7 +367,8 @@
         ],
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/customers/lookup": {
@@ -453,7 +418,8 @@
         "summary": "Search lightweight customer options",
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/customers/{id}": {
@@ -488,7 +454,8 @@
         ],
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "patch": {
         "operationId": "CustomerController_update",
@@ -531,7 +498,8 @@
         ],
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/customers/{id}/notes": {
@@ -576,7 +544,8 @@
         ],
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/customers/{id}/addresses": {
@@ -621,7 +590,8 @@
         ],
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/customers/{id}/addresses/{addressId}": {
@@ -674,7 +644,8 @@
         ],
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "delete": {
         "operationId": "CustomerController_deleteAddress",
@@ -708,7 +679,8 @@
         ],
         "tags": [
           "Customers"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/catalog/lookups": {
@@ -735,7 +707,8 @@
         "summary": "Categories, sizes, colors and locations for admin forms",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/catalog/lookups": {
@@ -762,7 +735,8 @@
         "summary": "Categories, sizes, colors and locations for admin forms",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/catalog/categories": {
@@ -798,7 +772,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "get": {
         "operationId": "CatalogController_listCategories[0]",
@@ -864,7 +839,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/catalog/categories": {
@@ -900,7 +876,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "get": {
         "operationId": "CatalogController_listCategories[1]",
@@ -966,7 +943,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/catalog/categories/options": {
@@ -1005,7 +983,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/catalog/categories/options": {
@@ -1044,7 +1023,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/catalog/categories/{id}": {
@@ -1089,7 +1069,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "delete": {
         "operationId": "CatalogController_deleteCategory[0]",
@@ -1126,7 +1107,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/catalog/categories/{id}": {
@@ -1171,7 +1153,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "delete": {
         "operationId": "CatalogController_deleteCategory[1]",
@@ -1208,7 +1191,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/catalog/sizes": {
@@ -1237,7 +1221,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/catalog/sizes": {
@@ -1266,7 +1251,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/catalog/colors": {
@@ -1295,7 +1281,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/catalog/colors": {
@@ -1324,7 +1311,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/products": {
@@ -1400,7 +1388,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "CatalogController_createProduct[0]",
@@ -1435,7 +1424,8 @@
         "summary": "Create product, variants, rates and initial physical inventory atomically",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/products": {
@@ -1511,7 +1501,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "CatalogController_createProduct[1]",
@@ -1546,7 +1537,8 @@
         "summary": "Create product, variants, rates and initial physical inventory atomically",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/products/lookup": {
@@ -1630,7 +1622,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/products/lookup": {
@@ -1714,7 +1707,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/products/{id}": {
@@ -1749,7 +1743,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "patch": {
         "operationId": "CatalogController_updateProduct[0]",
@@ -1792,7 +1787,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "delete": {
         "operationId": "CatalogController_archiveProduct[0]",
@@ -1819,7 +1815,8 @@
         "summary": "Safely archive a product if it has no active rental orders",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/products/{id}": {
@@ -1854,7 +1851,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "patch": {
         "operationId": "CatalogController_updateProduct[1]",
@@ -1897,7 +1895,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "delete": {
         "operationId": "CatalogController_archiveProduct[1]",
@@ -1924,7 +1923,8 @@
         "summary": "Safely archive a product if it has no active rental orders",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/products/{id}/variants": {
@@ -1969,7 +1969,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/products/{id}/variants": {
@@ -2014,7 +2015,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/variants/{id}/rental-rates": {
@@ -2059,7 +2061,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/variants/{id}/rental-rates": {
@@ -2104,7 +2107,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/inventory": {
@@ -2200,7 +2204,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "CatalogController_addInventory[0]",
@@ -2234,7 +2239,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/inventory": {
@@ -2330,7 +2336,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "CatalogController_addInventory[1]",
@@ -2364,7 +2371,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/inventory/summary": {
@@ -2390,7 +2398,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/inventory/summary": {
@@ -2416,7 +2425,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/inventory/history": {
@@ -2480,7 +2490,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/inventory/history": {
@@ -2544,7 +2555,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/inventory/{id}": {
@@ -2580,7 +2592,8 @@
         "summary": "Physical inventory detail with status history and unreleased allocations",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "delete": {
         "operationId": "CatalogController_archiveInventoryItem[0]",
@@ -2628,7 +2641,8 @@
         "summary": "Archive/retire physical inventory item safely",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/inventory/{id}": {
@@ -2664,7 +2678,8 @@
         "summary": "Physical inventory detail with status history and unreleased allocations",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "delete": {
         "operationId": "CatalogController_archiveInventoryItem[1]",
@@ -2712,7 +2727,8 @@
         "summary": "Archive/retire physical inventory item safely",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/products/{id}/media": {
@@ -2758,7 +2774,8 @@
         "summary": "Add an image to a product; setting primary clears the previous primary image",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/products/{id}/media": {
@@ -2804,7 +2821,8 @@
         "summary": "Add an image to a product; setting primary clears the previous primary image",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/products/{id}/media/{mediaId}": {
@@ -2841,7 +2859,8 @@
         "summary": "Remove a product image",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/products/{id}/media/{mediaId}": {
@@ -2878,7 +2897,8 @@
         "summary": "Remove a product image",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/inventory/{id}/status": {
@@ -2923,7 +2943,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/inventory/{id}/status": {
@@ -2968,7 +2989,8 @@
         ],
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/inventory/availability/search": {
@@ -3023,7 +3045,8 @@
         "summary": "Find physical items not allocated in a half-open [from, until) interval",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/inventory/availability/search": {
@@ -3078,7 +3101,8 @@
         "summary": "Find physical items not allocated in a half-open [from, until) interval",
         "tags": [
           "Admin - Catalog"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders": {
@@ -3191,7 +3215,8 @@
         "summary": "List/search orders; use from/until for calendar overlap queries",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "RentalController_create[0]",
@@ -3244,7 +3269,8 @@
         "summary": "Create order + price snapshots + physical allocations atomically",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders": {
@@ -3357,7 +3383,8 @@
         "summary": "List/search orders; use from/until for calendar overlap queries",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "RentalController_create[1]",
@@ -3410,7 +3437,8 @@
         "summary": "Create order + price snapshots + physical allocations atomically",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}": {
@@ -3445,7 +3473,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}": {
@@ -3480,7 +3509,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/schedule": {
@@ -3526,7 +3556,8 @@
         "summary": "Reschedule within the policy window from original booking; preserve duration and recheck overlap",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/schedule": {
@@ -3572,7 +3603,8 @@
         "summary": "Reschedule within the policy window from original booking; preserve duration and recheck overlap",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/confirm": {
@@ -3633,7 +3665,8 @@
         "summary": "Manually acknowledge receipt and collateral; atomically confirm without Payment API. Requires rentals.confirm.",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/confirm": {
@@ -3694,7 +3727,8 @@
         "summary": "Manually acknowledge receipt and collateral; atomically confirm without Payment API. Requires rentals.confirm.",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/confirmation-options": {
@@ -3738,7 +3772,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/confirmation-options": {
@@ -3782,7 +3817,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/confirmation/evidence": {
@@ -3827,7 +3863,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/confirmation/evidence": {
@@ -3872,7 +3909,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/start": {
@@ -3917,7 +3955,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/start": {
@@ -3962,7 +4001,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/collateral/return": {
@@ -3997,7 +4037,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/collateral/return": {
@@ -4032,7 +4073,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/return-preview": {
@@ -4077,7 +4119,8 @@
         "summary": "Preview return details, calculate late fees and list items for inspection",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/return-preview": {
@@ -4122,7 +4165,8 @@
         "summary": "Preview return details, calculate late fees and list items for inspection",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/return": {
@@ -4168,7 +4212,8 @@
         "summary": "Receive rental return with per-item inspection and optional manual charges",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/return": {
@@ -4214,7 +4259,8 @@
         "summary": "Receive rental return with per-item inspection and optional manual charges",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/settle": {
@@ -4260,7 +4306,8 @@
         "summary": "Settle returned rental order; offsets charges against cash deposit, releases document collateral if requested, and completes order",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/settle": {
@@ -4306,7 +4353,8 @@
         "summary": "Settle returned rental order; offsets charges against cash deposit, releases document collateral if requested, and completes order",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/settlement/evidence": {
@@ -4342,7 +4390,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/settlement/evidence": {
@@ -4378,7 +4427,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/cancel": {
@@ -4424,7 +4474,8 @@
         "summary": "Cancel a RESERVED order; confirmed and active orders cannot be cancelled",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/cancel": {
@@ -4470,7 +4521,8 @@
         "summary": "Cancel a RESERVED order; confirmed and active orders cannot be cancelled",
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/admin/rental-orders/{id}/charges": {
@@ -4515,7 +4567,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{id}/charges": {
@@ -4560,7 +4613,8 @@
         ],
         "tags": [
           "Admin - Rental Orders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/settings": {
@@ -4579,7 +4633,8 @@
         ],
         "tags": [
           "Settings"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/settings/shop": {
@@ -4598,7 +4653,8 @@
         ],
         "tags": [
           "Settings"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/settings/rental-policy": {
@@ -4625,7 +4681,8 @@
         "summary": "Get effective rental and deposit policy for the shop",
         "tags": [
           "Settings"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "patch": {
         "operationId": "SettingsController_updateRentalPolicy",
@@ -4660,7 +4717,8 @@
         "summary": "Update rental and deposit policy for the shop",
         "tags": [
           "Settings"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/settings/{key}": {
@@ -4698,7 +4756,8 @@
         ],
         "tags": [
           "Settings"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/settings/shop/profile": {
@@ -4727,7 +4786,8 @@
         ],
         "tags": [
           "Settings"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/payments": {
@@ -4817,7 +4877,8 @@
         ],
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/rental-orders/{orderId}/payments": {
@@ -4863,7 +4924,8 @@
         "summary": "Record rental payment, deposit or refund and recompute order payment state",
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/payments/{id}/void": {
@@ -4898,7 +4960,8 @@
         ],
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/expense-categories": {
@@ -4927,7 +4990,8 @@
         ],
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/expenses": {
@@ -5012,7 +5076,8 @@
         ],
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "FinanceController_createExpense",
@@ -5046,7 +5111,8 @@
         ],
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/expenses/{id}/void": {
@@ -5081,7 +5147,8 @@
         ],
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/finance/summary": {
@@ -5165,7 +5232,8 @@
         "summary": "Recognized revenue of completed rentals minus paid operating expenses",
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/finance/transactions": {
@@ -5283,7 +5351,8 @@
         "summary": "Paginated normalized finance entries",
         "tags": [
           "Finance"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/deliveries": {
@@ -5302,7 +5371,8 @@
         ],
         "tags": [
           "Delivery"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/deliveries/orders/{orderId}": {
@@ -5340,7 +5410,8 @@
         ],
         "tags": [
           "Delivery"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/deliveries/{id}/status": {
@@ -5378,7 +5449,8 @@
         ],
         "tags": [
           "Delivery"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/reminders": {
@@ -5406,7 +5478,8 @@
         ],
         "tags": [
           "Reminders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/reminders/refresh": {
@@ -5425,7 +5498,8 @@
         ],
         "tags": [
           "Reminders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/reminders/{id}/dismiss": {
@@ -5453,7 +5527,8 @@
         ],
         "tags": [
           "Reminders"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/reports/revenue": {
@@ -5500,7 +5575,8 @@
         "summary": "Daily realized revenue, expense and profit; deposits are excluded from revenue",
         "tags": [
           "Reports"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/reports/products": {
@@ -5560,7 +5636,8 @@
         "summary": "Most/least rented product performance from completed orders",
         "tags": [
           "Reports"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/reports/customers": {
@@ -5619,7 +5696,8 @@
         ],
         "tags": [
           "Reports"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/members": {
@@ -5638,7 +5716,8 @@
         ],
         "tags": [
           "Members & RBAC"
-        ]
+        ],
+        "x-api-surface": "admin"
       },
       "post": {
         "operationId": "MemberController_create",
@@ -5666,7 +5745,8 @@
         "summary": "Create a shop member with one or more RBAC roles",
         "tags": [
           "Members & RBAC"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/members/roles": {
@@ -5685,7 +5765,8 @@
         ],
         "tags": [
           "Members & RBAC"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     },
     "/members/{id}": {
@@ -5723,7 +5804,8 @@
         ],
         "tags": [
           "Members & RBAC"
-        ]
+        ],
+        "x-api-surface": "admin"
       }
     }
   },
@@ -5739,9 +5821,6 @@
     },
     {
       "name": "Auth"
-    },
-    {
-      "name": "Health"
     },
     {
       "name": "Dashboard"
@@ -5891,45 +5970,6 @@
         "required": [
           "currentPassword",
           "newPassword"
-        ]
-      },
-      "LiveHealthResDto": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "example": "ok"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "status",
-          "timestamp"
-        ]
-      },
-      "ReadyHealthResDto": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "example": "ok"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "database": {
-            "type": "string",
-            "example": "up"
-          }
-        },
-        "required": [
-          "status",
-          "timestamp",
-          "database"
         ]
       },
       "DashboardSummaryResDto": {

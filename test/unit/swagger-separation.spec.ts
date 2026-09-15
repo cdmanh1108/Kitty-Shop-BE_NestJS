@@ -1,6 +1,8 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { OpenAPIObject } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import type { AppConfiguration } from '../../src/config/configuration';
 
 describe('OpenAPI Separation & Production Contract Specification', () => {
   const adminDocPath = resolve(__dirname, '../../generated/openapi-admin.json');
@@ -9,6 +11,14 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
 
   function loadDoc(path: string): OpenAPIObject {
     return JSON.parse(readFileSync(path, 'utf8')) as OpenAPIObject;
+  }
+
+  function verifyAllRefsResolve(doc: OpenAPIObject): string[] {
+    const jsonStr = JSON.stringify(doc);
+    const refMatches = Array.from(jsonStr.matchAll(/"#\/components\/schemas\/([^"]+)"/g))
+      .map((m) => m[1])
+      .filter((name): name is string => Boolean(name));
+    return refMatches.filter((schemaName) => !doc.components?.schemas?.[schemaName]);
   }
 
   it('exports both admin and web OpenAPI JSON artifacts', () => {
@@ -34,10 +44,36 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(webLeakedPaths).toEqual([]);
     });
 
-    it('contains admin tag names', () => {
+    it('excludes system and health probe endpoints from admin contract', () => {
+      const paths = Object.keys(adminDoc.paths);
+      const healthPaths = paths.filter((p) => p.includes('health'));
+      expect(healthPaths).toEqual([]);
+    });
+
+    it('contains admin tag names and excludes web tags', () => {
       const tags = (adminDoc.tags ?? []).map((t) => t.name);
       const webTags = tags.filter((name) => name.startsWith('Web -'));
       expect(webTags).toEqual([]);
+      const healthTags = tags.filter((name) => name === 'Health');
+      expect(healthTags).toEqual([]);
+    });
+
+    it('guarantees every operation in admin contract has x-api-surface="admin"', () => {
+      const methods = ['get', 'post', 'put', 'delete', 'patch'] as const;
+      for (const pathItem of Object.values(adminDoc.paths)) {
+        if (!pathItem) continue;
+        for (const m of methods) {
+          const op = pathItem[m] as Record<string, unknown> | undefined;
+          if (op) {
+            expect(op['x-api-surface']).toBe('admin');
+          }
+        }
+      }
+    });
+
+    it('has zero broken or unresolvable $ref schemas', () => {
+      const brokenRefs = verifyAllRefsResolve(adminDoc);
+      expect(brokenRefs).toEqual([]);
     });
 
     it('has unique operationIds across all admin operations', () => {
@@ -64,7 +100,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(webDoc.info.title).toContain('Web Sale API');
     });
 
-    it('contains only /web/ routes and zero admin routes', () => {
+    it('contains only /web/ routes and zero admin or system routes', () => {
       const paths = Object.keys(webDoc.paths);
       expect(paths.length).toBe(8);
 
@@ -72,6 +108,9 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
         (p) => !p.includes('/web/') && !p.endsWith('/web'),
       );
       expect(nonWebPaths).toEqual([]);
+
+      const healthPaths = paths.filter((p) => p.includes('health'));
+      expect(healthPaths).toEqual([]);
     });
 
     it('contains only Web tags', () => {
@@ -79,6 +118,24 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       for (const tag of tags) {
         expect(tag).toMatch(/^Web - /);
       }
+    });
+
+    it('guarantees every operation in web contract has x-api-surface="web"', () => {
+      const methods = ['get', 'post', 'put', 'delete', 'patch'] as const;
+      for (const pathItem of Object.values(webDoc.paths)) {
+        if (!pathItem) continue;
+        for (const m of methods) {
+          const op = pathItem[m] as Record<string, unknown> | undefined;
+          if (op) {
+            expect(op['x-api-surface']).toBe('web');
+          }
+        }
+      }
+    });
+
+    it('has zero broken or unresolvable $ref schemas', () => {
+      const brokenRefs = verifyAllRefsResolve(webDoc);
+      expect(brokenRefs).toEqual([]);
     });
 
     it('contains only public storefront schemas and isolates internal models', () => {
@@ -226,6 +283,46 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(Object.keys(compatDoc.paths).length).toEqual(
         Object.keys(adminDoc.paths).length,
       );
+    });
+  });
+
+  describe('Base Application OpenAPI Surface Completeness', () => {
+    it('guarantees 100% of operations in the base document have an explicit x-api-surface set', async () => {
+      process.env.SKIP_DATABASE_CONNECT = 'true';
+      const [{ createApplication }, { createBaseOpenApiDocument }] = await Promise.all([
+        import('../../src/main'),
+        import('../../src/common/swagger/openapi'),
+      ]);
+
+      const app = await createApplication();
+      try {
+        const config = app.get(ConfigService<AppConfiguration, true>);
+        const baseDoc = createBaseOpenApiDocument(app, {
+          appName: config.get('appName', { infer: true }),
+          apiPrefix: config.get('apiPrefix', { infer: true }),
+        });
+
+        const unclassifiedOperations: string[] = [];
+        const methods = ['get', 'post', 'put', 'delete', 'patch'] as const;
+        const validSurfaces = new Set(['admin', 'web', 'system']);
+
+        for (const [pathKey, pathItem] of Object.entries(baseDoc.paths)) {
+          if (!pathItem) continue;
+          for (const m of methods) {
+            const op = pathItem[m] as Record<string, unknown> | undefined;
+            if (op) {
+              const surface = op['x-api-surface'];
+              if (!surface || typeof surface !== 'string' || !validSurfaces.has(surface)) {
+                unclassifiedOperations.push(`${m.toUpperCase()} ${pathKey} (surface=${String(surface)})`);
+              }
+            }
+          }
+        }
+
+        expect(unclassifiedOperations).toEqual([]);
+      } finally {
+        await app.close();
+      }
     });
   });
 });

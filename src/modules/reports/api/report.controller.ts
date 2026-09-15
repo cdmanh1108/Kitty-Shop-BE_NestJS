@@ -12,8 +12,10 @@ import {
   ReportRangeQueryDto,
   RevenueReportRowResDto,
 } from './report.dto';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { toPerformanceQuery, toReportRangeQuery } from './report.mapper';
 
+@ApiSurface('admin')
 @ApiTags('Reports')
 @ApiBearerAuth('access-token')
 @Controller('reports')

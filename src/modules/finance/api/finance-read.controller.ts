@@ -5,6 +5,7 @@ import type { CurrentUser as Principal } from '@common/types/current-user';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import { PERMISSIONS } from '@common/constants/permissions';
 import { FinanceReadService } from '../application/finance-read.service';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import {
   FinanceFilterDto,
   FinanceSummaryResDto,
@@ -12,6 +13,7 @@ import {
   FinanceTransactionsResDto,
 } from './finance-read.dto';
 
+@ApiSurface('admin')
 @ApiTags('Finance')
 @ApiBearerAuth('access-token')
 @Controller('finance')

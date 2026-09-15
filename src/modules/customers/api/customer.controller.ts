@@ -26,6 +26,7 @@ import {
   UpdateCustomerAddressReqDto,
   UpdateCustomerReqDto,
 } from './customer.dto';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import {
   toAddCustomerNoteInput,
   toCreateCustomerInput,
@@ -36,6 +37,7 @@ import {
   toUpdateCustomerInput,
 } from './customer.mapper';
 
+@ApiSurface('admin')
 @ApiTags('Customers')
 @ApiBearerAuth('access-token')
 @Controller('customers')

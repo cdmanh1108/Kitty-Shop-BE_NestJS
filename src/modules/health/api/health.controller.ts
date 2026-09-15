@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { Public } from '@common/decorators/public.decorator';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { HealthService } from '../application/health.service';
 
 class LiveHealthResDto {
@@ -12,6 +13,7 @@ class ReadyHealthResDto extends LiveHealthResDto {
   @ApiProperty({ example: 'up' }) database!: string;
 }
 
+@ApiSurface('system')
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {

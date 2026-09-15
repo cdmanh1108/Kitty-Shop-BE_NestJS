@@ -4,9 +4,11 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { DashboardService } from '../application/dashboard.service';
 import { DashboardSummaryResDto } from './dashboard.dto';
 
+@ApiSurface('admin')
 @ApiTags('Dashboard')
 @ApiBearerAuth('access-token')
 @Controller('dashboard')

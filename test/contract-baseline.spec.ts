@@ -58,8 +58,8 @@ describe('OpenAPI Contract Baseline', () => {
     expect(paths['/reminders']?.get).toBeDefined();
     expect(paths['/reports/revenue']?.get).toBeDefined();
     expect(paths['/dashboard/summary']?.get).toBeDefined();
-    expect(paths['/health/live']?.get).toBeDefined();
-    expect(paths['/health/ready']?.get).toBeDefined();
+    expect(paths['/health/live']).toBeUndefined();
+    expect(paths['/health/ready']).toBeUndefined();
   });
 
   it('documents canonical common response schemas', () => {

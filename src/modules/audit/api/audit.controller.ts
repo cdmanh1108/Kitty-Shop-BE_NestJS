@@ -6,6 +6,7 @@ import { Permissions } from '@common/decorators/permissions.decorator';
 import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { AuditService } from '../application/audit.service';
 
 class AuditQueryDto extends PaginationQueryDto {
@@ -19,6 +20,7 @@ class AuditQueryDto extends PaginationQueryDto {
   entityId?: string;
 }
 
+@ApiSurface('admin')
 @ApiTags('Audit')
 @ApiBearerAuth('access-token')
 @Controller('audit-logs')

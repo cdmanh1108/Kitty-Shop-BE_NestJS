@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
 import { ReminderService } from '../application/reminder.service';
@@ -14,6 +15,7 @@ class ReminderQueryDto {
   status?: string;
 }
 
+@ApiSurface('admin')
 @ApiTags('Reminders')
 @ApiBearerAuth('access-token')
 @Controller('reminders')

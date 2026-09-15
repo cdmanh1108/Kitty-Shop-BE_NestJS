@@ -5,6 +5,7 @@ import type { CurrentUser as CurrentUserType } from '@common/types/current-user'
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsUUID } from 'class-validator';
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { DeliveryService } from '../application/delivery.service';
 import { CreateDeliveryReqDto, UpdateDeliveryStatusReqDto } from './delivery.dto';
 import { toCreateDeliveryInput, toUpdateDeliveryStatusInput } from './delivery.mapper';
@@ -15,6 +16,7 @@ class DeliveryListQueryDto {
   orderId?: string;
 }
 
+@ApiSurface('admin')
 @ApiTags('Delivery')
 @ApiBearerAuth('access-token')
 @Controller('deliveries')
