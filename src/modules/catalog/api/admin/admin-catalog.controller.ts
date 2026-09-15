@@ -1,0 +1,311 @@
+import {
+  ProductLookupPageResDto,
+  InventorySummaryResDto,
+  InventoryHistoryQueryDto,
+  InventoryHistoryPageResDto,
+} from '../catalog-read.dto';
+import { PERMISSIONS } from '@common/constants/permissions';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { Permissions } from '@common/decorators/permissions.decorator';
+import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { CatalogService } from '../../application/catalog.service';
+import {
+  ProductLookupQueryDto,
+  AddInventoryReqDto,
+  AddVariantReqDto,
+  AvailabilityQueryDto,
+  CatalogLookupsResDto,
+  CategoryListQueryDto,
+  CategoryPageResDto,
+  CategoryOptionResDto,
+  CategoryOptionsQueryDto,
+  CategoryResDto,
+  CreateCategoryReqDto,
+  UpdateCategoryReqDto,
+  CreateColorReqDto,
+  CreateProductReqDto,
+  CreateSizeReqDto,
+  InventoryItemResDto,
+  InventoryListQueryDto,
+  InventoryPageResDto,
+  ProductListQueryDto,
+  ProductMediaReqDto,
+  ProductPageResDto,
+  ProductResDto,
+  ProductVariantResDto,
+  RentalRateResDto,
+  ProductMediaResDto,
+  ArchiveInventoryItemReqDto,
+  UpdateInventoryStatusReqDto,
+  UpdateProductReqDto,
+  UpsertRentalRateReqDto,
+} from '../catalog.dto';
+import {
+  toAddInventoryInput,
+  toAddVariantInput,
+  toAvailabilityQuery,
+  toCreateCategoryInput,
+  toCategoryListQuery,
+  toCreateColorInput,
+  toCreateProductInput,
+  toCreateSizeInput,
+  toInventoryListQuery,
+  toProductListQuery,
+  toProductMediaInput,
+  toUpdateInventoryStatusInput,
+  toUpdateCategoryInput,
+  toUpdateProductInput,
+  toUpsertRentalRateInput,
+} from '../catalog.mapper';
+
+@ApiTags('Admin - Catalog')
+@ApiBearerAuth('access-token')
+@Controller(['admin', ''])
+export class AdminCatalogController {
+  constructor(private readonly service: CatalogService) {}
+
+  @Get('catalog/lookups')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOperation({ summary: 'Categories, sizes, colors and locations for admin forms' })
+  @ApiOkResponse({ type: CatalogLookupsResDto })
+  lookups(@CurrentUser() user: CurrentUserType) {
+    return this.service.lookups(user);
+  }
+
+  @Post('catalog/categories')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiCreatedResponse({ type: CategoryResDto })
+  createCategory(@CurrentUser() user: CurrentUserType, @Body() body: CreateCategoryReqDto) {
+    return this.service.createCategory(user, toCreateCategoryInput(body));
+  }
+
+  @Get('catalog/categories')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOkResponse({ type: CategoryPageResDto })
+  async listCategories(@CurrentUser() user: CurrentUserType, @Query() query: CategoryListQueryDto) {
+    const page = await this.service.listCategories(user, toCategoryListQuery(query));
+    return page;
+  }
+
+  @Get('catalog/categories/options')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOkResponse({ type: [CategoryOptionResDto] })
+  categoryOptions(@CurrentUser() user: CurrentUserType, @Query() query: CategoryOptionsQueryDto) {
+    return this.service.categoryOptions(user, query.includeInactive);
+  }
+
+  @Patch('catalog/categories/:id')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ type: CategoryResDto })
+  updateCategory(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: UpdateCategoryReqDto,
+  ) {
+    return this.service.updateCategory(user, id, toUpdateCategoryInput(body));
+  }
+
+  @Delete('catalog/categories/:id')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ schema: { properties: { deleted: { type: 'boolean' } } } })
+  deleteCategory(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.deleteCategory(user, id);
+  }
+
+  @Post('catalog/sizes')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  createSize(@CurrentUser() user: CurrentUserType, @Body() body: CreateSizeReqDto) {
+    return this.service.createSize(user, toCreateSizeInput(body));
+  }
+
+  @Post('catalog/colors')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  createColor(@CurrentUser() user: CurrentUserType, @Body() body: CreateColorReqDto) {
+    return this.service.createColor(user, toCreateColorInput(body));
+  }
+
+  @Get('products')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOkResponse({ type: ProductPageResDto })
+  listProducts(@CurrentUser() user: CurrentUserType, @Query() query: ProductListQueryDto) {
+    return this.service.listProducts(user, toProductListQuery(query));
+  }
+
+  @Get('products/lookup')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOkResponse({ type: ProductLookupPageResDto })
+  lookupProducts(@CurrentUser() user: CurrentUserType, @Query() query: ProductLookupQueryDto) {
+    return this.service.lookupProducts(user, {
+      ...toProductListQuery(query),
+      productId: query.productId,
+    });
+  }
+
+  @Get('products/:id')
+  @Permissions(PERMISSIONS.CATALOG_VIEW)
+  @ApiOkResponse({ type: ProductResDto })
+  getProduct(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.getProduct(user, id);
+  }
+
+  @Post('products')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOperation({
+    summary: 'Create product, variants, rates and initial physical inventory atomically',
+  })
+  @ApiCreatedResponse({ type: ProductResDto })
+  createProduct(@CurrentUser() user: CurrentUserType, @Body() body: CreateProductReqDto) {
+    return this.service.createProduct(user, toCreateProductInput(body));
+  }
+
+  @Post('products/:id/variants')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiCreatedResponse({ type: ProductVariantResDto })
+  addVariant(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: AddVariantReqDto,
+  ) {
+    return this.service.addVariant(user, id, toAddVariantInput(body));
+  }
+
+  @Post('variants/:id/rental-rates')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiCreatedResponse({ type: RentalRateResDto })
+  upsertRentalRate(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: UpsertRentalRateReqDto,
+  ) {
+    return this.service.upsertRentalRate(user, id, toUpsertRentalRateInput(body));
+  }
+
+  @Patch('products/:id')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ type: ProductResDto })
+  updateProduct(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: UpdateProductReqDto,
+  ) {
+    return this.service.updateProduct(user, id, toUpdateProductInput(body));
+  }
+
+  @Delete('products/:id')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOperation({ summary: 'Safely archive a product if it has no active rental orders' })
+  archiveProduct(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.archiveProduct(user, id);
+  }
+
+  @Get('inventory')
+  @Permissions(PERMISSIONS.INVENTORY_VIEW)
+  @ApiOkResponse({ type: InventoryPageResDto })
+  listInventory(@CurrentUser() user: CurrentUserType, @Query() query: InventoryListQueryDto) {
+    return this.service.listInventory(user, toInventoryListQuery(query));
+  }
+
+  @Get('inventory/summary')
+  @Permissions(PERMISSIONS.INVENTORY_VIEW)
+  @ApiOkResponse({ type: InventorySummaryResDto })
+  inventorySummary(@CurrentUser() user: CurrentUserType) {
+    return this.service.inventorySummary(user);
+  }
+
+  @Get('inventory/history')
+  @Permissions(PERMISSIONS.INVENTORY_VIEW)
+  @ApiOkResponse({ type: InventoryHistoryPageResDto })
+  inventoryHistory(@CurrentUser() user: CurrentUserType, @Query() query: InventoryHistoryQueryDto) {
+    return this.service.inventoryHistory(user, {
+      page: query.page,
+      limit: query.limit,
+      productId: query.productId,
+      inventoryItemId: query.inventoryItemId,
+    });
+  }
+
+  @Get('inventory/:id')
+  @Permissions(PERMISSIONS.INVENTORY_VIEW)
+  @ApiOperation({
+    summary: 'Physical inventory detail with status history and unreleased allocations',
+  })
+  @ApiOkResponse({ type: InventoryItemResDto })
+  getInventory(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.service.getInventory(user, id);
+  }
+
+  @Post('products/:id/media')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiCreatedResponse({ type: ProductMediaResDto })
+  @ApiOperation({
+    summary: 'Add an image to a product; setting primary clears the previous primary image',
+  })
+  addProductMedia(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: ProductMediaReqDto,
+  ) {
+    return this.service.addProductMedia(user, id, toProductMediaInput(body));
+  }
+
+  @Delete('products/:id/media/:mediaId')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOperation({ summary: 'Remove a product image' })
+  removeProductMedia(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Param('mediaId') mediaId: string,
+  ) {
+    return this.service.removeProductMedia(user, id, mediaId);
+  }
+
+  @Post('inventory')
+  @Permissions(PERMISSIONS.INVENTORY_MANAGE)
+  @ApiCreatedResponse({ type: InventoryItemResDto })
+  async addInventory(@CurrentUser() user: CurrentUserType, @Body() body: AddInventoryReqDto) {
+    const item = await this.service.addInventory(user, toAddInventoryInput(body));
+    return this.service.getInventory(user, item.id);
+  }
+
+  @Patch('inventory/:id/status')
+  @Permissions(PERMISSIONS.INVENTORY_MANAGE)
+  @ApiOkResponse({ type: InventoryItemResDto })
+  async updateInventoryStatus(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: UpdateInventoryStatusReqDto,
+  ) {
+    await this.service.updateInventoryStatus(user, id, toUpdateInventoryStatusInput(body));
+    return this.service.getInventory(user, id);
+  }
+
+  @Delete('inventory/:id')
+  @Permissions(PERMISSIONS.INVENTORY_MANAGE)
+  @ApiOperation({ summary: 'Archive/retire physical inventory item safely' })
+  @ApiOkResponse({ schema: { properties: { success: { type: 'boolean' } } } })
+  archiveInventoryItem(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body?: ArchiveInventoryItemReqDto,
+  ) {
+    return this.service.archiveInventoryItem(user, id, body?.reason);
+  }
+
+  @Get('inventory/availability/search')
+  @Permissions(PERMISSIONS.INVENTORY_VIEW)
+  @ApiOperation({
+    summary: 'Find physical items not allocated in a half-open [from, until) interval',
+  })
+  @ApiOkResponse({ type: [InventoryItemResDto] })
+  availability(@CurrentUser() user: CurrentUserType, @Query() query: AvailabilityQueryDto) {
+    return this.service.availability(user, toAvailabilityQuery(query));
+  }
+}

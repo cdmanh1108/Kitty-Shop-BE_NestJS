@@ -1,0 +1,1100 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/web/categories": {
+      "get": {
+        "operationId": "WebCatalogController_listCategories",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WebCategoryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách danh mục sản phẩm cho storefront",
+        "tags": [
+          "Web - Catalog"
+        ]
+      }
+    },
+    "/web/products": {
+      "get": {
+        "operationId": "WebCatalogController_listProducts",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Từ khóa tìm kiếm theo tên, mã, màu, size",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo slug hoặc id danh mục",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "size",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo kích cỡ",
+            "schema": {
+              "example": "S",
+              "type": "string"
+            }
+          },
+          {
+            "name": "color",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo màu sắc",
+            "schema": {
+              "example": "Trắng",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "price-asc",
+              "type": "string",
+              "enum": [
+                "price-asc",
+                "price-desc",
+                "name",
+                "featured"
+              ]
+            }
+          },
+          {
+            "name": "featured",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lấy sản phẩm nổi bật",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WebProductListItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách sản phẩm công khai cho storefront",
+        "tags": [
+          "Web - Catalog"
+        ]
+      }
+    },
+    "/web/products/{slug}": {
+      "get": {
+        "operationId": "WebCatalogController_getProduct",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebProductDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết sản phẩm cho trang chi tiết storefront",
+        "tags": [
+          "Web - Catalog"
+        ]
+      }
+    },
+    "/web/availability": {
+      "get": {
+        "operationId": "WebRentalController_checkAvailability",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "description": "ID của sản phẩm hoặc biến thể",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variantId",
+            "required": false,
+            "in": "query",
+            "description": "ID của biến thể cụ thể",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pickupDate",
+            "required": true,
+            "in": "query",
+            "description": "Ngày nhận (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-09-20",
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnDate",
+            "required": true,
+            "in": "query",
+            "description": "Ngày trả (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-09-23",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebAvailabilityResDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Kiểm tra tình trạng trống của sản phẩm hoặc biến thể",
+        "tags": [
+          "Web - Rental Orders"
+        ]
+      }
+    },
+    "/web/rental/quote": {
+      "post": {
+        "operationId": "WebRentalController_calculateQuote",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebRentalQuoteReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebRentalQuoteResDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tính báo giá thuê tạm tính chính thức từ server",
+        "tags": [
+          "Web - Rental Orders"
+        ]
+      }
+    },
+    "/web/rental-orders": {
+      "post": {
+        "operationId": "WebRentalController_createOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebCreateOrderReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebCreateOrderResDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo đơn đặt thuê từ Web Storefront",
+        "tags": [
+          "Web - Rental Orders"
+        ]
+      }
+    },
+    "/web/rental-orders/lookup": {
+      "post": {
+        "operationId": "WebRentalController_lookupOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebOrderLookupReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebOrderLookupResDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tra cứu trạng thái đơn thuê bảo mật bằng mã đơn và SĐT",
+        "tags": [
+          "Web - Rental Orders"
+        ]
+      }
+    },
+    "/web/policies": {
+      "get": {
+        "operationId": "WebPolicyController_getPolicies",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebRentalPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lấy các điều khoản và chính sách thuê công khai",
+        "tags": [
+          "Web - Policies"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Kitty Shop API - Web Sale API",
+    "description": "Public Web Storefront & Sale API for customer storefront (kitty-web-nextjs). Authoritative server-side pricing and inventory availability.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "Web - Catalog"
+    },
+    {
+      "name": "Web - Rental Orders"
+    },
+    {
+      "name": "Web - Policies"
+    }
+  ],
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "API prefix"
+    },
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Configured application URL"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "WebCategoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "b6e82c18-9717-484d-a915-c26663f721d6"
+          },
+          "code": {
+            "type": "string",
+            "example": "VAY"
+          },
+          "name": {
+            "type": "string",
+            "example": "Váy thiết kế"
+          },
+          "slug": {
+            "type": "string",
+            "example": "vay-thiet-ke"
+          },
+          "description": {
+            "type": "string",
+            "example": "Bộ sưu tập váy tiệc và sự kiện"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "slug"
+        ]
+      },
+      "WebProductListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "code": {
+            "type": "string",
+            "example": "SP-001"
+          },
+          "slug": {
+            "type": "string",
+            "example": "dam-da-hoi-trang"
+          },
+          "name": {
+            "type": "string",
+            "example": "Đầm dạ hội trắng lụa cao cấp"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "b6e82c18-9717-484d-a915-c26663f721d6"
+          },
+          "categoryName": {
+            "type": "string",
+            "example": "Váy thiết kế"
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1"
+          },
+          "gallery": {
+            "example": [
+              "https://images.unsplash.com/photo-1"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "size": {
+            "type": "string",
+            "example": "S"
+          },
+          "color": {
+            "type": "string",
+            "example": "Trắng"
+          },
+          "rentalPrices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebRentalPriceDto"
+            }
+          },
+          "depositAmount": {
+            "type": "number",
+            "example": 500000,
+            "description": "Tiền cọc dự kiến (VND)"
+          },
+          "status": {
+            "type": "string",
+            "example": "available"
+          },
+          "isRentable": {
+            "type": "boolean",
+            "example": true
+          },
+          "featured": {
+            "type": "boolean",
+            "example": true
+          },
+          "tags": {
+            "example": [
+              "tiệc",
+              "dạ hội",
+              "trắng"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "slug",
+          "name",
+          "categoryId",
+          "categoryName",
+          "imageUrl",
+          "gallery",
+          "size",
+          "color",
+          "rentalPrices",
+          "depositAmount",
+          "status",
+          "isRentable",
+          "featured",
+          "tags"
+        ]
+      },
+      "WebProductDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "code": {
+            "type": "string",
+            "example": "SP-001"
+          },
+          "slug": {
+            "type": "string",
+            "example": "dam-da-hoi-trang"
+          },
+          "name": {
+            "type": "string",
+            "example": "Đầm dạ hội trắng lụa cao cấp"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "b6e82c18-9717-484d-a915-c26663f721d6"
+          },
+          "categoryName": {
+            "type": "string",
+            "example": "Váy thiết kế"
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1"
+          },
+          "gallery": {
+            "example": [
+              "https://images.unsplash.com/photo-1"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "size": {
+            "type": "string",
+            "example": "S"
+          },
+          "color": {
+            "type": "string",
+            "example": "Trắng"
+          },
+          "rentalPrices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebRentalPriceDto"
+            }
+          },
+          "depositAmount": {
+            "type": "number",
+            "example": 500000,
+            "description": "Tiền cọc dự kiến (VND)"
+          },
+          "status": {
+            "type": "string",
+            "example": "available"
+          },
+          "isRentable": {
+            "type": "boolean",
+            "example": true
+          },
+          "featured": {
+            "type": "boolean",
+            "example": true
+          },
+          "tags": {
+            "example": [
+              "tiệc",
+              "dạ hội",
+              "trắng"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string",
+            "example": "Chất liệu lụa satin cao cấp, phù hợp tiệc tối."
+          },
+          "facebookPostUrl": {
+            "type": "string",
+            "example": "https://facebook.com/kitty/posts/123"
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebProductVariantSummaryDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "slug",
+          "name",
+          "categoryId",
+          "categoryName",
+          "imageUrl",
+          "gallery",
+          "size",
+          "color",
+          "rentalPrices",
+          "depositAmount",
+          "status",
+          "isRentable",
+          "featured",
+          "tags",
+          "variants"
+        ]
+      },
+      "WebAvailabilityResDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "example": true
+          },
+          "availableQuantity": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "available"
+        ]
+      },
+      "WebRentalQuoteReqDto": {
+        "type": "object",
+        "properties": {
+          "pickupDate": {
+            "type": "string",
+            "example": "2026-09-20"
+          },
+          "returnDate": {
+            "type": "string",
+            "example": "2026-09-23"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebRentalItemInputDto"
+            }
+          },
+          "deliveryMethod": {
+            "type": "string",
+            "example": "self_pickup",
+            "enum": [
+              "self_pickup",
+              "shop_delivery"
+            ]
+          }
+        },
+        "required": [
+          "pickupDate",
+          "returnDate",
+          "items"
+        ]
+      },
+      "WebRentalQuoteResDto": {
+        "type": "object",
+        "properties": {
+          "durationDays": {
+            "type": "number",
+            "example": 3,
+            "description": "Số ngày thuê tính theo lịch"
+          },
+          "rentalSubtotal": {
+            "type": "number",
+            "example": 450000,
+            "description": "Tiền thuê tạm tính (VND)"
+          },
+          "depositAmount": {
+            "type": "number",
+            "example": 500000,
+            "description": "Tiền cọc dự kiến (VND)"
+          },
+          "shippingFee": {
+            "type": "number",
+            "example": 30000,
+            "description": "Phí vận chuyển dự kiến (VND)"
+          },
+          "totalAmount": {
+            "type": "number",
+            "example": 480000,
+            "description": "Tổng tiền thanh toán dự kiến (VND)"
+          },
+          "currency": {
+            "type": "string",
+            "example": "VND"
+          },
+          "available": {
+            "type": "boolean",
+            "example": true,
+            "description": "Tất cả sản phẩm có sẵn trong khoảng ngày đã chọn"
+          }
+        },
+        "required": [
+          "durationDays",
+          "rentalSubtotal",
+          "depositAmount",
+          "shippingFee",
+          "totalAmount",
+          "currency",
+          "available"
+        ]
+      },
+      "WebCreateOrderReqDto": {
+        "type": "object",
+        "properties": {
+          "customer": {
+            "$ref": "#/components/schemas/WebCreateOrderCustomerDto"
+          },
+          "pickupDate": {
+            "type": "string",
+            "example": "2026-09-20"
+          },
+          "returnDate": {
+            "type": "string",
+            "example": "2026-09-23"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebRentalItemInputDto"
+            }
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/WebCreateOrderDeliveryDto"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "example": "bank_transfer",
+            "enum": [
+              "cash",
+              "bank_transfer",
+              "momo"
+            ]
+          }
+        },
+        "required": [
+          "customer",
+          "pickupDate",
+          "returnDate",
+          "items",
+          "delivery",
+          "paymentMethod"
+        ]
+      },
+      "WebCreateOrderResDto": {
+        "type": "object",
+        "properties": {
+          "orderCode": {
+            "type": "string",
+            "example": "KT260920-001"
+          },
+          "totalAmount": {
+            "type": "number",
+            "example": 480000
+          },
+          "depositAmount": {
+            "type": "number",
+            "example": 500000
+          },
+          "status": {
+            "type": "string",
+            "example": "pending"
+          }
+        },
+        "required": [
+          "orderCode",
+          "totalAmount",
+          "depositAmount",
+          "status"
+        ]
+      },
+      "WebOrderLookupReqDto": {
+        "type": "object",
+        "properties": {
+          "orderCode": {
+            "type": "string",
+            "example": "KT260920-001",
+            "description": "Mã đơn thuê đã được cấp"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0912345678",
+            "description": "Số điện thoại đặt thuê để xác thực"
+          }
+        },
+        "required": [
+          "orderCode",
+          "phone"
+        ]
+      },
+      "WebOrderLookupResDto": {
+        "type": "object",
+        "properties": {
+          "orderCode": {
+            "type": "string",
+            "example": "KT260920-001"
+          },
+          "customerName": {
+            "type": "string",
+            "example": "Nguyễn Văn A"
+          },
+          "phoneMasked": {
+            "type": "string",
+            "example": "091****678"
+          },
+          "pickupDate": {
+            "type": "string",
+            "example": "2026-09-20"
+          },
+          "returnDate": {
+            "type": "string",
+            "example": "2026-09-23"
+          },
+          "status": {
+            "type": "string",
+            "example": "pending"
+          },
+          "totalAmount": {
+            "type": "number",
+            "example": 480000
+          },
+          "depositAmount": {
+            "type": "number",
+            "example": 500000
+          },
+          "paidAmount": {
+            "type": "number",
+            "example": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebOrderLookupItemDto"
+            }
+          }
+        },
+        "required": [
+          "orderCode",
+          "customerName",
+          "phoneMasked",
+          "pickupDate",
+          "returnDate",
+          "status",
+          "totalAmount",
+          "depositAmount",
+          "paidAmount",
+          "items"
+        ]
+      },
+      "WebRentalPolicyDto": {
+        "type": "object",
+        "properties": {
+          "depositMethods": {
+            "example": [
+              "CASH",
+              "DOCUMENT"
+            ],
+            "description": "Các hình thức cọc hợp lệ (tiền mặt hoặc giấy tờ tuỳ thân)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "depositDocumentTypes": {
+            "example": [
+              "CCCD",
+              "GPLX"
+            ],
+            "description": "Các loại giấy tờ tuỳ thân được chấp nhận giữ cọc",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "defaultDepositAmount": {
+            "type": "number",
+            "example": 200000,
+            "description": "Tiền cọc mặc định cho sản phẩm (VND)"
+          },
+          "lateFeePerItemPerDay": {
+            "type": "number",
+            "example": 50000,
+            "description": "Phí phụ thu trễ hạn mỗi ngày trên mỗi món đồ (VND)"
+          },
+          "standardShippingFee": {
+            "type": "number",
+            "example": 30000,
+            "description": "Phí vận chuyển giao đồ tận nơi tiêu chuẩn (VND)"
+          }
+        },
+        "required": [
+          "depositMethods",
+          "depositDocumentTypes",
+          "defaultDepositAmount",
+          "lateFeePerItemPerDay",
+          "standardShippingFee"
+        ]
+      },
+      "WebRentalPriceDto": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "number",
+            "example": 3,
+            "description": "Số ngày thuê"
+          },
+          "amount": {
+            "type": "number",
+            "example": 150000,
+            "description": "Giá thuê (VND)"
+          }
+        },
+        "required": [
+          "days",
+          "amount"
+        ]
+      },
+      "WebProductVariantSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "c7f93d29-0828-4b21-b1e4-d2e82e44f3b1"
+          },
+          "code": {
+            "type": "string",
+            "example": "VAR-S-WHITE"
+          },
+          "size": {
+            "type": "string",
+            "example": "S"
+          },
+          "color": {
+            "type": "string",
+            "example": "Trắng"
+          },
+          "depositAmount": {
+            "type": "number",
+            "example": 500000
+          }
+        },
+        "required": [
+          "id",
+          "code"
+        ]
+      },
+      "WebRentalItemInputDto": {
+        "type": "object",
+        "properties": {
+          "variantId": {
+            "type": "string",
+            "description": "ID biến thể sản phẩm"
+          },
+          "productId": {
+            "type": "string",
+            "description": "ID sản phẩm"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1,
+            "default": 1,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "WebCreateOrderCustomerDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Nguyễn Văn A"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0912345678"
+          },
+          "email": {
+            "type": "string",
+            "example": "nguyenvana@gmail.com"
+          },
+          "facebookOrZalo": {
+            "type": "string",
+            "example": "https://facebook.com/nguyenvana"
+          },
+          "note": {
+            "type": "string",
+            "example": "Giao buổi sáng"
+          }
+        },
+        "required": [
+          "name",
+          "phone"
+        ]
+      },
+      "WebCreateOrderDeliveryDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "example": "self_pickup",
+            "enum": [
+              "self_pickup",
+              "shop_delivery"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "example": "123 Đường 30/4, Ninh Kiều, Cần Thơ"
+          }
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "WebOrderLookupItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Đầm dạ hội trắng lụa cao cấp"
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "name",
+          "imageUrl",
+          "quantity"
+        ]
+      },
+      "ErrorResDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "code": {
+            "type": "string",
+            "example": "HTTP_400"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "nullable": true
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
+        ]
+      }
+    }
+  }
+}

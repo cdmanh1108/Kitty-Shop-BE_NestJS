@@ -23,6 +23,7 @@ import { RentalsModule } from '@modules/rentals/rentals.module';
 import { ReportsModule } from '@modules/reports/reports.module';
 import { SettingsModule } from '@modules/settings/settings.module';
 import { StorageModule } from '@common/storage/storage.module';
+import { TenantModule } from '@common/tenant/tenant.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { StorageModule } from '@common/storage/storage.module';
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
+    TenantModule,
     StorageModule,
     AuditModule,
     AuthModule,

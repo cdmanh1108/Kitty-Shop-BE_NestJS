@@ -39,7 +39,7 @@ export interface CreateRentalOrderData {
   discountTotal: number;
   note?: string;
   internalNote?: string;
-  createdBy: string;
+  createdBy?: string;
   idempotency?: { scope: string; key: string; claimId: string };
   lines: Array<{
     productId: string;

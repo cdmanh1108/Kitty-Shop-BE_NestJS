@@ -1,0 +1,35 @@
+import { Public } from '@common/decorators/public.decorator';
+import { ShopResolver } from '@common/tenant/shop-resolver';
+import { Controller, Get, Inject, Req } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
+import {
+  RENTAL_POLICY_PROVIDER,
+  type RentalPolicyProvider,
+} from '../../domain/rental-policy';
+import { WebRentalPolicyDto } from './dto/web-policy.dto';
+
+@Public()
+@ApiTags('Web - Policies')
+@Controller('web')
+export class WebPolicyController {
+  constructor(
+    private readonly shopResolver: ShopResolver,
+    @Inject(RENTAL_POLICY_PROVIDER) private readonly policyProvider: RentalPolicyProvider,
+  ) {}
+
+  @Get('policies')
+  @ApiOperation({ summary: 'Lấy các điều khoản và chính sách thuê công khai' })
+  @ApiResponse({ status: 200, type: WebRentalPolicyDto })
+  async getPolicies(@Req() request: Request): Promise<WebRentalPolicyDto> {
+    const shopId = await this.shopResolver.resolveShopId(request);
+    const policy = await this.policyProvider.getPolicy(shopId);
+    return {
+      depositMethods: policy.deposit.allowedMethods,
+      depositDocumentTypes: policy.deposit.allowedDocumentTypes,
+      defaultDepositAmount: policy.deposit.defaultCashDeposit,
+      lateFeePerItemPerDay: policy.lateReturn.feePerItemPerDay,
+      standardShippingFee: 30000,
+    };
+  }
+}

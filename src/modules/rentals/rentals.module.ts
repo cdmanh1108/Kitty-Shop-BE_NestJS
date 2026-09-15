@@ -1,8 +1,10 @@
 import { ClockModule } from '@common/clock/clock.module';
 import { SettingsModule } from '@modules/settings/settings.module';
 import { Module } from '@nestjs/common';
-import { RentalController } from './api/rental.controller';
+import { AdminRentalController } from './api/admin/admin-rental.controller';
+import { WebRentalController } from './api/web/web-rental.controller';
 import { RentalService } from './application/rental.service';
+import { WebRentalService } from './application/web-rental.service';
 import { RentalConfirmationService } from './application/rental-confirmation.service';
 import { RentalSettlementService } from './application/rental-settlement.service';
 import { RENTAL_REPOSITORY } from './domain/rental.repository';
@@ -10,14 +12,15 @@ import { PrismaRentalRepository } from './infrastructure/prisma-rental.repositor
 
 @Module({
   imports: [ClockModule, SettingsModule],
-  controllers: [RentalController],
+  controllers: [AdminRentalController, WebRentalController],
   providers: [
     RentalConfirmationService,
     RentalSettlementService,
     RentalService,
+    WebRentalService,
     PrismaRentalRepository,
     { provide: RENTAL_REPOSITORY, useExisting: PrismaRentalRepository },
   ],
-  exports: [RentalService, RentalSettlementService],
+  exports: [RentalService, WebRentalService, RentalSettlementService],
 })
 export class RentalsModule {}
