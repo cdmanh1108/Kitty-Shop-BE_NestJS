@@ -47,7 +47,7 @@ function offsetMs(date: Date, timeZone: string): number {
   return asUtc - Math.floor(date.getTime() / 1000) * 1000;
 }
 
-function localMidnightUtc(year: number, month: number, day: number, timeZone: string): Date {
+export function localMidnightUtc(year: number, month: number, day: number, timeZone: string): Date {
   const guess = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
   let result = new Date(guess.getTime() - offsetMs(guess, timeZone));
   result = new Date(guess.getTime() - offsetMs(result, timeZone));

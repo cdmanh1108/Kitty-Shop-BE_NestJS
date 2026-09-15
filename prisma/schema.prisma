@@ -565,6 +565,7 @@ model RentalOrder {
   @@index([shopId, rentalStartAt, rentalEndAt])
   @@index([shopId, status])
   @@index([customerId, createdAt])
+  @@index([shopId, status, completedAt])
   @@map("rental_orders")
 }
 

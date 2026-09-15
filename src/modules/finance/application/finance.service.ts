@@ -127,6 +127,17 @@ export class FinanceService {
   }
 
   async createExpense(user: CurrentUser, input: CreateExpenseInput) {
+    const description = input.description.trim();
+    const expenseDate = new Date(input.expenseDate + 'T00:00:00Z');
+    if (description.length < 3 || description.length > 2000) {
+      throw new BadRequestException('Nội dung khoản chi cần từ 3 đến 2.000 ký tự.');
+    }
+    if (
+      !Number.isFinite(expenseDate.getTime()) ||
+      expenseDate.toISOString().slice(0, 10) !== input.expenseDate
+    ) {
+      throw new BadRequestException('Ngày chi không hợp lệ.');
+    }
     let expense: Awaited<ReturnType<FinanceRepository['createExpense']>>;
     try {
       expense = await this.repository.createExpense({
@@ -135,11 +146,11 @@ export class FinanceService {
         categoryId: input.categoryId,
         orderId: input.orderId,
         inventoryItemId: input.inventoryItemId,
-        description: input.description,
+        description,
         amount: input.amount,
         paymentMethod: input.paymentMethod,
         vendorName: input.vendorName,
-        expenseDate: new Date(input.expenseDate),
+        expenseDate,
         paidAt: input.paidAt ? new Date(input.paidAt) : undefined,
         receiptUrl: input.receiptUrl,
         createdBy: user.memberId,

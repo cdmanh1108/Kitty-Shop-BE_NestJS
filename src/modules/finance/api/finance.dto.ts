@@ -19,6 +19,9 @@ import {
   IsUrl,
   IsUUID,
   Min,
+  MaxLength,
+  MinLength,
+  Matches,
 } from 'class-validator';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { PaginationMetaResDto } from '@common/dto/response.dto';
@@ -93,14 +96,18 @@ export class CreateExpenseReqDto {
   @IsUUID(undefined, { message: 'Mã món đồ phải là UUID hợp lệ.' })
   @IsOptional()
   inventoryItemId?: string;
-  @ApiProperty() @IsString({ message: 'Mô tả phải là chuỗi ký tự.' }) description!: string;
+  @ApiProperty({ maxLength: 2000 })
+  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @MinLength(3, { message: 'Nội dung khoản chi cần ít nhất 3 ký tự.' })
+  @MaxLength(2000, { message: 'Nội dung khoản chi không vượt quá 2.000 ký tự.' })
+  description!: string;
   @ApiProperty({ example: 120000 })
   @Type(() => Number)
   @IsNumber(undefined, { message: 'Số tiền phải là số hợp lệ.' })
   @Min(0.01, { message: 'Số tiền phải lớn hơn hoặc bằng $constraint1.' })
   amount!: number;
-  @ApiPropertyOptional()
-  @IsString({ message: 'Phương thức thanh toán phải là chuỗi ký tự.' })
+  @ApiPropertyOptional({ enum: Object.values(PAYMENT_METHOD) })
+  @IsIn(Object.values(PAYMENT_METHOD), { message: 'Phương thức thanh toán không hợp lệ.' })
   @IsOptional()
   paymentMethod?: string;
   @ApiPropertyOptional()
@@ -108,6 +115,7 @@ export class CreateExpenseReqDto {
   @IsOptional()
   vendorName?: string;
   @ApiProperty({ example: '2026-09-10' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Ngày chi phải có định dạng YYYY-MM-DD.' })
   @IsDateString(undefined, { message: 'Ngày chi phải là ngày giờ hợp lệ theo định dạng ISO 8601.' })
   expenseDate!: string;
   @ApiPropertyOptional()

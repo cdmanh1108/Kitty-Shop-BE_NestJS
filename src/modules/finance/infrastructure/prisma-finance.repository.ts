@@ -188,6 +188,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
   listExpenseCategories(shopId: string) {
     return this.prisma.expenseCategory.findMany({
       where: { shopId, isActive: true },
+      select: { id: true, name: true },
       orderBy: { name: 'asc' },
     });
   }

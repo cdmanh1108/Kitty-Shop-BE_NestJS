@@ -27,4 +27,4 @@ export type ListExpensesResult = PaginatedResult<
 
 export type VoidExpenseResult = null | ExpenseRecord;
 
-export type ListExpenseCategoriesResult = Array<ExpenseCategoryRecord>;
+export type ListExpenseCategoriesResult = Array<Pick<ExpenseCategoryRecord, 'id' | 'name'>>;

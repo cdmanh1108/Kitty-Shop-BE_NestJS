@@ -11,6 +11,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { FinanceService } from '../application/finance.service';
+import type { ExpenseRecord } from '../domain/finance.records';
+import { ExpenseCategoryResDto } from './finance-read.dto';
 import {
   CreateExpenseReqDto,
   CreatePaymentReqDto,
@@ -64,8 +66,9 @@ export class FinanceController {
 
   @Get('expense-categories')
   @Permissions(PERMISSIONS.FINANCE_VIEW)
-  expenseCategories(@CurrentUser() user: CurrentUserType) {
-    return this.service.listExpenseCategories(user);
+  @ApiOkResponse({ type: [ExpenseCategoryResDto] })
+  async expenseCategories(@CurrentUser() user: CurrentUserType) {
+    return (await this.service.listExpenseCategories(user)).map(({ id, name }) => ({ id, name }));
   }
 
   @Get('expenses')
@@ -78,8 +81,8 @@ export class FinanceController {
   @Post('expenses')
   @Permissions(PERMISSIONS.FINANCE_MANAGE)
   @ApiCreatedResponse({ type: ExpenseResDto })
-  createExpense(@CurrentUser() user: CurrentUserType, @Body() body: CreateExpenseReqDto) {
-    return this.service.createExpense(user, toCreateExpenseInput(body));
+  async createExpense(@CurrentUser() user: CurrentUserType, @Body() body: CreateExpenseReqDto) {
+    return expenseResponse(await this.service.createExpense(user, toCreateExpenseInput(body)));
   }
 
   @Post('expenses/:id/void')
@@ -88,4 +91,16 @@ export class FinanceController {
   voidExpense(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
     return this.service.voidExpense(user, id);
   }
+}
+
+function expenseResponse(expense: ExpenseRecord): ExpenseResDto {
+  return {
+    id: expense.id,
+    expenseNumber: expense.expenseNumber,
+    categoryId: expense.categoryId,
+    description: expense.description,
+    amount: expense.amount.toString(),
+    status: expense.status,
+    expenseDate: expense.expenseDate.toISOString().slice(0, 10),
+  };
 }
