@@ -10,6 +10,7 @@ import type {
   UpdateProductData,
 } from '../domain/catalog.repository';
 import { CatalogCategoryError, CatalogInvariantError } from '../domain/catalog.repository';
+import { slugify } from '@common/utils/slugify';
 
 export function createProduct(
   prisma: PrismaService,
@@ -41,12 +42,14 @@ export function createProduct(
       throw new CatalogInvariantError('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
     }
     await assertCatalogReferences(tx, shopId, input.categoryId, input.variants);
+    const slug = input.slug || slugify(input.name);
     const product = await tx.product.create({
       data: {
         shopId,
         categoryId: input.categoryId,
         code: input.code,
         name: input.name,
+        slug,
         description: input.description,
         defaultDepositAmount: input.defaultDepositAmount,
         replacementValue: input.replacementValue != null ? input.replacementValue : null,
@@ -159,7 +162,15 @@ export async function updateProduct(
       await assertProductCanArchive(tx, shopId, id);
       data.archivedAt = new Date();
     }
-    if (input.name !== undefined) data.name = input.name;
+    if (input.name !== undefined) {
+      data.name = input.name;
+      if (input.slug === undefined) {
+        data.slug = slugify(input.name);
+      }
+    }
+    if (input.slug !== undefined) {
+      data.slug = input.slug;
+    }
     if (input.categoryId !== undefined && input.categoryId !== existing.categoryId)
       data.category = { connect: { id: input.categoryId } };
     if (input.description !== undefined) data.description = input.description;

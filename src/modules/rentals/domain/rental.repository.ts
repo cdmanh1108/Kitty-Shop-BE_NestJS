@@ -94,6 +94,30 @@ export interface RentalRepository {
   returnCollateral(shopId: string, orderId: string, changedBy: string): Promise<RentalOrderDetails>;
   claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
   releaseIdempotency(shopId: string, scope: string, key: string, claimId: string): Promise<void>;
+  findActiveVariantIdsByProduct(shopId: string, productId: string): Promise<string[]>;
+  findFirstActiveVariantId(shopId: string, productId: string): Promise<string | null>;
+  lookupStorefrontOrder(
+    shopId: string,
+    orderNumber: string,
+  ): Promise<StorefrontOrderLookupRecord | null>;
+}
+
+export interface StorefrontOrderLookupRecord {
+  orderNumber: string;
+  customerFullName: string;
+  customerPhone: string;
+  customerNormalizedPhone: string;
+  rentalStartAt: Date;
+  rentalEndAt: Date;
+  status: string;
+  grandTotal: number;
+  depositRequired: number;
+  paidAmount: number;
+  items: Array<{
+    name: string;
+    imageUrl: string;
+    quantity: number;
+  }>;
 }
 
 export interface ReceiveRentalReturnData {

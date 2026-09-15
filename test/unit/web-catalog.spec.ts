@@ -1,17 +1,21 @@
+import { NotFoundException } from '@nestjs/common';
 import {
   toWebCategory,
   toWebProductDetail,
   toWebProductListItem,
   type RawProduct,
 } from '../../src/modules/catalog/api/web/web-catalog.mapper';
+import { WebCatalogService } from '../../src/modules/catalog/application/web-catalog.service';
+import type { CatalogRepository } from '../../src/modules/catalog/domain/catalog.repository';
 
-describe('Web Catalog Presenters and DTO Mapping', () => {
+describe('Web Catalog Presenters and Service', () => {
   describe('toWebCategory', () => {
     it('maps category entity to clean WebCategoryDto without internal properties', () => {
       const entity = {
         id: 'cat-1',
         name: 'Đầm dạ hội',
         code: 'EVENING_DRESS',
+        slug: 'dam-da-hoi',
         description: 'Váy đầm cao cấp cho tiệc tối',
         sortOrder: 1,
         shopId: 'shop-uuid-1',
@@ -88,14 +92,16 @@ describe('Web Catalog Presenters and DTO Mapping', () => {
       // Internal fields must not exist
       expect(result).not.toHaveProperty('purchasePrice');
       expect(result).not.toHaveProperty('replacementValue');
+      expect(result).not.toHaveProperty('featured');
+      expect(result).not.toHaveProperty('tags');
     });
 
-    it('generates slug from product name if slug is null', () => {
+    it('uses canonical slug', () => {
       const product: RawProduct = {
         id: 'prod-2',
         code: 'DR002',
         name: 'Váy ngắn',
-        slug: null,
+        slug: 'vay-ngan-xoe',
         categoryId: 'cat-1',
         status: 'ACTIVE',
         defaultDepositAmount: 0,
@@ -107,7 +113,7 @@ describe('Web Catalog Presenters and DTO Mapping', () => {
       };
 
       const result = toWebProductListItem(product);
-      expect(result.slug).toBe('vay-ngan');
+      expect(result.slug).toBe('vay-ngan-xoe');
     });
   });
 
@@ -156,6 +162,120 @@ describe('Web Catalog Presenters and DTO Mapping', () => {
       // Verify no physical inventory items leaked
       expect(result.variants[0]).not.toHaveProperty('inventoryItems');
       expect(result.variants[0]).not.toHaveProperty('physicalStockIds');
+    });
+  });
+
+  describe('WebCatalogService', () => {
+    let mockRepo: {
+      listStorefrontCategories: jest.Mock;
+      listStorefrontProducts: jest.Mock;
+      findStorefrontProductBySlug: jest.Mock;
+    };
+    let service: WebCatalogService;
+
+    beforeEach(() => {
+      mockRepo = {
+        listStorefrontCategories: jest.fn(),
+        listStorefrontProducts: jest.fn(),
+        findStorefrontProductBySlug: jest.fn(),
+      };
+      service = new WebCatalogService(mockRepo as unknown as CatalogRepository);
+    });
+
+    it('returns paginated response with items and metadata', async () => {
+      mockRepo.listStorefrontProducts.mockResolvedValue({
+        items: [
+          {
+            id: 'p-1',
+            code: 'SP-1',
+            slug: 'dam-da-hoi',
+            name: 'Đầm dạ hội',
+            categoryId: 'cat-1',
+            categoryName: 'Đầm',
+            imageUrl: 'https://img.com/1.jpg',
+            gallery: ['https://img.com/1.jpg'],
+            size: 'S, M',
+            color: 'Đỏ',
+            rentalPrices: [{ days: 3, amount: 250000 }],
+            depositAmount: 500000,
+            status: 'active',
+            isRentable: true,
+          },
+        ],
+        meta: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+        },
+      });
+
+      const res = await service.listProducts('shop-1', {
+        page: 1,
+        limit: 20,
+        size: 'S',
+        color: 'Đỏ',
+        sort: 'price_asc',
+      });
+
+      expect(res.items.length).toBe(1);
+      expect(res.meta).toEqual({
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      });
+      expect(mockRepo.listStorefrontProducts).toHaveBeenCalledWith({
+        shopId: 'shop-1',
+        page: 1,
+        limit: 20,
+        q: undefined,
+        category: undefined,
+        size: 'S',
+        color: 'Đỏ',
+        sort: 'price_asc',
+      });
+    });
+
+    it('finds product by canonical slug without table scan', async () => {
+      mockRepo.findStorefrontProductBySlug.mockResolvedValue({
+        id: 'p-1',
+        code: 'SP-1',
+        slug: 'dam-da-hoi',
+        name: 'Đầm dạ hội',
+        categoryId: 'cat-1',
+        categoryName: 'Đầm',
+        imageUrl: 'https://img.com/1.jpg',
+        gallery: ['https://img.com/1.jpg'],
+        size: 'S',
+        color: 'Đỏ',
+        rentalPrices: [{ days: 3, amount: 250000 }],
+        depositAmount: 500000,
+        status: 'active',
+        isRentable: true,
+        variants: [
+          {
+            id: 'v-1',
+            code: 'SP-1-S',
+            size: 'S',
+            color: 'Đỏ',
+            depositAmount: 500000,
+          },
+        ],
+      });
+
+      const product = await service.getProduct('shop-1', 'dam-da-hoi');
+      expect(product.slug).toBe('dam-da-hoi');
+      expect(product.name).toBe('Đầm dạ hội');
+      expect(mockRepo.findStorefrontProductBySlug).toHaveBeenCalledWith('shop-1', 'dam-da-hoi');
+    });
+
+    it('throws NotFoundException when slug is not found', async () => {
+      mockRepo.findStorefrontProductBySlug.mockResolvedValue(null);
+
+      await expect(service.getProduct('shop-1', 'non-existing-slug')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

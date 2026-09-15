@@ -6,10 +6,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { PrismaService } from '@database/prisma/prisma.service';
-import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { generateDatedReference } from '@common/utils/reference-number';
 import { normalizeCustomerPhone } from '@modules/customers/domain/customer-phone';
+import {
+  CUSTOMER_REPOSITORY,
+  type CustomerRepository,
+} from '@modules/customers/domain/customer.repository';
+import {
+  RENTAL_POLICY_PROVIDER,
+  type RentalPolicyProvider,
+} from '@modules/settings/domain/rental-policy';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
   RENTAL_REPOSITORY,
@@ -27,13 +33,12 @@ import type {
   WebRentalQuoteResult,
 } from './web-rental.contracts';
 
-const STANDARD_SHIPPING_FEE = 30000;
-
 @Injectable()
 export class WebRentalService {
   constructor(
     @Inject(RENTAL_REPOSITORY) private readonly repository: RentalRepository,
-    private readonly prisma: PrismaService,
+    @Inject(RENTAL_POLICY_PROVIDER) private readonly policyProvider: RentalPolicyProvider,
+    @Inject(CUSTOMER_REPOSITORY) private readonly customerRepository: CustomerRepository,
   ) {}
 
   async checkAvailability(
@@ -64,21 +69,16 @@ export class WebRentalService {
     }
 
     if (query.productId) {
-      const variants = await this.prisma.productVariant.findMany({
-        where: {
-          productId: query.productId,
-          shopId,
-          status: 'ACTIVE',
-          archivedAt: null,
-        },
-        select: { id: true },
-      });
+      const variantIds = await this.repository.findActiveVariantIdsByProduct(
+        shopId,
+        query.productId,
+      );
 
       let totalAvailable = 0;
-      for (const v of variants) {
+      for (const vid of variantIds) {
         const variant = await this.repository.getBookableVariant({
           shopId,
-          variantId: v.id,
+          variantId: vid,
           durationDays,
           from,
           until,
@@ -105,6 +105,7 @@ export class WebRentalService {
       throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc.');
     }
 
+    const policy = await this.policyProvider.getPolicy(shopId);
     const durationDays = calculateRentalDurationDays(from, until);
     let rentalSubtotal = 0;
     let depositAmount = 0;
@@ -113,12 +114,8 @@ export class WebRentalService {
     for (const item of req.items) {
       let variantId = item.variantId;
       if (!variantId && item.productId) {
-        const pv = await this.prisma.productVariant.findFirst({
-          where: { productId: item.productId, shopId, status: 'ACTIVE', archivedAt: null },
-          orderBy: { createdAt: 'asc' },
-          select: { id: true },
-        });
-        if (pv) variantId = pv.id;
+        variantId =
+          (await this.repository.findFirstActiveVariantId(shopId, item.productId)) ?? undefined;
       }
 
       if (!variantId) {
@@ -147,7 +144,8 @@ export class WebRentalService {
       depositAmount += variant.depositPerItem * item.quantity;
     }
 
-    const shippingFee = req.deliveryMethod === 'shop_delivery' ? STANDARD_SHIPPING_FEE : 0;
+    const standardShippingFee = policy.delivery.standardShippingFee;
+    const shippingFee = req.deliveryMethod === 'shop_delivery' ? standardShippingFee : 0;
     const totalAmount = rentalSubtotal + shippingFee;
 
     return {
@@ -171,7 +169,21 @@ export class WebRentalService {
       throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc.');
     }
 
+    const policy = await this.policyProvider.getPolicy(shopId);
     const durationDays = calculateRentalDurationDays(from, until);
+
+    // Collateral preference handling - validate upfront
+    const collateralMethod = req.collateral?.method ?? 'CASH';
+    const documentType = req.collateral?.documentType;
+
+    if (!policy.deposit.allowedMethods.includes(collateralMethod)) {
+      throw new BadRequestException('Phương thức đặt cọc không được chính sách hỗ trợ.');
+    }
+    if (collateralMethod === 'DOCUMENT') {
+      if (!documentType || !policy.deposit.allowedDocumentTypes.includes(documentType)) {
+        throw new BadRequestException('Loại giấy tờ đặt cọc không được chính sách hỗ trợ.');
+      }
+    }
 
     let normalizedPhone: string;
     try {
@@ -180,28 +192,22 @@ export class WebRentalService {
       throw new BadRequestException('Số điện thoại người thuê không hợp lệ.');
     }
 
-    let customer = await this.prisma.customer.findUnique({
-      where: {
-        shopId_normalizedPhone: {
-          shopId,
-          normalizedPhone,
-        },
-      },
-    });
+    let customer = await this.customerRepository.findByNormalizedPhone(shopId, normalizedPhone);
 
     if (!customer) {
-      customer = await this.prisma.customer.create({
-        data: {
-          shopId,
-          customerCode: `CUS-${Date.now().toString(36).toUpperCase()}-${randomBytes(2).toString('hex').toUpperCase()}`,
-          fullName: req.customer.name.trim(),
-          phone: req.customer.phone.trim(),
-          normalizedPhone,
-          email: req.customer.email?.trim().toLowerCase() || null,
-          facebook: req.customer.facebookOrZalo?.trim() || null,
-          source: 'WEB',
-          status: 'ACTIVE',
-        },
+      customer = await this.customerRepository.create(shopId, {
+        customerCode: `CUS-${Date.now().toString(36).toUpperCase()}-${randomBytes(2).toString('hex').toUpperCase()}`,
+        fullName: req.customer.name.trim(),
+        phone: req.customer.phone.trim(),
+        normalizedPhone,
+        email: req.customer.email?.trim().toLowerCase() || null,
+        facebook: req.customer.facebookOrZalo?.trim() || null,
+        zalo: null,
+        birthday: null,
+        gender: null,
+        customerType: 'NORMAL',
+        status: 'ACTIVE',
+        source: 'WEB',
       });
     }
 
@@ -209,12 +215,8 @@ export class WebRentalService {
     for (const item of req.items) {
       let variantId = item.variantId;
       if (!variantId && item.productId) {
-        const pv = await this.prisma.productVariant.findFirst({
-          where: { productId: item.productId, shopId, status: 'ACTIVE', archivedAt: null },
-          orderBy: { createdAt: 'asc' },
-          select: { id: true },
-        });
-        if (pv) variantId = pv.id;
+        variantId =
+          (await this.repository.findFirstActiveVariantId(shopId, item.productId)) ?? undefined;
       }
 
       if (!variantId) {
@@ -268,7 +270,8 @@ export class WebRentalService {
       });
     }
 
-    const shippingFee = req.delivery.method === 'shop_delivery' ? STANDARD_SHIPPING_FEE : 0;
+    const standardShippingFee = policy.delivery.standardShippingFee;
+    const shippingFee = req.delivery.method === 'shop_delivery' ? standardShippingFee : 0;
 
     const order = await this.repository.createOrder({
       orderNumber: generateDatedReference('RT'),
@@ -299,7 +302,10 @@ export class WebRentalService {
         addressLine: req.delivery.address,
         shippingFee,
       },
-      collateral: { method: 'CASH' },
+      collateral: {
+        method: collateralMethod,
+        ...(collateralMethod === 'DOCUMENT' && documentType ? { documentType } : {}),
+      },
     });
 
     if (!order) {
@@ -311,6 +317,7 @@ export class WebRentalService {
       totalAmount: Number(order.grandTotal),
       depositAmount: Number(order.depositRequired),
       status: order.status.toLowerCase(),
+      paymentStatus: (order.paymentStatus || 'UNPAID').toLowerCase(),
     };
   }
 
@@ -325,68 +332,29 @@ export class WebRentalService {
       throw new NotFoundException('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
     }
 
-    const order = await this.prisma.rentalOrder.findFirst({
-      where: {
-        shopId,
-        orderNumber: req.orderCode.trim(),
-      },
-      include: {
-        customer: true,
-        items: {
-          include: {
-            product: {
-              include: {
-                media: {
-                  where: { isPrimary: true },
-                  take: 1,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    const order = await this.repository.lookupStorefrontOrder(shopId, req.orderCode);
 
-    if (!order || order.customer.normalizedPhone !== normalizedPhone) {
+    if (!order || order.customerNormalizedPhone !== normalizedPhone) {
       throw new NotFoundException('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
     }
 
-    const rawPhone = order.customer.phone;
+    const rawPhone = order.customerPhone;
     const maskedPhone =
       rawPhone.length >= 7
         ? `${rawPhone.slice(0, 3)}****${rawPhone.slice(-3)}`
         : rawPhone;
 
-    const items = order.items.map((item) => ({
-      name: item.productNameSnapshot,
-      imageUrl: item.product?.media?.[0]?.url ?? '',
-      quantity: item.quantity,
-    }));
-
-    const payments = await this.prisma.paymentTransaction.aggregate({
-      where: {
-        shopId,
-        orderId: order.id,
-        status: 'COMPLETED',
-        voidedAt: null,
-        direction: 'INBOUND',
-      },
-      _sum: { amount: true },
-    });
-
-    const paidAmount = payments._sum?.amount ? decimalToNumber(payments._sum.amount) : 0;
-
     return {
       orderCode: order.orderNumber,
-      customerName: order.customer.fullName,
+      customerName: order.customerFullName,
       phoneMasked: maskedPhone,
       pickupDate: order.rentalStartAt.toISOString().slice(0, 10),
       returnDate: order.rentalEndAt.toISOString().slice(0, 10),
-      status: order.status.toLowerCase(),
-      totalAmount: decimalToNumber(order.grandTotal),
-      depositAmount: decimalToNumber(order.depositRequired),
-      paidAmount,
-      items,
+      status: order.status,
+      totalAmount: order.grandTotal,
+      depositAmount: order.depositRequired,
+      paidAmount: order.paidAmount,
+      items: order.items,
     };
   }
 }

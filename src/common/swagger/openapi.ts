@@ -8,35 +8,77 @@ export interface OpenApiOptions {
   appUrl?: string;
 }
 
+export const WEB_SURFACE_TAGS = new Set([
+  'Web - Catalog',
+  'Web - Rental Orders',
+  'Web - Policies',
+]);
+
+export const ADMIN_SURFACE_TAGS = new Set([
+  'Admin - Catalog',
+  'Admin - Rental Orders',
+  'Auth',
+  'Customers',
+  'Finance',
+  'Dashboard',
+  'Settings',
+  'Reports',
+  'Reminders',
+  'Delivery',
+  'Members & RBAC',
+  'Health',
+  'Audit',
+]);
+
+interface SurfaceSpecConfig {
+  surface: 'admin' | 'web';
+  allowedTags: Set<string>;
+  pathMatcher: (path: string) => boolean;
+  meta: { title: string; description: string };
+  includeAuth: boolean;
+}
+
 function filterOpenApiDocument(
   baseDoc: OpenAPIObject,
-  pathPredicate: (path: string) => boolean,
-  meta: { title: string; description: string },
-  includeAuth = true,
+  config: SurfaceSpecConfig,
 ): OpenAPIObject {
   const filteredPaths: OpenAPIObject['paths'] = {};
   const usedTags = new Set<string>();
   const usedSchemas = new Set<string>();
 
+  const methods = [
+    'get',
+    'post',
+    'put',
+    'delete',
+    'patch',
+    'options',
+    'head',
+    'trace',
+  ] as const;
+
   for (const [pathKey, pathItem] of Object.entries(baseDoc.paths || {})) {
-    if (pathPredicate(pathKey)) {
-      filteredPaths[pathKey] = pathItem;
-      const methods = [
-        'get',
-        'post',
-        'put',
-        'delete',
-        'patch',
-        'options',
-        'head',
-        'trace',
-      ] as const;
-      for (const m of methods) {
-        const op = pathItem?.[m];
-        if (op?.tags) {
-          for (const t of op.tags) usedTags.add(t);
+    if (!config.pathMatcher(pathKey) || !pathItem) continue;
+
+    // Check operations on this path
+    let hasMatchingOperation = false;
+    for (const m of methods) {
+      const op = pathItem[m];
+      if (op?.tags) {
+        const matchesSurface = op.tags.some((t) => config.allowedTags.has(t));
+        if (matchesSurface) {
+          hasMatchingOperation = true;
+          for (const t of op.tags) {
+            if (config.allowedTags.has(t)) {
+              usedTags.add(t);
+            }
+          }
         }
       }
+    }
+
+    if (hasMatchingOperation) {
+      filteredPaths[pathKey] = pathItem;
     }
   }
 
@@ -83,7 +125,7 @@ function filterOpenApiDocument(
     schemas: filteredSchemas,
   };
 
-  if (!includeAuth && components.securitySchemes) {
+  if (!config.includeAuth && components.securitySchemes) {
     delete components.securitySchemes;
   }
 
@@ -91,13 +133,13 @@ function filterOpenApiDocument(
     ...baseDoc,
     info: {
       ...baseDoc.info,
-      title: meta.title,
-      description: meta.description,
+      title: config.meta.title,
+      description: config.meta.description,
     },
     paths: filteredPaths,
     tags: filteredTags.length > 0 ? filteredTags : undefined,
     components,
-    security: includeAuth ? baseDoc.security : undefined,
+    security: config.includeAuth ? baseDoc.security : undefined,
   };
 }
 
@@ -135,21 +177,27 @@ function isWebPath(path: string): boolean {
   return /(?:^|\/)web(?:\/|$)/.test(path);
 }
 
+function isAdminPath(path: string): boolean {
+  // Matches all admin endpoints, compatibility paths, and private endpoints
+  return !isWebPath(path);
+}
+
 export function createAdminOpenApiDocument(
   app: INestApplication,
   options: OpenApiOptions,
 ): OpenAPIObject {
   const baseDoc = createBaseOpenApiDocument(app, options);
-  return filterOpenApiDocument(
-    baseDoc,
-    (path) => !isWebPath(path),
-    {
+  return filterOpenApiDocument(baseDoc, {
+    surface: 'admin',
+    allowedTags: ADMIN_SURFACE_TAGS,
+    pathMatcher: isAdminPath,
+    meta: {
       title: `${options.appName} - Admin API`,
       description:
         'Rental shop admin API for staff & operations (kitty-admin-fe). Tenant scope comes from the authenticated shop membership. Monetary values are decimal-safe values.',
     },
-    true,
-  );
+    includeAuth: true,
+  });
 }
 
 export function createWebOpenApiDocument(
@@ -157,16 +205,17 @@ export function createWebOpenApiDocument(
   options: OpenApiOptions,
 ): OpenAPIObject {
   const baseDoc = createBaseOpenApiDocument(app, options);
-  return filterOpenApiDocument(
-    baseDoc,
-    (path) => isWebPath(path),
-    {
+  return filterOpenApiDocument(baseDoc, {
+    surface: 'web',
+    allowedTags: WEB_SURFACE_TAGS,
+    pathMatcher: isWebPath,
+    meta: {
       title: `${options.appName} - Web Sale API`,
       description:
         'Public Web Storefront & Sale API for customer storefront (kitty-web-nextjs). Authoritative server-side pricing and inventory availability.',
     },
-    false,
-  );
+    includeAuth: false,
+  });
 }
 
 export function createOpenApiDocument(

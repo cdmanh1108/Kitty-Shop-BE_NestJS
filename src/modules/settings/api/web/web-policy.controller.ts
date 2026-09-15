@@ -1,3 +1,4 @@
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import { Controller, Get, Inject, Req } from '@nestjs/common';
@@ -11,6 +12,7 @@ import { WebRentalPolicyDto } from './dto/web-policy.dto';
 
 @Public()
 @ApiTags('Web - Policies')
+@ApiSurface('web')
 @Controller('web')
 export class WebPolicyController {
   constructor(
@@ -29,7 +31,7 @@ export class WebPolicyController {
       depositDocumentTypes: policy.deposit.allowedDocumentTypes,
       defaultDepositAmount: policy.deposit.defaultCashDeposit,
       lateFeePerItemPerDay: policy.lateReturn.feePerItemPerDay,
-      standardShippingFee: 30000,
+      standardShippingFee: policy.delivery.standardShippingFee,
     };
   }
 }

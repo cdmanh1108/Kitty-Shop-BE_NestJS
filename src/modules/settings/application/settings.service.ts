@@ -61,6 +61,11 @@ function buildEffectivePolicy(saved?: RentalPolicy | null): RentalPolicy {
         saved?.loyalty?.stackableWithPromotions ??
         DEFAULT_RENTAL_POLICY.loyalty.stackableWithPromotions,
     },
+    delivery: {
+      standardShippingFee:
+        saved?.delivery?.standardShippingFee ??
+        DEFAULT_RENTAL_POLICY.delivery.standardShippingFee,
+    },
   };
 }
 
@@ -81,6 +86,10 @@ function mergePolicyInput(base: RentalPolicy, input: UpdateRentalPolicyInput): R
       categoryOverrides: input.deposit?.categoryOverrides
         ? input.deposit.categoryOverrides.map((item) => ({ ...item }))
         : [...base.deposit.categoryOverrides],
+    },
+    delivery: {
+      standardShippingFee:
+        input.delivery?.standardShippingFee ?? base.delivery.standardShippingFee,
     },
     reschedule: {
       maxDaysFromBooking:

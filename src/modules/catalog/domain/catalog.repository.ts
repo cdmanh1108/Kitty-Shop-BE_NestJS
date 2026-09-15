@@ -21,6 +21,10 @@ import type {
   InventoryPage,
   ProductDetails,
   ProductPage,
+  StorefrontCategory,
+  StorefrontProductDetails,
+  StorefrontProductListCriteria,
+  StorefrontProductPage,
   UpdateProductResult,
   UpsertRentalRateResult,
 } from './catalog.models';
@@ -50,6 +54,12 @@ export class CatalogCategoryInvalidParentError extends CatalogInvariantError {
 export const CATALOG_REPOSITORY = Symbol('CATALOG_REPOSITORY');
 
 export interface CatalogRepository {
+  listStorefrontCategories(shopId: string): Promise<StorefrontCategory[]>;
+  listStorefrontProducts(input: StorefrontProductListCriteria): Promise<StorefrontProductPage>;
+  findStorefrontProductBySlug(
+    shopId: string,
+    slug: string,
+  ): Promise<StorefrontProductDetails | null>;
   lookupProducts(
     input: CatalogListProductsCriteria & { productId?: string },
   ): Promise<ProductLookupPage>;
@@ -135,6 +145,7 @@ export interface CatalogRepository {
 export interface CreateProductData {
   code: string;
   name: string;
+  slug?: string;
   categoryId: string;
   description?: string;
   defaultDepositAmount: number;
@@ -155,6 +166,7 @@ export interface CreateProductData {
 
 export interface UpdateProductData {
   name?: string;
+  slug?: string;
   categoryId?: string;
   description?: string;
   defaultDepositAmount?: number;

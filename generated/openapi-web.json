@@ -34,7 +34,7 @@
             "name": "q",
             "required": false,
             "in": "query",
-            "description": "Từ khóa tìm kiếm theo tên, mã, màu, size",
+            "description": "Từ khóa tìm kiếm theo tên, mã hoặc mô tả",
             "schema": {
               "type": "string"
             }
@@ -43,7 +43,7 @@
             "name": "category",
             "required": false,
             "in": "query",
-            "description": "Lọc theo slug hoặc id danh mục",
+            "description": "Lọc theo slug, mã hoặc id danh mục",
             "schema": {
               "type": "string"
             }
@@ -72,25 +72,17 @@
             "name": "sort",
             "required": false,
             "in": "query",
+            "description": "Thứ tự sắp xếp sản phẩm",
             "schema": {
-              "example": "price-asc",
+              "example": "newest",
               "type": "string",
               "enum": [
-                "price-asc",
-                "price-desc",
-                "name",
-                "featured"
+                "newest",
+                "price_asc",
+                "price_desc",
+                "name_asc",
+                "name_desc"
               ]
-            }
-          },
-          {
-            "name": "featured",
-            "required": false,
-            "in": "query",
-            "description": "Chỉ lấy sản phẩm nổi bật",
-            "schema": {
-              "example": true,
-              "type": "boolean"
             }
           },
           {
@@ -120,16 +112,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WebProductListItemDto"
-                  }
+                  "$ref": "#/components/schemas/WebProductListResDto"
                 }
               }
             }
           }
         },
-        "summary": "Danh sách sản phẩm công khai cho storefront",
+        "summary": "Danh sách sản phẩm công khai cho storefront có phân trang",
         "tags": [
           "Web - Catalog"
         ]
@@ -406,106 +395,22 @@
           "slug"
         ]
       },
-      "WebProductListItemDto": {
+      "WebProductListResDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string",
-            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-          },
-          "code": {
-            "type": "string",
-            "example": "SP-001"
-          },
-          "slug": {
-            "type": "string",
-            "example": "dam-da-hoi-trang"
-          },
-          "name": {
-            "type": "string",
-            "example": "Đầm dạ hội trắng lụa cao cấp"
-          },
-          "categoryId": {
-            "type": "string",
-            "example": "b6e82c18-9717-484d-a915-c26663f721d6"
-          },
-          "categoryName": {
-            "type": "string",
-            "example": "Váy thiết kế"
-          },
-          "imageUrl": {
-            "type": "string",
-            "example": "https://images.unsplash.com/photo-1"
-          },
-          "gallery": {
-            "example": [
-              "https://images.unsplash.com/photo-1"
-            ],
+          "items": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/WebProductListItemDto"
             }
           },
-          "size": {
-            "type": "string",
-            "example": "S"
-          },
-          "color": {
-            "type": "string",
-            "example": "Trắng"
-          },
-          "rentalPrices": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WebRentalPriceDto"
-            }
-          },
-          "depositAmount": {
-            "type": "number",
-            "example": 500000,
-            "description": "Tiền cọc dự kiến (VND)"
-          },
-          "status": {
-            "type": "string",
-            "example": "available"
-          },
-          "isRentable": {
-            "type": "boolean",
-            "example": true
-          },
-          "featured": {
-            "type": "boolean",
-            "example": true
-          },
-          "tags": {
-            "example": [
-              "tiệc",
-              "dạ hội",
-              "trắng"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
+          "meta": {
+            "$ref": "#/components/schemas/WebPaginationMetaDto"
           }
         },
         "required": [
-          "id",
-          "code",
-          "slug",
-          "name",
-          "categoryId",
-          "categoryName",
-          "imageUrl",
-          "gallery",
-          "size",
-          "color",
-          "rentalPrices",
-          "depositAmount",
-          "status",
-          "isRentable",
-          "featured",
-          "tags"
+          "items",
+          "meta"
         ]
       },
       "WebProductDetailDto": {
@@ -575,21 +480,6 @@
             "type": "boolean",
             "example": true
           },
-          "featured": {
-            "type": "boolean",
-            "example": true
-          },
-          "tags": {
-            "example": [
-              "tiệc",
-              "dạ hội",
-              "trắng"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "description": {
             "type": "string",
             "example": "Chất liệu lụa satin cao cấp, phù hợp tiệc tối."
@@ -620,8 +510,6 @@
           "depositAmount",
           "status",
           "isRentable",
-          "featured",
-          "tags",
           "variants"
         ]
       },
@@ -752,6 +640,9 @@
               "bank_transfer",
               "momo"
             ]
+          },
+          "collateral": {
+            "$ref": "#/components/schemas/WebCreateOrderCollateralDto"
           }
         },
         "required": [
@@ -780,14 +671,24 @@
           },
           "status": {
             "type": "string",
-            "example": "pending"
+            "example": "reserved"
+          },
+          "paymentStatus": {
+            "type": "string",
+            "example": "unpaid",
+            "enum": [
+              "unpaid",
+              "paid",
+              "partially_paid"
+            ]
           }
         },
         "required": [
           "orderCode",
           "totalAmount",
           "depositAmount",
-          "status"
+          "status",
+          "paymentStatus"
         ]
       },
       "WebOrderLookupReqDto": {
@@ -917,6 +818,118 @@
           "standardShippingFee"
         ]
       },
+      "WebProductListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "code": {
+            "type": "string",
+            "example": "SP-001"
+          },
+          "slug": {
+            "type": "string",
+            "example": "dam-da-hoi-trang"
+          },
+          "name": {
+            "type": "string",
+            "example": "Đầm dạ hội trắng lụa cao cấp"
+          },
+          "categoryId": {
+            "type": "string",
+            "example": "b6e82c18-9717-484d-a915-c26663f721d6"
+          },
+          "categoryName": {
+            "type": "string",
+            "example": "Váy thiết kế"
+          },
+          "imageUrl": {
+            "type": "string",
+            "example": "https://images.unsplash.com/photo-1"
+          },
+          "gallery": {
+            "example": [
+              "https://images.unsplash.com/photo-1"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "size": {
+            "type": "string",
+            "example": "S"
+          },
+          "color": {
+            "type": "string",
+            "example": "Trắng"
+          },
+          "rentalPrices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebRentalPriceDto"
+            }
+          },
+          "depositAmount": {
+            "type": "number",
+            "example": 500000,
+            "description": "Tiền cọc dự kiến (VND)"
+          },
+          "status": {
+            "type": "string",
+            "example": "available"
+          },
+          "isRentable": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "slug",
+          "name",
+          "categoryId",
+          "categoryName",
+          "imageUrl",
+          "gallery",
+          "size",
+          "color",
+          "rentalPrices",
+          "depositAmount",
+          "status",
+          "isRentable"
+        ]
+      },
+      "WebPaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "total": {
+            "type": "number",
+            "example": 45
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
       "WebRentalPriceDto": {
         "type": "object",
         "properties": {
@@ -1035,6 +1048,27 @@
         "required": [
           "method"
         ]
+      },
+      "WebCreateOrderCollateralDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "example": "CASH",
+            "enum": [
+              "CASH",
+              "DOCUMENT"
+            ]
+          },
+          "documentType": {
+            "type": "string",
+            "example": "CCCD",
+            "enum": [
+              "CCCD",
+              "GPLX"
+            ]
+          }
+        }
       },
       "WebOrderLookupItemDto": {
         "type": "object",

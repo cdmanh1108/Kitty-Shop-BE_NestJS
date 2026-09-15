@@ -39,9 +39,14 @@ export interface LoyaltyPolicy {
   stackableWithPromotions: boolean;
 }
 
+export interface DeliveryPolicy {
+  standardShippingFee: number;
+}
+
 export interface RentalPolicy {
   rentalPricing: RentalPricingPolicy;
   deposit: DepositPolicy;
+  delivery: DeliveryPolicy;
   reschedule: ReschedulePolicy;
   lateReturn: LateReturnPolicy;
   specialCleaning: SpecialCleaningPolicy;
@@ -58,6 +63,9 @@ export const DEFAULT_RENTAL_POLICY: RentalPolicy = {
     allowedDocumentTypes: ['CCCD', 'GPLX'],
     defaultCashDeposit: 200_000,
     categoryOverrides: [],
+  },
+  delivery: {
+    standardShippingFee: 30_000,
   },
   reschedule: {
     maxDaysFromBooking: 20,

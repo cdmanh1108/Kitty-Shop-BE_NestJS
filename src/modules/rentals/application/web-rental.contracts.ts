@@ -49,6 +49,10 @@ export interface WebCreateOrderInput {
     address?: string;
   };
   paymentMethod: 'cash' | 'bank_transfer' | 'momo';
+  collateral?: {
+    method?: 'CASH' | 'DOCUMENT';
+    documentType?: 'CCCD' | 'GPLX';
+  };
 }
 
 export interface WebCreateOrderResult {
@@ -56,6 +60,7 @@ export interface WebCreateOrderResult {
   totalAmount: number;
   depositAmount: number;
   status: string;
+  paymentStatus: string;
 }
 
 export interface WebOrderLookupInput {

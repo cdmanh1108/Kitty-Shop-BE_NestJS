@@ -1,9 +1,10 @@
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { type Prisma, type PrismaClient } from '@prisma/client';
 
-import { type RentalRepository } from '../domain/rental.repository';
+import { type RentalRepository, type StorefrontOrderLookupRecord } from '../domain/rental.repository';
 
 export async function customerExists(
   prisma: PrismaService,
@@ -171,4 +172,102 @@ export function getWithTx(
       statusHistory: { orderBy: { changedAt: 'asc' } },
     },
   });
+}
+
+export async function findActiveVariantIdsByProduct(
+  prisma: PrismaService,
+  shopId: string,
+  productId: string,
+): Promise<string[]> {
+  const variants = await prisma.productVariant.findMany({
+    where: {
+      productId,
+      shopId,
+      status: 'ACTIVE',
+      archivedAt: null,
+    },
+    select: { id: true },
+  });
+  return variants.map((v) => v.id);
+}
+
+export async function findFirstActiveVariantId(
+  prisma: PrismaService,
+  shopId: string,
+  productId: string,
+): Promise<string | null> {
+  const pv = await prisma.productVariant.findFirst({
+    where: {
+      productId,
+      shopId,
+      status: 'ACTIVE',
+      archivedAt: null,
+    },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
+  });
+  return pv?.id ?? null;
+}
+
+export async function lookupStorefrontOrder(
+  prisma: PrismaService,
+  shopId: string,
+  orderNumber: string,
+): Promise<StorefrontOrderLookupRecord | null> {
+  const order = await prisma.rentalOrder.findFirst({
+    where: {
+      shopId,
+      orderNumber: orderNumber.trim(),
+    },
+    include: {
+      customer: true,
+      items: {
+        include: {
+          product: {
+            include: {
+              media: {
+                where: { isPrimary: true },
+                take: 1,
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    return null;
+  }
+
+  const payments = await prisma.paymentTransaction.aggregate({
+    where: {
+      shopId,
+      orderId: order.id,
+      status: 'COMPLETED',
+      voidedAt: null,
+      direction: 'INBOUND',
+    },
+    _sum: { amount: true },
+  });
+
+  const paidAmount = payments._sum?.amount ? decimalToNumber(payments._sum.amount) : 0;
+
+  return {
+    orderNumber: order.orderNumber,
+    customerFullName: order.customer.fullName,
+    customerPhone: order.customer.phone,
+    customerNormalizedPhone: order.customer.normalizedPhone,
+    rentalStartAt: order.rentalStartAt,
+    rentalEndAt: order.rentalEndAt,
+    status: order.status.toLowerCase(),
+    grandTotal: decimalToNumber(order.grandTotal),
+    depositRequired: decimalToNumber(order.depositRequired),
+    paidAmount,
+    items: order.items.map((item) => ({
+      name: item.productNameSnapshot,
+      imageUrl: item.product?.media?.[0]?.url ?? '',
+      quantity: item.quantity,
+    })),
+  };
 }

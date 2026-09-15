@@ -140,8 +140,6 @@ export function toWebProductListItem(product: RawProduct): WebProductListItemDto
     depositAmount,
     status: product.status?.toLowerCase() ?? 'available',
     isRentable: product.isRentable ?? true,
-    featured: false,
-    tags: product.tags ?? [],
   };
 }
 

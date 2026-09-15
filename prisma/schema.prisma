@@ -389,6 +389,7 @@ model Product {
   @@unique([shopId, code])
   @@index([shopId, categoryId, status])
   @@index([shopId, name])
+  @@index([shopId, slug])
   @@map("products")
 }
 

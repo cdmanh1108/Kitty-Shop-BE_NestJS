@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class WebRentalPriceDto {
   @ApiProperty({ example: 3, description: 'Số ngày thuê' })
@@ -86,12 +86,6 @@ export class WebProductListItemDto {
 
   @ApiProperty({ example: true })
   isRentable!: boolean;
-
-  @ApiProperty({ example: true })
-  featured!: boolean;
-
-  @ApiProperty({ type: [String], example: ['tiệc', 'dạ hội', 'trắng'] })
-  tags!: string[];
 }
 
 export class WebProductDetailDto extends WebProductListItemDto {
@@ -105,13 +99,35 @@ export class WebProductDetailDto extends WebProductListItemDto {
   variants!: WebProductVariantSummaryDto[];
 }
 
+export class WebPaginationMetaDto {
+  @ApiProperty({ example: 1 })
+  page!: number;
+
+  @ApiProperty({ example: 20 })
+  limit!: number;
+
+  @ApiProperty({ example: 45 })
+  total!: number;
+
+  @ApiProperty({ example: 3 })
+  totalPages!: number;
+}
+
+export class WebProductListResDto {
+  @ApiProperty({ type: [WebProductListItemDto] })
+  items!: WebProductListItemDto[];
+
+  @ApiProperty({ type: WebPaginationMetaDto })
+  meta!: WebPaginationMetaDto;
+}
+
 export class WebProductListQueryDto {
-  @ApiPropertyOptional({ description: 'Từ khóa tìm kiếm theo tên, mã, màu, size' })
+  @ApiPropertyOptional({ description: 'Từ khóa tìm kiếm theo tên, mã hoặc mô tả' })
   @IsOptional()
   @IsString()
   q?: string;
 
-  @ApiPropertyOptional({ description: 'Lọc theo slug hoặc id danh mục' })
+  @ApiPropertyOptional({ description: 'Lọc theo slug, mã hoặc id danh mục' })
   @IsOptional()
   @IsString()
   category?: string;
@@ -126,16 +142,14 @@ export class WebProductListQueryDto {
   @IsString()
   color?: string;
 
-  @ApiPropertyOptional({ example: 'price-asc', enum: ['price-asc', 'price-desc', 'name', 'featured'] })
+  @ApiPropertyOptional({
+    example: 'newest',
+    enum: ['newest', 'price_asc', 'price_desc', 'name_asc', 'name_desc'],
+    description: 'Thứ tự sắp xếp sản phẩm',
+  })
   @IsOptional()
-  @IsString()
-  sort?: string;
-
-  @ApiPropertyOptional({ example: true, description: 'Chỉ lấy sản phẩm nổi bật' })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  featured?: boolean;
+  @IsIn(['newest', 'price_asc', 'price_desc', 'name_asc', 'name_desc'])
+  sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
 
   @ApiPropertyOptional({ example: 1, default: 1 })
   @IsOptional()

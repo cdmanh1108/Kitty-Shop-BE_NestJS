@@ -1,3 +1,4 @@
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
@@ -17,6 +18,7 @@ import {
 
 @Public()
 @ApiTags('Web - Rental Orders')
+@ApiSurface('web')
 @Controller('web')
 export class WebRentalController {
   constructor(

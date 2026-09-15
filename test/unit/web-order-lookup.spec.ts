@@ -1,60 +1,51 @@
 import { NotFoundException } from '@nestjs/common';
 import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
 import type { RentalRepository } from '../../src/modules/rentals/domain/rental.repository';
-import type { PrismaService } from '../../src/database/prisma/prisma.service';
-
-interface MockPrisma {
-  rentalOrder: {
-    findFirst: jest.Mock;
-  };
-  paymentTransaction: {
-    aggregate: jest.Mock;
-  };
-}
+import type { RentalPolicyProvider } from '../../src/modules/settings/domain/rental-policy';
+import type { CustomerRepository } from '../../src/modules/customers/domain/customer.repository';
+import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 
 describe('Web Order Lookup Security and Behavior', () => {
   let service: WebRentalService;
-  let mockPrisma: MockPrisma;
+  let mockRepository: {
+    lookupStorefrontOrder: jest.Mock;
+  };
 
   beforeEach(() => {
-    mockPrisma = {
-      rentalOrder: {
-        findFirst: jest.fn(),
-      },
-      paymentTransaction: {
-        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 150000 } }),
-      },
+    mockRepository = {
+      lookupStorefrontOrder: jest.fn(),
     };
 
+    const mockPolicyProvider: RentalPolicyProvider = {
+      getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY),
+    };
+
+    const mockCustomerRepo: Partial<CustomerRepository> = {};
+
     service = new WebRentalService(
-      {} as RentalRepository,
-      mockPrisma as unknown as PrismaService,
+      mockRepository as unknown as RentalRepository,
+      mockPolicyProvider,
+      mockCustomerRepo as unknown as CustomerRepository,
     );
   });
 
   it('successfully returns sanitized order details when orderCode and phone match', async () => {
-    mockPrisma.rentalOrder.findFirst.mockResolvedValue({
-      id: 'order-uuid-1',
+    mockRepository.lookupStorefrontOrder.mockResolvedValue({
       orderNumber: 'RT-20260920-001',
-      status: 'CONFIRMED',
+      status: 'confirmed',
       grandTotal: 450000,
       depositRequired: 500000,
+      paidAmount: 150000,
       rentalStartAt: new Date('2026-09-20T09:00:00.000Z'),
       rentalEndAt: new Date('2026-09-23T18:00:00.000Z'),
-      internalNote: 'Khách VIP, cần kiểm tra kỹ trước khi giao',
-      customer: {
-        id: 'cust-1',
-        fullName: 'Nguyễn Thị Mai',
-        phone: '0912345678',
-        normalizedPhone: '0912345678',
-      },
+      customerFullName: 'Nguyễn Thị Mai',
+      customerPhone: '0912345678',
+      customerNormalizedPhone: '0912345678',
       items: [
         {
-          productNameSnapshot: 'Đầm dạ hội đỏ',
+          name: 'Đầm dạ hội đỏ',
           quantity: 1,
-          product: {
-            media: [{ url: 'https://img.com/red-dress.jpg' }],
-          },
+          imageUrl: 'https://img.com/red-dress.jpg',
         },
       ],
     });
@@ -87,15 +78,17 @@ describe('Web Order Lookup Security and Behavior', () => {
   });
 
   it('rejects with NotFoundException when phone number does not match order owner', async () => {
-    mockPrisma.rentalOrder.findFirst.mockResolvedValue({
-      id: 'order-uuid-1',
+    mockRepository.lookupStorefrontOrder.mockResolvedValue({
       orderNumber: 'RT-20260920-001',
-      customer: {
-        id: 'cust-1',
-        fullName: 'Nguyễn Thị Mai',
-        phone: '0912345678',
-        normalizedPhone: '0912345678',
-      },
+      status: 'confirmed',
+      grandTotal: 450000,
+      depositRequired: 500000,
+      paidAmount: 0,
+      rentalStartAt: new Date('2026-09-20T09:00:00.000Z'),
+      rentalEndAt: new Date('2026-09-23T18:00:00.000Z'),
+      customerFullName: 'Nguyễn Thị Mai',
+      customerPhone: '0912345678',
+      customerNormalizedPhone: '0912345678',
       items: [],
     });
 
@@ -109,7 +102,7 @@ describe('Web Order Lookup Security and Behavior', () => {
   });
 
   it('rejects with NotFoundException when orderCode does not exist', async () => {
-    mockPrisma.rentalOrder.findFirst.mockResolvedValue(null);
+    mockRepository.lookupStorefrontOrder.mockResolvedValue(null);
 
     await expect(
       service.lookupOrder('shop-1', {

@@ -11,6 +11,6 @@ import { PrismaCustomerRepository } from './infrastructure/prisma-customer.repos
     PrismaCustomerRepository,
     { provide: CUSTOMER_REPOSITORY, useExisting: PrismaCustomerRepository },
   ],
-  exports: [CustomerService],
+  exports: [CustomerService, CUSTOMER_REPOSITORY],
 })
 export class CustomersModule {}

@@ -65,6 +65,9 @@ describe('CatalogService - Product Management', () => {
       listInventory: jest.fn(),
       findInventoryItem: jest.fn(),
       findAvailableInventory: jest.fn(),
+      listStorefrontCategories: jest.fn(),
+      listStorefrontProducts: jest.fn(),
+      findStorefrontProductBySlug: jest.fn(),
     };
     audit = {
       log: auditLogMock,

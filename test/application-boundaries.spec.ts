@@ -47,6 +47,9 @@ function rentalRepository(): jest.Mocked<RentalRepository> {
     getReturnPreview: jest.fn(),
     claimIdempotency: jest.fn(),
     releaseIdempotency: jest.fn(),
+    findActiveVariantIdsByProduct: jest.fn(),
+    findFirstActiveVariantId: jest.fn(),
+    lookupStorefrontOrder: jest.fn(),
   };
 }
 const audit = (): AuditPort => ({ log: () => Promise.resolve() });
@@ -206,6 +209,32 @@ describe('inner-layer import guard', () => {
           ts.forEachChild(node, visit);
         }
         visit(ast);
+      }
+    }
+    scan(join(process.cwd(), 'src/modules'));
+    expect(violations).toEqual([]);
+  });
+});
+
+describe('web layer architecture boundaries', () => {
+  it('ensures web controllers and application services never import PrismaService directly', () => {
+    const violations: string[] = [];
+    function scan(dir: string) {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const file = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scan(file);
+          continue;
+        }
+        if (!file.endsWith('.ts')) continue;
+        const isWebController = file.includes('/api/web/') || file.includes('\\api\\web\\');
+        const isApplication = file.includes('/application/') || file.includes('\\application\\');
+        if (!isWebController && !isApplication) continue;
+
+        const source = readFileSync(file, 'utf8');
+        if (source.includes('PrismaService') || source.includes('@database/prisma/prisma.service')) {
+          violations.push(`${file}: forbidden PrismaService dependency`);
+        }
       }
     }
     scan(join(process.cwd(), 'src/modules'));

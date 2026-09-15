@@ -66,7 +66,10 @@ import {
   toTransitionRentalInput,
 } from '../rental.mapper';
 
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
+
 @ApiTags('Admin - Rental Orders')
+@ApiSurface('admin')
 @ApiBearerAuth('access-token')
 @Controller(['admin/rental-orders', 'rental-orders'])
 export class AdminRentalController {

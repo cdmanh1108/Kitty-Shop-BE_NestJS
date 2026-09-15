@@ -71,6 +71,8 @@ describe('OpenAPI Separation Specification', () => {
 
       // Must have storefront schemas
       expect(schemas).toContain('WebProductListItemDto');
+      expect(schemas).toContain('WebProductListResDto');
+      expect(schemas).toContain('WebPaginationMetaDto');
       expect(schemas).toContain('WebProductDetailDto');
       expect(schemas).toContain('WebRentalQuoteReqDto');
       expect(schemas).toContain('WebRentalQuoteResDto');

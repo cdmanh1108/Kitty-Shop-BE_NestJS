@@ -62,6 +62,9 @@ describe('CatalogService - Inventory', () => {
       listInventory: listInventoryMock,
       findInventoryItem: findInventoryItemMock,
       findAvailableInventory: jest.fn(),
+      listStorefrontCategories: jest.fn(),
+      listStorefrontProducts: jest.fn(),
+      findStorefrontProductBySlug: jest.fn(),
     };
     audit = {
       log: auditLogMock,

@@ -27,6 +27,11 @@ import {
   removeProductMedia,
 } from './product-commands';
 import {
+  listStorefrontCategories,
+  listStorefrontProducts,
+  findStorefrontProductBySlug,
+} from './storefront-queries';
+import {
   addInventoryItem,
   updateInventoryStatus,
   archiveInventoryItem,
@@ -41,6 +46,25 @@ export class PrismaCatalogRepository implements CatalogRepository {
     private readonly prisma: PrismaService,
     @Inject(PUBLIC_MEDIA_URL_RESOLVER) private readonly mediaUrls: PublicMediaUrlResolver,
   ) {}
+
+  listStorefrontCategories(
+    shopId: string,
+  ): ReturnType<CatalogRepository['listStorefrontCategories']> {
+    return listStorefrontCategories(this.prisma, shopId);
+  }
+
+  listStorefrontProducts(
+    input: Parameters<CatalogRepository['listStorefrontProducts']>[0],
+  ): ReturnType<CatalogRepository['listStorefrontProducts']> {
+    return listStorefrontProducts(this.prisma, this.mediaUrls, input);
+  }
+
+  findStorefrontProductBySlug(
+    shopId: string,
+    slug: string,
+  ): ReturnType<CatalogRepository['findStorefrontProductBySlug']> {
+    return findStorefrontProductBySlug(this.prisma, this.mediaUrls, shopId, slug);
+  }
 
   lookupProducts(
     ...args: Parameters<CatalogRepository['lookupProducts']>

@@ -1,5 +1,6 @@
 import type { JsonValue } from '@common/types/json';
 import type {
+  DeliveryPolicy,
   DepositPolicy,
   LateReturnPolicy,
   LoyaltyPolicy,
@@ -26,6 +27,7 @@ export interface UpsertSettingInput {
 export interface UpdateRentalPolicyInput {
   rentalPricing?: Partial<RentalPricingPolicy>;
   deposit?: Partial<DepositPolicy>;
+  delivery?: Partial<DeliveryPolicy>;
   reschedule?: Partial<ReschedulePolicy>;
   lateReturn?: Partial<LateReturnPolicy>;
   specialCleaning?: Partial<SpecialCleaningPolicy>;

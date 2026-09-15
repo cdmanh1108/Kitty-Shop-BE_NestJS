@@ -150,6 +150,18 @@ export class WebCreateOrderDeliveryDto {
   address?: string;
 }
 
+export class WebCreateOrderCollateralDto {
+  @ApiPropertyOptional({ example: 'CASH', enum: ['CASH', 'DOCUMENT'] })
+  @IsOptional()
+  @IsIn(['CASH', 'DOCUMENT'])
+  method?: 'CASH' | 'DOCUMENT';
+
+  @ApiPropertyOptional({ example: 'CCCD', enum: ['CCCD', 'GPLX'] })
+  @IsOptional()
+  @IsIn(['CCCD', 'GPLX'])
+  documentType?: 'CCCD' | 'GPLX';
+}
+
 export class WebCreateOrderReqDto {
   @ApiProperty({ type: WebCreateOrderCustomerDto })
   @ValidateNested()
@@ -181,6 +193,12 @@ export class WebCreateOrderReqDto {
   @ApiProperty({ example: 'bank_transfer', enum: ['cash', 'bank_transfer', 'momo'] })
   @IsIn(['cash', 'bank_transfer', 'momo'])
   paymentMethod!: 'cash' | 'bank_transfer' | 'momo';
+
+  @ApiPropertyOptional({ type: WebCreateOrderCollateralDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WebCreateOrderCollateralDto)
+  collateral?: WebCreateOrderCollateralDto;
 }
 
 export class WebCreateOrderResDto {
@@ -193,8 +211,11 @@ export class WebCreateOrderResDto {
   @ApiProperty({ example: 500000 })
   depositAmount!: number;
 
-  @ApiProperty({ example: 'pending' })
+  @ApiProperty({ example: 'reserved' })
   status!: string;
+
+  @ApiProperty({ example: 'unpaid', enum: ['unpaid', 'paid', 'partially_paid'] })
+  paymentStatus!: string;
 }
 
 export class WebOrderLookupReqDto {

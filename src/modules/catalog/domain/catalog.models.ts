@@ -139,3 +139,60 @@ export type InventoryDetails =
     });
 
 export type FindAvailableInventoryResult = Array<InventoryItemRecord>;
+
+export interface StorefrontCategory {
+  id: string;
+  code: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
+export interface StorefrontRentalPrice {
+  days: number;
+  amount: number;
+}
+
+export interface StorefrontProductVariant {
+  id: string;
+  code: string;
+  size?: string | null;
+  color?: string | null;
+  depositAmount?: number;
+}
+
+export interface StorefrontProductItem {
+  id: string;
+  code: string;
+  slug: string;
+  name: string;
+  categoryId: string;
+  categoryName: string;
+  imageUrl: string;
+  gallery: string[];
+  size: string;
+  color: string;
+  rentalPrices: StorefrontRentalPrice[];
+  depositAmount: number;
+  status: string;
+  isRentable: boolean;
+}
+
+export interface StorefrontProductDetails extends StorefrontProductItem {
+  description?: string | null;
+  facebookPostUrl?: string | null;
+  variants: StorefrontProductVariant[];
+}
+
+export type StorefrontProductPage = PaginatedResult<StorefrontProductItem>;
+
+export interface StorefrontProductListCriteria {
+  shopId: string;
+  page: number;
+  limit: number;
+  q?: string;
+  category?: string;
+  size?: string;
+  color?: string;
+  sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
+}

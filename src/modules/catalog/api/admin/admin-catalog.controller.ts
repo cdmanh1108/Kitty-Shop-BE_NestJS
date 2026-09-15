@@ -66,7 +66,10 @@ import {
   toUpsertRentalRateInput,
 } from '../catalog.mapper';
 
+import { ApiSurface } from '@common/decorators/api-surface.decorator';
+
 @ApiTags('Admin - Catalog')
+@ApiSurface('admin')
 @ApiBearerAuth('access-token')
 @Controller(['admin', ''])
 export class AdminCatalogController {
