@@ -174,3 +174,10 @@ from confirmation/settlement records without assigning an unknown historical pay
 method. New receipts and lifecycle changes commit atomically. Deposits remain separate
 from revenue; internal deposit offsets use paired entries. See
 [Admin confirmation](ADMIN_CONFIRMATION.md) for reconciliation and deployment details.
+
+## Dashboard allocation count index
+
+`202609150001_dashboard_allocation_count` adds
+`rental_item_allocations(shop_id, status, released_at)` for the Dashboard active
+occupancy count. Existing booking/overlap constraints are unchanged. See
+[Dashboard query audit](DASHBOARD.md).

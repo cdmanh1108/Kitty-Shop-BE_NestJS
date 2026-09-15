@@ -13,4 +13,7 @@ export interface DashboardSummaryData {
   dayEnd: Date;
   monthStart: Date;
   monthEnd: Date;
+  timezone: string;
+  seriesStart: Date;
+  dueSoonEnd: Date;
 }

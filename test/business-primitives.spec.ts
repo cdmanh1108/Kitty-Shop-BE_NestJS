@@ -156,6 +156,9 @@ describe('business Clock consumers', () => {
       dayEnd: new Date('2026-09-11T17:00:00Z'),
       monthStart: new Date('2026-08-31T17:00:00Z'),
       monthEnd: new Date('2026-09-30T17:00:00Z'),
+      timezone: 'Asia/Ho_Chi_Minh',
+      seriesStart: new Date('2026-09-04T17:00:00Z'),
+      dueSoonEnd: new Date('2026-09-12T17:00:00Z'),
     });
   });
   it('defaults reports to exactly the preceding 30 days and preserves explicit offsets', async () => {

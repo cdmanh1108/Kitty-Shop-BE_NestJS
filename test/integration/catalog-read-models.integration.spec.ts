@@ -105,7 +105,13 @@ describe('Catalog purpose-specific reads', () => {
     expect(page.items[0]?.variantCount).toBe(1);
     const lookup = await repo.lookupProducts({ shopId: shop.id, page: 1, limit: 20 });
     expect(lookup.items[0]?.variants).toEqual([
-      { id: variant.id, variantCode: variant.variantCode, sizeName: null, colorName: null },
+      {
+        id: variant.id,
+        variantCode: variant.variantCode,
+        sizeName: null,
+        colorName: null,
+        rentalRates: [1, 2, 3, 4, 5].map((durationDays) => ({ durationDays, price: 0 })),
+      },
     ]);
     expect(lookup.items[0]).not.toHaveProperty('defaultDepositAmount');
   });

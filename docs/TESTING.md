@@ -62,7 +62,7 @@ E2E uses AppModule and the shared `configureApplication` bootstrap for middlewar
 | HTTP security        | 400/401/403/429, valid permissions, token response hygiene, health public, rental create/replay/overlap                                             |
 | Configuration/errors | Existing invalid config and production unknown-error sanitization tests retained                                                                    |
 
-Outbox has no dispatcher/consumer, so there are no invented delivery/exactly-once tests. Financial endpoints currently do not implement idempotency; no unsupported guarantee was added. Meaningful remaining expansion areas are delivery transitions, dashboard queries, product/customer performance reports, and refresh versus password-change session revocation races.
+Outbox has no dispatcher/consumer, so there are no invented delivery/exactly-once tests. Financial endpoints currently do not implement idempotency; no unsupported guarantee was added. Meaningful remaining expansion areas are delivery transitions, product/customer performance reports, and refresh versus password-change session revocation races.
 
 ## Changes from the unfinished implementation
 
@@ -155,3 +155,8 @@ npm run quality
 See [Task 7 stabilization](STABILIZATION.md) for the latest verification. Earlier dated counts are historical, not the current suite contract.
 
 Metadata-only OpenAPI export still validates application configuration. Without a configured local .env, provide an explicit synthetic JWT_ACCESS_SECRET of at least 32 characters for verification. The export command itself sets SKIP_DATABASE_CONNECT; let test harnesses manage their own NODE_ENV. Never reuse the synthetic signing key in a deployment. No database connection is needed for export.
+
+Dashboard regression suites (2026-09-15): `dashboard.integration.spec.ts` and
+`dashboard.e2e.spec.ts` cover the real read model, ledger/date/status semantics,
+tenant isolation, bounded previews, query count and dashboard-only permissions.
+See [Dashboard](DASHBOARD.md).

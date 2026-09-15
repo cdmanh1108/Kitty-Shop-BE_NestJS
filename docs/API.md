@@ -13,7 +13,7 @@ For a browser app, a future BFF/httpOnly-cookie layer is preferred over localSto
 
 ## Main endpoint groups
 
-- `/dashboard/summary`
+- `/dashboard/summary`: page-shaped, tenant-scoped real admin read model; see [Dashboard](DASHBOARD.md).
 - `/customers`
 - `/catalog/lookups`
 - `/products` (including product media management)

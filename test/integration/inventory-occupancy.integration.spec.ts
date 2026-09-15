@@ -77,9 +77,11 @@ describe('Inventory occupancy persistence and read models', () => {
       dayEnd: f.data.rentalEndAt,
       monthStart: new Date('2026-10-01T00:00:00Z'),
       monthEnd: new Date('2026-11-01T00:00:00Z'),
+      timezone: 'Asia/Ho_Chi_Minh',
+      seriesStart: new Date('2026-10-04T17:00:00Z'),
+      dueSoonEnd: f.data.rentalEndAt,
     });
-    expect(summary.currentlyRented).toBe(2);
-    expect(summary.inventory).toMatchObject({ AVAILABLE: 0, RESERVED: 0, RENTED: 2, TOTAL: 2 });
+    expect(summary.rentingProducts).toBe(2);
   });
 
   it('migrates legacy occupancy without deleting allocations or historical statuses', async () => {

@@ -16,6 +16,10 @@ export class DashboardService {
     const timezone = await this.repository.getShopTimezone(user.shopId);
     const day = zonedDayRange(now, timezone);
     const month = zonedMonthRange(now, timezone);
+    let seriesStart = day.start;
+    for (let index = 0; index < 6; index++) {
+      seriesStart = zonedDayRange(new Date(seriesStart.getTime() - 1), timezone).start;
+    }
     return this.repository.summary({
       shopId: user.shopId,
       now,
@@ -23,6 +27,9 @@ export class DashboardService {
       dayEnd: day.end,
       monthStart: month.start,
       monthEnd: month.end,
+      timezone,
+      seriesStart,
+      dueSoonEnd: zonedDayRange(day.end, timezone).end,
     });
   }
 }
