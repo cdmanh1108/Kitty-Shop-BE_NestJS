@@ -1,4 +1,5 @@
 import { ConsoleLogger, type LogLevel } from '@nestjs/common';
+import { currentRequestMetadata } from '@common/request-context/request-context';
 
 const levels: LogLevel[] = ['fatal', 'error', 'warn', 'log', 'debug', 'verbose'];
 const sensitiveKey =
@@ -30,6 +31,20 @@ export function redactLog(value: unknown, depth = 0): unknown {
   return typeof value === 'bigint' ? value.toString() : value;
 }
 
+function enrichLog(value: unknown): unknown {
+  const redacted = redactLog(value);
+  const requestId = currentRequestMetadata()?.requestId;
+  if (
+    !requestId ||
+    !redacted ||
+    typeof redacted !== 'object' ||
+    Array.isArray(redacted) ||
+    'requestId' in redacted
+  )
+    return redacted;
+  return { ...redacted, requestId };
+}
+
 export class ApplicationLogger extends ConsoleLogger {
   constructor(
     level = process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'log' : 'debug'),
@@ -46,7 +61,7 @@ export class ApplicationLogger extends ConsoleLogger {
   ): void {
     // Do not forward raw exception stacks through Nest's optional stack argument.
     super.printMessages(
-      messages.map((message) => redactLog(message)),
+      messages.map((message) => enrichLog(message)),
       context,
       logLevel,
       writeStreamType,

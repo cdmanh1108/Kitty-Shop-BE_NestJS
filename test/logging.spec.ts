@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import type { Request, Response } from 'express';
 import { ApplicationLogger, redactLog } from '../src/common/logging/application-logger';
 import { RequestContextMiddleware } from '../src/common/middleware/request-context.middleware';
+import { withRequestContext } from '../src/common/request-context/request-context';
 
 describe('application logging', () => {
   afterEach(() => jest.restoreAllMocks());
@@ -44,6 +45,23 @@ describe('application logging', () => {
       }).not.toThrow();
       expect(line).not.toContain('sensitive');
     }
+  });
+
+  it('adds the active request ID to structured application logs', () => {
+    const output: string[] = [];
+    jest.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+    withRequestContext({ requestId: 'request-correlation-1' }, () => {
+      new ApplicationLogger('log').log({ event: 'business.operation.completed' });
+    });
+    expect(JSON.parse(output[0] ?? '{}')).toMatchObject({
+      message: {
+        event: 'business.operation.completed',
+        requestId: 'request-correlation-1',
+      },
+    });
   });
 
   it.each([

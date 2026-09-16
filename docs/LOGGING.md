@@ -8,6 +8,8 @@ POST login, refresh, logout and change-password responses also emit `auth.<actio
 
 Client request IDs accept only 1–100 ASCII letters/digits/underscore/hyphen, otherwise a UUID is generated. IDs are correlation labels, never proof of identity. Configure an upstream trusted gateway to replace IDs if authoritative correlation is required.
 
+Structured application logs emitted inside an HTTP request are automatically enriched with its request ID unless the event already supplies one. Startup and background-job logs have no request ID.
+
 The logger redacts sensitive object keys recursively, bounds depth/array/string size, masks common credential URL/Bearer/JWT patterns, and suppresses Error message/stack text that may include SQL values or secrets. Application error events retain exception class, event and request ID. Free text redaction cannot detect arbitrary secrets: use fixed event names and explicitly selected fields; never log a request, DTO, token, environment or raw exception string. Detailed stack diagnostics require a separate reviewed, access-controlled error reporting policy.
 
 `http.request.failed`, `audit.persist.failed` and `reminders.refresh.failed` provide operational errors. Database audit history remains independent; its best-effort writer now enriches request metadata and sanitizes snapshots. See [RELIABILITY.md](RELIABILITY.md). Recovery/cleanup events omit idempotency keys and payloads. API response shapes and business/auth behavior are unchanged.
