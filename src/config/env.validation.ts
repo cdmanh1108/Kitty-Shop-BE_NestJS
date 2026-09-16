@@ -1,4 +1,5 @@
 import { parseObjectStorageConfiguration } from './object-storage.configuration';
+import { parseWebAuthConfiguration } from './web-auth.configuration';
 const required = (config: Record<string, unknown>, key: string): string => {
   const value = config[key];
   if (typeof value !== 'string' || value.trim() === '') {
@@ -8,6 +9,7 @@ const required = (config: Record<string, unknown>, key: string): string => {
 };
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {
+  parseWebAuthConfiguration(config);
   if (
     config.NODE_ENV !== undefined &&
     (typeof config.NODE_ENV !== 'string' ||
@@ -83,6 +85,20 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     throw new Error(
       'JWT_ACCESS_SECRET chứa giá trị yếu hoặc giá trị mẫu, không thể dùng trong môi trường production.',
     );
+  }
+  const webSecret = required(config, 'WEB_JWT_ACCESS_SECRET');
+  const otpSecret = required(config, 'AUTH_OTP_HASH_SECRET');
+  for (const [key, secret] of [
+    ['WEB_JWT_ACCESS_SECRET', webSecret],
+    ['AUTH_OTP_HASH_SECRET', otpSecret],
+  ] as const) {
+    if (secret.length < 32) throw new Error(`${key} phải có ít nhất 32 ký tự.`);
+    if (isProduction && weakSecrets.some((weak) => secret.toLowerCase().includes(weak))) {
+      throw new Error(`${key} chứa giá trị yếu hoặc giá trị mẫu.`);
+    }
+  }
+  if (isProduction && new Set([jwtSecret, webSecret, otpSecret]).size !== 3) {
+    throw new Error('Admin JWT, Web JWT và OTP hash phải dùng ba secret khác nhau.');
   }
 
   if (isProduction && typeof config.CORS_ORIGINS === 'string') {

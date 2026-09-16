@@ -65,6 +65,11 @@ describe('Web Sale API Security Boundary', () => {
 
   it('has no default bearer authorization configured for public storefront', () => {
     expect(webDoc.security).toBeUndefined();
-    expect(webDoc.components?.securitySchemes).toBeUndefined();
+    expect(webDoc.components?.securitySchemes).toEqual({
+      'web-access': { type: 'apiKey', in: 'cookie', name: 'kitty_web_access' },
+      'web-refresh': { type: 'apiKey', in: 'cookie', name: 'kitty_web_refresh' },
+    });
+    expect(webDoc.paths['/web/auth/me']?.get?.security).toEqual([{ 'web-access': [] }]);
+    expect(webDoc.paths['/web/products']?.get?.security).toBeUndefined();
   });
 });

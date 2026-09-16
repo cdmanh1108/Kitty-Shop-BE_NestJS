@@ -1,8 +1,10 @@
+import { parseWebAuthConfiguration, type WebAuthConfiguration } from './web-auth.configuration';
 import {
   parseObjectStorageConfiguration,
   type ObjectStorageConfiguration,
 } from './object-storage.configuration';
 export interface AppConfiguration {
+  webAuth: WebAuthConfiguration;
   nodeEnv: string;
   port: number;
   apiPrefix: string;
@@ -35,11 +37,12 @@ export default (): AppConfiguration => {
   const isProduction = nodeEnv === 'production';
 
   return {
+    webAuth: parseWebAuthConfiguration(process.env),
     nodeEnv,
-    port: asNumber(process.env.PORT, 3000),
+    port: asNumber(process.env.PORT, 3007),
     apiPrefix: process.env.API_PREFIX ?? 'api/v1',
     appName: process.env.APP_NAME ?? 'Rental Shop API',
-    appUrl: process.env.APP_URL ?? 'http://localhost:3000',
+    appUrl: process.env.APP_URL ?? 'http://localhost:3007',
     corsOrigins: (process.env.CORS_ORIGINS ?? '')
       .split(',')
       .map((value) => value.trim())

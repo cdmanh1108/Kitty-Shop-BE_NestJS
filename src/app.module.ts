@@ -11,6 +11,7 @@ import { PermissionsGuard } from '@common/guards/permissions.guard';
 import { RequestContextMiddleware } from '@common/middleware/request-context.middleware';
 import { AuditModule } from '@modules/audit/audit.module';
 import { AuthModule } from '@modules/auth/auth.module';
+import { WebAuthModule } from '@modules/web-auth/web-auth.module';
 import { CatalogModule } from '@modules/catalog/catalog.module';
 import { CustomersModule } from '@modules/customers/customers.module';
 import { DashboardModule } from '@modules/dashboard/dashboard.module';
@@ -53,6 +54,7 @@ import { TenantModule } from '@common/tenant/tenant.module';
     StorageModule,
     AuditModule,
     AuthModule,
+    WebAuthModule,
     HealthModule,
     DashboardModule,
     CustomersModule,

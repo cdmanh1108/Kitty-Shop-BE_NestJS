@@ -7,6 +7,8 @@ describe('environment validation and configuration', () => {
   const baseConfig = {
     DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/test',
     JWT_ACCESS_SECRET: validSecret,
+    WEB_JWT_ACCESS_SECRET: 'W9qL2mN7vR4xK8pT6cF3hJ5sD1zB0yUa',
+    AUTH_OTP_HASH_SECRET: 'Q4wE8rT2yU6iO0pA3sD7fG1hJ5kL9zXc',
   };
 
   beforeEach(() => {
@@ -22,6 +24,17 @@ describe('environment validation and configuration', () => {
       expect(() => validateEnvironment(baseConfig)).not.toThrow();
     });
 
+    it('requires distinct Admin, Web and OTP secrets in production', () => {
+      expect(() =>
+        validateEnvironment({
+          ...baseConfig,
+          NODE_ENV: 'production',
+          DEFAULT_ADMIN_PASSWORD: 'Strong-production-admin-value',
+          WEB_JWT_ACCESS_SECRET: validSecret,
+        }),
+      ).toThrow('ba secret khác nhau');
+    });
+
     it('throws when required DATABASE_URL is missing', () => {
       expect(() => validateEnvironment({ JWT_ACCESS_SECRET: validSecret })).toThrow(
         'Thiếu biến môi trường bắt buộc: DATABASE_URL.',
@@ -33,6 +46,8 @@ describe('environment validation and configuration', () => {
         validateEnvironment({
           SKIP_DATABASE_CONNECT: 'true',
           JWT_ACCESS_SECRET: validSecret,
+          WEB_JWT_ACCESS_SECRET: baseConfig.WEB_JWT_ACCESS_SECRET,
+          AUTH_OTP_HASH_SECRET: baseConfig.AUTH_OTP_HASH_SECRET,
         }),
       ).not.toThrow();
     });

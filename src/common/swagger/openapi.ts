@@ -1,10 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 import { ErrorResDto } from '../dto/response.dto';
-import {
-  API_SURFACE_METADATA_KEY,
-  type ApiSurfaceType,
-} from '../decorators/api-surface.decorator';
+import { API_SURFACE_METADATA_KEY, type ApiSurfaceType } from '../decorators/api-surface.decorator';
 
 export interface OpenApiOptions {
   appName: string;
@@ -20,21 +17,9 @@ interface SurfaceSpecConfig {
   includeAuth: boolean;
 }
 
-const HTTP_METHODS = [
-  'get',
-  'post',
-  'put',
-  'delete',
-  'patch',
-  'options',
-  'head',
-  'trace',
-] as const;
+const HTTP_METHODS = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head', 'trace'] as const;
 
-function operationMatchesSurface(
-  operation: unknown,
-  targetSurface: ApiSurfaceFilter,
-): boolean {
+function operationMatchesSurface(operation: unknown, targetSurface: ApiSurfaceFilter): boolean {
   if (!operation || typeof operation !== 'object') return false;
   const surface = (operation as Record<string, unknown>)[API_SURFACE_METADATA_KEY];
   if (Array.isArray(surface)) {
@@ -132,6 +117,20 @@ export function filterOpenApiDocument(
   if (!config.includeAuth && components.securitySchemes) {
     delete components.securitySchemes;
   }
+  if (config.includeAuth && components.securitySchemes) {
+    const referenced = new Set<string>();
+    for (const item of Object.values(filteredPaths)) {
+      if (!item) continue;
+      for (const method of HTTP_METHODS) {
+        for (const requirement of item[method]?.security ?? []) {
+          for (const name of Object.keys(requirement)) referenced.add(name);
+        }
+      }
+    }
+    components.securitySchemes = Object.fromEntries(
+      Object.entries(components.securitySchemes).filter(([name]) => referenced.has(name)),
+    );
+  }
 
   return {
     ...baseDoc,
@@ -158,7 +157,9 @@ export function createBaseOpenApiDocument(
     .setDescription('Full API specification')
     .setVersion('1.0.0')
     .addServer(serverPath, 'API prefix')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token');
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
+    .addCookieAuth('kitty_web_access', { type: 'apiKey', in: 'cookie' }, 'web-access')
+    .addCookieAuth('kitty_web_refresh', { type: 'apiKey', in: 'cookie' }, 'web-refresh');
 
   if (options.appUrl) {
     const absolute = `${options.appUrl.replace(/\/$/, '')}${serverPath}`;
@@ -205,7 +206,7 @@ export function createWebOpenApiDocument(
       description:
         'Public Web Storefront & Sale API for customer storefront (kitty-web-nextjs). Authoritative server-side pricing and inventory availability.',
     },
-    includeAuth: false,
+    includeAuth: true,
   });
 }
 

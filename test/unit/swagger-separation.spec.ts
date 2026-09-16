@@ -41,9 +41,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       const nonAdminPaths = paths.filter((p) => !p.startsWith('/admin/'));
       expect(nonAdminPaths).toEqual([]);
 
-      const webLeakedPaths = paths.filter(
-        (p) => p.includes('/web/') || p.endsWith('/web'),
-      );
+      const webLeakedPaths = paths.filter((p) => p.includes('/web/') || p.endsWith('/web'));
       expect(webLeakedPaths).toEqual([]);
     });
 
@@ -105,11 +103,9 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
 
     it('contains only /web/ routes and zero admin or system routes', () => {
       const paths = Object.keys(webDoc.paths);
-      expect(paths.length).toBe(8);
+      expect(paths.length).toBe(15);
 
-      const nonWebPaths = paths.filter(
-        (p) => !p.includes('/web/') && !p.endsWith('/web'),
-      );
+      const nonWebPaths = paths.filter((p) => !p.includes('/web/') && !p.endsWith('/web'));
       expect(nonWebPaths).toEqual([]);
 
       const healthPaths = paths.filter((p) => p.includes('health'));
@@ -205,17 +201,17 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       const productsGet = webDoc.paths['/web/products']?.get;
       expect(productsGet?.responses['200']).toBeDefined();
       expect(productsGet?.responses['400']).toBeDefined();
-      expect(
-        JSON.stringify(productsGet?.responses['400']),
-      ).toContain('#/components/schemas/ErrorResDto');
+      expect(JSON.stringify(productsGet?.responses['400'])).toContain(
+        '#/components/schemas/ErrorResDto',
+      );
 
       // 2. GET /web/products/{slug} -> 200, 404
       const productSlugGet = webDoc.paths['/web/products/{slug}']?.get;
       expect(productSlugGet?.responses['200']).toBeDefined();
       expect(productSlugGet?.responses['404']).toBeDefined();
-      expect(
-        JSON.stringify(productSlugGet?.responses['404']),
-      ).toContain('#/components/schemas/ErrorResDto');
+      expect(JSON.stringify(productSlugGet?.responses['404'])).toContain(
+        '#/components/schemas/ErrorResDto',
+      );
 
       // 3. GET /web/availability -> 200, 400
       const availabilityGet = webDoc.paths['/web/availability']?.get;
@@ -233,9 +229,9 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(orderPost?.responses['400']).toBeDefined();
       expect(orderPost?.responses['404']).toBeDefined();
       expect(orderPost?.responses['409']).toBeDefined();
-      expect(
-        JSON.stringify(orderPost?.responses['409']),
-      ).toContain('#/components/schemas/ErrorResDto');
+      expect(JSON.stringify(orderPost?.responses['409'])).toContain(
+        '#/components/schemas/ErrorResDto',
+      );
 
       // 6. POST /web/rental-orders/lookup -> 200, 400, 404
       const lookupPost = webDoc.paths['/web/rental-orders/lookup']?.post;
@@ -283,9 +279,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
     const compatDoc = loadDoc(compatDocPath);
 
     it('preserves same path count as admin OpenAPI for kitty-admin-fe', () => {
-      expect(Object.keys(compatDoc.paths).length).toEqual(
-        Object.keys(adminDoc.paths).length,
-      );
+      expect(Object.keys(compatDoc.paths).length).toEqual(Object.keys(adminDoc.paths).length);
     });
   });
 
@@ -316,7 +310,9 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
             if (op) {
               const surface = op['x-api-surface'];
               if (!surface || typeof surface !== 'string' || !validSurfaces.has(surface)) {
-                unclassifiedOperations.push(`${m.toUpperCase()} ${pathKey} (surface=${String(surface)})`);
+                unclassifiedOperations.push(
+                  `${m.toUpperCase()} ${pathKey} (surface=${String(surface)})`,
+                );
               }
             }
           }

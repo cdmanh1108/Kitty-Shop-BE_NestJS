@@ -15,6 +15,8 @@ export function isVerifiedAccessPayload(value: unknown): value is JwtAccessPaylo
     'sid' in value &&
     typeof value.sid === 'string' &&
     uuid.test(value.sid) &&
+    'surface' in value &&
+    value.surface === 'admin' &&
     'exp' in value &&
     typeof value.exp === 'number' &&
     Number.isSafeInteger(value.exp) &&

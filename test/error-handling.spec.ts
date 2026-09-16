@@ -4,6 +4,7 @@ import {
   HttpException,
   HttpStatus,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
   type ArgumentsHost,
 } from '@nestjs/common';
@@ -369,6 +370,23 @@ describe('AllExceptionsFilter', () => {
         code: 'HTTP_429',
         message: 'Bạn gửi yêu cầu quá nhanh. Vui lòng chờ một lúc rồi thử lại.',
       });
+    });
+
+    it('preserves the safe OTP delivery error so registration can recover', () => {
+      filter.catch(
+        new ServiceUnavailableException({
+          code: 'OTP_DELIVERY_UNAVAILABLE',
+          message: 'Chưa thể gửi mã xác thực. Vui lòng thử gửi lại sau.',
+        }),
+        mockHost,
+      );
+
+      expect(sentPayload).toMatchObject({
+        statusCode: 503,
+        code: 'OTP_DELIVERY_UNAVAILABLE',
+        message: 'Chưa thể gửi mã xác thực. Vui lòng thử gửi lại sau.',
+      });
+      expect(sentPayload.details).toBeUndefined();
     });
   });
 });

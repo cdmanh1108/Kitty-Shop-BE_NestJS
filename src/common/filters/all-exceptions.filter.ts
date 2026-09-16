@@ -18,6 +18,8 @@ import {
 import { FinanceInvariantError } from '@modules/finance/domain/finance.repository';
 import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
 
+const publicOperationalServerErrors = new Set(['OTP_DELIVERY_UNAVAILABLE']);
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -88,7 +90,21 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const body = exception.getResponse();
       code = `HTTP_${status}`;
 
-      if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      const record =
+        body && typeof body === 'object' ? (body as Record<string, unknown>) : undefined;
+      const publicCode = typeof record?.code === 'string' ? record.code : undefined;
+      const publicMessage = typeof record?.message === 'string' ? record.message : undefined;
+
+      if (
+        status >= HttpStatus.INTERNAL_SERVER_ERROR &&
+        publicCode &&
+        publicMessage &&
+        publicOperationalServerErrors.has(publicCode)
+      ) {
+        code = publicCode;
+        message = publicMessage;
+        details = undefined;
+      } else if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
         code = 'INTERNAL_SERVER_ERROR';
         message = 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.';
         details = undefined;
@@ -107,17 +123,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else if (typeof body === 'string') {
         message = body;
       } else if (body && typeof body === 'object') {
-        const record = body as Record<string, unknown>;
-        const rawMessage = record.message;
+        const responseRecord = body as Record<string, unknown>;
+        const rawMessage = responseRecord.message;
         message = Array.isArray(rawMessage)
           ? rawMessage.join(', ')
           : typeof rawMessage === 'string'
             ? rawMessage
             : exception.message;
-        if (record.code && typeof record.code === 'string') {
-          code = record.code;
+        if (responseRecord.code && typeof responseRecord.code === 'string') {
+          code = responseRecord.code;
         }
-        details = record;
+        details = responseRecord;
       }
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       if (exception.code === 'P2002') {

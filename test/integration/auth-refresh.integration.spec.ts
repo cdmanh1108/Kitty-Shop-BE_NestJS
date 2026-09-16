@@ -29,6 +29,17 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     });
 
     const testConfig: AppConfiguration = {
+      webAuth: {
+        bypassEnabled: false,
+        bypassCode: '',
+        otpTtlSeconds: 300,
+        otpMaxAttempts: 5,
+        resendCooldownSeconds: 60,
+        accessSecret: 'web-test-secret-at-least-thirty-two-characters',
+        accessTtlSeconds: 900,
+        refreshTokenTtlDays: 7,
+        otpHashSecret: 'otp-test-secret-at-least-thirty-two-characters',
+      },
       nodeEnv: 'test',
       port: 3000,
       apiPrefix: 'api/v1',

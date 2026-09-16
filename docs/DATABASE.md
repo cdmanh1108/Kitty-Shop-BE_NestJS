@@ -109,6 +109,14 @@ authorizes linking a User account; a future account link must require verified p
 Migration `202609120001_customer_phone_uniqueness` backfills from the display phone and reports
 invalid or duplicate legacy rows for manual reconciliation without merging customer history.
 
+Storefront identities use `web_accounts` and remain separate from staff `users`/memberships
+and tenant CRM customers. Their phone is globally unique in canonical E.164 form, enforced
+by a unique index and a format CHECK. `phone_verified_at` is the sole activation source.
+`web_otp_challenges` stores HMAC hashes, expiry, attempts, consumption and resend timing;
+its partial index permits one pending challenge per account. `web_refresh_tokens` stores only
+SHA-256 token hashes with expiry and revocation state. Registration and its first challenge are atomic. OTP
+verification and resend lock the account and update their related rows transactionally.
+
 ## Migration rules
 
 1. Edit `prisma/schema.prisma`.

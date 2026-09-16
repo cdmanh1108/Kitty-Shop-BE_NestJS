@@ -11,4 +11,5 @@ export interface JwtAccessPayload {
   sub: string;
   mid: string;
   sid: string;
+  surface: 'admin';
 }

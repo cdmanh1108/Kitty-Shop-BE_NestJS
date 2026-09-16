@@ -172,7 +172,11 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     await app.close();
   });
   const credentials = { email: 'admin@example.com', password };
-  const bearer = () => jwt.sign(ids, { expiresIn: 900, algorithm: 'HS256' });
+  const bearer = () =>
+    jwt.sign(
+      { ...ids, surface: 'admin' },
+      { expiresIn: 900, algorithm: 'HS256', issuer: 'kitty-api', audience: 'kitty-admin' },
+    );
 
   it('logs in without exposing persisted hashes; uses HS256, 900s and a 384-bit opaque refresh token', async () => {
     const response = await request(server)
@@ -188,6 +192,9 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     expect(JSON.stringify([...rows.values()])).not.toContain(session.tokens.refreshToken);
     expect(jwt.decode(session.tokens.accessToken)).toEqual({
       ...ids,
+      surface: 'admin',
+      iss: 'kitty-api',
+      aud: 'kitty-admin',
       iat: expect.any(Number) as number,
       exp: expect.any(Number) as number,
     });
@@ -218,7 +225,10 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
         .send(credentials)
         .expect(401);
     await request(server).post('/admin/auth/login').send(credentials).expect(429);
-    await request(server).get('/admin/auth/me').set('Authorization', `Bearer ${bearer()}`).expect(200);
+    await request(server)
+      .get('/admin/auth/me')
+      .set('Authorization', `Bearer ${bearer()}`)
+      .expect(200);
   });
 
   it('limits refresh independently to 60 requests/IP/minute', async () => {
@@ -238,7 +248,9 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     const session = await service.login(credentials, {});
     const responses = await Promise.all(
       [1, 2].map(() =>
-        request(server).post('/admin/auth/refresh').send({ refreshToken: session.tokens.refreshToken }),
+        request(server)
+          .post('/admin/auth/refresh')
+          .send({ refreshToken: session.tokens.refreshToken }),
       ),
     );
     expect(responses.map((r) => r.status).sort()).toEqual([201, 401]);
@@ -379,14 +391,22 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
                 algorithm: variant === 'HS384' ? 'HS384' : 'HS256',
                 ...(variant === 'wrong-secret' ? { secret: 'other-secret' } : {}),
               });
-      await request(server).get('/admin/auth/me').set('Authorization', `Bearer ${token}`).expect(401);
+      await request(server)
+        .get('/admin/auth/me')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(401);
       expect(membership.mock.calls).toHaveLength(0);
     },
   );
 });
 
 describe('authentication TTL configuration', () => {
-  const config = { DATABASE_URL: 'postgresql://unused', JWT_ACCESS_SECRET: secret };
+  const config = {
+    DATABASE_URL: 'postgresql://unused',
+    JWT_ACCESS_SECRET: secret,
+    WEB_JWT_ACCESS_SECRET: 'W9qL2mN7vR4xK8pT6cF3hJ5sD1zB0yUa',
+    AUTH_OTP_HASH_SECRET: 'Q4wE8rT2yU6iO0pA3sD7fG1hJ5kL9zXc',
+  };
   it.each(['0', '-1', 'NaN', '', '0.5', 'Infinity', '9007199254740992'])(
     'rejects invalid lifetime %s',
     (value) => {

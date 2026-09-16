@@ -31,7 +31,11 @@ export class JwtAuthGuard implements CanActivate {
     const token = authorization.slice('Bearer '.length).trim();
     let payload: JwtAccessPayload;
     try {
-      const verified: unknown = await this.jwtService.verifyAsync(token, { algorithms: ['HS256'] });
+      const verified: unknown = await this.jwtService.verifyAsync(token, {
+        algorithms: ['HS256'],
+        issuer: 'kitty-api',
+        audience: 'kitty-admin',
+      });
       if (!isVerifiedAccessPayload(verified)) throw new Error('Thông tin xác thực không hợp lệ.');
       payload = verified;
     } catch {

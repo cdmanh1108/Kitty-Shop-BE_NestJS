@@ -91,10 +91,13 @@ export class AuthService {
       sub: identity.userId,
       mid: identity.memberId,
       sid: identity.shopId,
+      surface: 'admin',
     };
     const accessToken = await this.jwt.signAsync(payload, {
       expiresIn: ttlSeconds,
       algorithm: 'HS256',
+      issuer: 'kitty-api',
+      audience: 'kitty-admin',
     });
 
     return {
