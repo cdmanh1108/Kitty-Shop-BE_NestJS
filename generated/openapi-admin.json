@@ -3892,7 +3892,7 @@
       "description": "API prefix"
     },
     {
-      "url": "http://localhost:3000/api/v1",
+      "url": "http://localhost:3007/api/v1",
       "description": "Configured application URL"
     }
   ],

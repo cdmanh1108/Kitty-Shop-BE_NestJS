@@ -43,6 +43,8 @@ export class WebCatalogController {
       code: c.code,
       name: c.name,
       slug: c.slug,
+      parentId: c.parentId,
+      sortOrder: c.sortOrder,
       description: c.description ?? undefined,
     }));
   }
@@ -52,8 +54,14 @@ export class WebCatalogController {
     operationId: 'getWebProducts',
     summary: 'Danh sách sản phẩm công khai cho storefront có phân trang',
   })
-  @ApiOkResponse({ type: WebProductListResDto, description: 'Danh sách sản phẩm kèm siêu dữ liệu phân trang' })
-  @ApiBadRequestResponse({ type: ErrorResDto, description: 'Tham số bộ lọc hoặc phân trang không hợp lệ' })
+  @ApiOkResponse({
+    type: WebProductListResDto,
+    description: 'Danh sách sản phẩm kèm siêu dữ liệu phân trang',
+  })
+  @ApiBadRequestResponse({
+    type: ErrorResDto,
+    description: 'Tham số bộ lọc hoặc phân trang không hợp lệ',
+  })
   async listProducts(
     @Req() request: Request,
     @Query() query: WebProductListQueryDto,
@@ -67,8 +75,14 @@ export class WebCatalogController {
     operationId: 'getWebProductBySlug',
     summary: 'Chi tiết sản phẩm cho trang chi tiết storefront',
   })
-  @ApiOkResponse({ type: WebProductDetailDto, description: 'Thông tin chi tiết sản phẩm và các biến thể' })
-  @ApiNotFoundResponse({ type: ErrorResDto, description: 'Không tìm thấy sản phẩm với slug tương ứng' })
+  @ApiOkResponse({
+    type: WebProductDetailDto,
+    description: 'Thông tin chi tiết sản phẩm và các biến thể',
+  })
+  @ApiNotFoundResponse({
+    type: ErrorResDto,
+    description: 'Không tìm thấy sản phẩm với slug tương ứng',
+  })
   async getProduct(
     @Req() request: Request,
     @Param('slug') slug: string,

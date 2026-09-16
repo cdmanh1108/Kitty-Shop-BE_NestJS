@@ -1,6 +1,6 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
-import { paginateMeta } from '@common/types/pagination';
 import { slugify } from '@common/utils/slugify';
+import { paginateMeta } from '@common/types/pagination';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { Prisma } from '@prisma/client';
@@ -22,14 +22,14 @@ export async function listStorefrontCategories(
       shopId,
       isActive: true,
     },
-    orderBy: {
-      sortOrder: 'asc',
-    },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { code: 'asc' }],
     select: {
       id: true,
       code: true,
       name: true,
       slug: true,
+      parentId: true,
+      sortOrder: true,
       description: true,
     },
   });
@@ -38,7 +38,9 @@ export async function listStorefrontCategories(
     id: c.id,
     code: c.code,
     name: c.name,
-    slug: c.slug || slugify(c.name),
+    slug: c.slug,
+    parentId: c.parentId,
+    sortOrder: c.sortOrder,
     description: c.description,
   }));
 }
@@ -151,9 +153,7 @@ export async function listStorefrontProducts(
   };
 
   // Determine sort order
-  let products: Array<
-    Prisma.ProductGetPayload<{ include: typeof productInclude }>
-  >;
+  let products: Array<Prisma.ProductGetPayload<{ include: typeof productInclude }>>;
   let total: number;
 
   if (input.sort === 'price_asc' || input.sort === 'price_desc') {
@@ -171,11 +171,15 @@ export async function listStorefrontProducts(
     // Sort by lowest price in the full matching set BEFORE paginating
     allProductsMatching.sort((a, b) => {
       const priceA =
-        extractRentalPrices(a.rentalRates, a.variants.map((v) => v.rentalRates))[0]?.amount ??
-        Number.MAX_SAFE_INTEGER;
+        extractRentalPrices(
+          a.rentalRates,
+          a.variants.map((v) => v.rentalRates),
+        )[0]?.amount ?? Number.MAX_SAFE_INTEGER;
       const priceB =
-        extractRentalPrices(b.rentalRates, b.variants.map((v) => v.rentalRates))[0]?.amount ??
-        Number.MAX_SAFE_INTEGER;
+        extractRentalPrices(
+          b.rentalRates,
+          b.variants.map((v) => v.rentalRates),
+        )[0]?.amount ?? Number.MAX_SAFE_INTEGER;
       return input.sort === 'price_asc' ? priceA - priceB : priceB - priceA;
     });
 
@@ -204,8 +208,7 @@ export async function listStorefrontProducts(
   }
 
   const items: StorefrontProductItem[] = products.map((product) => {
-    const primaryMediaObj =
-      product.media.find((m) => m.isPrimary) ?? product.media[0] ?? null;
+    const primaryMediaObj = product.media.find((m) => m.isPrimary) ?? product.media[0] ?? null;
     const imageUrl = primaryMediaObj ? mediaUrls.resolve(primaryMediaObj) : '';
     const gallery = product.media.map((m) => mediaUrls.resolve(m)).filter(Boolean);
 
@@ -258,11 +261,7 @@ export async function findStorefrontProductBySlug(
       archivedAt: null,
       isRentable: true,
       status: { in: ['ACTIVE', 'AVAILABLE'] },
-      OR: [
-        { slug: trimmed },
-        { id: trimmed },
-        { code: trimmed.toUpperCase() },
-      ],
+      OR: [{ slug: trimmed }, { id: trimmed }, { code: trimmed.toUpperCase() }],
     },
     include: {
       category: { select: { id: true, code: true, name: true } },
@@ -294,8 +293,7 @@ export async function findStorefrontProductBySlug(
     return null;
   }
 
-  const primaryMediaObj =
-    product.media.find((m) => m.isPrimary) ?? product.media[0] ?? null;
+  const primaryMediaObj = product.media.find((m) => m.isPrimary) ?? product.media[0] ?? null;
   const imageUrl = primaryMediaObj ? mediaUrls.resolve(primaryMediaObj) : '';
   const gallery = product.media.map((m) => mediaUrls.resolve(m)).filter(Boolean);
 

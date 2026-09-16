@@ -958,7 +958,7 @@
       "description": "API prefix"
     },
     {
-      "url": "http://localhost:3000/api/v1",
+      "url": "http://localhost:3007/api/v1",
       "description": "Configured application URL"
     }
   ],
@@ -1166,7 +1166,17 @@
           },
           "slug": {
             "type": "string",
-            "example": "vay-thiet-ke"
+            "example": "vay-thiet-ke",
+            "nullable": true
+          },
+          "parentId": {
+            "type": "string",
+            "example": "b6e82c18-9717-484d-a915-c26663f721d6",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "number",
+            "example": 0
           },
           "description": {
             "type": "string",
@@ -1177,7 +1187,9 @@
           "id",
           "code",
           "name",
-          "slug"
+          "slug",
+          "parentId",
+          "sortOrder"
         ]
       },
       "WebProductListResDto": {

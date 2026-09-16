@@ -16,6 +16,7 @@ describe('Web Catalog Presenters and Service', () => {
         name: 'Đầm dạ hội',
         code: 'EVENING_DRESS',
         slug: 'dam-da-hoi',
+        parentId: null,
         description: 'Váy đầm cao cấp cho tiệc tối',
         sortOrder: 1,
         shopId: 'shop-uuid-1',
@@ -30,6 +31,8 @@ describe('Web Catalog Presenters and Service', () => {
         name: 'Đầm dạ hội',
         code: 'EVENING_DRESS',
         slug: 'dam-da-hoi',
+        parentId: null,
+        sortOrder: 1,
         description: 'Váy đầm cao cấp cho tiệc tối',
       });
       // Ensure internal properties are not exposed

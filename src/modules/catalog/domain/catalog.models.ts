@@ -16,7 +16,9 @@ import type { ShopLocationRecord } from '@modules/settings/domain/settings.recor
 
 export type CatalogLookups = {
   categories: Array<
-    Pick<CategoryRecord, 'id' | 'parentId' | 'code' | 'name' | 'description'> & { productCount: number }
+    Pick<CategoryRecord, 'id' | 'parentId' | 'code' | 'name' | 'description'> & {
+      productCount: number;
+    }
   >;
   sizes: Array<Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder'>>;
   colors: Array<Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor'>>;
@@ -40,20 +42,42 @@ export type ProductPage = PaginatedResult<ProductListItem>;
 
 export type ProductDetails =
   | null
-  | (Pick<ProductRecord, 'id' | 'code' | 'name' | 'categoryId' | 'description' | 'defaultDepositAmount' | 'replacementValue' | 'facebookPostUrl' | 'status' | 'isRentable' | 'isPublic' | 'createdAt' | 'updatedAt'> & {
+  | (Pick<
+      ProductRecord,
+      | 'id'
+      | 'code'
+      | 'name'
+      | 'categoryId'
+      | 'description'
+      | 'defaultDepositAmount'
+      | 'replacementValue'
+      | 'facebookPostUrl'
+      | 'status'
+      | 'isRentable'
+      | 'isPublic'
+      | 'createdAt'
+      | 'updatedAt'
+    > & {
       category: Pick<CategoryRecord, 'id' | 'code' | 'name'> & {
         status: 'ACTIVE' | 'INACTIVE';
       };
       variants: Array<
-        Pick<ProductVariantRecord, 'id' | 'variantCode' | 'sizeId' | 'colorId' | 'depositAmountOverride' | 'status'> & {
+        Pick<
+          ProductVariantRecord,
+          'id' | 'variantCode' | 'sizeId' | 'colorId' | 'depositAmountOverride' | 'status'
+        > & {
           size: null | Pick<SizeRecord, 'name'>;
           color: null | Pick<ColorRecord, 'name' | 'hexColor'>;
           _count: { inventoryItems: number };
-          rentalRates: Array<Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>>;
+          rentalRates: Array<
+            Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>
+          >;
         }
       >;
       media: Array<Pick<ProductMediaRecord, 'id' | 'url' | 'altText' | 'isPrimary' | 'sortOrder'>>;
-      rentalRates: Array<Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>>;
+      rentalRates: Array<
+        Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>
+      >;
     });
 
 export type CreateProductResult = ProductRecord & {
@@ -144,7 +168,9 @@ export interface StorefrontCategory {
   id: string;
   code: string;
   name: string;
-  slug: string;
+  slug: string | null;
+  parentId: string | null;
+  sortOrder: number;
   description?: string | null;
 }
 

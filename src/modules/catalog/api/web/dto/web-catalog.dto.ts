@@ -20,8 +20,18 @@ export class WebCategoryDto {
   @ApiProperty({ example: 'Váy thiết kế' })
   name!: string;
 
-  @ApiProperty({ example: 'vay-thiet-ke' })
-  slug!: string;
+  @ApiProperty({ type: String, example: 'vay-thiet-ke', nullable: true })
+  slug!: string | null;
+
+  @ApiProperty({
+    type: String,
+    example: 'b6e82c18-9717-484d-a915-c26663f721d6',
+    nullable: true,
+  })
+  parentId!: string | null;
+
+  @ApiProperty({ example: 0 })
+  sortOrder!: number;
 
   @ApiPropertyOptional({ example: 'Bộ sưu tập váy tiệc và sự kiện' })
   description?: string;

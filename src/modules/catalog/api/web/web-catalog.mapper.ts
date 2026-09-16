@@ -58,7 +58,12 @@ export interface RawProduct {
 function parseDecimalNumber(value: unknown): number {
   if (value === null || value === undefined) return 0;
   if (typeof value === 'number') return value;
-  if (typeof value === 'object' && value !== null && 'toNumber' in value && typeof (value as { toNumber: () => number }).toNumber === 'function') {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toNumber' in value &&
+    typeof (value as { toNumber: () => number }).toNumber === 'function'
+  ) {
     return (value as { toNumber: () => number }).toNumber();
   }
   const parsed = Number(value);
@@ -91,33 +96,44 @@ function extractRentalPrices(product: RawProduct): WebRentalPriceDto[] {
     .map(([days, amount]) => ({ days, amount }));
 }
 
-export function toWebCategory(category: Category | { id: string; code: string; name: string; slug?: string | null; description?: string | null }): WebCategoryDto {
+export function toWebCategory(
+  category:
+    | Category
+    | {
+        id: string;
+        code: string;
+        name: string;
+        slug?: string | null;
+        parentId: string | null;
+        sortOrder: number;
+        description?: string | null;
+      },
+): WebCategoryDto {
   return {
     id: category.id,
     code: category.code,
     name: category.name,
-    slug: 'slug' in category && category.slug ? category.slug : slugify(category.name),
+    slug: 'slug' in category ? (category.slug ?? null) : null,
+    parentId: category.parentId,
+    sortOrder: category.sortOrder,
     description: category.description ?? undefined,
   };
 }
 
 export function toWebProductListItem(product: RawProduct): WebProductListItemDto {
-  const primaryMedia = product.media?.find((m) => m.isPrimary)?.url ?? product.media?.[0]?.url ?? '';
+  const primaryMedia =
+    product.media?.find((m) => m.isPrimary)?.url ?? product.media?.[0]?.url ?? '';
   const gallery = (product.media ?? []).map((m) => m.url).filter((u): u is string => Boolean(u));
 
   const sizes = Array.from(
     new Set(
-      (product.variants ?? [])
-        .map((v) => v.size?.name)
-        .filter((s): s is string => Boolean(s)),
+      (product.variants ?? []).map((v) => v.size?.name).filter((s): s is string => Boolean(s)),
     ),
   );
 
   const colors = Array.from(
     new Set(
-      (product.variants ?? [])
-        .map((v) => v.color?.name)
-        .filter((c): c is string => Boolean(c)),
+      (product.variants ?? []).map((v) => v.color?.name).filter((c): c is string => Boolean(c)),
     ),
   );
 
@@ -151,7 +167,9 @@ export function toWebProductDetail(product: RawProduct): WebProductDetailDto {
     code: v.variantCode,
     size: v.size?.name ?? undefined,
     color: v.color?.name ?? undefined,
-    depositAmount: v.depositAmountOverride ? parseDecimalNumber(v.depositAmountOverride) : base.depositAmount,
+    depositAmount: v.depositAmountOverride
+      ? parseDecimalNumber(v.depositAmountOverride)
+      : base.depositAmount,
   }));
 
   return {
