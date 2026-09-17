@@ -10,6 +10,7 @@ import {
   type CatalogRepository,
   CatalogCategoryError,
   CatalogInvariantError,
+  CatalogProductSlugAlreadyExistsError,
 } from '../../src/modules/catalog/domain/catalog.repository';
 import { CatalogService } from '../../src/modules/catalog/application/catalog.service';
 
@@ -239,6 +240,35 @@ describe('CatalogService - Product Management', () => {
         }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('throws ConflictException with code PRODUCT_SLUG_ALREADY_EXISTS when slug already exists', async () => {
+      createProductMock.mockRejectedValue(new CatalogProductSlugAlreadyExistsError());
+
+      try {
+        await service.createProduct(mockUser, {
+          code: 'PROD-COLLIDE',
+          name: 'Váy đỏ',
+          slug: 'ao-dai-do',
+          categoryId: 'cat-1',
+          defaultDepositAmount: 0,
+          isPublic: true,
+          variants: [
+            {
+              variantCode: 'PROD-COLLIDE-S',
+              inventoryCount: 1,
+              rentalRates: [{ durationDays: 1, price: 50000 }],
+            },
+          ],
+          media: [],
+        });
+        fail('expected to throw ConflictException');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConflictException);
+        const res = (error as ConflictException).getResponse() as { code?: string; message?: string };
+        expect(res.code).toBe('PRODUCT_SLUG_ALREADY_EXISTS');
+        expect(res.message).toBe('Slug sản phẩm đã tồn tại trong cửa hàng.');
+      }
+    });
   });
 
   describe('updateProduct', () => {
@@ -288,6 +318,58 @@ describe('CatalogService - Product Management', () => {
       await expect(
         service.updateProduct(mockUser, 'non-existent', { name: 'Test' }),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ConflictException with code PRODUCT_SLUG_ALREADY_EXISTS when updated slug collides', async () => {
+      updateProductMock.mockRejectedValue(new CatalogProductSlugAlreadyExistsError());
+
+      try {
+        await service.updateProduct(mockUser, 'prod-1', { slug: 'already-used-slug' });
+        fail('expected to throw ConflictException');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConflictException);
+        const res = (error as ConflictException).getResponse() as { code?: string; message?: string };
+        expect(res.code).toBe('PRODUCT_SLUG_ALREADY_EXISTS');
+        expect(res.message).toBe('Slug sản phẩm đã tồn tại trong cửa hàng.');
+      }
+    });
+
+    it('forwards explicit slug when provided in updateProduct', async () => {
+      const updated: UpdateProductResult = {
+        id: 'prod-1',
+        shopId: mockUser.shopId,
+        categoryId: 'cat-1',
+        code: 'PROD-1',
+        name: 'Váy dạ hội',
+        slug: 'vay-da-hoi-moi',
+        description: null,
+        defaultDepositAmount: new Prisma.Decimal(0),
+        replacementValue: null,
+        facebookPostUrl: null,
+        currency: 'VND',
+        status: 'ACTIVE',
+        isRentable: true,
+        isPublic: true,
+        metadata: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        archivedAt: null,
+      };
+      updateProductMock.mockResolvedValue(updated);
+
+      await service.updateProduct(mockUser, 'prod-1', {
+        name: 'Váy dạ hội mới',
+        slug: 'vay-da-hoi-moi',
+      });
+
+      expect(updateProductMock).toHaveBeenCalledWith(
+        mockUser.shopId,
+        'prod-1',
+        expect.objectContaining({
+          name: 'Váy dạ hội mới',
+          slug: 'vay-da-hoi-moi',
+        }),
+      );
     });
   });
 

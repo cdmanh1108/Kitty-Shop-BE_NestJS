@@ -1,6 +1,6 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import type { PrismaService } from '@database/prisma/prisma.service';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { activeOccupyingAllocationWhere } from '@database/prisma/inventory-availability';
 import type {
@@ -9,76 +9,103 @@ import type {
   ProductMediaData,
   UpdateProductData,
 } from '../domain/catalog.repository';
-import { CatalogCategoryError, CatalogInvariantError } from '../domain/catalog.repository';
+import {
+  CatalogCategoryError,
+  CatalogInvariantError,
+  CatalogProductSlugAlreadyExistsError,
+} from '../domain/catalog.repository';
 import { slugify } from '@common/utils/slugify';
 
-export function createProduct(
+function handleProductUniqueViolation(error: unknown): never {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    const target = error.meta?.target;
+    const targetStr = Array.isArray(target)
+      ? target.join(',')
+      : typeof target === 'string'
+        ? target
+        : '';
+
+    if (targetStr.includes('slug') || targetStr.includes('products_shop_id_slug_key')) {
+      throw new CatalogProductSlugAlreadyExistsError();
+    }
+    if (targetStr.includes('code') || targetStr.includes('products_shop_id_code_key')) {
+      throw new CatalogInvariantError('Mã sản phẩm đã tồn tại trong cửa hàng.');
+    }
+  }
+  throw error;
+}
+
+export async function createProduct(
   prisma: PrismaService,
   shopId: string,
   input: CreateProductData,
 ): ReturnType<CatalogRepository['createProduct']> {
-  return prisma.$transaction(async (tx) => {
-    const seenCombinations = new Set<string>();
-    for (const variant of input.variants) {
-      const key = `${variant.sizeId ?? 'null'}::${variant.colorId ?? 'null'}`;
-      if (seenCombinations.has(key)) {
-        throw new CatalogInvariantError(
-          'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
-        );
-      }
-      seenCombinations.add(key);
-
-      const seenDurations = new Set<number>();
-      for (const rate of variant.rentalRates) {
-        if (seenDurations.has(rate.durationDays)) {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const seenCombinations = new Set<string>();
+      for (const variant of input.variants) {
+        const key = `${variant.sizeId ?? 'null'}::${variant.colorId ?? 'null'}`;
+        if (seenCombinations.has(key)) {
           throw new CatalogInvariantError(
-            'Mức giá thuê cho số ngày này đã tồn tại trong biến thể.',
+            'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
           );
         }
-        seenDurations.add(rate.durationDays);
+        seenCombinations.add(key);
+
+        const seenDurations = new Set<number>();
+        for (const rate of variant.rentalRates) {
+          if (seenDurations.has(rate.durationDays)) {
+            throw new CatalogInvariantError(
+              'Mức giá thuê cho số ngày này đã tồn tại trong biến thể.',
+            );
+          }
+          seenDurations.add(rate.durationDays);
+        }
       }
-    }
-    if (input.media.filter((m) => m.isPrimary).length > 1) {
-      throw new CatalogInvariantError('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
-    }
-    await assertCatalogReferences(tx, shopId, input.categoryId, input.variants);
-    const slug = input.slug || slugify(input.name);
-    const product = await tx.product.create({
-      data: {
-        shopId,
-        categoryId: input.categoryId,
-        code: input.code,
-        name: input.name,
-        slug,
-        description: input.description,
-        defaultDepositAmount: input.defaultDepositAmount,
-        replacementValue: input.replacementValue != null ? input.replacementValue : null,
-        facebookPostUrl:
-          input.facebookPostUrl != null && input.facebookPostUrl.trim() !== ''
-            ? input.facebookPostUrl.trim()
-            : null,
-        isPublic: input.isPublic,
-      },
-    });
-
-    for (const variantInput of input.variants) {
-      await createVariantWithInventory(tx, shopId, product.id, variantInput);
-    }
-
-    if (input.media.length > 0) {
-      await tx.productMedia.createMany({
-        data: input.media.map((media) => ({ ...media, shopId, productId: product.id })),
+      if (input.media.filter((m) => m.isPrimary).length > 1) {
+        throw new CatalogInvariantError('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
+      }
+      await assertCatalogReferences(tx, shopId, input.categoryId, input.variants);
+      const slug = input.slug || slugify(input.name);
+      const product = await tx.product.create({
+        data: {
+          shopId,
+          categoryId: input.categoryId,
+          code: input.code,
+          name: input.name,
+          slug,
+          description: input.description,
+          defaultDepositAmount: input.defaultDepositAmount,
+          replacementValue: input.replacementValue != null ? input.replacementValue : null,
+          facebookPostUrl:
+            input.facebookPostUrl != null && input.facebookPostUrl.trim() !== ''
+              ? input.facebookPostUrl.trim()
+              : null,
+          isPublic: input.isPublic,
+        },
       });
-    }
 
-    return tx.product.findUniqueOrThrow({
-      where: { id: product.id },
-      include: {
-        variants: { include: { inventoryItems: true, rentalRates: true } },
-        media: true,
-      },
+      for (const variantInput of input.variants) {
+        await createVariantWithInventory(tx, shopId, product.id, variantInput);
+      }
+
+      if (input.media.length > 0) {
+        await tx.productMedia.createMany({
+          data: input.media.map((media) => ({ ...media, shopId, productId: product.id })),
+        });
+      }
+
+      return tx.product.findUniqueOrThrow({
+        where: { id: product.id },
+        include: {
+          variants: { include: { inventoryItems: true, rentalRates: true } },
+          media: true,
+        },
+      });
     });
-  });
+  } catch (error) {
+    handleProductUniqueViolation(error);
+  }
 }
 export async function addVariant(
   prisma: PrismaService,
@@ -149,46 +176,47 @@ export async function updateProduct(
   id: string,
   input: UpdateProductData,
 ): ReturnType<CatalogRepository['updateProduct']> {
-  return serializableTransaction(prisma, async (tx) => {
-    const existing = await tx.product.findFirst({
-      where: { id, shopId, archivedAt: null },
-    });
-    if (!existing) return null;
-    if (input.categoryId && input.categoryId !== existing.categoryId) {
-      await assertActiveCategory(tx, shopId, input.categoryId);
-    }
-    const data: Prisma.ProductUpdateInput = {};
-    if (input.status === 'ARCHIVED') {
-      await assertProductCanArchive(tx, shopId, id);
-      data.archivedAt = new Date();
-    }
-    if (input.name !== undefined) {
-      data.name = input.name;
-      if (input.slug === undefined) {
-        data.slug = slugify(input.name);
+  try {
+    return await serializableTransaction(prisma, async (tx) => {
+      const existing = await tx.product.findFirst({
+        where: { id, shopId, archivedAt: null },
+      });
+      if (!existing) return null;
+      if (input.categoryId && input.categoryId !== existing.categoryId) {
+        await assertActiveCategory(tx, shopId, input.categoryId);
       }
-    }
-    if (input.slug !== undefined) {
-      data.slug = input.slug;
-    }
-    if (input.categoryId !== undefined && input.categoryId !== existing.categoryId)
-      data.category = { connect: { id: input.categoryId } };
-    if (input.description !== undefined) data.description = input.description;
-    if (input.defaultDepositAmount !== undefined)
-      data.defaultDepositAmount = input.defaultDepositAmount;
-    if (input.replacementValue !== undefined) data.replacementValue = input.replacementValue;
-    if (input.facebookPostUrl !== undefined) {
-      data.facebookPostUrl =
-        input.facebookPostUrl != null && input.facebookPostUrl.trim() !== ''
-          ? input.facebookPostUrl.trim()
-          : null;
-    }
-    if (input.isPublic !== undefined) data.isPublic = input.isPublic;
-    if (input.isRentable !== undefined) data.isRentable = input.isRentable;
-    if (input.status !== undefined) data.status = input.status;
+      const data: Prisma.ProductUpdateInput = {};
+      if (input.status === 'ARCHIVED') {
+        await assertProductCanArchive(tx, shopId, id);
+        data.archivedAt = new Date();
+      }
+      if (input.name !== undefined) {
+        data.name = input.name;
+      }
+      if (input.slug !== undefined) {
+        data.slug = input.slug;
+      }
+      if (input.categoryId !== undefined && input.categoryId !== existing.categoryId)
+        data.category = { connect: { id: input.categoryId } };
+      if (input.description !== undefined) data.description = input.description;
+      if (input.defaultDepositAmount !== undefined)
+        data.defaultDepositAmount = input.defaultDepositAmount;
+      if (input.replacementValue !== undefined) data.replacementValue = input.replacementValue;
+      if (input.facebookPostUrl !== undefined) {
+        data.facebookPostUrl =
+          input.facebookPostUrl != null && input.facebookPostUrl.trim() !== ''
+            ? input.facebookPostUrl.trim()
+            : null;
+      }
+      if (input.isPublic !== undefined) data.isPublic = input.isPublic;
+      if (input.isRentable !== undefined) data.isRentable = input.isRentable;
+      if (input.status !== undefined) data.status = input.status;
 
-    return tx.product.update({ where: { id }, data });
-  });
+      return tx.product.update({ where: { id }, data });
+    });
+  } catch (error) {
+    handleProductUniqueViolation(error);
+  }
 }
 
 export async function archiveProduct(

@@ -430,9 +430,9 @@ model Product {
   orderItems  RentalOrderItem[]
 
   @@unique([shopId, code])
+  @@unique([shopId, slug])
   @@index([shopId, categoryId, status])
   @@index([shopId, name])
-  @@index([shopId, slug])
   @@map("products")
 }
 

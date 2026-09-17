@@ -15,6 +15,7 @@ import {
   CatalogCategoryInvalidParentError,
   CatalogInvariantError,
   CatalogCategoryCodeAlreadyExistsError,
+  CatalogProductSlugAlreadyExistsError,
   type CatalogRepository,
 } from '../domain/catalog.repository';
 import type {
@@ -242,6 +243,7 @@ export class CatalogService {
     const updated = await this.withInvariant(() =>
       this.repository.updateProduct(user.shopId, id, {
         name: input.name,
+        slug: input.slug,
         categoryId: input.categoryId,
         description: input.description,
         defaultDepositAmount: input.defaultDepositAmount,
@@ -406,6 +408,11 @@ export class CatalogService {
           });
         if (error instanceof CatalogCategoryInvalidParentError)
           throw new BadRequestException({
+            code: error.code,
+            message: error.message,
+          });
+        if (error instanceof CatalogProductSlugAlreadyExistsError)
+          throw new ConflictException({
             code: error.code,
             message: error.message,
           });

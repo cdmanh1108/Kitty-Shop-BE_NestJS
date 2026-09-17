@@ -50,6 +50,13 @@ export class CatalogCategoryInvalidParentError extends CatalogInvariantError {
     super(message);
   }
 }
+export class CatalogProductSlugAlreadyExistsError extends CatalogInvariantError {
+  readonly code = 'PRODUCT_SLUG_ALREADY_EXISTS';
+
+  constructor() {
+    super('Slug sản phẩm đã tồn tại trong cửa hàng.');
+  }
+}
 
 export const CATALOG_REPOSITORY = Symbol('CATALOG_REPOSITORY');
 

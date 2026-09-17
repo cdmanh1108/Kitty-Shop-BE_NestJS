@@ -9,15 +9,28 @@ export class ShopResolver {
   async resolveShopId(request?: Request): Promise<string> {
     const rawHeader = request?.headers?.['x-shop-code'];
     const headerShopCode = typeof rawHeader === 'string' ? rawHeader.trim() : undefined;
-    const shopCode = headerShopCode || process.env.DEFAULT_SHOP_CODE || 'MAIN';
 
-    const shop = await this.prisma.shop.findUnique({
-      where: { code: shopCode },
+    if (headerShopCode) {
+      const shop = await this.prisma.shop.findUnique({
+        where: { code: headerShopCode },
+        select: { id: true, status: true },
+      });
+
+      if (!shop || shop.status !== 'ACTIVE') {
+        throw new NotFoundException('Không tìm thấy cửa hàng hoạt động trong hệ thống.');
+      }
+
+      return shop.id;
+    }
+
+    const defaultCode = process.env.DEFAULT_SHOP_CODE || 'MAIN';
+    const defaultShop = await this.prisma.shop.findUnique({
+      where: { code: defaultCode },
       select: { id: true, status: true },
     });
 
-    if (shop && shop.status === 'ACTIVE') {
-      return shop.id;
+    if (defaultShop && defaultShop.status === 'ACTIVE') {
+      return defaultShop.id;
     }
 
     const fallbackShop = await this.prisma.shop.findFirst({
