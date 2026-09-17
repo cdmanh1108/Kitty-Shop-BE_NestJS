@@ -26,11 +26,11 @@ import {
   addProductMedia,
   removeProductMedia,
 } from './product-commands';
+import { listStorefrontCategories } from './storefront-category.queries';
 import {
-  listStorefrontCategories,
   listStorefrontProducts,
   findStorefrontProductBySlug,
-} from './storefront-queries';
+} from './storefront-product.queries';
 import {
   addInventoryItem,
   updateInventoryStatus,

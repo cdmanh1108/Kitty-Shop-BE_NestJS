@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class WebRentalPriceDto {
   @ApiProperty({ example: 3, description: 'Số ngày thuê' })
@@ -134,22 +134,30 @@ export class WebProductListResDto {
 export class WebProductListQueryDto {
   @ApiPropertyOptional({ description: 'Từ khóa tìm kiếm theo tên, mã hoặc mô tả' })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @MaxLength(100)
   q?: string;
 
   @ApiPropertyOptional({ description: 'Lọc theo slug, mã hoặc id danh mục' })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @MaxLength(100)
   category?: string;
 
   @ApiPropertyOptional({ example: 'S', description: 'Lọc theo kích cỡ' })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @MaxLength(50)
   size?: string;
 
   @ApiPropertyOptional({ example: 'Trắng', description: 'Lọc theo màu sắc' })
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
+  @MaxLength(50)
   color?: string;
 
   @ApiPropertyOptional({

@@ -12,6 +12,7 @@ import { ErrorResDto } from '@common/dto/response.dto';
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import type { Request } from 'express';
 import { WebCatalogService } from '../../application/web-catalog.service';
+import { WebCatalogMapper } from './web-catalog.mapper';
 import {
   WebCategoryDto,
   WebProductDetailDto,
@@ -38,15 +39,7 @@ export class WebCatalogController {
   async listCategories(@Req() request: Request): Promise<WebCategoryDto[]> {
     const shopId = await this.shopResolver.resolveShopId(request);
     const categories = await this.catalogService.listCategories(shopId);
-    return categories.map((c) => ({
-      id: c.id,
-      code: c.code,
-      name: c.name,
-      slug: c.slug,
-      parentId: c.parentId,
-      sortOrder: c.sortOrder,
-      description: c.description ?? undefined,
-    }));
+    return WebCatalogMapper.toCategoryList(categories);
   }
 
   @Get('products')
@@ -67,7 +60,8 @@ export class WebCatalogController {
     @Query() query: WebProductListQueryDto,
   ): Promise<WebProductListResDto> {
     const shopId = await this.shopResolver.resolveShopId(request);
-    return this.catalogService.listProducts(shopId, query);
+    const result = await this.catalogService.listProducts(shopId, query);
+    return WebCatalogMapper.toProductListResponse(result);
   }
 
   @Get('products/:slug')
@@ -89,17 +83,6 @@ export class WebCatalogController {
   ): Promise<WebProductDetailDto> {
     const shopId = await this.shopResolver.resolveShopId(request);
     const product = await this.catalogService.getProduct(shopId, slug);
-    return {
-      ...product,
-      description: product.description ?? undefined,
-      facebookPostUrl: product.facebookPostUrl ?? undefined,
-      variants: product.variants.map((v) => ({
-        id: v.id,
-        code: v.code,
-        size: v.size ?? undefined,
-        color: v.color ?? undefined,
-        depositAmount: v.depositAmount,
-      })),
-    };
+    return WebCatalogMapper.toProductDetail(product);
   }
 }

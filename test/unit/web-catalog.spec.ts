@@ -1,17 +1,28 @@
 import { NotFoundException } from '@nestjs/common';
+import type { Request } from 'express';
 import {
+  WebCatalogMapper,
   toWebCategory,
+  toWebCategoryList,
   toWebProductDetail,
   toWebProductListItem,
-  type RawProduct,
+  toWebProductListResponse,
 } from '../../src/modules/catalog/api/web/web-catalog.mapper';
+import { WebCatalogController } from '../../src/modules/catalog/api/web/web-catalog.controller';
 import { WebCatalogService } from '../../src/modules/catalog/application/web-catalog.service';
 import type { CatalogRepository } from '../../src/modules/catalog/domain/catalog.repository';
+import type {
+  StorefrontCategory,
+  StorefrontProductDetails,
+  StorefrontProductItem,
+  StorefrontProductPage,
+} from '../../src/modules/catalog/domain/catalog.models';
+import type { ShopResolver } from '@common/tenant/shop-resolver';
 
-describe('Web Catalog Presenters and Service', () => {
-  describe('toWebCategory', () => {
-    it('maps category entity to clean WebCategoryDto without internal properties', () => {
-      const entity = {
+describe('Web Catalog Presenters, Service and Controller', () => {
+  describe('WebCatalogMapper.toCategory & toCategoryList', () => {
+    it('maps storefront category to clean WebCategoryDto without internal properties', () => {
+      const entity: StorefrontCategory = {
         id: 'cat-1',
         name: 'Đầm dạ hội',
         code: 'EVENING_DRESS',
@@ -19,13 +30,9 @@ describe('Web Catalog Presenters and Service', () => {
         parentId: null,
         description: 'Váy đầm cao cấp cho tiệc tối',
         sortOrder: 1,
-        shopId: 'shop-uuid-1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        archivedAt: null,
       };
 
-      const result = toWebCategory(entity);
+      const result = WebCatalogMapper.toCategory(entity);
       expect(result).toEqual({
         id: 'cat-1',
         name: 'Đầm dạ hội',
@@ -38,133 +45,169 @@ describe('Web Catalog Presenters and Service', () => {
       // Ensure internal properties are not exposed
       expect(result).not.toHaveProperty('shopId');
       expect(result).not.toHaveProperty('archivedAt');
+      expect(result).not.toHaveProperty('isActive');
+      expect(toWebCategory(entity)).toEqual(result);
+    });
+
+    it('maps an array of categories via toCategoryList and alias toWebCategoryList', () => {
+      const entities: StorefrontCategory[] = [
+        {
+          id: 'cat-1',
+          name: 'Váy',
+          code: 'VAY',
+          slug: 'vay',
+          parentId: null,
+          sortOrder: 0,
+        },
+      ];
+
+      const res1 = WebCatalogMapper.toCategoryList(entities);
+      const res2 = toWebCategoryList(entities);
+      expect(res1).toHaveLength(1);
+      expect(res1[0]?.id).toBe('cat-1');
+      expect(res2).toEqual(res1);
     });
   });
 
-  describe('toWebProductListItem', () => {
-    it('maps product with primary media, pricing, and sizes to storefront card format', () => {
-      const product: RawProduct = {
+  describe('WebCatalogMapper.toProductListItem & toProductListResponse', () => {
+    it('maps storefront product item to clean WebProductListItemDto', () => {
+      const product: StorefrontProductItem = {
         id: 'prod-1',
         code: 'DR001',
         name: 'Đầm dạ hội lụa ánh kim',
         slug: 'dam-da-hoi-lua-anh-kim',
         categoryId: 'cat-1',
-        description: 'Chất liệu lụa cao cấp.',
-        defaultDepositAmount: 500000,
-        status: 'ACTIVE',
+        categoryName: 'Đầm tiệc',
+        imageUrl: 'https://img.com/main.jpg',
+        gallery: ['https://img.com/main.jpg', 'https://img.com/sub.jpg'],
+        size: 'S, M',
+        color: 'Trắng',
+        rentalPrices: [{ days: 3, amount: 400000 }],
+        depositAmount: 500000,
+        status: 'available',
         isRentable: true,
-        facebookPostUrl: 'https://facebook.com/post/1',
-        category: { id: 'cat-1', name: 'Đầm tiệc' },
-        media: [
-          { url: 'https://img.com/main.jpg', isPrimary: true },
-          { url: 'https://img.com/sub.jpg', isPrimary: false },
-        ],
-        variants: [
-          {
-            id: 'var-1',
-            variantCode: 'DR001-S',
-            size: { name: 'S' },
-            color: { name: 'Trắng' },
-            rentalRates: [{ durationDays: 3, price: 350000 }],
-          },
-          {
-            id: 'var-2',
-            variantCode: 'DR001-M',
-            size: { name: 'M' },
-            color: { name: 'Trắng' },
-            rentalRates: [],
-          },
-        ],
-        rentalRates: [{ durationDays: 3, price: 400000 }],
       };
 
-      const result = toWebProductListItem(product);
+      const result = WebCatalogMapper.toProductListItem(product);
 
       expect(result.id).toBe('prod-1');
       expect(result.code).toBe('DR001');
       expect(result.name).toBe('Đầm dạ hội lụa ánh kim');
       expect(result.slug).toBe('dam-da-hoi-lua-anh-kim');
       expect(result.imageUrl).toBe('https://img.com/main.jpg');
+      expect(result.gallery).toEqual(['https://img.com/main.jpg', 'https://img.com/sub.jpg']);
       expect(result.categoryName).toBe('Đầm tiệc');
       expect(result.rentalPrices).toEqual([{ days: 3, amount: 400000 }]);
       expect(result.depositAmount).toBe(500000);
+      expect(result.status).toBe('available');
       expect(result.isRentable).toBe(true);
-      expect(result.size).toContain('S');
-      expect(result.size).toContain('M');
+      expect(result.size).toBe('S, M');
+      expect(result.color).toBe('Trắng');
 
       // Internal fields must not exist
       expect(result).not.toHaveProperty('purchasePrice');
       expect(result).not.toHaveProperty('replacementValue');
       expect(result).not.toHaveProperty('featured');
       expect(result).not.toHaveProperty('tags');
+      expect(result).not.toHaveProperty('shopId');
+      expect(toWebProductListItem(product)).toEqual(result);
     });
 
-    it('uses canonical slug', () => {
-      const product: RawProduct = {
-        id: 'prod-2',
-        code: 'DR002',
-        name: 'Váy ngắn',
-        slug: 'vay-ngan-xoe',
-        categoryId: 'cat-1',
-        status: 'ACTIVE',
-        defaultDepositAmount: 0,
-        isRentable: true,
-        category: { id: 'cat-1', name: 'Đầm' },
-        media: [],
-        variants: [],
-        rentalRates: [],
+    it('maps paginated product page via toProductListResponse and alias toWebProductListResponse', () => {
+      const page: StorefrontProductPage = {
+        items: [
+          {
+            id: 'p-1',
+            code: 'SP-1',
+            slug: 'vay-ngan',
+            name: 'Váy ngắn',
+            categoryId: 'cat-1',
+            categoryName: 'Váy',
+            imageUrl: 'https://img.com/1.jpg',
+            gallery: [],
+            size: 'Free size',
+            color: 'Hồng',
+            rentalPrices: [{ days: 1, amount: 50000 }],
+            depositAmount: 100000,
+            status: 'available',
+            isRentable: true,
+          },
+        ],
+        meta: {
+          page: 2,
+          limit: 10,
+          total: 25,
+          totalPages: 3,
+        },
       };
 
-      const result = toWebProductListItem(product);
-      expect(result.slug).toBe('vay-ngan-xoe');
+      const res = WebCatalogMapper.toProductListResponse(page);
+      expect(res.items).toHaveLength(1);
+      expect(res.meta).toEqual({
+        page: 2,
+        limit: 10,
+        total: 25,
+        totalPages: 3,
+      });
+      expect(toWebProductListResponse(page)).toEqual(res);
     });
   });
 
-  describe('toWebProductDetail', () => {
+  describe('WebCatalogMapper.toProductDetail', () => {
     it('maps full product details including variants, pricing rates, and images', () => {
-      const product: RawProduct = {
+      const product: StorefrontProductDetails = {
         id: 'prod-1',
         code: 'DR001',
         name: 'Đầm dạ hội lụa ánh kim',
         slug: 'dam-da-hoi-lua-anh-kim',
         categoryId: 'cat-1',
-        status: 'ACTIVE',
-        description: 'Váy dạ hội sang trọng.',
-        defaultDepositAmount: 500000,
-        facebookPostUrl: 'https://facebook.com/post/1',
-        category: { id: 'cat-1', name: 'Đầm tiệc' },
-        media: [
-          { url: 'https://img.com/1.jpg', isPrimary: true },
-          { url: 'https://img.com/2.jpg', isPrimary: false },
+        categoryName: 'Đầm tiệc',
+        imageUrl: 'https://img.com/1.jpg',
+        gallery: ['https://img.com/1.jpg', 'https://img.com/2.jpg'],
+        size: 'S',
+        color: 'Đỏ',
+        rentalPrices: [
+          { days: 1, amount: 150000 },
+          { days: 3, amount: 350000 },
         ],
+        depositAmount: 500000,
+        status: 'available',
+        isRentable: true,
+        description: 'Váy dạ hội sang trọng.',
+        facebookPostUrl: 'https://facebook.com/post/1',
         variants: [
           {
             id: 'var-1',
-            variantCode: 'DR001-S',
-            depositAmountOverride: null,
-            size: { name: 'S' },
-            color: { name: 'Đỏ' },
-            rentalRates: [{ durationDays: 3, price: 350000 }],
+            code: 'DR001-S',
+            size: 'S',
+            color: 'Đỏ',
+            depositAmount: 500000,
           },
-        ],
-        rentalRates: [
-          { durationDays: 1, price: 150000 },
-          { durationDays: 3, price: 350000 },
         ],
       };
 
-      const result = toWebProductDetail(product);
+      const result = WebCatalogMapper.toProductDetail(product);
 
       expect(result.id).toBe('prod-1');
       expect(result.gallery).toEqual(['https://img.com/1.jpg', 'https://img.com/2.jpg']);
       expect(result.imageUrl).toBe('https://img.com/1.jpg');
       expect(result.rentalPrices.length).toBe(2);
+      expect(result.description).toBe('Váy dạ hội sang trọng.');
+      expect(result.facebookPostUrl).toBe('https://facebook.com/post/1');
       expect(result.variants.length).toBe(1);
       expect(result.variants[0]?.code).toBe('DR001-S');
+      expect(result.variants[0]?.size).toBe('S');
+      expect(result.variants[0]?.color).toBe('Đỏ');
+      expect(result.variants[0]?.depositAmount).toBe(500000);
 
-      // Verify no physical inventory items leaked
+      // Verify no physical inventory items or internal fields leaked
       expect(result.variants[0]).not.toHaveProperty('inventoryItems');
       expect(result.variants[0]).not.toHaveProperty('physicalStockIds');
+      expect(result.variants[0]).not.toHaveProperty('archivedAt');
+      expect(result).not.toHaveProperty('shopId');
+
+      // Verify backwards compatible function alias
+      expect(toWebProductDetail(product)).toEqual(result);
     });
   });
 
@@ -185,7 +228,25 @@ describe('Web Catalog Presenters and Service', () => {
       service = new WebCatalogService(mockRepo as unknown as CatalogRepository);
     });
 
-    it('returns paginated response with items and metadata', async () => {
+    it('returns categories from repository', async () => {
+      mockRepo.listStorefrontCategories.mockResolvedValueOnce([
+        {
+          id: 'cat-1',
+          code: 'VAY',
+          name: 'Váy',
+          slug: 'vay',
+          parentId: null,
+          sortOrder: 0,
+        },
+      ]);
+
+      const res = await service.listCategories('shop-1');
+      expect(res).toHaveLength(1);
+      expect(res[0]?.id).toBe('cat-1');
+      expect(mockRepo.listStorefrontCategories).toHaveBeenCalledWith('shop-1');
+    });
+
+    it('returns paginated response with items and metadata, clamping pagination limits', async () => {
       mockRepo.listStorefrontProducts.mockResolvedValue({
         items: [
           {
@@ -240,7 +301,7 @@ describe('Web Catalog Presenters and Service', () => {
       });
     });
 
-    it('finds product by canonical slug without table scan', async () => {
+    it('finds product by canonical slug', async () => {
       mockRepo.findStorefrontProductBySlug.mockResolvedValue({
         id: 'p-1',
         code: 'SP-1',
@@ -279,6 +340,114 @@ describe('Web Catalog Presenters and Service', () => {
       await expect(service.getProduct('shop-1', 'non-existing-slug')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('WebCatalogController', () => {
+    let controller: WebCatalogController;
+    let mockShopResolver: { resolveShopId: jest.Mock };
+    let mockService: {
+      listCategories: jest.Mock;
+      listProducts: jest.Mock;
+      getProduct: jest.Mock;
+    };
+    const mockRequest = {} as Request;
+
+    beforeEach(() => {
+      mockShopResolver = {
+        resolveShopId: jest.fn().mockResolvedValue('shop-uuid-1'),
+      };
+      mockService = {
+        listCategories: jest.fn().mockResolvedValue([
+          {
+            id: 'cat-1',
+            code: 'AO_DAI',
+            name: 'Áo dài',
+            slug: 'ao-dai',
+            parentId: null,
+            sortOrder: 1,
+            description: 'Áo dài truyền thống',
+          },
+        ]),
+        listProducts: jest.fn().mockResolvedValue({
+          items: [
+            {
+              id: 'p-1',
+              code: 'AD01',
+              slug: 'ao-dai-do',
+              name: 'Áo dài đỏ',
+              categoryId: 'cat-1',
+              categoryName: 'Áo dài',
+              imageUrl: 'https://img.com/ad.jpg',
+              gallery: [],
+              size: 'M',
+              color: 'Đỏ',
+              rentalPrices: [{ days: 3, amount: 200000 }],
+              depositAmount: 300000,
+              status: 'available',
+              isRentable: true,
+            },
+          ],
+          meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        }),
+        getProduct: jest.fn().mockResolvedValue({
+          id: 'p-1',
+          code: 'AD01',
+          slug: 'ao-dai-do',
+          name: 'Áo dài đỏ',
+          categoryId: 'cat-1',
+          categoryName: 'Áo dài',
+          imageUrl: 'https://img.com/ad.jpg',
+          gallery: ['https://img.com/ad.jpg'],
+          size: 'M',
+          color: 'Đỏ',
+          rentalPrices: [{ days: 3, amount: 200000 }],
+          depositAmount: 300000,
+          status: 'available',
+          isRentable: true,
+          description: 'Mô tả chi tiết',
+          facebookPostUrl: null,
+          variants: [
+            {
+              id: 'v-1',
+              code: 'AD01-M',
+              size: 'M',
+              color: 'Đỏ',
+              depositAmount: 300000,
+            },
+          ],
+        }),
+      };
+
+      controller = new WebCatalogController(
+        mockShopResolver as unknown as ShopResolver,
+        mockService as unknown as WebCatalogService,
+      );
+    });
+
+    it('delegates listCategories to shopResolver and WebCatalogMapper', async () => {
+      const res = await controller.listCategories(mockRequest);
+      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith(mockRequest);
+      expect(mockService.listCategories).toHaveBeenCalledWith('shop-uuid-1');
+      expect(res).toHaveLength(1);
+      expect(res[0]?.code).toBe('AO_DAI');
+    });
+
+    it('delegates listProducts to shopResolver and WebCatalogMapper', async () => {
+      const query = { page: 1, limit: 20, q: 'ao dai' };
+      const res = await controller.listProducts(mockRequest, query);
+      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith(mockRequest);
+      expect(mockService.listProducts).toHaveBeenCalledWith('shop-uuid-1', query);
+      expect(res.items).toHaveLength(1);
+      expect(res.meta.total).toBe(1);
+    });
+
+    it('delegates getProduct to shopResolver and WebCatalogMapper', async () => {
+      const res = await controller.getProduct(mockRequest, 'ao-dai-do');
+      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith(mockRequest);
+      expect(mockService.getProduct).toHaveBeenCalledWith('shop-uuid-1', 'ao-dai-do');
+      expect(res.slug).toBe('ao-dai-do');
+      expect(res.variants).toHaveLength(1);
     });
   });
 });
