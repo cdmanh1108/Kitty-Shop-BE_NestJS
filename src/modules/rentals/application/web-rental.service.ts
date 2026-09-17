@@ -95,10 +95,7 @@ export class WebRentalService {
     throw new BadRequestException('Vui lòng cung cấp productId hoặc variantId.');
   }
 
-  async calculateQuote(
-    shopId: string,
-    req: WebRentalQuoteInput,
-  ): Promise<WebRentalQuoteResult> {
+  async calculateQuote(shopId: string, req: WebRentalQuoteInput): Promise<WebRentalQuoteResult> {
     const from = new Date(req.pickupDate);
     const until = new Date(req.returnDate);
     if (isNaN(from.getTime()) || isNaN(until.getTime()) || from >= until) {
@@ -159,10 +156,7 @@ export class WebRentalService {
     };
   }
 
-  async createOrder(
-    shopId: string,
-    req: WebCreateOrderInput,
-  ): Promise<WebCreateOrderResult> {
+  async createOrder(shopId: string, req: WebCreateOrderInput): Promise<WebCreateOrderResult> {
     const from = new Date(req.pickupDate);
     const until = new Date(req.returnDate);
     if (isNaN(from.getTime()) || isNaN(until.getTime()) || from >= until) {
@@ -321,10 +315,7 @@ export class WebRentalService {
     };
   }
 
-  async lookupOrder(
-    shopId: string,
-    req: WebOrderLookupInput,
-  ): Promise<WebOrderLookupResult> {
+  async lookupOrder(shopId: string, req: WebOrderLookupInput): Promise<WebOrderLookupResult> {
     let normalizedPhone: string;
     try {
       normalizedPhone = normalizeCustomerPhone(req.phone);
@@ -340,9 +331,7 @@ export class WebRentalService {
 
     const rawPhone = order.customerPhone;
     const maskedPhone =
-      rawPhone.length >= 7
-        ? `${rawPhone.slice(0, 3)}****${rawPhone.slice(-3)}`
-        : rawPhone;
+      rawPhone.length >= 7 ? `${rawPhone.slice(0, 3)}****${rawPhone.slice(-3)}` : rawPhone;
 
     return {
       orderCode: order.orderNumber,

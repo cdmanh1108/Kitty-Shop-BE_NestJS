@@ -16,12 +16,31 @@ export const fixedClock: Clock = { now: () => new Date('2026-10-01T12:00:00.000Z
 
 export async function payRentalForConfirmation(
   prisma: PrismaService,
-  input: { shopId: string; orderId: string; memberId: string; rentalAmount: number; depositAmount: number },
+  input: {
+    shopId: string;
+    orderId: string;
+    memberId: string;
+    rentalAmount: number;
+    depositAmount: number;
+  },
 ) {
   const finance = new PrismaFinanceRepository(prisma);
-  for (const [purpose, amount] of [['RENTAL_PAYMENT', input.rentalAmount], ['DEPOSIT', input.depositAmount]] as const) {
+  for (const [purpose, amount] of [
+    ['RENTAL_PAYMENT', input.rentalAmount],
+    ['DEPOSIT', input.depositAmount],
+  ] as const) {
     if (amount <= 0) continue;
-    await finance.createPayment({ shopId: input.shopId, orderId: input.orderId, transactionNumber: uniqueCode('PAY'), direction: 'IN', purpose, paymentMethod: 'CASH', amount, paidAt: fixedClock.now(), createdBy: input.memberId });
+    await finance.createPayment({
+      shopId: input.shopId,
+      orderId: input.orderId,
+      transactionNumber: uniqueCode('PAY'),
+      direction: 'IN',
+      purpose,
+      paymentMethod: 'CASH',
+      amount,
+      paidAt: fixedClock.now(),
+      createdBy: input.memberId,
+    });
   }
 }
 

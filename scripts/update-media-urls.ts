@@ -6,7 +6,10 @@ config();
 const prisma = new PrismaClient();
 
 async function main() {
-  const baseUrl = (process.env.OBJECT_STORAGE_PUBLIC_BASE_URL || 'https://pub-da9772f41ace4dda9871f112ae659353.r2.dev')
+  const baseUrl = (
+    process.env.OBJECT_STORAGE_PUBLIC_BASE_URL ||
+    'https://pub-da9772f41ace4dda9871f112ae659353.r2.dev'
+  )
     .trim()
     .replace(/\/+$/, '');
 

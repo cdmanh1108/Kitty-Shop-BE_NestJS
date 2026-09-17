@@ -35,7 +35,8 @@ export class CreateRentalItemReqDto {
   quantity = 1;
   @ApiPropertyOptional({
     type: Number,
-    description: 'Đơn giá thuê mỗi món do admin ghi đè (VNĐ). Nếu để trống, hệ thống dùng giá cấu hình.',
+    description:
+      'Đơn giá thuê mỗi món do admin ghi đè (VNĐ). Nếu để trống, hệ thống dùng giá cấu hình.',
     example: 150000,
   })
   @Type(() => Number)

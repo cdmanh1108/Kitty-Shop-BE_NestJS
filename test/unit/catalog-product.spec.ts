@@ -264,7 +264,10 @@ describe('CatalogService - Product Management', () => {
         fail('expected to throw ConflictException');
       } catch (error) {
         expect(error).toBeInstanceOf(ConflictException);
-        const res = (error as ConflictException).getResponse() as { code?: string; message?: string };
+        const res = (error as ConflictException).getResponse() as {
+          code?: string;
+          message?: string;
+        };
         expect(res.code).toBe('PRODUCT_SLUG_ALREADY_EXISTS');
         expect(res.message).toBe('Slug sản phẩm đã tồn tại trong cửa hàng.');
       }
@@ -328,7 +331,10 @@ describe('CatalogService - Product Management', () => {
         fail('expected to throw ConflictException');
       } catch (error) {
         expect(error).toBeInstanceOf(ConflictException);
-        const res = (error as ConflictException).getResponse() as { code?: string; message?: string };
+        const res = (error as ConflictException).getResponse() as {
+          code?: string;
+          message?: string;
+        };
         expect(res.code).toBe('PRODUCT_SLUG_ALREADY_EXISTS');
         expect(res.message).toBe('Slug sản phẩm đã tồn tại trong cửa hàng.');
       }

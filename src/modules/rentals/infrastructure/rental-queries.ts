@@ -4,7 +4,10 @@ import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { type Prisma, type PrismaClient } from '@prisma/client';
 
-import { type RentalRepository, type StorefrontOrderLookupRecord } from '../domain/rental.repository';
+import {
+  type RentalRepository,
+  type StorefrontOrderLookupRecord,
+} from '../domain/rental.repository';
 
 export async function customerExists(
   prisma: PrismaService,

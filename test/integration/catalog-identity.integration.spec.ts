@@ -26,8 +26,7 @@ interface ErrorResponseBody {
 
 const asDetail = (res: request.Response): ProductDetailResponse =>
   res.body as ProductDetailResponse;
-const asError = (res: request.Response): ErrorResponseBody =>
-  res.body as ErrorResponseBody;
+const asError = (res: request.Response): ErrorResponseBody => res.body as ErrorResponseBody;
 
 describe('Tenant Resolution & Product Slug Identity Integration', () => {
   let app: INestApplication;

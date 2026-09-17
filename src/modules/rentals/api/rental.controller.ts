@@ -1,1 +1,4 @@
-export { AdminRentalController, AdminRentalController as RentalController } from './admin/admin-rental.controller';
+export {
+  AdminRentalController,
+  AdminRentalController as RentalController,
+} from './admin/admin-rental.controller';

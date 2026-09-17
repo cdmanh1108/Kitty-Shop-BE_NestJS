@@ -63,8 +63,7 @@ function buildEffectivePolicy(saved?: RentalPolicy | null): RentalPolicy {
     },
     delivery: {
       standardShippingFee:
-        saved?.delivery?.standardShippingFee ??
-        DEFAULT_RENTAL_POLICY.delivery.standardShippingFee,
+        saved?.delivery?.standardShippingFee ?? DEFAULT_RENTAL_POLICY.delivery.standardShippingFee,
     },
   };
 }
@@ -88,8 +87,7 @@ function mergePolicyInput(base: RentalPolicy, input: UpdateRentalPolicyInput): R
         : [...base.deposit.categoryOverrides],
     },
     delivery: {
-      standardShippingFee:
-        input.delivery?.standardShippingFee ?? base.delivery.standardShippingFee,
+      standardShippingFee: input.delivery?.standardShippingFee ?? base.delivery.standardShippingFee,
     },
     reschedule: {
       maxDaysFromBooking:

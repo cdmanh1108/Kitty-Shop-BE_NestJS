@@ -27,10 +27,7 @@ import {
   removeProductMedia,
 } from './product-commands';
 import { listStorefrontCategories } from './storefront-category.queries';
-import {
-  listStorefrontProducts,
-  findStorefrontProductBySlug,
-} from './storefront-product.queries';
+import { listStorefrontProducts, findStorefrontProductBySlug } from './storefront-product.queries';
 import {
   addInventoryItem,
   updateInventoryStatus,

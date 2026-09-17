@@ -1,4 +1,7 @@
-import type { CustomerAddressRecord, CustomerRecord } from '@modules/customers/domain/customers.records';
+import type {
+  CustomerAddressRecord,
+  CustomerRecord,
+} from '@modules/customers/domain/customers.records';
 
 export type CustomerDetails =
   | null

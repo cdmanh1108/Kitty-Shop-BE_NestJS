@@ -84,8 +84,21 @@ describe('Catalog and customer persistence boundaries', () => {
         (row) => row.id,
       ),
     ).toEqual([customer.id]);
-    expect(Object.keys((await repo.list({ shopId: f.shop.id, search: 'Alice', page: 1, limit: 10 })).items[0] ?? {}).sort()).toEqual([
-      'completedRentalCount', 'customerCode', 'facebook', 'fullName', 'id', 'lastRentalAt', 'phone', 'totalPaid', 'zalo',
+    expect(
+      Object.keys(
+        (await repo.list({ shopId: f.shop.id, search: 'Alice', page: 1, limit: 10 })).items[0] ??
+          {},
+      ).sort(),
+    ).toEqual([
+      'completedRentalCount',
+      'customerCode',
+      'facebook',
+      'fullName',
+      'id',
+      'lastRentalAt',
+      'phone',
+      'totalPaid',
+      'zalo',
     ]);
     expect(
       (
@@ -98,7 +111,15 @@ describe('Catalog and customer persistence boundaries', () => {
     expect(await repo.findById(other.id, customer.id)).toBeNull();
     const detail = await repo.findById(f.shop.id, customer.id);
     expect(Object.keys(detail ?? {}).sort()).toEqual([
-      'addresses', 'customerCode', 'facebook', 'fullName', 'id', 'notes', 'phone', 'stats', 'zalo',
+      'addresses',
+      'customerCode',
+      'facebook',
+      'fullName',
+      'id',
+      'notes',
+      'phone',
+      'stats',
+      'zalo',
     ]);
     expect(detail).not.toHaveProperty('recentOrders');
     expect(await repo.update(other.id, customer.id, { fullName: 'Spoof' })).toBeNull();
@@ -130,14 +151,31 @@ describe('Catalog and customer persistence boundaries', () => {
     const f = await rentalScenario(prisma);
     const rental = await prisma.rentalOrder.create({
       data: {
-        shopId: f.shop.id, customerId: f.customer.id, orderNumber: uniqueCode('RT'),
-        rentalStartAt: f.data.rentalStartAt, rentalEndAt: f.data.rentalEndAt,
+        shopId: f.shop.id,
+        customerId: f.customer.id,
+        orderNumber: uniqueCode('RT'),
+        rentalStartAt: f.data.rentalStartAt,
+        rentalEndAt: f.data.rentalEndAt,
         createdBy: f.member.id,
       },
     });
     const finance = new PrismaFinanceRepository(prisma);
-    const record = (purpose: 'RENTAL_PAYMENT' | 'DEPOSIT' | 'ORDER_REFUND' | 'DEPOSIT_REFUND', direction: 'IN' | 'OUT', amount: number) =>
-      finance.createPayment({ shopId: f.shop.id, orderId: rental.id, transactionNumber: uniqueCode('PAY'), purpose, direction, amount, paymentMethod: 'CASH', paidAt: new Date(), createdBy: f.member.id });
+    const record = (
+      purpose: 'RENTAL_PAYMENT' | 'DEPOSIT' | 'ORDER_REFUND' | 'DEPOSIT_REFUND',
+      direction: 'IN' | 'OUT',
+      amount: number,
+    ) =>
+      finance.createPayment({
+        shopId: f.shop.id,
+        orderId: rental.id,
+        transactionNumber: uniqueCode('PAY'),
+        purpose,
+        direction,
+        amount,
+        paymentMethod: 'CASH',
+        paidAt: new Date(),
+        createdBy: f.member.id,
+      });
     await record('RENTAL_PAYMENT', 'IN', 200000);
     await record('DEPOSIT', 'IN', 100000);
     await record('ORDER_REFUND', 'OUT', 30000);
@@ -145,7 +183,9 @@ describe('Catalog and customer persistence boundaries', () => {
     const voided = await record('RENTAL_PAYMENT', 'IN', 50000);
     if (!voided) throw new Error('Missing payment');
     await finance.voidPayment({ shopId: f.shop.id, paymentId: voided.id, voidedBy: f.member.id });
-    expect((await new PrismaCustomerRepository(prisma).findById(f.shop.id, f.customer.id))?.stats).toMatchObject({
+    expect(
+      (await new PrismaCustomerRepository(prisma).findById(f.shop.id, f.customer.id))?.stats,
+    ).toMatchObject({
       totalPaid: 170000,
       depositHeld: 80000,
     });

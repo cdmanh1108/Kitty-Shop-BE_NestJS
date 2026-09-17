@@ -40,7 +40,10 @@ export class WebRentalController {
     operationId: 'getWebAvailability',
     summary: 'Kiểm tra tình trạng trống của sản phẩm hoặc biến thể',
   })
-  @ApiOkResponse({ type: WebAvailabilityResDto, description: 'Tình trạng còn hàng của sản phẩm hoặc biến thể' })
+  @ApiOkResponse({
+    type: WebAvailabilityResDto,
+    description: 'Tình trạng còn hàng của sản phẩm hoặc biến thể',
+  })
   @ApiBadRequestResponse({
     type: ErrorResDto,
     description: 'Khoảng thời gian thuê không hợp lệ hoặc thiếu productId/variantId',
@@ -58,7 +61,10 @@ export class WebRentalController {
     operationId: 'createWebRentalQuote',
     summary: 'Tính báo giá thuê tạm tính chính thức từ server',
   })
-  @ApiOkResponse({ type: WebRentalQuoteResDto, description: 'Báo giá thuê tạm tính chính thức từ server' })
+  @ApiOkResponse({
+    type: WebRentalQuoteResDto,
+    description: 'Báo giá thuê tạm tính chính thức từ server',
+  })
   @ApiBadRequestResponse({
     type: ErrorResDto,
     description: 'Dữ liệu tính báo giá không hợp lệ hoặc khoảng ngày không đúng',

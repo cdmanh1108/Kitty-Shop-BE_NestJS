@@ -208,7 +208,9 @@ export async function updateCategory(
 ): ReturnType<CatalogRepository['updateCategory']> {
   if (input.parentId !== undefined && input.parentId !== null) {
     if (input.parentId === id) {
-      throw new CatalogCategoryInvalidParentError('Danh mục không thể chọn chính nó làm danh mục cha.');
+      throw new CatalogCategoryInvalidParentError(
+        'Danh mục không thể chọn chính nó làm danh mục cha.',
+      );
     }
     const parent = await prisma.category.findFirst({
       where: { id: input.parentId, shopId },

@@ -189,8 +189,22 @@ export async function findProduct(
       createdAt: true,
       updatedAt: true,
       category: { select: { id: true, code: true, name: true, isActive: true } },
-      media: { orderBy: { sortOrder: 'asc' }, select: { id: true, storageKey: true, url: true, altText: true, isPrimary: true, sortOrder: true } },
-      rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' }, select: { id: true, durationDays: true, price: true, currency: true, isActive: true } },
+      media: {
+        orderBy: { sortOrder: 'asc' },
+        select: {
+          id: true,
+          storageKey: true,
+          url: true,
+          altText: true,
+          isPrimary: true,
+          sortOrder: true,
+        },
+      },
+      rentalRates: {
+        where: { isActive: true },
+        orderBy: { durationDays: 'asc' },
+        select: { id: true, durationDays: true, price: true, currency: true, isActive: true },
+      },
       variants: {
         select: {
           id: true,
@@ -201,7 +215,11 @@ export async function findProduct(
           status: true,
           size: { select: { name: true } },
           color: { select: { name: true, hexColor: true } },
-          rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' }, select: { id: true, durationDays: true, price: true, currency: true, isActive: true } },
+          rentalRates: {
+            where: { isActive: true },
+            orderBy: { durationDays: 'asc' },
+            select: { id: true, durationDays: true, price: true, currency: true, isActive: true },
+          },
           _count: { select: { inventoryItems: { where: { isActive: true } } } },
         },
       },

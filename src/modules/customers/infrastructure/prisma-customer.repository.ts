@@ -31,7 +31,14 @@ export class PrismaCustomerRepository implements CustomerRepository {
     const [customers, total] = await this.prisma.$transaction([
       this.prisma.customer.findMany({
         where,
-        select: { id: true, customerCode: true, fullName: true, phone: true, facebook: true, zalo: true },
+        select: {
+          id: true,
+          customerCode: true,
+          fullName: true,
+          phone: true,
+          facebook: true,
+          zalo: true,
+        },
         orderBy: { createdAt: 'desc' },
         skip: (input.page - 1) * input.limit,
         take: input.limit,
@@ -119,27 +126,32 @@ export class PrismaCustomerRepository implements CustomerRepository {
         phone: true,
         facebook: true,
         zalo: true,
-        addresses: { orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }], select: { id: true, addressLine: true, isDefault: true } },
-        notes: { orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }], select: { id: true, content: true, createdAt: true } },
+        addresses: {
+          orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+          select: { id: true, addressLine: true, isDefault: true },
+        },
+        notes: {
+          orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+          select: { id: true, content: true, createdAt: true },
+        },
       },
     });
     if (!customer) return null;
 
-    const [completedRentalCount, lastRental, payments] =
-      await this.prisma.$transaction([
-        this.prisma.rentalOrder.count({ where: { shopId, customerId: id, status: 'COMPLETED' } }),
-        this.prisma.rentalOrder.findFirst({
-          where: { shopId, customerId: id, status: 'COMPLETED' },
-          select: { rentalStartAt: true },
-          orderBy: { rentalStartAt: 'desc' },
-        }),
-        this.prisma.paymentTransaction.groupBy({
-          by: ['direction', 'purpose'],
-          where: { shopId, customerId: id, status: 'COMPLETED', voidedAt: null },
-          orderBy: [{ direction: 'asc' }, { purpose: 'asc' }],
-          _sum: { amount: true },
-        }),
-      ]);
+    const [completedRentalCount, lastRental, payments] = await this.prisma.$transaction([
+      this.prisma.rentalOrder.count({ where: { shopId, customerId: id, status: 'COMPLETED' } }),
+      this.prisma.rentalOrder.findFirst({
+        where: { shopId, customerId: id, status: 'COMPLETED' },
+        select: { rentalStartAt: true },
+        orderBy: { rentalStartAt: 'desc' },
+      }),
+      this.prisma.paymentTransaction.groupBy({
+        by: ['direction', 'purpose'],
+        where: { shopId, customerId: id, status: 'COMPLETED', voidedAt: null },
+        orderBy: [{ direction: 'asc' }, { purpose: 'asc' }],
+        _sum: { amount: true },
+      }),
+    ]);
 
     const netNonDepositPaid = payments.reduce((sum, payment) => {
       if (['DEPOSIT', 'DEPOSIT_REFUND'].includes(payment.purpose)) return sum;

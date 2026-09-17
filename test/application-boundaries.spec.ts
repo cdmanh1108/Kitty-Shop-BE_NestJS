@@ -232,7 +232,10 @@ describe('web layer architecture boundaries', () => {
         if (!isWebController && !isApplication) continue;
 
         const source = readFileSync(file, 'utf8');
-        if (source.includes('PrismaService') || source.includes('@database/prisma/prisma.service')) {
+        if (
+          source.includes('PrismaService') ||
+          source.includes('@database/prisma/prisma.service')
+        ) {
           violations.push(`${file}: forbidden PrismaService dependency`);
         }
       }

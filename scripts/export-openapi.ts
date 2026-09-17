@@ -17,13 +17,8 @@ async function main(): Promise<void> {
   // OpenAPI generation is metadata-only and must not require PostgreSQL to be reachable.
   process.env.SKIP_DATABASE_CONNECT = 'true';
 
-  const [
-    { createApplication },
-    { createAdminOpenApiDocument, createWebOpenApiDocument },
-  ] = await Promise.all([
-    import('../src/main'),
-    import('../src/common/swagger/openapi'),
-  ]);
+  const [{ createApplication }, { createAdminOpenApiDocument, createWebOpenApiDocument }] =
+    await Promise.all([import('../src/main'), import('../src/common/swagger/openapi')]);
 
   const app = await createApplication();
   try {
@@ -106,4 +101,3 @@ async function main(): Promise<void> {
 }
 
 void main();
-

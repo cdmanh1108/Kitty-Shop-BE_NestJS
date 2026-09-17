@@ -22,7 +22,8 @@ export interface CustomerRecord {
   archivedAt: Date | null;
 }
 
-export interface CustomerListItemRecord extends Pick<CustomerRecord, 'id' | 'customerCode' | 'fullName' | 'phone' | 'facebook' | 'zalo'> {
+export interface CustomerListItemRecord
+  extends Pick<CustomerRecord, 'id' | 'customerCode' | 'fullName' | 'phone' | 'facebook' | 'zalo'> {
   completedRentalCount: number;
   totalPaid: number;
   lastRentalAt: Date | null;

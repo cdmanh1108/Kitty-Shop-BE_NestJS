@@ -62,7 +62,10 @@ describe('WebRentalService', () => {
       mockRepository.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         variantCode: 'DR-S',
-        availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }, { id: 'inv-2', sku: 'SKU-2' }],
+        availableInventory: [
+          { id: 'inv-1', sku: 'SKU-1' },
+          { id: 'inv-2', sku: 'SKU-2' },
+        ],
       });
 
       const result = await service.checkAvailability('shop-1', {

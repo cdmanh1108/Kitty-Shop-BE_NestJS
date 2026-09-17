@@ -25,12 +25,47 @@ function pickOne<T>(arr: readonly T[]): T {
   return arr[Math.floor(random() * arr.length)]!;
 }
 
-const ADJECTIVES = ['Dạ Hội', 'Vintage', 'Công Sở', 'Dạo Phố', 'Hàn Quốc', 'Thiết Kế', 'Cao Cấp', 'Cổ Điển', 'Thanh Lịch', 'Sang Trọng'];
-const NOUNS = ['Đầm', 'Váy', 'Áo Dài', 'Sơ Mi', 'Vest', 'Chân Váy', 'Set Đồ', 'Áo Khoác', 'Jumpsuit', 'Blazer'];
-const COLORS = ['Trắng', 'Đen', 'Đỏ', 'Xanh Pastel', 'Vàng Nhạt', 'Hồng Pastel', 'Be', 'Nâu', 'Tím Nhạt', 'Cam'];
+const ADJECTIVES = [
+  'Dạ Hội',
+  'Vintage',
+  'Công Sở',
+  'Dạo Phố',
+  'Hàn Quốc',
+  'Thiết Kế',
+  'Cao Cấp',
+  'Cổ Điển',
+  'Thanh Lịch',
+  'Sang Trọng',
+];
+const NOUNS = [
+  'Đầm',
+  'Váy',
+  'Áo Dài',
+  'Sơ Mi',
+  'Vest',
+  'Chân Váy',
+  'Set Đồ',
+  'Áo Khoác',
+  'Jumpsuit',
+  'Blazer',
+];
+const COLORS = [
+  'Trắng',
+  'Đen',
+  'Đỏ',
+  'Xanh Pastel',
+  'Vàng Nhạt',
+  'Hồng Pastel',
+  'Be',
+  'Nâu',
+  'Tím Nhạt',
+  'Cam',
+];
 
 export async function seedPerformanceCatalog(targetCount = 1000): Promise<void> {
-  logger.log(`Starting deterministic performance dataset seeding (target: ${targetCount} products)...`);
+  logger.log(
+    `Starting deterministic performance dataset seeding (target: ${targetCount} products)...`,
+  );
 
   const shop = await prisma.shop.findFirst({ where: { code: 'MAIN' } });
   if (!shop) {
@@ -63,7 +98,9 @@ export async function seedPerformanceCatalog(targetCount = 1000): Promise<void> 
   });
 
   if (existingPerfCount >= targetCount) {
-    logger.log(`Dataset already has ${existingPerfCount} performance products. Skipping generation.`);
+    logger.log(
+      `Dataset already has ${existingPerfCount} performance products. Skipping generation.`,
+    );
     return;
   }
 
@@ -99,9 +136,9 @@ export async function seedPerformanceCatalog(targetCount = 1000): Promise<void> 
 
       if (roll > 0.95) {
         archivedAt = new Date(Date.now() - 86400000);
-      } else if (roll > 0.90) {
+      } else if (roll > 0.9) {
         isRentable = false;
-      } else if (roll > 0.80) {
+      } else if (roll > 0.8) {
         isPublic = false;
       }
 

@@ -7,10 +7,7 @@ import helmet from 'helmet';
 import type { Application } from 'express';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import type { AppConfiguration } from './config/configuration';
-import {
-  createAdminOpenApiDocument,
-  createWebOpenApiDocument,
-} from './common/swagger/openapi';
+import { createAdminOpenApiDocument, createWebOpenApiDocument } from './common/swagger/openapi';
 import { ApplicationLogger } from './common/logging/application-logger';
 
 export function configureApplication(app: INestApplication): void {

@@ -4,10 +4,7 @@ import { ShopResolver } from '@common/tenant/shop-resolver';
 import { Controller, Get, Inject, Req } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
-import {
-  RENTAL_POLICY_PROVIDER,
-  type RentalPolicyProvider,
-} from '../../domain/rental-policy';
+import { RENTAL_POLICY_PROVIDER, type RentalPolicyProvider } from '../../domain/rental-policy';
 import { WebRentalPolicyDto } from './dto/web-policy.dto';
 
 @Public()

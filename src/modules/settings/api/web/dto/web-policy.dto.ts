@@ -16,7 +16,10 @@ export class WebRentalPolicyDto {
   @ApiProperty({ example: 200000, description: 'Tiền cọc mặc định cho sản phẩm (VND)' })
   defaultDepositAmount!: number;
 
-  @ApiProperty({ example: 50000, description: 'Phí phụ thu trễ hạn mỗi ngày trên mỗi món đồ (VND)' })
+  @ApiProperty({
+    example: 50000,
+    description: 'Phí phụ thu trễ hạn mỗi ngày trên mỗi món đồ (VND)',
+  })
   lateFeePerItemPerDay!: number;
 
   @ApiProperty({ example: 30000, description: 'Phí vận chuyển giao đồ tận nơi tiêu chuẩn (VND)' })

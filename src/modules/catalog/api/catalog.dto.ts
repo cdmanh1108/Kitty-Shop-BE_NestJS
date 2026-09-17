@@ -226,7 +226,12 @@ export class UpdateProductReqDto {
 }
 
 export class CreateCategoryReqDto {
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid', example: 'd1964177-3e91-4475-ab1b-2661001a1829' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    format: 'uuid',
+    example: 'd1964177-3e91-4475-ab1b-2661001a1829',
+  })
   @IsUUID(undefined, { message: 'Mã danh mục cha phải là UUID hợp lệ.' })
   @IsOptional()
   parentId?: string | null;
@@ -263,7 +268,12 @@ export class CreateCategoryReqDto {
 }
 
 export class UpdateCategoryReqDto {
-  @ApiPropertyOptional({ type: String, nullable: true, format: 'uuid', example: 'd1964177-3e91-4475-ab1b-2661001a1829' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    format: 'uuid',
+    example: 'd1964177-3e91-4475-ab1b-2661001a1829',
+  })
   @IsUUID(undefined, { message: 'Mã danh mục cha phải là UUID hợp lệ.' })
   @IsOptional()
   parentId?: string | null;
