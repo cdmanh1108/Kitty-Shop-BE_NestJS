@@ -41,7 +41,8 @@ export const WebCatalogMapper = {
 
   /**
    * Maps a StorefrontProductItem into WebProductListItemDto.
-   * Ensures monetary fields are numeric and internal valuation/cost fields are excluded.
+   * Ensures monetary fields are numeric, internal valuation/cost fields are excluded,
+   * and only fields required by storefront list/card consumers are exposed.
    */
   toProductListItem(product: StorefrontProductItem): WebProductListItemDto {
     return {
@@ -52,7 +53,6 @@ export const WebCatalogMapper = {
       categoryId: product.categoryId,
       categoryName: product.categoryName,
       imageUrl: product.imageUrl,
-      gallery: product.gallery,
       size: product.size,
       color: product.color,
       rentalPrices: product.rentalPrices.map((r) => ({
@@ -60,7 +60,6 @@ export const WebCatalogMapper = {
         amount: r.amount,
       })),
       depositAmount: product.depositAmount,
-      status: product.status,
       isRentable: product.isRentable,
     };
   },
@@ -82,12 +81,26 @@ export const WebCatalogMapper = {
 
   /**
    * Maps a StorefrontProductDetails into WebProductDetailDto.
-   * Maps variants into clean public summaries without leaking inventory identifiers.
+   * Exposes rich media gallery, description, and variant summaries without internal inventory identifiers.
    */
   toProductDetail(product: StorefrontProductDetails): WebProductDetailDto {
-    const base = WebCatalogMapper.toProductListItem(product);
     return {
-      ...base,
+      id: product.id,
+      code: product.code,
+      slug: product.slug,
+      name: product.name,
+      categoryId: product.categoryId,
+      categoryName: product.categoryName,
+      imageUrl: product.imageUrl,
+      gallery: product.gallery,
+      size: product.size,
+      color: product.color,
+      rentalPrices: product.rentalPrices.map((r) => ({
+        days: r.days,
+        amount: r.amount,
+      })),
+      depositAmount: product.depositAmount,
+      isRentable: product.isRentable,
       description: product.description ?? undefined,
       facebookPostUrl: product.facebookPostUrl ?? undefined,
       variants: product.variants.map((v) => ({

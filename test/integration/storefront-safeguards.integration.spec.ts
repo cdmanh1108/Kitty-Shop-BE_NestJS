@@ -42,12 +42,12 @@ describe('Storefront Production Integration Safeguards', () => {
   });
 
   describe('Request ID (Correlation ID) Propagation', () => {
-    it('echoes incoming x-request-id in response headers on GET /web/products', async () => {
+    it('echoes incoming x-request-id in response headers on GET /api/v1/web/products', async () => {
       const shop = await createTestShop(prisma);
       const customRequestId = 'req-trace-test-12345';
 
       const res = await request(server)
-        .get('/web/products')
+        .get('/api/v1/web/products')
         .set('x-shop-code', shop.code)
         .set('x-request-id', customRequestId);
 
@@ -58,7 +58,7 @@ describe('Storefront Production Integration Safeguards', () => {
     it('generates a valid UUID x-request-id when none is supplied', async () => {
       const shop = await createTestShop(prisma);
 
-      const res = await request(server).get('/web/products').set('x-shop-code', shop.code);
+      const res = await request(server).get('/api/v1/web/products').set('x-shop-code', shop.code);
 
       expect(res.status).toBe(200);
       const generatedId = res.headers['x-request-id'];
@@ -75,7 +75,7 @@ describe('Storefront Production Integration Safeguards', () => {
       const maliciousId = 'bad-id-with-special-chars-<>!@#$%^&*()';
 
       const res = await request(server)
-        .get('/web/products')
+        .get('/api/v1/web/products')
         .set('x-shop-code', shop.code)
         .set('x-request-id', maliciousId);
 
@@ -96,7 +96,7 @@ describe('Storefront Production Integration Safeguards', () => {
       const customRequestId = 'req-not-found-slug-99';
 
       const res = await request(server)
-        .get('/web/products/non-existent-slug-xyz')
+        .get('/api/v1/web/products/non-existent-slug-xyz')
         .set('x-shop-code', shop.code)
         .set('x-request-id', customRequestId);
 
@@ -114,7 +114,7 @@ describe('Storefront Production Integration Safeguards', () => {
       const customRequestId = 'req-bad-query-input-77';
 
       const res = await request(server)
-        .get('/web/products?page=-1')
+        .get('/api/v1/web/products?page=-1')
         .set('x-shop-code', shop.code)
         .set('x-request-id', customRequestId);
 
@@ -130,7 +130,7 @@ describe('Storefront Production Integration Safeguards', () => {
       const customRequestId = 'req-unknown-shop-code';
 
       const res = await request(server)
-        .get('/web/products')
+        .get('/api/v1/web/products')
         .set('x-shop-code', 'NON_EXISTENT_SHOP_CODE')
         .set('x-request-id', customRequestId);
 
@@ -173,14 +173,14 @@ describe('Storefront Production Integration Safeguards', () => {
 
       // Query from shop A -> 200
       const resA = await request(server)
-        .get(`/web/products/${product.slug}`)
+        .get(`/api/v1/web/products/${product.slug}`)
         .set('x-shop-code', shopA.code);
       expect(resA.status).toBe(200);
       expect((resA.body as DetailResponseBody).slug).toBe(product.slug);
 
       // Query from shop B -> 404
       const resB = await request(server)
-        .get(`/web/products/${product.slug}`)
+        .get(`/api/v1/web/products/${product.slug}`)
         .set('x-shop-code', shopB.code);
       expect(resB.status).toBe(404);
     });

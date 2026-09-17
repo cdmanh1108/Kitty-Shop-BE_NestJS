@@ -79,12 +79,10 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         categoryId: 'cat-1',
         categoryName: 'Đầm tiệc',
         imageUrl: 'https://img.com/main.jpg',
-        gallery: ['https://img.com/main.jpg', 'https://img.com/sub.jpg'],
         size: 'S, M',
         color: 'Trắng',
         rentalPrices: [{ days: 3, amount: 400000 }],
         depositAmount: 500000,
-        status: 'available',
         isRentable: true,
       };
 
@@ -95,16 +93,16 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(result.name).toBe('Đầm dạ hội lụa ánh kim');
       expect(result.slug).toBe('dam-da-hoi-lua-anh-kim');
       expect(result.imageUrl).toBe('https://img.com/main.jpg');
-      expect(result.gallery).toEqual(['https://img.com/main.jpg', 'https://img.com/sub.jpg']);
       expect(result.categoryName).toBe('Đầm tiệc');
       expect(result.rentalPrices).toEqual([{ days: 3, amount: 400000 }]);
       expect(result.depositAmount).toBe(500000);
-      expect(result.status).toBe('available');
       expect(result.isRentable).toBe(true);
       expect(result.size).toBe('S, M');
       expect(result.color).toBe('Trắng');
 
-      // Internal fields must not exist
+      // Optimized/stripped fields must not exist in list DTO
+      expect(result).not.toHaveProperty('gallery');
+      expect(result).not.toHaveProperty('status');
       expect(result).not.toHaveProperty('purchasePrice');
       expect(result).not.toHaveProperty('replacementValue');
       expect(result).not.toHaveProperty('featured');
@@ -124,12 +122,10 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             categoryId: 'cat-1',
             categoryName: 'Váy',
             imageUrl: 'https://img.com/1.jpg',
-            gallery: [],
             size: 'Free size',
             color: 'Hồng',
             rentalPrices: [{ days: 1, amount: 50000 }],
             depositAmount: 100000,
-            status: 'available',
             isRentable: true,
           },
         ],
@@ -143,6 +139,8 @@ describe('Web Catalog Presenters, Service and Controller', () => {
 
       const res = WebCatalogMapper.toProductListResponse(page);
       expect(res.items).toHaveLength(1);
+      expect(res.items[0]).not.toHaveProperty('gallery');
+      expect(res.items[0]).not.toHaveProperty('status');
       expect(res.meta).toEqual({
         page: 2,
         limit: 10,
@@ -171,7 +169,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
           { days: 3, amount: 350000 },
         ],
         depositAmount: 500000,
-        status: 'available',
         isRentable: true,
         description: 'Váy dạ hội sang trọng.',
         facebookPostUrl: 'https://facebook.com/post/1',
@@ -201,6 +198,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(result.variants[0]?.depositAmount).toBe(500000);
 
       // Verify no physical inventory items or internal fields leaked
+      expect(result).not.toHaveProperty('status');
       expect(result.variants[0]).not.toHaveProperty('inventoryItems');
       expect(result.variants[0]).not.toHaveProperty('physicalStockIds');
       expect(result.variants[0]).not.toHaveProperty('archivedAt');
@@ -257,12 +255,10 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             categoryId: 'cat-1',
             categoryName: 'Đầm',
             imageUrl: 'https://img.com/1.jpg',
-            gallery: ['https://img.com/1.jpg'],
             size: 'S, M',
             color: 'Đỏ',
             rentalPrices: [{ days: 3, amount: 250000 }],
             depositAmount: 500000,
-            status: 'active',
             isRentable: true,
           },
         ],
@@ -315,7 +311,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         color: 'Đỏ',
         rentalPrices: [{ days: 3, amount: 250000 }],
         depositAmount: 500000,
-        status: 'active',
         isRentable: true,
         variants: [
           {
@@ -379,12 +374,10 @@ describe('Web Catalog Presenters, Service and Controller', () => {
               categoryId: 'cat-1',
               categoryName: 'Áo dài',
               imageUrl: 'https://img.com/ad.jpg',
-              gallery: [],
               size: 'M',
               color: 'Đỏ',
               rentalPrices: [{ days: 3, amount: 200000 }],
               depositAmount: 300000,
-              status: 'available',
               isRentable: true,
             },
           ],
@@ -403,7 +396,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
           color: 'Đỏ',
           rentalPrices: [{ days: 3, amount: 200000 }],
           depositAmount: 300000,
-          status: 'available',
           isRentable: true,
           description: 'Mô tả chi tiết',
           facebookPostUrl: null,

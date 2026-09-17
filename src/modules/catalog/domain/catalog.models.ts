@@ -195,16 +195,27 @@ export interface StorefrontProductItem {
   categoryId: string;
   categoryName: string;
   imageUrl: string;
+  size: string;
+  color: string;
+  rentalPrices: StorefrontRentalPrice[];
+  depositAmount: number;
+  isRentable: boolean;
+}
+
+export interface StorefrontProductDetails {
+  id: string;
+  code: string;
+  slug: string;
+  name: string;
+  categoryId: string;
+  categoryName: string;
+  imageUrl: string;
   gallery: string[];
   size: string;
   color: string;
   rentalPrices: StorefrontRentalPrice[];
   depositAmount: number;
-  status: string;
   isRentable: boolean;
-}
-
-export interface StorefrontProductDetails extends StorefrontProductItem {
   description?: string | null;
   facebookPostUrl?: string | null;
   variants: StorefrontProductVariant[];

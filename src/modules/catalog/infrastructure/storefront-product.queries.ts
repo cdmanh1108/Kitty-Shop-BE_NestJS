@@ -128,13 +128,21 @@ export async function listStorefrontProducts(
     where.variants = { some: variantFilter };
   }
 
-  const productInclude = {
-    category: { select: { id: true, code: true, name: true } },
+  const productSelect = {
+    id: true,
+    code: true,
+    slug: true,
+    name: true,
+    categoryId: true,
+    defaultDepositAmount: true,
+    isRentable: true,
+    category: { select: { name: true } },
     media: {
       where: {
         OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
       },
-      orderBy: { sortOrder: 'asc' as const },
+      orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }],
+      take: 1,
       select: { storageKey: true, url: true, isPrimary: true },
     },
     rentalRates: {
@@ -148,10 +156,8 @@ export async function listStorefrontProducts(
     variants: {
       where: storefrontVariantBaseWhere(),
       select: {
-        id: true,
-        variantCode: true,
         size: { select: { name: true } },
-        color: { select: { name: true, hexColor: true } },
+        color: { select: { name: true } },
         rentalRates: {
           where: { isActive: true },
           orderBy: { durationDays: 'asc' as const },
@@ -162,7 +168,7 @@ export async function listStorefrontProducts(
   };
 
   // Determine sort order
-  let products: Array<Prisma.ProductGetPayload<{ include: typeof productInclude }>>;
+  let products: Array<Prisma.ProductGetPayload<{ select: typeof productSelect }>>;
   let total: number;
 
   if (input.sort === 'price_asc' || input.sort === 'price_desc') {
@@ -170,7 +176,7 @@ export async function listStorefrontProducts(
     const [allProductsMatching, count] = await prisma.$transaction([
       prisma.product.findMany({
         where,
-        include: productInclude,
+        select: productSelect,
       }),
       prisma.product.count({ where }),
     ]);
@@ -206,7 +212,7 @@ export async function listStorefrontProducts(
         skip,
         take: limit,
         orderBy,
-        include: productInclude,
+        select: productSelect,
       }),
       prisma.product.count({ where }),
     ]);
@@ -216,9 +222,8 @@ export async function listStorefrontProducts(
   }
 
   const items: StorefrontProductItem[] = products.map((product) => {
-    const primaryMediaObj = product.media.find((m) => m.isPrimary) ?? product.media[0] ?? null;
+    const primaryMediaObj = product.media[0] ?? null;
     const imageUrl = primaryMediaObj ? mediaUrls.resolve(primaryMediaObj) : '';
-    const gallery = product.media.map((m) => mediaUrls.resolve(m)).filter(Boolean);
 
     const sizes = Array.from(
       new Set(product.variants.map((v) => v.size?.name).filter((s): s is string => Boolean(s))),
@@ -240,12 +245,10 @@ export async function listStorefrontProducts(
       categoryId: product.categoryId,
       categoryName: product.category?.name ?? 'Sản phẩm',
       imageUrl,
-      gallery: gallery.length ? gallery : imageUrl ? [imageUrl] : [],
       size: sizes.join(', ') || 'Free size',
       color: colors.join(', ') || 'Nhiều màu',
       rentalPrices,
       depositAmount: decimalToNumber(product.defaultDepositAmount),
-      status: product.status.toLowerCase(),
       isRentable: product.isRentable,
     };
   });
@@ -282,8 +285,17 @@ export async function findStorefrontProductBySlug(
       ...storefrontProductBaseWhere(shopId),
       OR: identifierOr,
     },
-    include: {
-      category: { select: { id: true, code: true, name: true } },
+    select: {
+      id: true,
+      code: true,
+      slug: true,
+      name: true,
+      categoryId: true,
+      description: true,
+      defaultDepositAmount: true,
+      facebookPostUrl: true,
+      isRentable: true,
+      category: { select: { name: true } },
       media: {
         where: {
           OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
@@ -301,9 +313,12 @@ export async function findStorefrontProductBySlug(
       },
       variants: {
         where: storefrontVariantBaseWhere(),
-        include: {
+        select: {
+          id: true,
+          variantCode: true,
+          depositAmountOverride: true,
           size: { select: { name: true } },
-          color: { select: { name: true, hexColor: true } },
+          color: { select: { name: true } },
           rentalRates: {
             where: { isActive: true },
             orderBy: { durationDays: 'asc' },
@@ -359,7 +374,6 @@ export async function findStorefrontProductBySlug(
     color: colors.join(', ') || 'Nhiều màu',
     rentalPrices,
     depositAmount: baseDepositAmount,
-    status: product.status.toLowerCase(),
     isRentable: product.isRentable,
     description: product.description,
     facebookPostUrl: product.facebookPostUrl,

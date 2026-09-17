@@ -1269,10 +1269,6 @@
             "example": 500000,
             "description": "Tiền cọc dự kiến (VND)"
           },
-          "status": {
-            "type": "string",
-            "example": "available"
-          },
           "isRentable": {
             "type": "boolean",
             "example": true
@@ -1305,7 +1301,6 @@
           "color",
           "rentalPrices",
           "depositAmount",
-          "status",
           "isRentable",
           "variants"
         ]
@@ -1646,15 +1641,6 @@
             "type": "string",
             "example": "https://images.unsplash.com/photo-1"
           },
-          "gallery": {
-            "example": [
-              "https://images.unsplash.com/photo-1"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "size": {
             "type": "string",
             "example": "S"
@@ -1674,10 +1660,6 @@
             "example": 500000,
             "description": "Tiền cọc dự kiến (VND)"
           },
-          "status": {
-            "type": "string",
-            "example": "available"
-          },
           "isRentable": {
             "type": "boolean",
             "example": true
@@ -1691,12 +1673,10 @@
           "categoryId",
           "categoryName",
           "imageUrl",
-          "gallery",
           "size",
           "color",
           "rentalPrices",
           "depositAmount",
-          "status",
           "isRentable"
         ]
       },
