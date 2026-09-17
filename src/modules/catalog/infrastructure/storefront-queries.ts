@@ -12,6 +12,37 @@ import type {
   StorefrontProductPage,
   StorefrontRentalPrice,
 } from '../domain/catalog.models';
+import { PRODUCT_STATUS } from '../domain/catalog-status';
+
+/**
+ * Shared base query filter for products eligible to appear on the storefront.
+ * Both product listing and product detail by slug MUST enforce identical conditions:
+ * - Current shop tenancy (`shopId = current resolved shop`)
+ * - Explicitly public (`isPublic = true`)
+ * - Rentable (`isRentable = true`)
+ * - Unarchived (`archivedAt = null`)
+ * - Active product status (`status = PRODUCT_STATUS.ACTIVE`)
+ */
+export function storefrontProductBaseWhere(shopId: string): Prisma.ProductWhereInput {
+  return {
+    shopId,
+    isPublic: true,
+    isRentable: true,
+    archivedAt: null,
+    status: PRODUCT_STATUS.ACTIVE,
+  };
+}
+
+/**
+ * Shared base query filter for variants eligible to appear on the storefront.
+ * Excludes variants that are archived or inactive.
+ */
+export function storefrontVariantBaseWhere(): Prisma.ProductVariantWhereInput {
+  return {
+    archivedAt: null,
+    status: PRODUCT_STATUS.ACTIVE,
+  };
+}
 
 export async function listStorefrontCategories(
   prisma: PrismaService,
@@ -82,21 +113,28 @@ export async function listStorefrontProducts(
   const skip = (page - 1) * limit;
 
   // Build Prisma where clause
+  //
+  // Note on Category Visibility Ambiguity:
+  // In the existing domain, Category defines `isActive: boolean` (enforced when listing storefront
+  // categories and validating product category assignments). However, the domain does not specify
+  // whether deactivating a category cascades to hiding its products from the storefront, or whether
+  // product visibility is strictly governed by product-level visibility fields (isPublic, status, etc.).
+  // As instructed, we do not invent a cascading business rule and keep product-level visibility authoritative.
   const where: Prisma.ProductWhereInput = {
-    shopId: input.shopId,
-    archivedAt: null,
-    status: { in: ['ACTIVE', 'AVAILABLE'] },
-    isRentable: true,
+    ...storefrontProductBaseWhere(input.shopId),
   };
 
   if (input.category) {
-    where.category = {
-      OR: [
-        { id: input.category },
-        { code: input.category.toUpperCase() },
-        { slug: input.category.toLowerCase() },
-      ],
-    };
+    const cat = input.category.trim();
+    const isCatUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cat);
+    const catOr: Prisma.CategoryWhereInput[] = [
+      { code: cat.toUpperCase() },
+      { slug: cat.toLowerCase() },
+    ];
+    if (isCatUuid) {
+      catOr.push({ id: cat });
+    }
+    where.category = { OR: catOr };
   }
 
   if (input.q?.trim()) {
@@ -108,7 +146,9 @@ export async function listStorefrontProducts(
     ];
   }
 
-  const variantFilter: Prisma.ProductVariantWhereInput = { archivedAt: null };
+  const variantFilter: Prisma.ProductVariantWhereInput = {
+    ...storefrontVariantBaseWhere(),
+  };
   let hasVariantFilter = false;
 
   if (input.size?.trim()) {
@@ -128,16 +168,22 @@ export async function listStorefrontProducts(
   const productInclude = {
     category: { select: { id: true, code: true, name: true } },
     media: {
+      where: {
+        OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
+      },
       orderBy: { sortOrder: 'asc' as const },
       select: { storageKey: true, url: true, isPrimary: true },
     },
     rentalRates: {
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
+      },
       orderBy: { durationDays: 'asc' as const },
       select: { durationDays: true, price: true },
     },
     variants: {
-      where: { archivedAt: null },
+      where: storefrontVariantBaseWhere(),
       select: {
         id: true,
         variantCode: true,
@@ -255,27 +301,39 @@ export async function findStorefrontProductBySlug(
   slug: string,
 ): Promise<StorefrontProductDetails | null> {
   const trimmed = slug.trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+  const identifierOr: Prisma.ProductWhereInput[] = [
+    { slug: trimmed },
+    { code: trimmed.toUpperCase() },
+  ];
+  if (isUuid) {
+    identifierOr.push({ id: trimmed });
+  }
+
   const product = await prisma.product.findFirst({
     where: {
-      shopId,
-      archivedAt: null,
-      isRentable: true,
-      status: { in: ['ACTIVE', 'AVAILABLE'] },
-      OR: [{ slug: trimmed }, { id: trimmed }, { code: trimmed.toUpperCase() }],
+      ...storefrontProductBaseWhere(shopId),
+      OR: identifierOr,
     },
     include: {
       category: { select: { id: true, code: true, name: true } },
       media: {
+        where: {
+          OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
+        },
         orderBy: { sortOrder: 'asc' },
         select: { storageKey: true, url: true, isPrimary: true },
       },
       rentalRates: {
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
+        },
         orderBy: { durationDays: 'asc' },
         select: { durationDays: true, price: true },
       },
       variants: {
-        where: { archivedAt: null },
+        where: storefrontVariantBaseWhere(),
         include: {
           size: { select: { name: true } },
           color: { select: { name: true, hexColor: true } },
