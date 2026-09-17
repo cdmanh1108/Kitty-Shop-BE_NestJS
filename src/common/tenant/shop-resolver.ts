@@ -20,6 +20,9 @@ export class ShopResolver {
         throw new NotFoundException('Không tìm thấy cửa hàng hoạt động trong hệ thống.');
       }
 
+      if (request) {
+        (request as Request & { resolvedShopId?: string }).resolvedShopId = shop.id;
+      }
       return shop.id;
     }
 
@@ -30,6 +33,9 @@ export class ShopResolver {
     });
 
     if (defaultShop && defaultShop.status === 'ACTIVE') {
+      if (request) {
+        (request as Request & { resolvedShopId?: string }).resolvedShopId = defaultShop.id;
+      }
       return defaultShop.id;
     }
 
@@ -42,6 +48,9 @@ export class ShopResolver {
       throw new NotFoundException('Không tìm thấy cửa hàng hoạt động trong hệ thống.');
     }
 
+    if (request) {
+      (request as Request & { resolvedShopId?: string }).resolvedShopId = fallbackShop.id;
+    }
     return fallbackShop.id;
   }
 }

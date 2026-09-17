@@ -30,7 +30,9 @@ export class RequestContextMiddleware implements NestMiddleware {
         aborted,
         durationMs: Number(process.hrtime.bigint() - started) / 1_000_000,
         userId: request.currentUser?.userId,
-        shopId: request.currentUser?.shopId,
+        shopId:
+          request.currentUser?.shopId ??
+          (request as Request & { resolvedShopId?: string }).resolvedShopId,
       };
       const level =
         aborted || response.statusCode >= 500

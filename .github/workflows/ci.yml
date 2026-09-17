@@ -1,11 +1,11 @@
 name: CI
 
 on:
-  # Automatic CI is paused. Run manually from the Actions tab when needed.
   workflow_dispatch:
-  # push:
-  #   branches: ['**']
-  # pull_request:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
 
 jobs:
   quality:
@@ -27,6 +27,7 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://rental:rental@localhost:5432/rental_shop_test?schema=public
+      TEST_DATABASE_URL: postgresql://rental:rental@localhost:5432/rental_shop_test?schema=public
       JWT_ACCESS_SECRET: ci-only-secret-at-least-32-characters-long
       WEB_JWT_ACCESS_SECRET: ci-only-web-jwt-access-secret-32-chars-minimum
       AUTH_OTP_HASH_SECRET: ci-only-otp-hash-secret-32-chars-minimum
@@ -51,6 +52,8 @@ jobs:
       - run: npm run db:generate
       - run: npm run db:migrate
       - run: npm run db:seed
+      - run: npm run typecheck
       - run: npm run quality
+      - run: npm run test:integration
       - name: Verify OpenAPI contract freshness
         run: npm run openapi:check
