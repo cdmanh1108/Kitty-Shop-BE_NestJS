@@ -369,6 +369,7 @@ model Category {
 
   @@unique([shopId, code])
   @@index([shopId, isActive, sortOrder])
+  @@index([shopId, slug])
   @@map("categories")
 }
 
@@ -433,6 +434,7 @@ model Product {
   @@unique([shopId, slug])
   @@index([shopId, categoryId, status])
   @@index([shopId, name])
+  @@index([shopId, status, isPublic, isRentable, archivedAt, createdAt(sort: Desc)])
   @@map("products")
 }
 
@@ -486,6 +488,7 @@ model ProductMedia {
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   @@index([productId, sortOrder])
+  @@index([productId, isPrimary(sort: Desc), sortOrder(sort: Asc)])
   @@map("product_media")
 }
 
