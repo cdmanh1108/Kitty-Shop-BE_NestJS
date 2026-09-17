@@ -14,3 +14,4 @@ openapi.json
 .idea/
 private-data/
 powershell.cmd
+*.zip
