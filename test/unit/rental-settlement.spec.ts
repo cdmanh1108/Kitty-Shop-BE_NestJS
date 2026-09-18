@@ -1,4 +1,7 @@
-import { calculateRentalSettlement } from '../../src/modules/rentals/domain/rental-settlement';
+import {
+  calculateRentalPaymentTotals,
+  calculateRentalSettlement,
+} from '../../src/modules/rentals/domain/rental-settlement';
 
 describe('rental deposit settlement', () => {
   const base = {
@@ -62,6 +65,25 @@ describe('rental deposit settlement', () => {
       calculateRentalSettlement({ ...base, status: 'ACTIVE', depositIn: '50000.00' }),
     ).toMatchObject({
       settlementStatus: 'PENDING',
+    });
+  });
+
+  it('derives payment totals before presentation without floating-point arithmetic', () => {
+    expect(
+      calculateRentalPaymentTotals({
+        grandTotal: '120000.00',
+        payments: [
+          { purpose: 'RENTAL', direction: 'IN', amount: '100000.00' },
+          { purpose: 'RENTAL', direction: 'OUT', amount: '10.00' },
+          { purpose: 'DEPOSIT', direction: 'IN', amount: '50000.00' },
+          { purpose: 'DEPOSIT_REFUND', direction: 'OUT', amount: '20000.00' },
+        ],
+      }),
+    ).toEqual({
+      paidAmount: '99990',
+      remainingAmount: '20010',
+      depositIn: '50000',
+      depositOut: '20000',
     });
   });
 });

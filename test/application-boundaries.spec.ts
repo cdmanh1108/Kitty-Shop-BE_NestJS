@@ -244,3 +244,36 @@ describe('web layer architecture boundaries', () => {
     expect(violations).toEqual([]);
   });
 });
+
+describe('API persistence/config boundary', () => {
+  it('keeps Prisma and direct environment access out of API modules', () => {
+    const violations: string[] = [];
+    function scan(dir: string) {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const file = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scan(file);
+          continue;
+        }
+        if (!file.endsWith('.ts') || !/[\\/]api[\\/]/.test(file)) continue;
+        const source = readFileSync(file, 'utf8');
+        const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+        function visit(node: ts.Node) {
+          if (
+            (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+            node.moduleSpecifier &&
+            ts.isStringLiteral(node.moduleSpecifier) &&
+            node.moduleSpecifier.text === '@prisma/client'
+          ) {
+            violations.push(`${file}: Prisma import`);
+          }
+          ts.forEachChild(node, visit);
+        }
+        visit(ast);
+        if (/\bprocess\.env\b/.test(source)) violations.push(`${file}: direct environment access`);
+      }
+    }
+    scan(join(process.cwd(), 'src/modules'));
+    expect(violations).toEqual([]);
+  });
+});

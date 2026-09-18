@@ -8,6 +8,7 @@ import { RentalService } from './application/rental.service';
 import { WebRentalService } from './application/web-rental.service';
 import { RentalConfirmationService } from './application/rental-confirmation.service';
 import { RentalSettlementService } from './application/rental-settlement.service';
+import { RentalReadPresenter } from './application/rental-read.presenter';
 import { RENTAL_REPOSITORY } from './domain/rental.repository';
 import { PrismaRentalRepository } from './infrastructure/prisma-rental.repository';
 
@@ -17,6 +18,7 @@ import { PrismaRentalRepository } from './infrastructure/prisma-rental.repositor
   providers: [
     RentalConfirmationService,
     RentalSettlementService,
+    RentalReadPresenter,
     RentalService,
     WebRentalService,
     PrismaRentalRepository,

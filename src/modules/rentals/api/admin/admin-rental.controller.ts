@@ -45,6 +45,7 @@ import {
   ApiPayloadTooLargeResponse,
 } from '@nestjs/swagger';
 import { RentalService } from '../../application/rental.service';
+import { RentalReadPresenter } from '../../application/rental-read.presenter';
 import {
   AddRentalChargeReqDto,
   CreateRentalOrderReqDto,
@@ -77,6 +78,7 @@ export class AdminRentalController {
     private readonly service: RentalService,
     private readonly confirmations: RentalConfirmationService,
     private readonly settlements: RentalSettlementService,
+    private readonly responses: RentalReadPresenter,
   ) {}
 
   @Get()
@@ -85,14 +87,19 @@ export class AdminRentalController {
   @ApiOkResponse({ type: RentalOrderPageResDto })
   async list(@CurrentUser() user: CurrentUserType, @Query() query: RentalListQueryDto) {
     const page = await this.service.list(user, toRentalListQuery(query));
-    return { items: page.items.map(toRentalSummary), meta: page.meta };
+    return {
+      items: page.items.map((item) => toRentalSummary(this.responses.summary(item))),
+      meta: page.meta,
+    };
   }
 
   @Get(':id')
   @Permissions(PERMISSIONS.RENTALS_VIEW)
   @ApiOkResponse({ type: RentalOrderResDto })
   get(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
-    return this.service.get(user, id).then(toRentalResponse);
+    return this.service
+      .get(user, id)
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Post()
@@ -111,7 +118,7 @@ export class AdminRentalController {
   ) {
     return this.service
       .create(user, toCreateRentalOrderInput(body), idempotencyKey)
-      .then(toRentalResponse);
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Patch(':id/schedule')
@@ -126,7 +133,9 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: RescheduleRentalReqDto,
   ) {
-    return this.service.reschedule(user, id, toRescheduleRentalInput(body)).then(toRentalResponse);
+    return this.service
+      .reschedule(user, id, toRescheduleRentalInput(body))
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Post(':id/confirm')
@@ -165,7 +174,7 @@ export class AdminRentalController {
         },
         file,
       )
-      .then(toRentalResponse);
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Get(':id/confirmation-options')
@@ -204,14 +213,18 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: TransitionRentalReqDto,
   ) {
-    return this.service.start(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
+    return this.service
+      .start(user, id, toTransitionRentalInput(body))
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Post(':id/collateral/return')
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
   @ApiOkResponse({ type: RentalOrderResDto })
   returnCollateral(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
-    return this.service.returnCollateral(user, id).then(toRentalResponse);
+    return this.service
+      .returnCollateral(user, id)
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Get(':id/return-preview')
@@ -248,7 +261,7 @@ export class AdminRentalController {
   ) {
     return this.service
       .receiveReturn(user, id, toReturnRentalOrderInput(body))
-      .then(toRentalResponse);
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Post(':id/settle')
@@ -267,7 +280,9 @@ export class AdminRentalController {
     @Body() body: SettleRentalOrderReqDto,
     @UploadedFile() file?: SettlementImage,
   ) {
-    return this.settlements.settle(user, id, body, file).then(toRentalResponse);
+    return this.settlements
+      .settle(user, id, body, file)
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Get(':id/settlement/evidence')
@@ -296,7 +311,9 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: TransitionRentalReqDto,
   ) {
-    return this.service.cancel(user, id, toTransitionRentalInput(body)).then(toRentalResponse);
+    return this.service
+      .cancel(user, id, toTransitionRentalInput(body))
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
   @Post(':id/charges')
@@ -307,6 +324,8 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: AddRentalChargeReqDto,
   ) {
-    return this.service.addCharge(user, id, toAddRentalChargeInput(body)).then(toRentalResponse);
+    return this.service
+      .addCharge(user, id, toAddRentalChargeInput(body))
+      .then((order) => toRentalResponse(this.responses.details(order)));
   }
 }
