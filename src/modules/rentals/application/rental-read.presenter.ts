@@ -16,10 +16,10 @@ type DetailsSource = RentalOrderDetails | JsonSerialized<RentalOrderDetails>;
 type RentalItemSource =
   | NonNullable<RentalOrderDetails>['items'][number]
   | JsonSerialized<NonNullable<RentalOrderDetails>['items'][number]>;
-type MoneyValue = { toString(): string } | string;
+type MoneyValue = object | string;
 
 function money(value: MoneyValue): string {
-  return typeof value === 'string' ? value : value.toString();
+  return typeof value === 'string' ? value : (value as { toString(): string }).toString();
 }
 
 @Injectable()

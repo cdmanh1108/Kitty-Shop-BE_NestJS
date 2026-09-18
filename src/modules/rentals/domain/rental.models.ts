@@ -1,9 +1,5 @@
 import type { PaginatedResult } from '@common/types/pagination';
 import type { RentalConfirmationRecord } from './rental-confirmation';
-import type { InventoryItemRecord } from '@modules/catalog/domain/catalog.records';
-import type { CustomerRecord } from '@modules/customers/domain/customers.records';
-import type { DeliveryJobRecord } from '@modules/deliveries/domain/deliveries.records';
-import type { PaymentTransactionRecord } from '@modules/finance/domain/finance.records';
 import type {
   RentalItemAllocationRecord,
   RentalOrderChargeRecord,
@@ -11,9 +7,44 @@ import type {
   RentalOrderRecord,
   RentalOrderStatusHistoryRecord,
 } from '@modules/rentals/domain/rentals.records';
-import type { ShopLocationRecord } from '@modules/settings/domain/settings.records';
 
 import type { RentalReturnRecord, RentalSettlementRecord } from './rental-return';
+
+/** Read projections owned by Rentals; they are intentionally not provider persistence records. */
+type RentalCustomerProjection = {
+  readonly [key: string]: string | number | boolean | Date | object | null | undefined;
+  id: string;
+  shopId: string;
+  customerCode: string;
+  fullName: string;
+  phone: string;
+};
+type RentalLocationProjection = { id: string; code: string; name: string; isPrimary: boolean };
+type RentalInventoryProjection = { id: string; sku: string; currentStatus: string };
+type RentalPaymentProjection = {
+  source: string;
+  createdBy: string | null;
+  note: string | null;
+  id: string;
+  transactionNumber: string;
+  direction: string;
+  purpose: string;
+  paymentMethod: string;
+  amount: { toString(): string };
+  currency: string;
+  paidAt: Date;
+};
+type RentalDeliveryProjection = {
+  id: string;
+  direction: string;
+  method: string;
+  status: string;
+  scheduledAt: Date | null;
+  recipientName: string | null;
+  recipientPhone: string | null;
+  addressLine: string | null;
+  shippingFee: { toString(): string };
+};
 
 export type RentalOrderDetails =
   | null
@@ -21,9 +52,9 @@ export type RentalOrderDetails =
       confirmation: RentalConfirmationRecord | null;
       returnRecord: RentalReturnRecord | null;
       settlement: RentalSettlementRecord | null;
-      location: null | ShopLocationRecord;
+      location: null | RentalLocationProjection;
       statusHistory: Array<RentalOrderStatusHistoryRecord>;
-      customer: CustomerRecord;
+      customer: RentalCustomerProjection;
       items: Array<
         RentalOrderItemRecord & {
           imageUrl?: string | null;
@@ -35,14 +66,14 @@ export type RentalOrderDetails =
           } | null;
           allocations: Array<
             RentalItemAllocationRecord & {
-              inventoryItem: InventoryItemRecord;
+              inventoryItem: RentalInventoryProjection;
             }
           >;
         }
       >;
       charges: Array<RentalOrderChargeRecord>;
-      payments: Array<PaymentTransactionRecord>;
-      deliveries: Array<DeliveryJobRecord>;
+      payments: Array<RentalPaymentProjection>;
+      deliveries: Array<RentalDeliveryProjection>;
     });
 
 export type RentalOrderPage = PaginatedResult<

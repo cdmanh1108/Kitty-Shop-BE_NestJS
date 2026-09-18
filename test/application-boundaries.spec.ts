@@ -203,6 +203,13 @@ describe('inner-layer import guard', () => {
               (domain && /@nestjs|\/application\//.test(target))
             )
               violations.push(`${file}: ${target}`);
+            if (
+              /[\\/]modules[\\/]rentals[\\/]domain[\\/]/.test(file) &&
+              /@modules\/(catalog|customers|deliveries|finance|settings)\/domain\/.*\.records/.test(
+                target,
+              )
+            )
+              violations.push(`${file}: cross-context record dependency ${target}`);
           }
           if (node.kind === ts.SyntaxKind.UnknownKeyword || node.kind === ts.SyntaxKind.AnyKeyword)
             violations.push(`${file}: untyped contract`);
