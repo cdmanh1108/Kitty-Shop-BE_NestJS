@@ -37,7 +37,7 @@ function variant(): NonNullable<Parameters<typeof toBookableVariant>[0]> {
       categoryId: 'category',
       code: 'BB',
       name: 'Ba ba',
-      slug: null,
+      slug: 'ba-ba',
       description: null,
       defaultDepositAmount: new Prisma.Decimal(300000),
       replacementValue: null,

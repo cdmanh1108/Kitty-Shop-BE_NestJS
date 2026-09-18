@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { generateProductSlug } from '@modules/catalog/domain/product-slug';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { normalizeToCode, parseLegacyBoolean } from './legacy-catalog.normalizer';
 import { parseLegacyColors } from './legacy-color.parser';
@@ -387,6 +388,7 @@ export class LegacyCatalogImportService {
               categoryId: planned.categoryId,
               code: planned.code,
               name: planned.name,
+              slug: generateProductSlug(planned.name, planned.code),
               description: planned.description,
               defaultDepositAmount: planned.defaultDepositAmount,
               currency: planned.currency,

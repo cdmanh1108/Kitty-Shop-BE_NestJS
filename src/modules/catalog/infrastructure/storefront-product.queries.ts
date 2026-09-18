@@ -1,5 +1,4 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
-import { slugify } from '@common/utils/slugify';
 import { paginateMeta } from '@common/types/pagination';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { PrismaService } from '@database/prisma/prisma.service';
@@ -329,7 +328,7 @@ export async function listStorefrontProducts(
     return {
       id: product.id,
       code: product.code,
-      slug: product.slug || slugify(product.name),
+      slug: product.slug,
       name: product.name,
       categoryId: product.categoryId,
       categoryName: product.category?.name ?? 'Sản phẩm',
@@ -349,7 +348,7 @@ export async function listStorefrontProducts(
 }
 
 /**
- * Finds a single public product by slug, code, or UUID for storefront detail view.
+ * Finds a single public product by its persisted canonical slug.
  * Strictly scopes to current shop and verifies storefront visibility conditions.
  * Returns null if the product is private, unrentable, archived, or in another shop.
  */
@@ -359,20 +358,10 @@ export async function findStorefrontProductBySlug(
   shopId: string,
   slug: string,
 ): Promise<StorefrontProductDetails | null> {
-  const trimmed = slug.trim();
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
-  const identifierOr: Prisma.ProductWhereInput[] = [
-    { slug: trimmed },
-    { code: trimmed.toUpperCase() },
-  ];
-  if (isUuid) {
-    identifierOr.push({ id: trimmed });
-  }
-
   const product = await prisma.product.findFirst({
     where: {
       ...storefrontProductBaseWhere(shopId),
-      OR: identifierOr,
+      slug: slug.trim(),
     },
     select: {
       id: true,
@@ -453,7 +442,7 @@ export async function findStorefrontProductBySlug(
   return {
     id: product.id,
     code: product.code,
-    slug: product.slug || slugify(product.name),
+    slug: product.slug,
     name: product.name,
     categoryId: product.categoryId,
     categoryName: product.category?.name ?? 'Sản phẩm',

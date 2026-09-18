@@ -40,6 +40,7 @@ describe('Catalog purpose-specific reads', () => {
         categoryId: category.id,
         code: `P-${i}`,
         name: `Dress ${i}`,
+        slug: `dress-${i}`,
         status: i === 204 ? 'INACTIVE' : 'ACTIVE',
       })),
     });

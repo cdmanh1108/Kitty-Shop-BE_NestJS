@@ -14,7 +14,7 @@ import {
   CatalogInvariantError,
   CatalogProductSlugAlreadyExistsError,
 } from '../domain/catalog.repository';
-import { slugify } from '@common/utils/slugify';
+import { generateProductSlug, normalizeProductSlug } from '../domain/product-slug';
 
 function handleProductUniqueViolation(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -66,7 +66,9 @@ export async function createProduct(
         throw new CatalogInvariantError('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
       }
       await assertCatalogReferences(tx, shopId, input.categoryId, input.variants);
-      const slug = input.slug || slugify(input.name);
+      const slug = input.slug === undefined
+        ? generateProductSlug(input.name, input.code)
+        : normalizeProductSlug(input.slug);
       const product = await tx.product.create({
         data: {
           shopId,
@@ -194,7 +196,7 @@ export async function updateProduct(
         data.name = input.name;
       }
       if (input.slug !== undefined) {
-        data.slug = input.slug;
+        data.slug = normalizeProductSlug(input.slug);
       }
       if (input.categoryId !== undefined && input.categoryId !== existing.categoryId)
         data.category = { connect: { id: input.categoryId } };

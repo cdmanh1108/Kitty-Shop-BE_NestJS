@@ -480,6 +480,40 @@ describe('Tenant Resolution & Product Slug Identity Integration', () => {
   });
 
   describe('Part 3: Cross-Tenant Public Detail Lookup with Identical Slugs', () => {
+    it('does not treat an existing public product code or UUID as a storefront slug', async () => {
+      const shop = await createTestShop(prisma);
+      const category = await createTestCategory(prisma, shop.id);
+      const product = await prisma.product.create({
+        data: {
+          shopId: shop.id,
+          categoryId: category.id,
+          code: uniqueCode('PUBLIC_CODE'),
+          name: 'Sản phẩm chỉ có slug canonical',
+          slug: 'san-pham-canonical',
+          status: 'ACTIVE',
+          isPublic: true,
+          isRentable: true,
+          defaultDepositAmount: new Prisma.Decimal(100000),
+        },
+      });
+      await prisma.productVariant.create({
+        data: { shopId: shop.id, productId: product.id, variantCode: `${product.code}-V1`, status: 'ACTIVE' },
+      });
+
+      await request(server)
+        .get(`/api/v1/web/products/${product.code}`)
+        .set('x-shop-code', shop.code)
+        .expect(404);
+      await request(server)
+        .get(`/api/v1/web/products/${product.id}`)
+        .set('x-shop-code', shop.code)
+        .expect(404);
+      await request(server)
+        .get('/api/v1/web/products/san-pham-canonical')
+        .set('x-shop-code', shop.code)
+        .expect(200);
+    });
+
     it('returns the product belonging to the resolved shop when two shops share the identical slug', async () => {
       const shopA = await createTestShop(prisma);
       const shopB = await createTestShop(prisma);

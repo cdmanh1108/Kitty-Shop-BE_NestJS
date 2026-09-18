@@ -7,7 +7,7 @@ export interface CategoryRecord {
   parentId: string | null;
   code: string;
   name: string;
-  slug: string | null;
+  slug: string;
   description: string | null;
   sortOrder: number;
   isActive: boolean;

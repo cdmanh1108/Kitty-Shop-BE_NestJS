@@ -175,6 +175,7 @@ export async function createTestProductWithVariant(
       categoryId: category.id,
       code: productCode,
       name: `Product ${productCode}`,
+      slug: productCode.toLowerCase(),
       currency: 'VND',
       defaultDepositAmount: new Prisma.Decimal(depositAmount),
       isRentable: true,

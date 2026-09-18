@@ -409,7 +409,7 @@ model Product {
   categoryId           String    @map("category_id") @db.Uuid
   code                 String    @db.VarChar(50)
   name                 String    @db.VarChar(255)
-  slug                 String?   @db.VarChar(255)
+  slug                 String    @db.VarChar(255)
   description          String?   @db.Text
   defaultDepositAmount Decimal   @default(0) @map("default_deposit_amount") @db.Decimal(18, 2)
   replacementValue     Decimal?  @map("replacement_value") @db.Decimal(18, 2)
