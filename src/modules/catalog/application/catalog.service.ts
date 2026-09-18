@@ -5,19 +5,17 @@ import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import {
   BadRequestException,
   ConflictException,
+  HttpStatus,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import {
   CATALOG_REPOSITORY,
-  CatalogCategoryError,
-  CatalogCategoryInvalidParentError,
   CatalogInvariantError,
-  CatalogCategoryCodeAlreadyExistsError,
-  CatalogProductSlugAlreadyExistsError,
   type CatalogRepository,
 } from '../domain/catalog.repository';
+import { mapCatalogErrorToHttpStatus } from './catalog-error-http.mapper';
 import type {
   AddInventoryInput,
   AddVariantInput,
@@ -396,38 +394,15 @@ export class CatalogService {
       return await action();
     } catch (error) {
       if (error instanceof CatalogInvariantError) {
-        if (error instanceof CatalogCategoryError) {
-          if (error.code === 'CATEGORY_NOT_FOUND')
-            throw new NotFoundException({ code: error.code, message: error.message });
-          throw new ConflictException({ code: error.code, message: error.message });
+        const body = { code: error.code, message: error.message };
+        switch (mapCatalogErrorToHttpStatus(error.code)) {
+          case HttpStatus.NOT_FOUND:
+            throw new NotFoundException(body);
+          case HttpStatus.CONFLICT:
+            throw new ConflictException(body);
+          default:
+            throw new BadRequestException(body);
         }
-        if (error instanceof CatalogCategoryCodeAlreadyExistsError)
-          throw new ConflictException({
-            code: error.code,
-            message: 'Mã danh mục đã tồn tại.',
-          });
-        if (error instanceof CatalogCategoryInvalidParentError)
-          throw new BadRequestException({
-            code: error.code,
-            message: error.message,
-          });
-        if (error instanceof CatalogProductSlugAlreadyExistsError)
-          throw new ConflictException({
-            code: error.code,
-            message: error.message,
-          });
-        const msg = error.message.toLowerCase();
-        if (
-          msg.includes('duplicate') ||
-          msg.includes('đã tồn tại') ||
-          msg.includes('lịch thuê') ||
-          msg.includes('lịch đặt') ||
-          msg.includes('đang được thuê') ||
-          msg.includes('thay đổi')
-        ) {
-          throw new ConflictException(error.message);
-        }
-        throw new BadRequestException(error.message);
       }
       throw error;
     }

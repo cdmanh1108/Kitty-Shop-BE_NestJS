@@ -8,6 +8,7 @@ import type {
 } from '../../src/modules/catalog/domain/catalog.models';
 import {
   type CatalogRepository,
+  CATALOG_ERROR_CODE,
   CatalogCategoryError,
   CatalogInvariantError,
   CatalogProductSlugAlreadyExistsError,
@@ -391,7 +392,10 @@ describe('CatalogService - Product Management', () => {
 
     it('throws ConflictException when product has active rentals', async () => {
       archiveProductMock.mockRejectedValue(
-        new CatalogInvariantError('Không thể lưu trữ sản phẩm đang có lịch thuê chưa kết thúc.'),
+        new CatalogInvariantError(
+          CATALOG_ERROR_CODE.PRODUCT_ACTIVE_RENTAL,
+          'Không thể lưu trữ sản phẩm đang có lịch thuê chưa kết thúc.',
+        ),
       );
       await expect(service.archiveProduct(mockUser, 'prod-1')).rejects.toThrow(ConflictException);
     });

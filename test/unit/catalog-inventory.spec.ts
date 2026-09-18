@@ -1,7 +1,10 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CatalogService } from '@modules/catalog/application/catalog.service';
 import type { CatalogRepository } from '@modules/catalog/domain/catalog.repository';
-import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
+import {
+  CATALOG_ERROR_CODE,
+  CatalogInvariantError,
+} from '@modules/catalog/domain/catalog.repository';
 import type { AuditService } from '@modules/audit/application/audit.service';
 import type { CurrentUser } from '@common/types/current-user';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
@@ -320,7 +323,10 @@ describe('CatalogService - Inventory', () => {
 
     it('maps duplicate SKU invariant error to ConflictException', async () => {
       addInventoryItemMock.mockRejectedValue(
-        new CatalogInvariantError('Mã SKU "SP001-01" đã tồn tại trong kho của cửa hàng.'),
+        new CatalogInvariantError(
+          CATALOG_ERROR_CODE.INVENTORY_SKU_ALREADY_EXISTS,
+          'Mã SKU "SP001-01" đã tồn tại trong kho của cửa hàng.',
+        ),
       );
 
       await expect(
@@ -395,6 +401,7 @@ describe('CatalogService - Inventory', () => {
     it('maps invariant error for active rental to ConflictException', async () => {
       updateInventoryStatusMock.mockRejectedValue(
         new CatalogInvariantError(
+          CATALOG_ERROR_CODE.INVENTORY_ACTIVE_ALLOCATION,
           'Món đồ đang có lịch thuê hoạt động hoặc đang được thuê. Không thể đổi trạng thái thủ công từ kho.',
         ),
       );
@@ -409,6 +416,7 @@ describe('CatalogService - Inventory', () => {
     it('maps state mismatch invariant error to ConflictException', async () => {
       updateInventoryStatusMock.mockRejectedValue(
         new CatalogInvariantError(
+          CATALOG_ERROR_CODE.INVENTORY_STATUS_MISMATCH,
           'Trạng thái món đồ đã thay đổi (thực tế: CLEANING, kỳ vọng: AVAILABLE). Vui lòng tải lại trang.',
         ),
       );
@@ -424,7 +432,10 @@ describe('CatalogService - Inventory', () => {
 
     it('maps missing reason invariant error to BadRequestException', async () => {
       updateInventoryStatusMock.mockRejectedValue(
-        new CatalogInvariantError('Cần nhập lý do khi chuyển món đồ sang trạng thái DAMAGED.'),
+        new CatalogInvariantError(
+          CATALOG_ERROR_CODE.INVENTORY_STATUS_REASON_REQUIRED,
+          'Cần nhập lý do khi chuyển món đồ sang trạng thái DAMAGED.',
+        ),
       );
 
       await expect(
@@ -475,6 +486,7 @@ describe('CatalogService - Inventory', () => {
     it('throws ConflictException if item has active allocation', async () => {
       archiveInventoryItemMock.mockRejectedValue(
         new CatalogInvariantError(
+          CATALOG_ERROR_CODE.INVENTORY_ACTIVE_ALLOCATION,
           'Không thể ngừng sử dụng món đồ đang có lịch đặt hoặc đang được thuê.',
         ),
       );

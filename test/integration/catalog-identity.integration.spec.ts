@@ -12,7 +12,10 @@ import { createTestApp } from '../helpers/test-app';
 import { createTestCategory, createTestShop, uniqueCode } from '../fixtures/test-factories';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
-import { CatalogProductSlugAlreadyExistsError } from '../../src/modules/catalog/domain/catalog.repository';
+import {
+  CATALOG_ERROR_CODE,
+  CatalogProductSlugAlreadyExistsError,
+} from '../../src/modules/catalog/domain/catalog.repository';
 
 interface ProductDetailResponse {
   code: string;
@@ -347,7 +350,10 @@ describe('Tenant Resolution & Product Slug Identity Integration', () => {
           ],
           media: [],
         }),
-      ).rejects.toBeInstanceOf(CatalogProductSlugAlreadyExistsError);
+      ).rejects.toMatchObject({
+        constructor: CatalogProductSlugAlreadyExistsError,
+        code: CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS,
+      });
     });
 
     it('updateProduct throws CatalogProductSlugAlreadyExistsError when updating slug to an existing slug in the same shop', async () => {

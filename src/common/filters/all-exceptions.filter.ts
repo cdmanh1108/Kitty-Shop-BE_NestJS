@@ -17,6 +17,7 @@ import {
 } from '@modules/rentals/domain/rental-errors';
 import { FinanceInvariantError } from '@modules/finance/domain/finance.repository';
 import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
+import { mapCatalogErrorToHttpStatus } from '@modules/catalog/application/catalog-error-http.mapper';
 
 const publicOperationalServerErrors = new Set(['OTP_DELIVERY_UNAVAILABLE']);
 
@@ -69,22 +70,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = HttpStatus.BAD_REQUEST;
       code = 'FINANCE_INVARIANT_ERROR';
       message = (exception as Error).message;
-    } else if (
-      exception instanceof CatalogInvariantError ||
-      errorName === 'CatalogInvariantError'
-    ) {
-      const msg = (exception as Error).message.toLowerCase();
-      const isConflict =
-        msg.includes('duplicate') ||
-        msg.includes('đã tồn tại') ||
-        msg.includes('active rental') ||
-        msg.includes('lịch đặt') ||
-        msg.includes('lịch thuê') ||
-        msg.includes('đang được thuê') ||
-        msg.includes('thay đổi');
-      status = isConflict ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
-      code = isConflict ? 'CATALOG_CONFLICT' : 'CATALOG_INVARIANT_ERROR';
-      message = (exception as Error).message;
+    } else if (exception instanceof CatalogInvariantError) {
+      status = mapCatalogErrorToHttpStatus(exception.code);
+      code = exception.code;
+      message = exception.message;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const body = exception.getResponse();

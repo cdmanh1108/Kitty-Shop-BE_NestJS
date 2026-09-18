@@ -18,7 +18,10 @@ import {
   RentalInvariantError,
 } from '../src/modules/rentals/domain/rental-errors';
 import { FinanceInvariantError } from '../src/modules/finance/domain/finance.repository';
-import { CatalogInvariantError } from '../src/modules/catalog/domain/catalog.repository';
+import {
+  CATALOG_ERROR_CODE,
+  CatalogInvariantError,
+} from '../src/modules/catalog/domain/catalog.repository';
 
 interface MockResponsePayload {
   statusCode: number;
@@ -163,15 +166,32 @@ describe('AllExceptionsFilter', () => {
       });
     });
 
-    it('maps CatalogInvariantError to 400 CATALOG_INVARIANT_ERROR', () => {
-      const error = new CatalogInvariantError('Kích thước không thuộc cửa hàng này.');
+    it('maps CatalogInvariantError by code regardless of message wording', () => {
+      const error = new CatalogInvariantError(
+        CATALOG_ERROR_CODE.SIZE_NOT_IN_SHOP,
+        'Any future localized wording remains safe for HTTP classification.',
+      );
       filter.catch(error, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(sentPayload).toMatchObject({
         statusCode: 400,
-        code: 'CATALOG_INVARIANT_ERROR',
-        message: 'Kích thước không thuộc cửa hàng này.',
+        code: CATALOG_ERROR_CODE.SIZE_NOT_IN_SHOP,
+        message: 'Any future localized wording remains safe for HTTP classification.',
+      });
+    });
+
+    it('maps a typed Catalog conflict without inspecting its message', () => {
+      const error = new CatalogInvariantError(
+        CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS,
+        'Completely unrelated wording.',
+      );
+      filter.catch(error, mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(sentPayload).toMatchObject({
+        statusCode: HttpStatus.CONFLICT,
+        code: CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS,
       });
     });
   });

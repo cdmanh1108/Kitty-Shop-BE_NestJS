@@ -10,6 +10,7 @@ import type {
   UpdateProductData,
 } from '../domain/catalog.repository';
 import {
+  CATALOG_ERROR_CODE,
   CatalogCategoryError,
   CatalogInvariantError,
   CatalogProductSlugAlreadyExistsError,
@@ -29,7 +30,10 @@ function handleProductUniqueViolation(error: unknown): never {
       throw new CatalogProductSlugAlreadyExistsError();
     }
     if (targetStr.includes('code') || targetStr.includes('products_shop_id_code_key')) {
-      throw new CatalogInvariantError('Mã sản phẩm đã tồn tại trong cửa hàng.');
+      throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.PRODUCT_CODE_ALREADY_EXISTS,
+        'Mã sản phẩm đã tồn tại trong cửa hàng.',
+      );
     }
   }
   throw error;
@@ -47,6 +51,7 @@ export async function createProduct(
         const key = `${variant.sizeId ?? 'null'}::${variant.colorId ?? 'null'}`;
         if (seenCombinations.has(key)) {
           throw new CatalogInvariantError(
+            CATALOG_ERROR_CODE.PRODUCT_VARIANT_COMBINATION_DUPLICATE,
             'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
           );
         }
@@ -56,6 +61,7 @@ export async function createProduct(
         for (const rate of variant.rentalRates) {
           if (seenDurations.has(rate.durationDays)) {
             throw new CatalogInvariantError(
+              CATALOG_ERROR_CODE.RENTAL_RATE_DURATION_DUPLICATE,
               'Mức giá thuê cho số ngày này đã tồn tại trong biến thể.',
             );
           }
@@ -63,7 +69,10 @@ export async function createProduct(
         }
       }
       if (input.media.filter((m) => m.isPrimary).length > 1) {
-        throw new CatalogInvariantError('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
+        throw new CatalogInvariantError(
+          CATALOG_ERROR_CODE.PRODUCT_MULTIPLE_PRIMARY_MEDIA,
+          'Chỉ được chọn một ảnh đại diện cho sản phẩm.',
+        );
       }
       await assertCatalogReferences(tx, shopId, input.categoryId, input.variants);
       const slug = input.slug === undefined
@@ -127,6 +136,7 @@ export async function addVariant(
     for (const v of existingVariants) {
       if (`${v.sizeId ?? 'null'}::${v.colorId ?? 'null'}` === key) {
         throw new CatalogInvariantError(
+          CATALOG_ERROR_CODE.PRODUCT_VARIANT_COMBINATION_DUPLICATE,
           'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
         );
       }
@@ -255,7 +265,10 @@ async function assertProductCanArchive(
     select: { id: true },
   });
   if (allocation)
-    throw new CatalogInvariantError('Không thể lưu trữ sản phẩm đang có lịch thuê chưa kết thúc.');
+    throw new CatalogInvariantError(
+      CATALOG_ERROR_CODE.PRODUCT_ACTIVE_RENTAL,
+      'Không thể lưu trữ sản phẩm đang có lịch thuê chưa kết thúc.',
+    );
 }
 
 export async function addProductMedia(
@@ -315,8 +328,8 @@ async function assertActiveCategory(
     where: { id: categoryId, shopId },
     select: { isActive: true },
   });
-  if (!category) throw new CatalogCategoryError('CATEGORY_NOT_FOUND');
-  if (!category.isActive) throw new CatalogCategoryError('CATEGORY_INACTIVE');
+  if (!category) throw new CatalogCategoryError(CATALOG_ERROR_CODE.CATEGORY_NOT_FOUND);
+  if (!category.isActive) throw new CatalogCategoryError(CATALOG_ERROR_CODE.CATEGORY_INACTIVE);
 }
 async function assertVariantReferences(
   tx: Prisma.TransactionClient,
@@ -325,11 +338,19 @@ async function assertVariantReferences(
 ): Promise<void> {
   if (variant.sizeId) {
     const size = await tx.size.count({ where: { id: variant.sizeId, shopId } });
-    if (!size) throw new CatalogInvariantError('Kích thước không thuộc cửa hàng này.');
+    if (!size)
+      throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.SIZE_NOT_IN_SHOP,
+        'Kích thước không thuộc cửa hàng này.',
+      );
   }
   if (variant.colorId) {
     const color = await tx.color.count({ where: { id: variant.colorId, shopId } });
-    if (!color) throw new CatalogInvariantError('Màu sắc không thuộc cửa hàng này.');
+    if (!color)
+      throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.COLOR_NOT_IN_SHOP,
+        'Màu sắc không thuộc cửa hàng này.',
+      );
   }
 }
 

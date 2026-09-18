@@ -8,6 +8,7 @@ import { serializableTransaction } from '@database/prisma/transaction';
 import {
   type AddInventoryData,
   type CatalogRepository,
+  CATALOG_ERROR_CODE,
   CatalogInvariantError,
 } from '../domain/catalog.repository';
 import {
@@ -79,6 +80,7 @@ export async function addInventoryItem(
     });
     if (!location) {
       throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.INVENTORY_LOCATION_INVALID,
         'Vị trí kho không thuộc cửa hàng này hoặc đã ngưng hoạt động',
       );
     }
@@ -96,7 +98,10 @@ export async function addInventoryItem(
     where: { shopId, sku },
   });
   if (existingSku) {
-    throw new CatalogInvariantError(`Mã SKU "${sku}" đã tồn tại trong kho của cửa hàng.`);
+    throw new CatalogInvariantError(
+      CATALOG_ERROR_CODE.INVENTORY_SKU_ALREADY_EXISTS,
+      `Mã SKU "${sku}" đã tồn tại trong kho của cửa hàng.`,
+    );
   }
 
   if (input.barcode) {
@@ -104,7 +109,10 @@ export async function addInventoryItem(
       where: { shopId, barcode: input.barcode },
     });
     if (existingBarcode) {
-      throw new CatalogInvariantError(`Mã vạch "${input.barcode}" đã tồn tại trong kho.`);
+      throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.INVENTORY_BARCODE_ALREADY_EXISTS,
+        `Mã vạch "${input.barcode}" đã tồn tại trong kho.`,
+      );
     }
   }
 
@@ -150,6 +158,7 @@ export async function updateInventoryStatus(
 
     if (input.expectedFromStatus && existing.currentStatus !== input.expectedFromStatus) {
       throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.INVENTORY_STATUS_MISMATCH,
         `Trạng thái món đồ đã thay đổi (thực tế: ${existing.currentStatus}, kỳ vọng: ${input.expectedFromStatus}). Vui lòng tải lại trang.`,
       );
     }
@@ -213,6 +222,7 @@ export async function archiveInventoryItem(
     });
     if (activeAllocation) {
       throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.INVENTORY_ACTIVE_ALLOCATION,
         'Không thể ngừng sử dụng món đồ đang có lịch đặt hoặc đang được thuê.',
       );
     }
