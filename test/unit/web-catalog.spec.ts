@@ -10,7 +10,7 @@ import {
 } from '../../src/modules/catalog/api/web/web-catalog.mapper';
 import { WebCatalogController } from '../../src/modules/catalog/api/web/web-catalog.controller';
 import { WebCatalogService } from '../../src/modules/catalog/application/web-catalog.service';
-import type { CatalogRepository } from '../../src/modules/catalog/domain/catalog.repository';
+import type { StorefrontCatalogRepository } from '../../src/modules/catalog/domain/storefront-catalog.repository';
 import type {
   StorefrontCategory,
   StorefrontProductDetails,
@@ -223,7 +223,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         listStorefrontProducts: jest.fn(),
         findStorefrontProductBySlug: jest.fn(),
       };
-      service = new WebCatalogService(mockRepo as unknown as CatalogRepository);
+      service = new WebCatalogService(mockRepo as unknown as StorefrontCatalogRepository);
     });
 
     it('returns categories from repository', async () => {

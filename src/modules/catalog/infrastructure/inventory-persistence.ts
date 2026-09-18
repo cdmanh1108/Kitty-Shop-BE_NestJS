@@ -7,10 +7,10 @@ import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import {
   type AddInventoryData,
-  type CatalogRepository,
   CATALOG_ERROR_CODE,
   CatalogInvariantError,
 } from '../domain/catalog.repository';
+import type { CatalogInventoryRepository } from '../domain/catalog-inventory.repository';
 import {
   validateInventoryStatusTransition,
   getAllowedOperationalTransitions,
@@ -67,7 +67,7 @@ export async function addInventoryItem(
   prisma: PrismaService,
   shopId: string,
   input: AddInventoryData,
-): ReturnType<CatalogRepository['addInventoryItem']> {
+): ReturnType<CatalogInventoryRepository['addInventoryItem']> {
   const variant = await prisma.productVariant.findFirst({
     where: { id: input.variantId, shopId, archivedAt: null },
     include: { product: true },
@@ -148,8 +148,8 @@ export async function addInventoryItem(
 
 export async function updateInventoryStatus(
   prisma: PrismaService,
-  input: Parameters<CatalogRepository['updateInventoryStatus']>[0],
-): ReturnType<CatalogRepository['updateInventoryStatus']> {
+  input: Parameters<CatalogInventoryRepository['updateInventoryStatus']>[0],
+): ReturnType<CatalogInventoryRepository['updateInventoryStatus']> {
   return serializableTransaction(prisma, async (tx) => {
     const existing = await tx.inventoryItem.findFirst({
       where: { id: input.id, shopId: input.shopId, archivedAt: null },
@@ -252,7 +252,7 @@ export async function archiveInventoryItem(
 
 export async function listInventory(
   prisma: PrismaService,
-  input: Parameters<CatalogRepository['listInventory']>[0],
+  input: Parameters<CatalogInventoryRepository['listInventory']>[0],
 ) {
   const where = {
     shopId: input.shopId,
@@ -403,8 +403,8 @@ export async function findInventoryItem(
 
 export function findAvailableInventory(
   prisma: PrismaService,
-  input: Parameters<CatalogRepository['findAvailableInventory']>[0],
-): ReturnType<CatalogRepository['findAvailableInventory']> {
+  input: Parameters<CatalogInventoryRepository['findAvailableInventory']>[0],
+): ReturnType<CatalogInventoryRepository['findAvailableInventory']> {
   return prisma.inventoryItem.findMany({
     where: {
       shopId: input.shopId,

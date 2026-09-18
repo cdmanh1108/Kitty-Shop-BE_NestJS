@@ -5,7 +5,10 @@ import {
 import { inventorySummary, inventoryHistory } from './inventory-read-queries';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Inject, Injectable } from '@nestjs/common';
-import type { CatalogRepository } from '../domain/catalog.repository';
+import type { CatalogAdminRepository } from '../domain/catalog-admin.repository';
+import type { StorefrontCatalogRepository } from '../domain/storefront-catalog.repository';
+type CatalogPersistenceAdapter = CatalogAdminRepository & StorefrontCatalogRepository;
+type CatalogRepository = CatalogPersistenceAdapter;
 import {
   listLookups,
   listCategories,
@@ -38,7 +41,9 @@ import {
 } from './inventory-persistence';
 
 @Injectable()
-export class PrismaCatalogRepository implements CatalogRepository {
+export class PrismaCatalogRepository
+  implements CatalogAdminRepository, StorefrontCatalogRepository
+{
   constructor(
     private readonly prisma: PrismaService,
     @Inject(PUBLIC_MEDIA_URL_RESOLVER) private readonly mediaUrls: PublicMediaUrlResolver,
@@ -46,20 +51,20 @@ export class PrismaCatalogRepository implements CatalogRepository {
 
   listStorefrontCategories(
     shopId: string,
-  ): ReturnType<CatalogRepository['listStorefrontCategories']> {
+  ): ReturnType<CatalogPersistenceAdapter['listStorefrontCategories']> {
     return listStorefrontCategories(this.prisma, shopId);
   }
 
   listStorefrontProducts(
-    input: Parameters<CatalogRepository['listStorefrontProducts']>[0],
-  ): ReturnType<CatalogRepository['listStorefrontProducts']> {
+    input: Parameters<CatalogPersistenceAdapter['listStorefrontProducts']>[0],
+  ): ReturnType<CatalogPersistenceAdapter['listStorefrontProducts']> {
     return listStorefrontProducts(this.prisma, this.mediaUrls, input);
   }
 
   findStorefrontProductBySlug(
     shopId: string,
     slug: string,
-  ): ReturnType<CatalogRepository['findStorefrontProductBySlug']> {
+  ): ReturnType<CatalogPersistenceAdapter['findStorefrontProductBySlug']> {
     return findStorefrontProductBySlug(this.prisma, this.mediaUrls, shopId, slug);
   }
 

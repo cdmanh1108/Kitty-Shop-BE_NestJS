@@ -20,15 +20,11 @@ import {
 import { getBookableVariant } from './rental-availability';
 import { createOrder } from './rental-booking';
 import { claimIdempotency, releaseIdempotency } from './rental-idempotency';
-import {
-  transition,
-  reschedule,
-  addCharge,
-  returnDocumentCollateral,
-  receiveReturn,
-  settleOrder,
-  getReturnPreview,
-} from './rental-lifecycle';
+import { receiveReturn } from './rental-return.lifecycle';
+import { settleOrder } from './rental-settlement.lifecycle';
+import { transition } from './rental-transition.lifecycle';
+import { addCharge, reschedule } from './rental-scheduling.lifecycle';
+import { getReturnPreview, returnDocumentCollateral } from './rental-collateral.lifecycle';
 import { confirmOrder } from './rental-confirmation';
 
 @Injectable()

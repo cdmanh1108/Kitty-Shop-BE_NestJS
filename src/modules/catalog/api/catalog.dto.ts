@@ -345,21 +345,6 @@ export class AddVariantReqDto extends ProductVariantReqDto {}
 
 export class UpsertRentalRateReqDto extends RentalRateReqDto {}
 
-export class ProductListQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional()
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
-  @IsOptional()
-  search?: string;
-  @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
-  @IsOptional()
-  categoryId?: string;
-  @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
-  @IsIn(Object.values(PRODUCT_STATUS), { message: 'Trạng thái không hợp lệ.' })
-  @IsOptional()
-  status?: string;
-}
-
 export class AddInventoryReqDto {
   @ApiProperty()
   @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
@@ -712,14 +697,4 @@ export class InventoryListItemResDto extends PickType(InventoryItemResDto, [
 export class InventoryPageResDto {
   @ApiProperty({ type: [InventoryListItemResDto] }) items!: InventoryListItemResDto[];
   @ApiProperty({ type: PaginationMetaResDto }) meta!: PaginationMetaResDto;
-}
-
-export class ProductLookupQueryDto extends ProductListQueryDto {
-  @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
-  @IsOptional()
-  productId?: string;
-  @ApiPropertyOptional({ type: Number, maximum: 50, default: 20 })
-  @Max(50, { message: 'Số kết quả mỗi trang phải nhỏ hơn hoặc bằng $constraint1.' })
-  override limit = 20;
 }

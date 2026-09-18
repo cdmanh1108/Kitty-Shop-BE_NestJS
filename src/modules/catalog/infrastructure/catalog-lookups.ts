@@ -1,5 +1,5 @@
 import type { PrismaService } from '@database/prisma/prisma.service';
-import type { CatalogRepository } from '../domain/catalog.repository';
+import type { CatalogManagementRepository } from '../domain/catalog-management.repository';
 import {
   CatalogCategoryCodeAlreadyExistsError,
   CatalogCategoryInvalidParentError,
@@ -9,7 +9,7 @@ import { Prisma } from '@prisma/client';
 export async function listLookups(
   prisma: PrismaService,
   shopId: string,
-): ReturnType<CatalogRepository['listLookups']> {
+): ReturnType<CatalogManagementRepository['listLookups']> {
   const [categories, sizes, colors, locations] = await prisma.$transaction([
     prisma.category.findMany({
       where: { shopId, isActive: true },
@@ -60,7 +60,7 @@ export async function createCategory(
     status: 'ACTIVE' | 'INACTIVE';
     sortOrder: number;
   },
-): ReturnType<CatalogRepository['createCategory']> {
+): ReturnType<CatalogManagementRepository['createCategory']> {
   if (await prisma.category.count({ where: { shopId, code: input.code } })) {
     throw new CatalogCategoryCodeAlreadyExistsError();
   }
@@ -120,7 +120,7 @@ export async function listCategories(
     search?: string;
     status?: 'ACTIVE' | 'INACTIVE';
   },
-): ReturnType<CatalogRepository['listCategories']> {
+): ReturnType<CatalogManagementRepository['listCategories']> {
   const where = {
     shopId: input.shopId,
     ...(input.status ? { isActive: input.status === 'ACTIVE' } : {}),
@@ -178,7 +178,7 @@ export function categoryOptions(
   prisma: PrismaService,
   shopId: string,
   includeInactive = false,
-): ReturnType<CatalogRepository['categoryOptions']> {
+): ReturnType<CatalogManagementRepository['categoryOptions']> {
   return prisma.category
     .findMany({
       where: { shopId, ...(!includeInactive ? { isActive: true } : {}) },
@@ -205,7 +205,7 @@ export async function updateCategory(
     status?: 'ACTIVE' | 'INACTIVE';
     sortOrder?: number;
   },
-): ReturnType<CatalogRepository['updateCategory']> {
+): ReturnType<CatalogManagementRepository['updateCategory']> {
   if (input.parentId !== undefined && input.parentId !== null) {
     if (input.parentId === id) {
       throw new CatalogCategoryInvalidParentError(
@@ -272,7 +272,7 @@ export async function deleteCategory(
   prisma: PrismaService,
   shopId: string,
   id: string,
-): ReturnType<CatalogRepository['deleteCategory']> {
+): ReturnType<CatalogManagementRepository['deleteCategory']> {
   try {
     return await prisma.$transaction(async (tx) => {
       const category = await tx.category.findFirst({ where: { id, shopId }, select: { id: true } });
@@ -292,13 +292,13 @@ export function createSize(
   prisma: PrismaService,
   shopId: string,
   input: { code: string; name: string; sortOrder: number },
-): ReturnType<CatalogRepository['createSize']> {
+): ReturnType<CatalogManagementRepository['createSize']> {
   return prisma.size.create({ data: { shopId, ...input } });
 }
 export function createColor(
   prisma: PrismaService,
   shopId: string,
   input: { code: string; name: string; hexColor?: string },
-): ReturnType<CatalogRepository['createColor']> {
+): ReturnType<CatalogManagementRepository['createColor']> {
   return prisma.color.create({ data: { shopId, ...input } });
 }

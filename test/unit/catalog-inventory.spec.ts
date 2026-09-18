@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CatalogService } from '@modules/catalog/application/catalog.service';
-import type { CatalogRepository } from '@modules/catalog/domain/catalog.repository';
+import type { CatalogAdminRepository } from '@modules/catalog/domain/catalog-admin.repository';
 import {
   CATALOG_ERROR_CODE,
   CatalogInvariantError,
@@ -11,7 +11,7 @@ import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/
 
 describe('CatalogService - Inventory', () => {
   let service: CatalogService;
-  let repository: CatalogRepository;
+  let repository: CatalogAdminRepository;
   let audit: { log: jest.Mock };
 
   let listInventoryMock: jest.Mock;
@@ -65,9 +65,6 @@ describe('CatalogService - Inventory', () => {
       listInventory: listInventoryMock,
       findInventoryItem: findInventoryItemMock,
       findAvailableInventory: jest.fn(),
-      listStorefrontCategories: jest.fn(),
-      listStorefrontProducts: jest.fn(),
-      findStorefrontProductBySlug: jest.fn(),
     };
     audit = {
       log: auditLogMock,

@@ -7,22 +7,22 @@ import type {
   UpdateProductResult,
 } from '../../src/modules/catalog/domain/catalog.models';
 import {
-  type CatalogRepository,
   CATALOG_ERROR_CODE,
   CatalogCategoryError,
   CatalogInvariantError,
   CatalogProductSlugAlreadyExistsError,
 } from '../../src/modules/catalog/domain/catalog.repository';
+import type { CatalogAdminRepository } from '../../src/modules/catalog/domain/catalog-admin.repository';
 import { CatalogService } from '../../src/modules/catalog/application/catalog.service';
 
 describe('CatalogService - Product Management', () => {
-  let repository: CatalogRepository;
+  let repository: CatalogAdminRepository;
   let audit: AuditPort;
   let service: CatalogService;
 
-  let createProductMock: jest.MockedFunction<CatalogRepository['createProduct']>;
-  let updateProductMock: jest.MockedFunction<CatalogRepository['updateProduct']>;
-  let archiveProductMock: jest.MockedFunction<CatalogRepository['archiveProduct']>;
+  let createProductMock: jest.MockedFunction<CatalogAdminRepository['createProduct']>;
+  let updateProductMock: jest.MockedFunction<CatalogAdminRepository['updateProduct']>;
+  let archiveProductMock: jest.MockedFunction<CatalogAdminRepository['archiveProduct']>;
   let auditLogMock: jest.MockedFunction<AuditPort['log']>;
 
   const mockUser: CurrentUser = {
@@ -67,9 +67,6 @@ describe('CatalogService - Product Management', () => {
       listInventory: jest.fn(),
       findInventoryItem: jest.fn(),
       findAvailableInventory: jest.fn(),
-      listStorefrontCategories: jest.fn(),
-      listStorefrontProducts: jest.fn(),
-      findStorefrontProductBySlug: jest.fn(),
     };
     audit = {
       log: auditLogMock,

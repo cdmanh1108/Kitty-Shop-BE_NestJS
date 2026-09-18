@@ -2,13 +2,13 @@ import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
-import type { CatalogRepository } from '../domain/catalog.repository';
+import type { CatalogProductRepository } from '../domain/catalog-product.repository';
 
 export async function listProducts(
   prisma: PrismaService,
   mediaUrls: PublicMediaUrlResolver,
-  input: Parameters<CatalogRepository['listProducts']>[0],
-): ReturnType<CatalogRepository['listProducts']> {
+  input: Parameters<CatalogProductRepository['listProducts']>[0],
+): ReturnType<CatalogProductRepository['listProducts']> {
   const where = {
     shopId: input.shopId,
     archivedAt: null,
@@ -89,8 +89,8 @@ export async function listProducts(
 
 export async function lookupProducts(
   prisma: PrismaService,
-  input: Parameters<CatalogRepository['lookupProducts']>[0],
-): ReturnType<CatalogRepository['lookupProducts']> {
+  input: Parameters<CatalogProductRepository['lookupProducts']>[0],
+): ReturnType<CatalogProductRepository['lookupProducts']> {
   const where = {
     shopId: input.shopId,
     archivedAt: null,
@@ -171,7 +171,7 @@ export async function findProduct(
   mediaUrls: PublicMediaUrlResolver,
   shopId: string,
   id: string,
-): ReturnType<CatalogRepository['findProduct']> {
+): ReturnType<CatalogProductRepository['findProduct']> {
   const product = await prisma.product.findFirst({
     where: { id, shopId, archivedAt: null },
     select: {

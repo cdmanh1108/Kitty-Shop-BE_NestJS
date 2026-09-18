@@ -1,12 +1,12 @@
 import { paginateMeta } from '@common/types/pagination';
 import { activeOccupyingAllocationWhere } from '@database/prisma/inventory-availability';
 import type { PrismaService } from '@database/prisma/prisma.service';
-import type { CatalogRepository } from '../domain/catalog.repository';
+import type { CatalogInventoryRepository } from '../domain/catalog-inventory.repository';
 
 export async function inventorySummary(
   prisma: PrismaService,
   shopId: string,
-): ReturnType<CatalogRepository['inventorySummary']> {
+): ReturnType<CatalogInventoryRepository['inventorySummary']> {
   const where = { shopId, archivedAt: null };
   const conditionsQuery = prisma.inventoryItem.groupBy({
     by: ['currentStatus'],
@@ -35,8 +35,8 @@ export async function inventorySummary(
 
 export async function inventoryHistory(
   prisma: PrismaService,
-  input: Parameters<CatalogRepository['inventoryHistory']>[0],
-): ReturnType<CatalogRepository['inventoryHistory']> {
+  input: Parameters<CatalogInventoryRepository['inventoryHistory']>[0],
+): ReturnType<CatalogInventoryRepository['inventoryHistory']> {
   const where = {
     shopId: input.shopId,
     ...(input.inventoryItemId ? { inventoryItemId: input.inventoryItemId } : {}),

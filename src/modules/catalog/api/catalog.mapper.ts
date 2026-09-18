@@ -28,7 +28,6 @@ import type {
   CreateSizeReqDto,
   UpdateCategoryReqDto,
   InventoryListQueryDto,
-  ProductListQueryDto,
   ProductMediaReqDto,
   ProductVariantReqDto,
   RentalRateReqDto,
@@ -36,6 +35,7 @@ import type {
   UpdateProductReqDto,
   UpsertRentalRateReqDto,
 } from './catalog.dto';
+import type { ProductListQueryDto } from './admin/dto/product-query.dto';
 
 export function toAddInventoryInput(dto: AddInventoryReqDto): AddInventoryInput {
   return { ...dto };

@@ -4,11 +4,11 @@ import { Prisma } from '@prisma/client';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { activeOccupyingAllocationWhere } from '@database/prisma/inventory-availability';
 import type {
-  CatalogRepository,
   CreateProductData,
   ProductMediaData,
   UpdateProductData,
 } from '../domain/catalog.repository';
+import type { CatalogProductRepository } from '../domain/catalog-product.repository';
 import {
   CATALOG_ERROR_CODE,
   CatalogCategoryError,
@@ -43,7 +43,7 @@ export async function createProduct(
   prisma: PrismaService,
   shopId: string,
   input: CreateProductData,
-): ReturnType<CatalogRepository['createProduct']> {
+): ReturnType<CatalogProductRepository['createProduct']> {
   try {
     return await prisma.$transaction(async (tx) => {
       const seenCombinations = new Set<string>();
@@ -75,9 +75,10 @@ export async function createProduct(
         );
       }
       await assertCatalogReferences(tx, shopId, input.categoryId, input.variants);
-      const slug = input.slug === undefined
-        ? generateProductSlug(input.name, input.code)
-        : normalizeProductSlug(input.slug);
+      const slug =
+        input.slug === undefined
+          ? generateProductSlug(input.name, input.code)
+          : normalizeProductSlug(input.slug);
       const product = await tx.product.create({
         data: {
           shopId,
@@ -123,7 +124,7 @@ export async function addVariant(
   shopId: string,
   productId: string,
   input: CreateProductData['variants'][number],
-): ReturnType<CatalogRepository['addVariant']> {
+): ReturnType<CatalogProductRepository['addVariant']> {
   return serializableTransaction(prisma, async (tx) => {
     const product = await tx.product.findFirst({
       where: { id: productId, shopId, archivedAt: null, status: { not: 'ARCHIVED' } },
@@ -154,7 +155,7 @@ export async function upsertRentalRate(
   shopId: string,
   variantId: string,
   input: { durationDays: number; price: number },
-): ReturnType<CatalogRepository['upsertRentalRate']> {
+): ReturnType<CatalogProductRepository['upsertRentalRate']> {
   return prisma.$transaction(async (tx) => {
     const variant = await tx.productVariant.findFirst({
       where: {
@@ -187,7 +188,7 @@ export async function updateProduct(
   shopId: string,
   id: string,
   input: UpdateProductData,
-): ReturnType<CatalogRepository['updateProduct']> {
+): ReturnType<CatalogProductRepository['updateProduct']> {
   try {
     return await serializableTransaction(prisma, async (tx) => {
       const existing = await tx.product.findFirst({
@@ -277,7 +278,7 @@ export async function addProductMedia(
   shopId: string,
   productId: string,
   input: ProductMediaData,
-): ReturnType<CatalogRepository['addProductMedia']> {
+): ReturnType<CatalogProductRepository['addProductMedia']> {
   const created = await serializableTransaction(prisma, async (tx) => {
     const product = await tx.product.findFirst({
       where: { id: productId, shopId, archivedAt: null },
@@ -304,7 +305,7 @@ export async function removeProductMedia(
   shopId: string,
   productId: string,
   mediaId: string,
-): ReturnType<CatalogRepository['removeProductMedia']> {
+): ReturnType<CatalogProductRepository['removeProductMedia']> {
   const deleted = await prisma.productMedia.deleteMany({
     where: { id: mediaId, shopId, productId },
   });

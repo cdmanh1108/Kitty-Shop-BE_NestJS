@@ -1,5 +1,5 @@
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
-import { transition } from '../../src/modules/rentals/infrastructure/rental-lifecycle';
+import { transition } from '../../src/modules/rentals/infrastructure/rental-transition.lifecycle';
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 import type { Clock } from '../../src/common/clock/clock';
 

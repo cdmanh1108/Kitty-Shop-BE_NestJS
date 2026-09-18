@@ -1,5 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CATALOG_REPOSITORY, type CatalogRepository } from '../domain/catalog.repository';
+import {
+  STOREFRONT_CATALOG_REPOSITORY,
+  type StorefrontCatalogRepository,
+} from '../domain/storefront-catalog.repository';
 import type {
   StorefrontCategory,
   StorefrontProductDetails,
@@ -9,7 +12,10 @@ import type {
 
 @Injectable()
 export class WebCatalogService {
-  constructor(@Inject(CATALOG_REPOSITORY) private readonly repository: CatalogRepository) {}
+  constructor(
+    @Inject(STOREFRONT_CATALOG_REPOSITORY)
+    private readonly repository: StorefrontCatalogRepository,
+  ) {}
 
   async listCategories(shopId: string): Promise<StorefrontCategory[]> {
     return this.repository.listStorefrontCategories(shopId);

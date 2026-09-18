@@ -18,7 +18,6 @@ import {
 } from '@nestjs/swagger';
 import { CatalogService } from '../../application/catalog.service';
 import {
-  ProductLookupQueryDto,
   AddInventoryReqDto,
   AddVariantReqDto,
   AvailabilityQueryDto,
@@ -36,7 +35,6 @@ import {
   InventoryItemResDto,
   InventoryListQueryDto,
   InventoryPageResDto,
-  ProductListQueryDto,
   ProductMediaReqDto,
   ProductPageResDto,
   ProductResDto,
@@ -48,6 +46,10 @@ import {
   UpdateProductReqDto,
   UpsertRentalRateReqDto,
 } from '../catalog.dto';
+import {
+  ProductListQueryDto,
+  ProductLookupQueryDto,
+} from './dto/product-query.dto';
 import {
   toAddInventoryInput,
   toAddVariantInput,

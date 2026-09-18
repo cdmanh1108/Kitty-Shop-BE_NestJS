@@ -10,11 +10,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  CATALOG_REPOSITORY,
-  CatalogInvariantError,
-  type CatalogRepository,
-} from '../domain/catalog.repository';
+import { CATALOG_ADMIN_REPOSITORY, type CatalogAdminRepository } from '../domain/catalog-admin.repository';
+import { CatalogInvariantError } from '../domain/catalog.repository';
 import { mapCatalogErrorToHttpStatus } from './catalog-error-http.mapper';
 import type {
   AddInventoryInput,
@@ -37,7 +34,7 @@ import type {
 @Injectable()
 export class CatalogService {
   constructor(
-    @Inject(CATALOG_REPOSITORY) private readonly repository: CatalogRepository,
+    @Inject(CATALOG_ADMIN_REPOSITORY) private readonly repository: CatalogAdminRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 

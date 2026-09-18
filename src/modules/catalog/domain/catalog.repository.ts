@@ -1,33 +1,4 @@
-import type {
-  ProductLookupPage,
-  InventorySummary,
-  InventoryHistoryPage,
-  InventoryHistoryCriteria,
-} from './catalog.read-models';
 import type { InventoryStatus } from '@modules/catalog/domain/catalog-status';
-import { type ColorRecord, type SizeRecord } from '@modules/catalog/domain/catalog.records';
-
-import type {
-  AddInventoryItemResult,
-  AddProductMediaResult,
-  AddVariantResult,
-  CatalogLookups,
-  CategoryListItem,
-  CategoryPage,
-  CategoryOption,
-  CreateProductResult,
-  FindAvailableInventoryResult,
-  InventoryDetails,
-  InventoryPage,
-  ProductDetails,
-  ProductPage,
-  StorefrontCategory,
-  StorefrontProductDetails,
-  StorefrontProductListCriteria,
-  StorefrontProductPage,
-  UpdateProductResult,
-  UpsertRentalRateResult,
-} from './catalog.models';
 export const CATALOG_ERROR_CODE = {
   CATEGORY_CODE_ALREADY_EXISTS: 'CATEGORY_CODE_ALREADY_EXISTS',
   CATEGORY_NOT_FOUND: 'CATEGORY_NOT_FOUND',
@@ -90,99 +61,11 @@ export class CatalogCategoryInvalidParentError extends CatalogInvariantError {
 }
 export class CatalogProductSlugAlreadyExistsError extends CatalogInvariantError {
   constructor() {
-    super(CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS, 'Slug sản phẩm đã tồn tại trong cửa hàng.');
+    super(
+      CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS,
+      'Slug sản phẩm đã tồn tại trong cửa hàng.',
+    );
   }
-}
-
-export const CATALOG_REPOSITORY = Symbol('CATALOG_REPOSITORY');
-
-export interface CatalogRepository {
-  listStorefrontCategories(shopId: string): Promise<StorefrontCategory[]>;
-  listStorefrontProducts(input: StorefrontProductListCriteria): Promise<StorefrontProductPage>;
-  findStorefrontProductBySlug(
-    shopId: string,
-    slug: string,
-  ): Promise<StorefrontProductDetails | null>;
-  lookupProducts(
-    input: CatalogListProductsCriteria & { productId?: string },
-  ): Promise<ProductLookupPage>;
-  inventorySummary(shopId: string): Promise<InventorySummary>;
-  inventoryHistory(input: InventoryHistoryCriteria): Promise<InventoryHistoryPage>;
-  listLookups(shopId: string): Promise<CatalogLookups>;
-  listCategories(input: {
-    shopId: string;
-    page: number;
-    limit: number;
-    search?: string;
-    status?: 'ACTIVE' | 'INACTIVE';
-  }): Promise<CategoryPage>;
-  categoryOptions(shopId: string, includeInactive?: boolean): Promise<CategoryOption[]>;
-  createCategory(
-    shopId: string,
-    input: {
-      parentId?: string | null;
-      code: string;
-      name: string;
-      description?: string;
-      status: 'ACTIVE' | 'INACTIVE';
-      sortOrder: number;
-    },
-  ): Promise<CategoryListItem>;
-  updateCategory(
-    shopId: string,
-    id: string,
-    input: {
-      parentId?: string | null;
-      code?: string;
-      name?: string;
-      description?: string | null;
-      status?: 'ACTIVE' | 'INACTIVE';
-      sortOrder?: number;
-    },
-  ): Promise<CategoryListItem | null>;
-  deleteCategory(shopId: string, id: string): Promise<'deleted' | 'in-use' | 'not-found'>;
-  createSize(
-    shopId: string,
-    input: { code: string; name: string; sortOrder: number },
-  ): Promise<SizeRecord>;
-  createColor(
-    shopId: string,
-    input: { code: string; name: string; hexColor?: string },
-  ): Promise<ColorRecord>;
-  listProducts(input: CatalogListProductsCriteria): Promise<ProductPage>;
-  findProduct(shopId: string, id: string): Promise<ProductDetails>;
-  createProduct(shopId: string, input: CreateProductData): Promise<CreateProductResult>;
-  addVariant(
-    shopId: string,
-    productId: string,
-    input: CreateProductData['variants'][number],
-  ): Promise<AddVariantResult>;
-  upsertRentalRate(
-    shopId: string,
-    variantId: string,
-    input: { durationDays: number; price: number },
-  ): Promise<UpsertRentalRateResult>;
-  updateProduct(shopId: string, id: string, input: UpdateProductData): Promise<UpdateProductResult>;
-  archiveProduct(shopId: string, id: string): Promise<boolean>;
-  addProductMedia(
-    shopId: string,
-    productId: string,
-    input: ProductMediaData,
-  ): Promise<AddProductMediaResult>;
-  removeProductMedia(shopId: string, productId: string, mediaId: string): Promise<boolean>;
-  addInventoryItem(shopId: string, input: AddInventoryData): Promise<AddInventoryItemResult>;
-  updateInventoryStatus(input: CatalogUpdateInventoryStatusData): Promise<AddInventoryItemResult>;
-  archiveInventoryItem(
-    shopId: string,
-    id: string,
-    reason?: string,
-    changedBy?: string,
-  ): Promise<boolean>;
-  listInventory(input: CatalogListInventoryCriteria): Promise<InventoryPage>;
-  findInventoryItem(shopId: string, id: string): Promise<InventoryDetails>;
-  findAvailableInventory(
-    input: CatalogFindAvailableInventoryCriteria,
-  ): Promise<FindAvailableInventoryResult>;
 }
 
 export interface CreateProductData {
