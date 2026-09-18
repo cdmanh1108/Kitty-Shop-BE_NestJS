@@ -36,6 +36,13 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     }
   }
 
+  if (config.DEFAULT_SHOP_CODE !== undefined) {
+    const value = config.DEFAULT_SHOP_CODE;
+    if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(value.trim())) {
+      throw new Error('DEFAULT_SHOP_CODE phải là mã cửa hàng không rỗng, gồm chữ cái, số, gạch dưới hoặc gạch ngang (tối đa 64 ký tự).');
+    }
+  }
+
   for (const key of ['JWT_ACCESS_TTL_SECONDS', 'REFRESH_TOKEN_TTL_DAYS']) {
     const value = config[key];
     if (value === undefined) continue;

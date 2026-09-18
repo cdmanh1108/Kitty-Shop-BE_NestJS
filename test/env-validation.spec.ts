@@ -24,6 +24,15 @@ describe('environment validation and configuration', () => {
       expect(() => validateEnvironment(baseConfig)).not.toThrow();
     });
 
+    it('validates DEFAULT_SHOP_CODE when it is configured', () => {
+      expect(() =>
+        validateEnvironment({ ...baseConfig, DEFAULT_SHOP_CODE: 'invalid shop code' }),
+      ).toThrow('DEFAULT_SHOP_CODE');
+      expect(() =>
+        validateEnvironment({ ...baseConfig, DEFAULT_SHOP_CODE: 'shop-main_01' }),
+      ).not.toThrow();
+    });
+
     it('requires distinct Admin, Web and OTP secrets in production', () => {
       expect(() =>
         validateEnvironment({

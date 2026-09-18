@@ -10,6 +10,8 @@ export interface AppConfiguration {
   apiPrefix: string;
   appName: string;
   appUrl: string;
+  /** Optional only when every storefront request supplies x-shop-code. */
+  defaultShopCode?: string;
   corsOrigins: string[];
   trustProxy: boolean;
   swaggerEnabled: boolean;
@@ -43,6 +45,7 @@ export default (): AppConfiguration => {
     apiPrefix: process.env.API_PREFIX ?? 'api/v1',
     appName: process.env.APP_NAME ?? 'Rental Shop API',
     appUrl: process.env.APP_URL ?? 'http://localhost:3007',
+    defaultShopCode: process.env.DEFAULT_SHOP_CODE?.trim() || undefined,
     corsOrigins: (process.env.CORS_ORIGINS ?? '')
       .split(',')
       .map((value) => value.trim())
