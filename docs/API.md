@@ -46,17 +46,21 @@ Send an `Idempotency-Key` header for retries. The backend creates the order, his
 
 ## FE code generation
 
-The portable contract is `generated/openapi.json`. In this workspace:
+The committed artifacts are `generated/openapi-web.json`, `generated/openapi-admin.json`, and the Admin compatibility copy `generated/openapi.json`. In this workspace:
 
 ```bash
 # kitty-be
 npm run openapi:export
+# verifies freshness without changing any generated/openapi*.json file
+npm run openapi:check
 # kitty-admin-fe
 npm run api:sync
 npm run api:check
 ```
 
 Do not hand-edit BE generated/openapi.json, FE openapi/kitty-api.json or FE src/api/generated/schema.ts. The FE uses openapi-typescript and openapi-fetch. api:check validates snapshot-to-TypeScript consistency; compare parsed BE/FE JSON or sync to verify cross-repository equality. Swagger HTTP exposure is controlled by SWAGGER_ENABLED and defaults off in production.
+
+When a backend DTO/controller changes, run `npm run openapi:check`. If it reports a stale contract, run `npm run openapi:export`, review and commit the generated artifacts, then run the check again. `openapi:check` generates current documents in memory and compares their canonical content with the committed files; it never updates them.
 
 ## API versioning
 

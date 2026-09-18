@@ -63,7 +63,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DATABASE.md](docs/DA
 npm run i                 # install dependencies only
 npm run bootstrap         # prepare env, database, seed and OpenAPI
 npm run start:dev         # watch mode
-npm run quality           # lint + tests + production build
+npm run quality           # lint + tests + production build + non-mutating OpenAPI freshness check
 npm run db:up             # start local PostgreSQL only
 npm run db:migrate        # apply committed migrations
 npm run db:migrate:dev    # create a migration during development
@@ -115,7 +115,7 @@ npm run typecheck
 npm run quality
 ```
 
-`db:generate` is required after a clean install; npm ci alone may leave the generic Prisma client stub. `quality` covers lint, unit tests, build and OpenAPI export; it does not run PostgreSQL integration/E2E. Follow TESTING.md for an isolated TEST_DATABASE_URL, migrate with `test:db:migrate`, then run `test:integration` and `test:e2e` sequentially. Migration deploy changes the selected database; never use the application database for test cleanup.
+`db:generate` is required after a clean install; npm ci alone may leave the generic Prisma client stub. `quality` covers lint, unit tests, build and a non-mutating OpenAPI freshness check; it does not run PostgreSQL integration/E2E. Use `npm run openapi:export` explicitly when an API contract changes. Follow TESTING.md for an isolated TEST_DATABASE_URL, migrate with `test:db:migrate`, then run `test:integration` and `test:e2e` sequentially. Migration deploy changes the selected database; never use the application database for test cleanup.
 
 See [Task 7 stabilization](docs/STABILIZATION.md) for the latest verification. Earlier dated counts are historical, not the current suite contract.
 

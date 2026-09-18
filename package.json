@@ -24,7 +24,7 @@
     "test:e2e": "jest --config jest.db.config.cjs test/e2e --runInBand",
     "test:watch": "jest --watch",
     "test:cov": "jest --config jest.db.config.cjs --coverage --runInBand",
-    "quality": "npm run lint && npm run test && npm run build && npm run openapi:export",
+    "quality": "npm run lint && npm run test && npm run build && npm run openapi:check",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:generate": "prisma generate",

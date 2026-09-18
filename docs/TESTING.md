@@ -10,7 +10,7 @@
 
 `jest.config.cjs` retains the existing Jest setup. `jest.db.config.cjs` adds explicit test environment initialization before application imports and a 15-second per-test timeout. There is no forceExit or arbitrary concurrency sleep. DB-dependent tests fail if their environment is missing; they are never silently skipped. Integration/E2E runs must be serial across suites; do not launch both simultaneously against the same database.
 
-The existing `quality` command still runs lint, the database-free default tests, build and OpenAPI export. It does not imply DB coverage. CI must run integration/E2E explicitly with an isolated migrated PostgreSQL database.
+The `quality` command runs lint, the database-free default tests, build and a non-mutating OpenAPI freshness check. It does not imply DB coverage. Run `npm run openapi:export` explicitly after intentional contract changes. CI must run integration/E2E explicitly with an isolated migrated PostgreSQL database.
 
 ## Isolated PostgreSQL setup
 

@@ -5,7 +5,9 @@ import { ConfigService } from '@nestjs/config';
 import type { AppConfiguration } from '../src/config/configuration';
 
 function normalizeLineEndings(content: string): string {
-  return content.replace(/\r\n/g, '\n').trim();
+  // Export always serializes with LF and a trailing newline. Normalize only the platform newline
+  // representation so Windows checkouts do not create false stale reports; all other bytes matter.
+  return content.replace(/\r\n/g, '\n');
 }
 
 async function main(): Promise<void> {
@@ -80,7 +82,8 @@ async function main(): Promise<void> {
             staleFiles.map((f) => ` - generated/${f}`).join('\n') +
             `\n\nRun "npm run openapi:export" to update them.\n`,
         );
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
 
       process.stdout.write('[openapi:check] All checked OpenAPI specifications are up to date.\n');

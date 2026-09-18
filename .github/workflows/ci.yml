@@ -55,5 +55,3 @@ jobs:
       - run: npm run typecheck
       - run: npm run quality
       - run: npm run test:integration
-      - name: Verify OpenAPI contract freshness
-        run: npm run openapi:check
