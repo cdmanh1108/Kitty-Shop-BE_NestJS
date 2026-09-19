@@ -91,6 +91,7 @@ describe('WebRentalService', () => {
           shopId: 'shop-1',
           variantId: 'var-1',
           durationDays: 3,
+          storefrontEligibility: true,
         }),
       );
     });
@@ -115,7 +116,11 @@ describe('WebRentalService', () => {
 
       expect(result.available).toBe(true);
       expect(result.availableQuantity).toBe(3);
-      expect(mockRepository.findActiveVariantIdsByProduct).toHaveBeenCalledWith('shop-1', 'prod-1');
+      expect(mockRepository.findActiveVariantIdsByProduct).toHaveBeenCalledWith(
+        'shop-1',
+        'prod-1',
+        true,
+      );
     });
   });
 
@@ -300,6 +305,7 @@ describe('WebRentalService', () => {
         totalAmount: 495000,
       });
       const createInput = firstCreateOrderInput();
+      expect(createInput.storefrontEligibility).toBe(true);
       expect(createInput.charges).toEqual([]);
       expect(createInput.delivery).toMatchObject({
         method: 'DELIVERY',

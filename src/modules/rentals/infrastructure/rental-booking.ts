@@ -20,7 +20,8 @@ import {
 import { getWithTx } from './rental-queries';
 import { isOverlapError } from './rental-errors';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
-import { RentalInvariantError } from '../domain/rental-errors';
+import { RentalInventoryUnavailableError, RentalInvariantError } from '../domain/rental-errors';
+import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
 
 export async function createOrder(
   prisma: PrismaService,
@@ -51,6 +52,8 @@ export async function createOrder(
   try {
     return await serializableTransaction(prisma, async (tx) => {
       if (data.idempotency) await lockRentalClaim(tx, data.shopId, data.idempotency);
+
+      if (data.storefrontEligibility) await assertStorefrontEligibleLines(tx, data);
 
       for (const line of data.lines) {
         await assertInventoryRentable(tx, {
@@ -207,5 +210,38 @@ export async function createOrder(
   } catch (error) {
     if (isOverlapError(error)) throw new RentalOverlapError();
     throw error;
+  }
+}
+
+async function assertStorefrontEligibleLines(
+  tx: Prisma.TransactionClient,
+  data: CreateRentalOrderData,
+): Promise<void> {
+  const expectedProductByVariant = new Map<string, string>();
+  for (const line of data.lines) {
+    const existingProductId = expectedProductByVariant.get(line.variantId);
+    if (existingProductId && existingProductId !== line.productId) {
+      throw new RentalInventoryUnavailableError();
+    }
+    expectedProductByVariant.set(line.variantId, line.productId);
+  }
+
+  const eligibleVariants = await tx.productVariant.findMany({
+    where: {
+      id: { in: [...expectedProductByVariant.keys()] },
+      shopId: data.shopId,
+      status: 'ACTIVE',
+      archivedAt: null,
+      product: { shopId: data.shopId, ...storefrontProductEligibility },
+    },
+    select: { id: true, productId: true },
+  });
+  if (
+    eligibleVariants.length !== expectedProductByVariant.size ||
+    eligibleVariants.some(
+      (variant) => expectedProductByVariant.get(variant.id) !== variant.productId,
+    )
+  ) {
+    throw new RentalInventoryUnavailableError();
   }
 }

@@ -40,6 +40,8 @@ export interface CreateRentalOrderData {
   note?: string;
   internalNote?: string;
   createdBy?: string;
+  /** Server-owned context set only by the Web rental application service. */
+  storefrontEligibility?: true;
   idempotency?: { scope: string; key: string; claimId: string };
   lines: Array<{
     productId: string;
@@ -94,8 +96,16 @@ export interface RentalRepository {
   returnCollateral(shopId: string, orderId: string, changedBy: string): Promise<RentalOrderDetails>;
   claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
   releaseIdempotency(shopId: string, scope: string, key: string, claimId: string): Promise<void>;
-  findActiveVariantIdsByProduct(shopId: string, productId: string): Promise<string[]>;
-  findFirstActiveVariantId(shopId: string, productId: string): Promise<string | null>;
+  findActiveVariantIdsByProduct(
+    shopId: string,
+    productId: string,
+    storefrontEligibility?: boolean,
+  ): Promise<string[]>;
+  findFirstActiveVariantId(
+    shopId: string,
+    productId: string,
+    storefrontEligibility?: boolean,
+  ): Promise<string | null>;
   lookupStorefrontOrder(
     shopId: string,
     orderNumber: string,
@@ -183,6 +193,8 @@ export interface RentalGetBookableVariantData {
   durationDays: number;
   from: Date;
   until: Date;
+  /** Server-owned context set only by the Web rental application service. */
+  storefrontEligibility?: true;
 }
 
 export interface RentalListCriteria {

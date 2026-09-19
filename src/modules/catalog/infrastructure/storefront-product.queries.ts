@@ -11,6 +11,10 @@ import type {
   StorefrontRentalPrice,
 } from '../domain/catalog.models';
 import { PRODUCT_STATUS } from '../domain/catalog-status';
+import {
+  storefrontProductEligibility,
+  storefrontVariantEligibility,
+} from '../domain/storefront-eligibility';
 
 /**
  * Shared base query filter for products eligible to appear on the storefront.
@@ -24,10 +28,7 @@ import { PRODUCT_STATUS } from '../domain/catalog-status';
 export function storefrontProductBaseWhere(shopId: string): Prisma.ProductWhereInput {
   return {
     shopId,
-    isPublic: true,
-    isRentable: true,
-    archivedAt: null,
-    status: PRODUCT_STATUS.ACTIVE,
+    ...storefrontProductEligibility,
   };
 }
 
@@ -37,8 +38,7 @@ export function storefrontProductBaseWhere(shopId: string): Prisma.ProductWhereI
  */
 export function storefrontVariantBaseWhere(): Prisma.ProductVariantWhereInput {
   return {
-    archivedAt: null,
-    status: PRODUCT_STATUS.ACTIVE,
+    ...storefrontVariantEligibility,
   };
 }
 

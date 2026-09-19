@@ -3,6 +3,7 @@ import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { type Prisma, type PrismaClient } from '@prisma/client';
+import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
 
 import {
   type RentalRepository,
@@ -181,6 +182,7 @@ export async function findActiveVariantIdsByProduct(
   prisma: PrismaService,
   shopId: string,
   productId: string,
+  storefrontEligibility = false,
 ): Promise<string[]> {
   const variants = await prisma.productVariant.findMany({
     where: {
@@ -188,6 +190,7 @@ export async function findActiveVariantIdsByProduct(
       shopId,
       status: 'ACTIVE',
       archivedAt: null,
+      ...(storefrontEligibility ? { product: storefrontProductEligibility } : {}),
     },
     select: { id: true },
   });
@@ -198,6 +201,7 @@ export async function findFirstActiveVariantId(
   prisma: PrismaService,
   shopId: string,
   productId: string,
+  storefrontEligibility = false,
 ): Promise<string | null> {
   const pv = await prisma.productVariant.findFirst({
     where: {
@@ -205,6 +209,7 @@ export async function findFirstActiveVariantId(
       shopId,
       status: 'ACTIVE',
       archivedAt: null,
+      ...(storefrontEligibility ? { product: storefrontProductEligibility } : {}),
     },
     orderBy: { createdAt: 'asc' },
     select: { id: true },

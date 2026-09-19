@@ -60,6 +60,7 @@ export class WebRentalService {
         durationDays,
         from,
         until,
+        storefrontEligibility: true,
       });
       const availableQuantity = variant?.availableInventory.length ?? 0;
       return {
@@ -72,6 +73,7 @@ export class WebRentalService {
       const variantIds = await this.repository.findActiveVariantIdsByProduct(
         shopId,
         query.productId,
+        true,
       );
 
       let totalAvailable = 0;
@@ -82,6 +84,7 @@ export class WebRentalService {
           durationDays,
           from,
           until,
+          storefrontEligibility: true,
         });
         totalAvailable += variant?.availableInventory.length ?? 0;
       }
@@ -112,7 +115,8 @@ export class WebRentalService {
       let variantId = item.variantId;
       if (!variantId && item.productId) {
         variantId =
-          (await this.repository.findFirstActiveVariantId(shopId, item.productId)) ?? undefined;
+          (await this.repository.findFirstActiveVariantId(shopId, item.productId, true)) ??
+          undefined;
       }
 
       if (!variantId) {
@@ -126,6 +130,7 @@ export class WebRentalService {
         durationDays,
         from,
         until,
+        storefrontEligibility: true,
       });
 
       if (!variant || variant.ratePrice === null) {
@@ -210,7 +215,8 @@ export class WebRentalService {
       let variantId = item.variantId;
       if (!variantId && item.productId) {
         variantId =
-          (await this.repository.findFirstActiveVariantId(shopId, item.productId)) ?? undefined;
+          (await this.repository.findFirstActiveVariantId(shopId, item.productId, true)) ??
+          undefined;
       }
 
       if (!variantId) {
@@ -223,6 +229,7 @@ export class WebRentalService {
         durationDays,
         from,
         until,
+        storefrontEligibility: true,
       });
 
       if (!variant) {
@@ -274,6 +281,7 @@ export class WebRentalService {
       rentalStartAt: from,
       rentalEndAt: until,
       discountTotal: 0,
+      storefrontEligibility: true,
       note: req.customer.note,
       internalNote: 'Đơn tạo từ Web Storefront',
       lines,

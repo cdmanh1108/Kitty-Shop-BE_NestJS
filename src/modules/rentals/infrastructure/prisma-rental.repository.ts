@@ -142,15 +142,17 @@ export class PrismaRentalRepository implements RentalRepository {
   findActiveVariantIdsByProduct(
     shopId: string,
     productId: string,
+    storefrontEligibility?: boolean,
   ): ReturnType<RentalRepository['findActiveVariantIdsByProduct']> {
-    return findActiveVariantIdsByProduct(this.prisma, shopId, productId);
+    return findActiveVariantIdsByProduct(this.prisma, shopId, productId, storefrontEligibility);
   }
 
   findFirstActiveVariantId(
     shopId: string,
     productId: string,
+    storefrontEligibility?: boolean,
   ): ReturnType<RentalRepository['findFirstActiveVariantId']> {
-    return findFirstActiveVariantId(this.prisma, shopId, productId);
+    return findFirstActiveVariantId(this.prisma, shopId, productId, storefrontEligibility);
   }
 
   lookupStorefrontOrder(

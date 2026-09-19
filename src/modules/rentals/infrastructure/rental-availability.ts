@@ -1,6 +1,7 @@
 import { toBookableVariant, bookableVariantInclude } from './rental-prisma.mapper';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { type RentalRepository } from '../domain/rental.repository';
+import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
 
 export async function getBookableVariant(
   prisma: PrismaService,
@@ -12,7 +13,9 @@ export async function getBookableVariant(
       shopId: input.shopId,
       status: 'ACTIVE',
       archivedAt: null,
-      product: { status: 'ACTIVE', isRentable: true, archivedAt: null },
+      product: input.storefrontEligibility
+        ? storefrontProductEligibility
+        : { status: 'ACTIVE', isRentable: true, archivedAt: null },
     },
     include: bookableVariantInclude(input),
   });
