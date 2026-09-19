@@ -32,6 +32,8 @@ All endpoints are mounted under the `/web` prefix:
 - **`GET /api/v1/web/availability`**: Checks whether a storefront-eligible product or specific variant has rentable inventory available during `pickupDate` to `returnDate`.
 - **`POST /api/v1/web/rental/quote`**: Computes authoritative rental subtotal, deposit, delivery fee, and grand total only for storefront-eligible variants.
 
+Rental selection is variant-first: `variantId` is the canonical storefront selection. If a request also sends `productId`, it must be the selected variant's parent. `productId` by itself remains a compatibility alias only when exactly one storefront-eligible variant exists; a product with multiple variants must be selected explicitly and is reported unavailable by the product-only availability endpoint. Duplicate request lines for the same resolved variant are merged into one quantity before quote pricing and allocation.
+
 ### 3.3 Orders & Lookup
 
 - **`POST /api/v1/web/rental-orders`**: Places a rental reservation from the storefront. It revalidates storefront eligibility and inventory stock inside the booking transaction, then resolves or creates the customer record, creates physical item allocations, and generates a reference order code.

@@ -48,7 +48,6 @@ function rentalRepository(): jest.Mocked<RentalRepository> {
     claimIdempotency: jest.fn(),
     releaseIdempotency: jest.fn(),
     findActiveVariantIdsByProduct: jest.fn(),
-    findFirstActiveVariantId: jest.fn(),
     lookupStorefrontOrder: jest.fn(),
   };
 }

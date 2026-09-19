@@ -197,26 +197,6 @@ export async function findActiveVariantIdsByProduct(
   return variants.map((v) => v.id);
 }
 
-export async function findFirstActiveVariantId(
-  prisma: PrismaService,
-  shopId: string,
-  productId: string,
-  storefrontEligibility = false,
-): Promise<string | null> {
-  const pv = await prisma.productVariant.findFirst({
-    where: {
-      productId,
-      shopId,
-      status: 'ACTIVE',
-      archivedAt: null,
-      ...(storefrontEligibility ? { product: storefrontProductEligibility } : {}),
-    },
-    orderBy: { createdAt: 'asc' },
-    select: { id: true },
-  });
-  return pv?.id ?? null;
-}
-
 export async function lookupStorefrontOrder(
   prisma: PrismaService,
   shopId: string,

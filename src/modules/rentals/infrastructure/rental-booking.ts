@@ -53,6 +53,7 @@ export async function createOrder(
     return await serializableTransaction(prisma, async (tx) => {
       if (data.idempotency) await lockRentalClaim(tx, data.shopId, data.idempotency);
 
+      assertAllocationPlan(data);
       if (data.storefrontEligibility) await assertStorefrontEligibleLines(tx, data);
 
       for (const line of data.lines) {
@@ -243,5 +244,29 @@ async function assertStorefrontEligibleLines(
     )
   ) {
     throw new RentalInventoryUnavailableError();
+  }
+}
+
+/**
+ * Every physical inventory item may be allocated only once per order.  This
+ * protects the persistence boundary even if a caller skips the Web basket
+ * normalizer or retries a stale selection plan.
+ */
+function assertAllocationPlan(data: CreateRentalOrderData): void {
+  const allocatedInventoryIds = new Set<string>();
+
+  for (const line of data.lines) {
+    if (!Number.isSafeInteger(line.quantity) || line.quantity <= 0) {
+      throw new RentalInventoryUnavailableError();
+    }
+    if (line.inventory.length !== line.quantity) {
+      throw new RentalInventoryUnavailableError();
+    }
+    for (const inventory of line.inventory) {
+      if (allocatedInventoryIds.has(inventory.id)) {
+        throw new RentalInventoryUnavailableError();
+      }
+      allocatedInventoryIds.add(inventory.id);
+    }
   }
 }

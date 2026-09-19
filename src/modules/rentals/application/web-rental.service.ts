@@ -32,6 +32,7 @@ import type {
   WebRentalQuoteInput,
   WebRentalQuoteResult,
 } from './web-rental.contracts';
+import { resolveWebRentalSelection } from './web-rental-selection';
 
 @Injectable()
 export class WebRentalService {
@@ -52,50 +53,23 @@ export class WebRentalService {
     }
 
     const durationDays = calculateRentalDurationDays(from, until);
-
-    if (query.variantId) {
-      const variant = await this.repository.getBookableVariant({
-        shopId,
-        variantId: query.variantId,
-        durationDays,
-        from,
-        until,
-        storefrontEligibility: true,
-      });
-      const availableQuantity = variant?.availableInventory.length ?? 0;
-      return {
-        available: availableQuantity > 0,
-        availableQuantity,
-      };
+    if (!query.productId && !query.variantId) {
+      throw new BadRequestException('Vui lòng cung cấp productId hoặc variantId.');
     }
 
-    if (query.productId) {
-      const variantIds = await this.repository.findActiveVariantIdsByProduct(
-        shopId,
-        query.productId,
-        true,
-      );
+    const selection = await resolveWebRentalSelection(this.repository, {
+      shopId,
+      items: [{ productId: query.productId, variantId: query.variantId, quantity: 1 }],
+      durationDays,
+      from,
+      until,
+    });
+    if (!selection.valid) return { available: false, availableQuantity: 0 };
 
-      let totalAvailable = 0;
-      for (const vid of variantIds) {
-        const variant = await this.repository.getBookableVariant({
-          shopId,
-          variantId: vid,
-          durationDays,
-          from,
-          until,
-          storefrontEligibility: true,
-        });
-        totalAvailable += variant?.availableInventory.length ?? 0;
-      }
-
-      return {
-        available: totalAvailable > 0,
-        availableQuantity: totalAvailable,
-      };
-    }
-
-    throw new BadRequestException('Vui lòng cung cấp productId hoặc variantId.');
+    const demand = selection.demands[0];
+    if (!demand) return { available: false, availableQuantity: 0 };
+    const availableQuantity = demand.variant.availableInventory.length;
+    return { available: availableQuantity > 0, availableQuantity };
   }
 
   async calculateQuote(shopId: string, req: WebRentalQuoteInput): Promise<WebRentalQuoteResult> {
@@ -107,43 +81,30 @@ export class WebRentalService {
 
     const policy = await this.policyProvider.getPolicy(shopId);
     const durationDays = calculateRentalDurationDays(from, until);
+    const selection = await resolveWebRentalSelection(this.repository, {
+      shopId,
+      items: req.items,
+      durationDays,
+      from,
+      until,
+    });
+    if (!selection.valid && selection.reason === 'INVALID_QUANTITY') {
+      throw new BadRequestException('Số lượng thuê phải là số nguyên dương.');
+    }
     let rentalSubtotal = 0;
     let depositAmount = 0;
-    let allAvailable = true;
+    let allAvailable = selection.valid;
 
-    for (const item of req.items) {
-      let variantId = item.variantId;
-      if (!variantId && item.productId) {
-        variantId =
-          (await this.repository.findFirstActiveVariantId(shopId, item.productId, true)) ??
-          undefined;
+    if (selection.valid) {
+      for (const { variant, quantity } of selection.demands) {
+        if (variant.ratePrice === null) {
+          allAvailable = false;
+          continue;
+        }
+        if (variant.availableInventory.length < quantity) allAvailable = false;
+        rentalSubtotal += variant.ratePrice * quantity;
+        depositAmount += variant.depositPerItem * quantity;
       }
-
-      if (!variantId) {
-        allAvailable = false;
-        continue;
-      }
-
-      const variant = await this.repository.getBookableVariant({
-        shopId,
-        variantId,
-        durationDays,
-        from,
-        until,
-        storefrontEligibility: true,
-      });
-
-      if (!variant || variant.ratePrice === null) {
-        allAvailable = false;
-        continue;
-      }
-
-      if (variant.availableInventory.length < item.quantity) {
-        allAvailable = false;
-      }
-
-      rentalSubtotal += variant.ratePrice * item.quantity;
-      depositAmount += variant.depositPerItem * item.quantity;
     }
 
     const standardShippingFee = policy.delivery.standardShippingFee;
@@ -184,6 +145,20 @@ export class WebRentalService {
       }
     }
 
+    const selection = await resolveWebRentalSelection(this.repository, {
+      shopId,
+      items: req.items,
+      durationDays,
+      from,
+      until,
+    });
+    if (!selection.valid) {
+      if (selection.reason === 'INVALID_QUANTITY') {
+        throw new BadRequestException('Số lượng thuê phải là số nguyên dương.');
+      }
+      throw new NotFoundException('Sản phẩm đã chọn không khả dụng để thuê.');
+    }
+
     let normalizedPhone: string;
     try {
       normalizedPhone = normalizeCustomerPhone(req.customer.phone);
@@ -211,44 +186,20 @@ export class WebRentalService {
     }
 
     const lines: CreateRentalOrderData['lines'] = [];
-    for (const item of req.items) {
-      let variantId = item.variantId;
-      if (!variantId && item.productId) {
-        variantId =
-          (await this.repository.findFirstActiveVariantId(shopId, item.productId, true)) ??
-          undefined;
-      }
-
-      if (!variantId) {
-        throw new BadRequestException('Không tìm thấy biến thể sản phẩm hợp lệ.');
-      }
-
-      const variant = await this.repository.getBookableVariant({
-        shopId,
-        variantId,
-        durationDays,
-        from,
-        until,
-        storefrontEligibility: true,
-      });
-
-      if (!variant) {
-        throw new NotFoundException(`Sản phẩm không khả dụng để thuê.`);
-      }
-
+    for (const { variant, quantity } of selection.demands) {
       if (variant.ratePrice === null) {
         throw new BadRequestException(
           `Sản phẩm ${variant.productName} chưa được cấu hình giá thuê cho ${durationDays} ngày.`,
         );
       }
 
-      if (variant.availableInventory.length < item.quantity) {
+      if (variant.availableInventory.length < quantity) {
         throw new ConflictException(
           `Sản phẩm ${variant.productName} không đủ số lượng có sẵn trong khoảng ngày đã chọn.`,
         );
       }
 
-      const selectedInventory = variant.availableInventory.slice(0, item.quantity);
+      const selectedInventory = variant.availableInventory.slice(0, quantity);
       const variantName = [variant.variantCode, variant.sizeName, variant.colorName]
         .filter(Boolean)
         .join(' / ');
@@ -258,10 +209,10 @@ export class WebRentalService {
         variantId: variant.id,
         productName: variant.productName,
         variantName,
-        quantity: item.quantity,
+        quantity,
         unitRentalPrice: variant.ratePrice,
-        depositAmount: variant.depositPerItem * item.quantity,
-        lineTotal: variant.ratePrice * item.quantity,
+        depositAmount: variant.depositPerItem * quantity,
+        lineTotal: variant.ratePrice * quantity,
         pricingSnapshot: {
           durationDays,
           unitRentalPrice: variant.ratePrice,

@@ -14,7 +14,6 @@ import {
   getStatus,
   getSchedule,
   findActiveVariantIdsByProduct,
-  findFirstActiveVariantId,
   lookupStorefrontOrder,
 } from './rental-queries';
 import { getBookableVariant } from './rental-availability';
@@ -145,14 +144,6 @@ export class PrismaRentalRepository implements RentalRepository {
     storefrontEligibility?: boolean,
   ): ReturnType<RentalRepository['findActiveVariantIdsByProduct']> {
     return findActiveVariantIdsByProduct(this.prisma, shopId, productId, storefrontEligibility);
-  }
-
-  findFirstActiveVariantId(
-    shopId: string,
-    productId: string,
-    storefrontEligibility?: boolean,
-  ): ReturnType<RentalRepository['findFirstActiveVariantId']> {
-    return findFirstActiveVariantId(this.prisma, shopId, productId, storefrontEligibility);
   }
 
   lookupStorefrontOrder(

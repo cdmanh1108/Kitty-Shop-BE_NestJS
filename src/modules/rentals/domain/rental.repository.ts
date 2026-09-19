@@ -101,11 +101,6 @@ export interface RentalRepository {
     productId: string,
     storefrontEligibility?: boolean,
   ): Promise<string[]>;
-  findFirstActiveVariantId(
-    shopId: string,
-    productId: string,
-    storefrontEligibility?: boolean,
-  ): Promise<string | null>;
   lookupStorefrontOrder(
     shopId: string,
     orderNumber: string,

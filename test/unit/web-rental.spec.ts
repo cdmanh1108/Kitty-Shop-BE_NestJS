@@ -14,7 +14,6 @@ describe('WebRentalService', () => {
     getBookableVariant: jest.Mock;
     createOrder: jest.Mock;
     findActiveVariantIdsByProduct: jest.Mock;
-    findFirstActiveVariantId: jest.Mock;
     lookupStorefrontOrder: jest.Mock;
   };
   let mockPolicyProvider: {
@@ -30,7 +29,6 @@ describe('WebRentalService', () => {
       getBookableVariant: jest.fn(),
       createOrder: jest.fn(),
       findActiveVariantIdsByProduct: jest.fn(),
-      findFirstActiveVariantId: jest.fn(),
       lookupStorefrontOrder: jest.fn(),
     };
 
@@ -96,7 +94,7 @@ describe('WebRentalService', () => {
       );
     });
 
-    it('checks availability by productId using repository port without direct Prisma query', async () => {
+    it('does not aggregate availability across ambiguous product variants', async () => {
       mockRepository.findActiveVariantIdsByProduct.mockResolvedValue(['v-1', 'v-2']);
       mockRepository.getBookableVariant
         .mockResolvedValueOnce({
@@ -114,13 +112,30 @@ describe('WebRentalService', () => {
         productId: 'prod-1',
       });
 
-      expect(result.available).toBe(true);
-      expect(result.availableQuantity).toBe(3);
+      expect(result).toEqual({ available: false, availableQuantity: 0 });
       expect(mockRepository.findActiveVariantIdsByProduct).toHaveBeenCalledWith(
         'shop-1',
         'prod-1',
         true,
       );
+      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+    });
+
+    it('uses productId as a compatibility alias only for one eligible variant', async () => {
+      mockRepository.findActiveVariantIdsByProduct.mockResolvedValue(['var-1']);
+      mockRepository.getBookableVariant.mockResolvedValue({
+        id: 'var-1',
+        productId: 'prod-1',
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
+      });
+
+      await expect(
+        service.checkAvailability('shop-1', {
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          productId: 'prod-1',
+        }),
+      ).resolves.toEqual({ available: true, availableQuantity: 1 });
     });
   });
 
@@ -174,6 +189,54 @@ describe('WebRentalService', () => {
 
       expect(result.available).toBe(false);
       expect(result.shippingFee).toBe(0);
+    });
+
+    it('rejects a non-positive or fractional rental quantity before pricing', async () => {
+      await expect(
+        service.calculateQuote('shop-1', {
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [{ variantId: 'var-1', quantity: 0 }],
+          deliveryMethod: 'self_pickup',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.calculateQuote('shop-1', {
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [{ variantId: 'var-1', quantity: 1.5 }],
+          deliveryMethod: 'self_pickup',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('merges duplicate variant demand before checking stock and calculating price', async () => {
+      mockRepository.getBookableVariant.mockResolvedValue({
+        id: 'var-1',
+        productId: 'prod-1',
+        variantCode: 'DR-S',
+        productName: 'Dress',
+        ratePrice: 150000,
+        depositPerItem: 500000,
+        availableInventory: [{ id: 'inv-1' }],
+      });
+
+      const result = await service.calculateQuote('shop-1', {
+        pickupDate: '2026-09-20',
+        returnDate: '2026-09-23',
+        items: [
+          { variantId: 'var-1', quantity: 1 },
+          { variantId: 'var-1', quantity: 1 },
+        ],
+        deliveryMethod: 'self_pickup',
+      });
+
+      expect(result).toMatchObject({
+        available: false,
+        rentalSubtotal: 300000,
+        depositAmount: 1000000,
+      });
     });
   });
 
@@ -313,6 +376,74 @@ describe('WebRentalService', () => {
         shippingFee: 45000,
       });
       expect(result.totalAmount).toBe(495000);
+    });
+
+    it('merges duplicate Web lines into one allocation plan', async () => {
+      mockCustomerRepo.findByNormalizedPhone.mockResolvedValue({ id: 'cust-1' });
+      mockRepository.getBookableVariant.mockResolvedValue({
+        id: 'var-1',
+        productId: 'prod-1',
+        variantCode: 'DR-M',
+        productName: 'Dress',
+        ratePrice: 250000,
+        depositPerItem: 600000,
+        availableInventory: [
+          { id: 'inv-1', sku: 'SKU-001' },
+          { id: 'inv-2', sku: 'SKU-002' },
+        ],
+      });
+      mockRepository.createOrder.mockResolvedValue({
+        orderNumber: 'RT-001',
+        grandTotal: 500000,
+        depositRequired: 1200000,
+        status: 'RESERVED',
+        paymentStatus: 'UNPAID',
+      });
+
+      await service.createOrder('shop-1', {
+        customer: { name: 'Trần Thị B', phone: '0987654321' },
+        pickupDate: '2026-09-20',
+        returnDate: '2026-09-23',
+        items: [
+          { variantId: 'var-1', quantity: 1 },
+          { variantId: 'var-1', quantity: 1 },
+        ],
+        delivery: { method: 'self_pickup' },
+        paymentMethod: 'cash',
+      });
+
+      expect(firstCreateOrderInput().lines).toEqual([
+        expect.objectContaining({
+          variantId: 'var-1',
+          quantity: 2,
+          lineTotal: 500000,
+          depositAmount: 1200000,
+          inventory: [
+            { id: 'inv-1', sku: 'SKU-001' },
+            { id: 'inv-2', sku: 'SKU-002' },
+          ],
+        }),
+      ]);
+    });
+
+    it('rejects an explicit variant whose supplied productId is not its parent', async () => {
+      mockRepository.getBookableVariant.mockResolvedValue({
+        id: 'var-1',
+        productId: 'prod-1',
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-001' }],
+      });
+
+      await expect(
+        service.createOrder('shop-1', {
+          customer: { name: 'Trần Thị B', phone: '0987654321' },
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [{ productId: 'prod-2', variantId: 'var-1', quantity: 1 }],
+          delivery: { method: 'self_pickup' },
+          paymentMethod: 'cash',
+        }),
+      ).rejects.toThrow();
+      expect(mockRepository.createOrder).not.toHaveBeenCalled();
     });
 
     it('rejects collateral method if not allowed by policy', async () => {
