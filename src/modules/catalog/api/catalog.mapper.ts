@@ -18,23 +18,27 @@ import type {
   UpsertRentalRateInput,
 } from '../application/catalog.contracts';
 import type {
-  AddInventoryReqDto,
-  AddVariantReqDto,
-  AvailabilityQueryDto,
   CreateCategoryReqDto,
   CategoryListQueryDto,
   CreateColorReqDto,
-  CreateProductReqDto,
   CreateSizeReqDto,
   UpdateCategoryReqDto,
-  InventoryListQueryDto,
+} from './admin/dto/category.dto';
+import type {
+  AddVariantReqDto,
+  CreateProductReqDto,
   ProductMediaReqDto,
   ProductVariantReqDto,
   RentalRateReqDto,
-  UpdateInventoryStatusReqDto,
   UpdateProductReqDto,
   UpsertRentalRateReqDto,
-} from './catalog.dto';
+} from './admin/dto/product.dto';
+import type {
+  AddInventoryReqDto,
+  AvailabilityQueryDto,
+  InventoryListQueryDto,
+  UpdateInventoryStatusReqDto,
+} from './admin/dto/inventory.dto';
 import type { ProductListQueryDto } from './admin/dto/product-query.dto';
 
 export function toAddInventoryInput(dto: AddInventoryReqDto): AddInventoryInput {

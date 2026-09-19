@@ -18,38 +18,39 @@ import {
 } from '@nestjs/swagger';
 import { CatalogService } from '../../application/catalog.service';
 import {
-  AddInventoryReqDto,
-  AddVariantReqDto,
-  AvailabilityQueryDto,
   CatalogLookupsResDto,
   CategoryListQueryDto,
-  CategoryPageResDto,
   CategoryOptionResDto,
   CategoryOptionsQueryDto,
+  CategoryPageResDto,
   CategoryResDto,
   CreateCategoryReqDto,
-  UpdateCategoryReqDto,
   CreateColorReqDto,
-  CreateProductReqDto,
   CreateSizeReqDto,
-  InventoryItemResDto,
-  InventoryListQueryDto,
-  InventoryPageResDto,
+  UpdateCategoryReqDto,
+} from './dto/category.dto';
+import {
+  AddVariantReqDto,
+  CreateProductReqDto,
   ProductMediaReqDto,
+  ProductMediaResDto,
   ProductPageResDto,
   ProductResDto,
   ProductVariantResDto,
   RentalRateResDto,
-  ProductMediaResDto,
-  ArchiveInventoryItemReqDto,
-  UpdateInventoryStatusReqDto,
   UpdateProductReqDto,
   UpsertRentalRateReqDto,
-} from '../catalog.dto';
+} from './dto/product.dto';
 import {
-  ProductListQueryDto,
-  ProductLookupQueryDto,
-} from './dto/product-query.dto';
+  AddInventoryReqDto,
+  ArchiveInventoryItemReqDto,
+  AvailabilityQueryDto,
+  InventoryItemResDto,
+  InventoryListQueryDto,
+  InventoryPageResDto,
+  UpdateInventoryStatusReqDto,
+} from './dto/inventory.dto';
+import { ProductListQueryDto, ProductLookupQueryDto } from './dto/product-query.dto';
 import {
   toAddInventoryInput,
   toAddVariantInput,
