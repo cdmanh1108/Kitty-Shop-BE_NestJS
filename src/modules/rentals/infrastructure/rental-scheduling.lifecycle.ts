@@ -4,11 +4,12 @@ import { isOverlapError } from './rental-errors';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
-import { ALLOCATION_STATUS, RENTAL_STATUS } from '../domain/rental-status';
+import { ALLOCATION_STATUS } from '../domain/rental-status';
 import { assertRentalReschedule, canRescheduleRental } from '../domain/rental-policy';
-import { RentalInvariantError } from '../domain/rental-errors';
 import { RentalOverlapError, type RentalRepository } from '../domain/rental.repository';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import { assertChargeMutationAllowed } from '../domain/rental-monetary.policy';
+import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
 
 export async function reschedule(
   prisma: PrismaService,
@@ -80,23 +81,14 @@ export async function addCharge(
   prisma: PrismaService,
   input: Parameters<RentalRepository['addCharge']>[0],
 ): ReturnType<RentalRepository['addCharge']> {
-  return prisma.$transaction(async (tx) => {
+  return serializableTransaction(prisma, async (tx) => {
+    if (!(await lockRentalMonetaryOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({
       where: { id: input.orderId, shopId: input.shopId },
     });
     if (!order) return null;
-    if (order.status === RENTAL_STATUS.COMPLETED || order.status === RENTAL_STATUS.CANCELLED) {
-      throw new RentalInvariantError(
-        'ORDER_LOCKED',
-        'Không thể thêm phụ phí cho đơn thuê đã đóng hoặc đã hủy.',
-      );
-    }
-    if (await tx.rentalSettlement.findUnique({ where: { orderId: input.orderId } })) {
-      throw new RentalInvariantError(
-        'ORDER_ALREADY_SETTLED',
-        'Không thể thêm phụ phí sau khi đã kết toán đơn thuê.',
-      );
-    }
+    const settlement = await tx.rentalSettlement.findUnique({ where: { orderId: order.id } });
+    assertChargeMutationAllowed({ status: order.status, hasSettlement: Boolean(settlement) });
     await tx.rentalOrderCharge.create({
       data: {
         shopId: input.shopId,

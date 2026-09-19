@@ -4,6 +4,7 @@ import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { rewardForCompletedRental } from '../domain/rental-settlement';
 import { RentalInvariantError } from '../domain/rental-errors';
+import { assertSettlementAllowed } from '../domain/rental-monetary.policy';
 import type { Clock } from '@common/clock/clock';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
@@ -12,6 +13,7 @@ import { Prisma } from '@prisma/client';
 import type { SettleRentalOrderData } from '../domain/rental.repository';
 import type { RentalOrderDetails } from '../domain/rental.models';
 import { getWithTx } from './rental-queries';
+import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
 
 export async function settleOrder(
   prisma: PrismaService,
@@ -20,6 +22,7 @@ export async function settleOrder(
   clock: Clock,
 ): Promise<RentalOrderDetails> {
   return serializableTransaction(prisma, async (tx) => {
+    if (!(await lockRentalMonetaryOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({
       where: { id: input.orderId, shopId: input.shopId },
       include: {
@@ -29,19 +32,10 @@ export async function settleOrder(
       },
     });
     if (!order) return null;
-    if (order.status !== RENTAL_STATUS.RETURNED) {
-      throw new RentalInvariantError(
-        'RENTAL_TRANSITION_NOT_ALLOWED',
-        'Chỉ có thể kết toán đơn ở trạng thái đã nhận trả.',
-      );
-    }
-
     const existingSettlement = await tx.rentalSettlement.findUnique({
       where: { orderId: order.id },
     });
-    if (existingSettlement) {
-      throw new RentalInvariantError('ORDER_ALREADY_SETTLED', 'Đơn thuê này đã được kết toán.');
-    }
+    assertSettlementAllowed({ status: order.status, hasSettlement: Boolean(existingSettlement) });
 
     const ledger = rentalLedger(order.payments);
     const depositAmount = ledger.depositHeld;
