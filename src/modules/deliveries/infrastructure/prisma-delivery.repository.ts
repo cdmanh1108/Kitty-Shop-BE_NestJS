@@ -4,6 +4,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import { serializableTransaction } from '@database/prisma/transaction';
+import { assertChargeMutationAllowed } from '@modules/rentals/domain/rental-monetary.policy';
+import { lockRentalMonetaryOrder } from '@modules/rentals/infrastructure/rental-monetary-boundary';
 import type { DeliveryRepository } from '../domain/delivery.repository';
 
 @Injectable()
@@ -24,12 +26,32 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
 
   async create(input: Parameters<DeliveryRepository['create']>[0]) {
     return serializableTransaction(this.prisma, async (tx) => {
+      const changesMonetaryState = input.shippingFee > 0;
+      if (
+        changesMonetaryState &&
+        !(await lockRentalMonetaryOrder(tx, {
+          shopId: input.shopId,
+          orderId: input.orderId,
+        }))
+      ) {
+        return null;
+      }
+
       const order = await tx.rentalOrder.findFirst({
         where: { id: input.orderId, shopId: input.shopId },
       });
       if (!order) return null;
+
+      if (changesMonetaryState) {
+        const settlement = await tx.rentalSettlement.findFirst({
+          where: { shopId: input.shopId, orderId: input.orderId },
+          select: { orderId: true },
+        });
+        assertChargeMutationAllowed({ status: order.status, hasSettlement: Boolean(settlement) });
+      }
+
       const delivery = await tx.deliveryJob.create({ data: input });
-      if (input.shippingFee > 0) {
+      if (changesMonetaryState) {
         await tx.rentalOrderCharge.create({
           data: {
             shopId: input.shopId,
