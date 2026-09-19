@@ -6,6 +6,12 @@ import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state
 import { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
+import {
+  assertPaymentCreationAllowed,
+  assertPaymentVoidAllowed,
+} from '@modules/rentals/domain/rental-monetary.policy';
+import { lockRentalMonetaryOrder } from '@modules/rentals/infrastructure/rental-monetary-boundary';
 import { FinanceInvariantError, type FinanceRepository } from '../domain/finance.repository';
 
 @Injectable()
@@ -14,10 +20,20 @@ export class PrismaFinanceRepository implements FinanceRepository {
 
   async createPayment(input: Parameters<FinanceRepository['createPayment']>[0]) {
     return serializableTransaction(this.prisma, async (tx) => {
+      if (!(await lockRentalMonetaryOrder(tx, input))) return null;
       const order = await tx.rentalOrder.findFirst({
         where: { id: input.orderId, shopId: input.shopId },
       });
       if (!order) return null;
+
+      const settlement = await tx.rentalSettlement.findFirst({
+        where: { shopId: input.shopId, orderId: order.id },
+        select: { orderId: true },
+      });
+      assertPaymentCreationAllowed(
+        { status: order.status, hasSettlement: Boolean(settlement) },
+        input,
+      );
 
       if (input.direction === 'OUT' && ['DEPOSIT_REFUND', 'ORDER_REFUND'].includes(input.purpose)) {
         const existing = await tx.paymentTransaction.findMany({
@@ -73,11 +89,46 @@ export class PrismaFinanceRepository implements FinanceRepository {
   }
 
   async voidPayment(input: { shopId: string; paymentId: string; voidedBy: string }) {
-    return this.prisma.$transaction(async (tx) => {
+    const route = await this.prisma.paymentTransaction.findFirst({
+      where: { id: input.paymentId, shopId: input.shopId, voidedAt: null },
+      select: { orderId: true },
+    });
+    if (!route) return null;
+
+    return serializableTransaction(this.prisma, async (tx) => {
+      if (!(await lockRentalMonetaryOrder(tx, { shopId: input.shopId, orderId: route.orderId }))) {
+        return null;
+      }
+      const order = await tx.rentalOrder.findFirst({
+        where: { id: route.orderId, shopId: input.shopId },
+        include: { confirmation: { select: { orderId: true } } },
+      });
+      if (!order) return null;
       const payment = await tx.paymentTransaction.findFirst({
-        where: { id: input.paymentId, shopId: input.shopId, voidedAt: null },
+        where: {
+          id: input.paymentId,
+          shopId: input.shopId,
+          orderId: order.id,
+          voidedAt: null,
+        },
       });
       if (!payment) return null;
+
+      const settlement = await tx.rentalSettlement.findFirst({
+        where: { shopId: input.shopId, orderId: order.id },
+        select: { orderId: true },
+      });
+      assertPaymentVoidAllowed(
+        {
+          status: order.status,
+          hasSettlement: Boolean(settlement),
+          hasConfirmation: Boolean(order.confirmation),
+        },
+        order.id,
+        payment,
+      );
+      await assertVoidKeepsRefundsCovered(tx, order.id, payment.id);
+
       const updated = await tx.paymentTransaction.update({
         where: { id: payment.id },
         data: { status: TRANSACTION_STATUS.VOIDED, voidedAt: new Date(), voidedBy: input.voidedBy },
@@ -191,5 +242,36 @@ export class PrismaFinanceRepository implements FinanceRepository {
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     });
+  }
+}
+
+async function assertVoidKeepsRefundsCovered(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+  paymentId: string,
+): Promise<void> {
+  const payments = await tx.paymentTransaction.findMany({
+    where: {
+      orderId,
+      id: { not: paymentId },
+      status: TRANSACTION_STATUS.COMPLETED,
+      voidedAt: null,
+    },
+    select: { amount: true, direction: true, purpose: true },
+  });
+  const net = payments.reduce(
+    (total, payment) => {
+      const amount = decimalToNumber(payment.amount);
+      const isDeposit = payment.purpose === 'DEPOSIT' || payment.purpose === 'DEPOSIT_REFUND';
+      const bucket = isDeposit ? 'deposit' : 'rental';
+      total[bucket] += payment.direction === 'IN' ? amount : -amount;
+      return total;
+    },
+    { deposit: 0, rental: 0 },
+  );
+  if (net.deposit < 0 || net.rental < 0) {
+    throw new FinanceInvariantError(
+      'Không thể hủy giao dịch vì sẽ làm tiền hoàn vượt quá số dư đã ghi nhận.',
+    );
   }
 }
