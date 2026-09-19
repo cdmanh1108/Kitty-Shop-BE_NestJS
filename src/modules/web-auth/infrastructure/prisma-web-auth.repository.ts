@@ -14,10 +14,17 @@ import {
 @Injectable()
 export class PrismaWebAuthRepository implements WebAuthRepository {
   constructor(private readonly prisma: PrismaService) {}
-  async register(phone: string, passwordHash: string, challenge: NewChallenge) {
+  async register(phone: string, passwordHash: string, attemptId: string, challenge: NewChallenge) {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const account = await tx.webAccount.create({ data: { phone, passwordHash } });
+        const existing = await tx.webAccount.findUnique({ where: { phone } });
+        if (existing) {
+          if (existing.phoneVerifiedAt || existing.disabledAt) throw new PhoneAlreadyRegisteredError();
+          await tx.webOtpChallenge.updateMany({ where: { accountId: existing.id, consumedAt: null }, data: { consumedAt: challenge.createdAt } });
+          await tx.webAccount.update({ where: { id: existing.id }, data: { pendingPasswordHash: passwordHash, registrationAttemptId: attemptId } });
+          return tx.webOtpChallenge.create({ data: { ...challenge, accountId: existing.id } });
+        }
+        const account = await tx.webAccount.create({ data: { phone, passwordHash, pendingPasswordHash: passwordHash, registrationAttemptId: attemptId } });
         return tx.webOtpChallenge.create({ data: { ...challenge, accountId: account.id } });
       });
     } catch (error) {
@@ -49,6 +56,8 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
         include: { account: true },
       });
       if (challenge.account.disabledAt) return { error: 'ACCOUNT_DISABLED' };
+      if (!challenge.registrationAttemptId || challenge.registrationAttemptId !== challenge.account.registrationAttemptId || !challenge.account.pendingPasswordHash)
+        return { error: 'OTP_CONSUMED' };
       if (challenge.consumedAt) return { error: 'OTP_CONSUMED' };
       if (challenge.expiresAt <= now) return { error: 'OTP_EXPIRED' };
       if (challenge.attemptCount >= maxAttempts) return { error: 'OTP_ATTEMPTS_EXCEEDED' };
@@ -58,7 +67,11 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
       await tx.webOtpChallenge.update({ where: { id }, data: { consumedAt: now } });
       await tx.webAccount.update({
         where: { id: challenge.accountId },
-        data: { phoneVerifiedAt: now },
+        data: { passwordHash: challenge.account.pendingPasswordHash, pendingPasswordHash: null, registrationAttemptId: null, phoneVerifiedAt: now },
+      });
+      await tx.webOtpChallenge.updateMany({
+        where: { accountId: challenge.accountId, consumedAt: null },
+        data: { consumedAt: now },
       });
       return { verified: true };
     });
@@ -73,6 +86,8 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
       const account = await tx.webAccount.findUniqueOrThrow({ where: { id } });
       if (account.disabledAt) return { error: 'ACCOUNT_DISABLED' };
       if (account.phoneVerifiedAt) return { error: 'PHONE_ALREADY_VERIFIED' };
+      if (!account.registrationAttemptId || !account.pendingPasswordHash)
+        return { error: 'OTP_CHALLENGE_NOT_FOUND' };
       const previous = await tx.webOtpChallenge.findFirst({
         where: { accountId: id, consumedAt: null },
       });
@@ -82,7 +97,9 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
         data: { consumedAt: now },
       });
       return {
-        challenge: await tx.webOtpChallenge.create({ data: { ...challenge, accountId: id } }),
+        challenge: await tx.webOtpChallenge.create({
+          data: { ...challenge, accountId: id, registrationAttemptId: account.registrationAttemptId },
+        }),
       };
     });
   }

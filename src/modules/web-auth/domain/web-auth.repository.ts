@@ -3,6 +3,8 @@ export interface WebAccount {
   id: string;
   phone: string;
   passwordHash: string;
+  pendingPasswordHash?: string | null;
+  registrationAttemptId?: string | null;
   phoneVerifiedAt: Date | null;
   disabledAt: Date | null;
   createdAt: Date;
@@ -16,6 +18,7 @@ export interface WebProfile {
 export interface OtpChallenge {
   id: string;
   accountId: string;
+  registrationAttemptId?: string | null;
   otpHash: string;
   expiresAt: Date;
   resendAvailableAt: Date;
@@ -49,7 +52,7 @@ export interface WebRefreshTokenData {
   ipAddress?: string;
 }
 export interface WebAuthRepository {
-  register(phone: string, passwordHash: string, challenge: NewChallenge): Promise<OtpChallenge>;
+  register(phone: string, passwordHash: string, attemptId: string, challenge: NewChallenge): Promise<OtpChallenge>;
   findAccount(phone: string): Promise<WebAccount | null>;
   findChallenge(id: string): Promise<OtpChallenge | null>;
   verify(id: string, otpHash: string, now: Date, maxAttempts: number): Promise<VerifyResult>;

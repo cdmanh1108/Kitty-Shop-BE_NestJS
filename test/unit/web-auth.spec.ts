@@ -76,7 +76,7 @@ describe('WebAuthService', () => {
     let persistedPhone = '';
     let persistedChallengeId = '';
     const register: WebAuthRepository['register'] = jest.fn(
-      (_phone: string, passwordHash: string, newChallenge) => {
+      (_phone: string, passwordHash: string, _attemptId: string, newChallenge) => {
         persistedPhone = _phone;
         persistedHash = passwordHash;
         persistedChallengeId = newChallenge.id;
@@ -109,14 +109,19 @@ describe('WebAuthService', () => {
       ),
     ).rejects.toMatchObject({ response: { code: 'PHONE_NOT_VERIFIED' } });
   });
-  it('returns a recoverable code when registration already exists but still awaits OTP', async () => {
+  it('starts a new credential-bound attempt when registration is still pending', async () => {
     const pending = { ...account('unused-hash'), phoneVerifiedAt: null };
-    await expect(
-      service(repository({ findAccount: jest.fn().mockResolvedValue(pending) })).register({
-        phone: '0912345678',
-        password: 'right-password',
-      }),
-    ).rejects.toMatchObject({ status: 409, response: { code: 'PHONE_NOT_VERIFIED' } });
+    const register: WebAuthRepository['register'] = jest.fn().mockResolvedValue({
+      id: '00000000-0000-4000-8000-000000000002', accountId: pending.id, otpHash: 'a'.repeat(64),
+      registrationAttemptId: '00000000-0000-4000-8000-000000000003', expiresAt: new Date(now.getTime() + 300000),
+      resendAvailableAt: new Date(now.getTime() + 60000), attemptCount: 0, consumedAt: null, createdAt: now,
+    } satisfies OtpChallenge);
+    const repo = repository();
+    repo.findAccount = jest.fn().mockResolvedValue(pending);
+    repo.register = register;
+    const result = await service(repo).register({ phone: '0912345678', password: 'right-password' });
+    expect(result.challengeId).toEqual(expect.any(String));
+    expect(register).toHaveBeenCalledTimes(1);
   });
 
   it('keeps verified duplicate registrations directed to login', async () => {

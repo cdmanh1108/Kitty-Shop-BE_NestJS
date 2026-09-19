@@ -72,22 +72,23 @@ export class WebAuthService {
     this.validatePassword(input.password);
     const existing = await this.repository.findAccount(phone);
     if (existing) {
-      if (!existing.phoneVerifiedAt && !existing.disabledAt) authError('PHONE_NOT_VERIFIED', 409);
-      authError('PHONE_ALREADY_REGISTERED', 409);
+      if (existing.phoneVerifiedAt || existing.disabledAt) authError('PHONE_ALREADY_REGISTERED', 409);
     }
     const code = this.otp.generateCode();
+    const attemptId = randomUUID();
     let challenge: OtpChallenge;
     try {
       challenge = await this.repository.register(
         phone,
         await hash(input.password, 12),
-        this.challenge(code),
+        attemptId,
+        this.challenge(code, attemptId),
       );
     } catch (error) {
       if (error instanceof PhoneAlreadyRegisteredError) {
         const racedAccount = await this.repository.findAccount(phone);
         if (racedAccount && !racedAccount.phoneVerifiedAt && !racedAccount.disabledAt)
-          authError('PHONE_NOT_VERIFIED', 409);
+          return this.register(input);
         authError('PHONE_ALREADY_REGISTERED', 409);
       }
       throw error;
@@ -162,12 +163,13 @@ export class WebAuthService {
     if (password.length < 8 || password.length > 64 || Buffer.byteLength(password, 'utf8') > 72)
       authError('INVALID_PASSWORD');
   }
-  private challenge(code: string) {
+  private challenge(code: string, registrationAttemptId?: string) {
     const now = this.clock.now();
     const settings = this.config.get('webAuth', { infer: true });
     const id = randomUUID();
     return {
       id,
+      registrationAttemptId,
       otpHash: this.otpHash(id, code),
       createdAt: now,
       expiresAt: new Date(now.getTime() + settings.otpTtlSeconds * 1000),

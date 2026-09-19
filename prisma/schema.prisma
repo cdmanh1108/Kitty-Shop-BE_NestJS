@@ -12,6 +12,8 @@ model WebAccount {
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   phone String @unique @db.VarChar(30)
   passwordHash String @map("password_hash") @db.Text
+  pendingPasswordHash String? @map("pending_password_hash") @db.Text
+  registrationAttemptId String? @map("registration_attempt_id") @db.Uuid
   phoneVerifiedAt DateTime? @map("phone_verified_at") @db.Timestamptz(6)
   disabledAt DateTime? @map("disabled_at") @db.Timestamptz(6)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -24,6 +26,7 @@ model WebOtpChallenge {
   id String @id @db.Uuid
   accountId String @map("account_id") @db.Uuid
   otpHash String @map("otp_hash") @db.Char(64)
+  registrationAttemptId String? @map("registration_attempt_id") @db.Uuid
   expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
   resendAvailableAt DateTime @map("resend_available_at") @db.Timestamptz(6)
   attemptCount Int @default(0) @map("attempt_count")
