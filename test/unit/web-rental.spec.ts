@@ -1,6 +1,9 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
-import type { RentalRepository } from '../../src/modules/rentals/domain/rental.repository';
+import type {
+  CreateRentalOrderData,
+  RentalRepository,
+} from '../../src/modules/rentals/domain/rental.repository';
 import type { RentalPolicyProvider } from '../../src/modules/settings/domain/rental-policy';
 import type { CustomerRepository } from '../../src/modules/customers/domain/customer.repository';
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
@@ -46,6 +49,13 @@ describe('WebRentalService', () => {
       mockCustomerRepo as unknown as CustomerRepository,
     );
   });
+
+  function firstCreateOrderInput(): CreateRentalOrderData {
+    const calls: unknown = mockRepository.createOrder.mock.calls;
+    if (!Array.isArray(calls) || !Array.isArray(calls[0]))
+      throw new Error('Expected createOrder call');
+    return calls[0][0] as CreateRentalOrderData;
+  }
 
   describe('checkAvailability', () => {
     it('throws BadRequestException if pickupDate is equal to or after returnDate', async () => {
@@ -244,6 +254,59 @@ describe('WebRentalService', () => {
       expect(res.depositAmount).toBe(600000);
       expect(res.status).toBe('reserved');
       expect(res.paymentStatus).toBe('unpaid');
+    });
+
+    it('passes delivery shipping once and never mirrors it as an explicit charge', async () => {
+      mockPolicyProvider.getPolicy.mockResolvedValue({
+        ...DEFAULT_RENTAL_POLICY,
+        delivery: { standardShippingFee: 45000 },
+      });
+      mockCustomerRepo.findByNormalizedPhone.mockResolvedValue({ id: 'cust-1' });
+      mockRepository.getBookableVariant.mockResolvedValue({
+        id: 'var-1',
+        productId: 'prod-1',
+        variantCode: 'DR-M',
+        productName: 'Váy công chúa',
+        ratePrice: 450000,
+        depositPerItem: 600000,
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-001' }],
+      });
+      mockRepository.createOrder.mockResolvedValue({
+        orderNumber: 'RT-20260920-DELIVERY',
+        grandTotal: 495000,
+        depositRequired: 600000,
+        status: 'RESERVED',
+        paymentStatus: 'UNPAID',
+      });
+
+      const quote = await service.calculateQuote('shop-1', {
+        pickupDate: '2026-09-20',
+        returnDate: '2026-09-23',
+        items: [{ variantId: 'var-1', quantity: 1 }],
+        deliveryMethod: 'shop_delivery',
+      });
+      const result = await service.createOrder('shop-1', {
+        customer: { name: 'Trần Thị B', phone: '0987654321' },
+        pickupDate: '2026-09-20',
+        returnDate: '2026-09-23',
+        items: [{ variantId: 'var-1', quantity: 1 }],
+        delivery: { method: 'shop_delivery', address: '1 Nguyễn Huệ' },
+        paymentMethod: 'cash',
+      });
+
+      expect(quote).toMatchObject({
+        rentalSubtotal: 450000,
+        shippingFee: 45000,
+        totalAmount: 495000,
+      });
+      const createInput = firstCreateOrderInput();
+      expect(createInput.charges).toEqual([]);
+      expect(createInput.delivery).toMatchObject({
+        method: 'DELIVERY',
+        addressLine: '1 Nguyễn Huệ',
+        shippingFee: 45000,
+      });
+      expect(result.totalAmount).toBe(495000);
     });
 
     it('rejects collateral method if not allowed by policy', async () => {

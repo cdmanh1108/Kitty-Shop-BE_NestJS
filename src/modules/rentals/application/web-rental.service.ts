@@ -277,17 +277,10 @@ export class WebRentalService {
       note: req.customer.note,
       internalNote: 'Đơn tạo từ Web Storefront',
       lines,
-      charges:
-        shippingFee > 0
-          ? [
-              {
-                chargeType: 'SHIPPING',
-                description: 'Phí giao hàng',
-                amount: shippingFee,
-                quantity: 1,
-              },
-            ]
-          : [],
+      // rental-booking owns the delivery-backed SHIPPING charge. Web has no
+      // independent supplemental charges, so mirroring shipping here would
+      // persist and total the same fee twice.
+      charges: [],
       delivery: {
         direction: 'OUTBOUND',
         method: req.delivery.method === 'shop_delivery' ? 'DELIVERY' : 'PICKUP',
