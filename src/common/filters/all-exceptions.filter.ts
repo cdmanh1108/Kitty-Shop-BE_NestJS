@@ -18,6 +18,7 @@ import {
 import { FinanceInvariantError } from '@modules/finance/domain/finance.repository';
 import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
 import { mapCatalogErrorToHttpStatus } from '@modules/catalog/application/catalog-error-http.mapper';
+import { BookingCustomerUnavailableError } from '@modules/customers/domain/customer-errors';
 
 const publicOperationalServerErrors = new Set(['OTP_DELIVERY_UNAVAILABLE']);
 
@@ -39,6 +40,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof RentalInvariantError) {
       status = HttpStatus.BAD_REQUEST;
+      code = exception.code;
+      message = exception.message;
+    } else if (exception instanceof BookingCustomerUnavailableError) {
+      status = HttpStatus.CONFLICT;
       code = exception.code;
       message = exception.message;
     } else if (exception instanceof RentalOverlapError || errorName === 'RentalOverlapError') {

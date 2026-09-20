@@ -96,7 +96,8 @@ export class WebRentalController {
   })
   @ApiConflictResponse({
     type: ErrorResDto,
-    description: 'Sản phẩm không đủ tồn kho khả dụng trong khoảng ngày đã chọn',
+    description:
+      'Sản phẩm không đủ tồn kho khả dụng hoặc thông tin khách hàng không thể dùng để đặt thuê',
   })
   async createOrder(
     @Req() request: Request,

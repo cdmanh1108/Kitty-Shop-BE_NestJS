@@ -64,6 +64,7 @@ describe('CustomerService Unit Tests', () => {
       list: jest.fn(),
       lookup: jest.fn(),
       findByNormalizedPhone: jest.fn().mockResolvedValue(null),
+      resolveForBooking: jest.fn(),
       findById: findByIdMock,
       create: createMock,
       update: updateMock,

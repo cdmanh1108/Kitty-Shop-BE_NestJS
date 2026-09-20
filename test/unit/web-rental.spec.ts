@@ -6,6 +6,7 @@ import type {
 } from '../../src/modules/rentals/domain/rental.repository';
 import type { RentalPolicyProvider } from '../../src/modules/settings/domain/rental-policy';
 import type { CustomerRepository } from '../../src/modules/customers/domain/customer.repository';
+import { InvalidCustomerPhoneError } from '../../src/modules/customers/domain/customer-phone';
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 
 describe('WebRentalService', () => {
@@ -20,8 +21,7 @@ describe('WebRentalService', () => {
     getPolicy: jest.Mock;
   };
   let mockCustomerRepo: {
-    findByNormalizedPhone: jest.Mock;
-    create: jest.Mock;
+    resolveForBooking: jest.Mock;
   };
 
   beforeEach(() => {
@@ -37,8 +37,7 @@ describe('WebRentalService', () => {
     };
 
     mockCustomerRepo = {
-      findByNormalizedPhone: jest.fn(),
-      create: jest.fn(),
+      resolveForBooking: jest.fn().mockResolvedValue({ id: 'cust-1' }),
     };
 
     service = new WebRentalService(
@@ -242,14 +241,6 @@ describe('WebRentalService', () => {
 
   describe('createOrder', () => {
     it('validates phone and rejects if available stock is insufficient', async () => {
-      mockCustomerRepo.findByNormalizedPhone.mockResolvedValue({
-        id: 'cust-1',
-        customerCode: 'CUS-1',
-        fullName: 'Nguyễn Văn A',
-        phone: '0912345678',
-        normalizedPhone: '0912345678',
-      });
-
       mockRepository.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         variantCode: 'DR-S',
@@ -269,25 +260,11 @@ describe('WebRentalService', () => {
           paymentMethod: 'bank_transfer',
         }),
       ).rejects.toThrow(ConflictException);
+      expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
     });
 
     it('creates order with paymentStatus: unpaid and does not fake payment success', async () => {
-      mockCustomerRepo.findByNormalizedPhone.mockResolvedValue(null);
-      mockCustomerRepo.create.mockResolvedValue({
-        id: 'cust-new',
-        customerCode: 'CUS-001',
-        fullName: 'Trần Thị B',
-        phone: '0987654321',
-        normalizedPhone: '0987654321',
-        email: null,
-        facebook: null,
-        zalo: null,
-        birthday: null,
-        gender: null,
-        customerType: 'NORMAL',
-        status: 'ACTIVE',
-        source: 'WEB',
-      });
+      mockCustomerRepo.resolveForBooking.mockResolvedValue({ id: 'cust-new' });
 
       mockRepository.getBookableVariant.mockResolvedValue({
         id: 'var-1',
@@ -322,6 +299,38 @@ describe('WebRentalService', () => {
       expect(res.depositAmount).toBe(600000);
       expect(res.status).toBe('reserved');
       expect(res.paymentStatus).toBe('unpaid');
+      expect(mockCustomerRepo.resolveForBooking).toHaveBeenCalledWith({
+        shopId: 'shop-1',
+        fullName: 'Trần Thị B',
+        phone: '0987654321',
+        email: undefined,
+        facebook: undefined,
+      });
+    });
+
+    it('maps only the typed invalid-phone error from the resolver to a client error', async () => {
+      mockCustomerRepo.resolveForBooking.mockRejectedValue(new InvalidCustomerPhoneError());
+      mockRepository.getBookableVariant.mockResolvedValue({
+        id: 'var-1',
+        productId: 'prod-1',
+        variantCode: 'DR-M',
+        productName: 'Váy công chúa',
+        ratePrice: 250000,
+        depositPerItem: 600000,
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-001' }],
+      });
+
+      await expect(
+        service.createOrder('shop-1', {
+          customer: { name: 'Trần Thị B', phone: 'invalid-phone' },
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [{ variantId: 'var-1', quantity: 1 }],
+          delivery: { method: 'self_pickup' },
+          paymentMethod: 'cash',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockRepository.createOrder).not.toHaveBeenCalled();
     });
 
     it('passes delivery shipping once and never mirrors it as an explicit charge', async () => {
@@ -329,7 +338,6 @@ describe('WebRentalService', () => {
         ...DEFAULT_RENTAL_POLICY,
         delivery: { standardShippingFee: 45000 },
       });
-      mockCustomerRepo.findByNormalizedPhone.mockResolvedValue({ id: 'cust-1' });
       mockRepository.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
@@ -379,7 +387,6 @@ describe('WebRentalService', () => {
     });
 
     it('merges duplicate Web lines into one allocation plan', async () => {
-      mockCustomerRepo.findByNormalizedPhone.mockResolvedValue({ id: 'cust-1' });
       mockRepository.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
@@ -453,14 +460,6 @@ describe('WebRentalService', () => {
           ...DEFAULT_RENTAL_POLICY.deposit,
           allowedMethods: ['CASH'], // DOCUMENT not allowed
         },
-      });
-
-      mockCustomerRepo.findByNormalizedPhone.mockResolvedValue({
-        id: 'cust-1',
-        customerCode: 'CUS-1',
-        fullName: 'Nguyễn Văn A',
-        phone: '0912345678',
-        normalizedPhone: '0912345678',
       });
 
       await expect(

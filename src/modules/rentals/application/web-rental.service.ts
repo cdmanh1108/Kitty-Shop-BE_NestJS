@@ -5,9 +5,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
 import { generateDatedReference } from '@common/utils/reference-number';
-import { normalizeCustomerPhone } from '@modules/customers/domain/customer-phone';
+import {
+  InvalidCustomerPhoneError,
+  normalizeCustomerPhone,
+} from '@modules/customers/domain/customer-phone';
 import {
   CUSTOMER_REPOSITORY,
   type CustomerRepository,
@@ -159,32 +161,6 @@ export class WebRentalService {
       throw new NotFoundException('Sản phẩm đã chọn không khả dụng để thuê.');
     }
 
-    let normalizedPhone: string;
-    try {
-      normalizedPhone = normalizeCustomerPhone(req.customer.phone);
-    } catch {
-      throw new BadRequestException('Số điện thoại người thuê không hợp lệ.');
-    }
-
-    let customer = await this.customerRepository.findByNormalizedPhone(shopId, normalizedPhone);
-
-    if (!customer) {
-      customer = await this.customerRepository.create(shopId, {
-        customerCode: `CUS-${Date.now().toString(36).toUpperCase()}-${randomBytes(2).toString('hex').toUpperCase()}`,
-        fullName: req.customer.name.trim(),
-        phone: req.customer.phone.trim(),
-        normalizedPhone,
-        email: req.customer.email?.trim().toLowerCase() || null,
-        facebook: req.customer.facebookOrZalo?.trim() || null,
-        zalo: null,
-        birthday: null,
-        gender: null,
-        customerType: 'NORMAL',
-        status: 'ACTIVE',
-        source: 'WEB',
-      });
-    }
-
     const lines: CreateRentalOrderData['lines'] = [];
     for (const { variant, quantity } of selection.demands) {
       if (variant.ratePrice === null) {
@@ -224,6 +200,26 @@ export class WebRentalService {
 
     const standardShippingFee = policy.delivery.standardShippingFee;
     const shippingFee = req.delivery.method === 'shop_delivery' ? standardShippingFee : 0;
+
+    // C13 deliberately persists a valid guest profile independently of the booking
+    // transaction, but only after all no-write selection, price, and inventory
+    // preflight has passed. A later booking failure can therefore leave one
+    // reusable profile, never a partial order.
+    let customer: { id: string };
+    try {
+      customer = await this.customerRepository.resolveForBooking({
+        shopId,
+        fullName: req.customer.name,
+        phone: req.customer.phone,
+        email: req.customer.email,
+        facebook: req.customer.facebookOrZalo,
+      });
+    } catch (error) {
+      if (error instanceof InvalidCustomerPhoneError) {
+        throw new BadRequestException('Số điện thoại người thuê không hợp lệ.');
+      }
+      throw error;
+    }
 
     const order = await this.repository.createOrder({
       orderNumber: generateDatedReference('RT'),

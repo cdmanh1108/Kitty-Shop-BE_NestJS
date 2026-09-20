@@ -3,8 +3,12 @@ import { paginateMeta } from '@common/types/pagination';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { CustomerPhoneAlreadyExistsError } from '../domain/customer-errors';
-import { normalizeCustomerPhoneSearch } from '../domain/customer-phone';
+import { randomBytes } from 'node:crypto';
+import {
+  BookingCustomerUnavailableError,
+  CustomerPhoneAlreadyExistsError,
+} from '../domain/customer-errors';
+import { normalizeCustomerPhone, normalizeCustomerPhoneSearch } from '../domain/customer-phone';
 import type { CustomerRepository } from '../domain/customer.repository';
 
 @Injectable()
@@ -114,6 +118,67 @@ export class PrismaCustomerRepository implements CustomerRepository {
       where: { shopId, normalizedPhone, archivedAt: null },
       select: { id: true, fullName: true, phone: true },
     });
+  }
+
+  async resolveForBooking(input: Parameters<CustomerRepository['resolveForBooking']>[0]) {
+    const normalizedPhone = normalizeCustomerPhone(input.phone);
+    const existing = await this.findBookingCustomer(input.shopId, normalizedPhone);
+    if (existing) return this.assertBookingCustomerEligible(existing);
+
+    try {
+      return await this.prisma.customer.create({
+        data: {
+          shopId: input.shopId,
+          customerCode: `CUS-WEB-${Date.now().toString(36).toUpperCase()}-${randomBytes(4).toString('hex').toUpperCase()}`,
+          fullName: input.fullName.trim(),
+          phone: input.phone.trim(),
+          normalizedPhone,
+          email: input.email?.trim().toLowerCase() || null,
+          facebook: input.facebook?.trim() || null,
+          zalo: null,
+          birthday: null,
+          gender: null,
+          customerType: 'NORMAL',
+          status: 'ACTIVE',
+          source: 'WEB',
+        },
+        select: { id: true },
+      });
+    } catch (error) {
+      if (!this.isNormalizedPhoneConflict(error)) throw error;
+      const winner = await this.findBookingCustomer(input.shopId, normalizedPhone);
+      if (!winner) throw error;
+      return this.assertBookingCustomerEligible(winner);
+    }
+  }
+
+  private findBookingCustomer(shopId: string, normalizedPhone: string) {
+    return this.prisma.customer.findFirst({
+      where: { shopId, normalizedPhone },
+      select: { id: true, status: true, archivedAt: true },
+    });
+  }
+
+  private assertBookingCustomerEligible(customer: {
+    id: string;
+    status: string;
+    archivedAt: Date | null;
+  }): { id: string } {
+    if (customer.archivedAt !== null || customer.status !== 'ACTIVE') {
+      throw new BookingCustomerUnavailableError();
+    }
+    return { id: customer.id };
+  }
+
+  private isNormalizedPhoneConflict(error: unknown): boolean {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
+      return false;
+    const fields = Array.isArray(error.meta?.target) ? error.meta.target.map(String) : [];
+    return (
+      fields.length === 2 &&
+      fields.some((field) => field === 'shop_id' || field === 'shopId') &&
+      fields.some((field) => field === 'normalized_phone' || field === 'normalizedPhone')
+    );
   }
 
   async findById(shopId: string, id: string) {

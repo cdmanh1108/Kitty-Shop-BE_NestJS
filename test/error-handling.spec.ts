@@ -22,6 +22,7 @@ import {
   CATALOG_ERROR_CODE,
   CatalogInvariantError,
 } from '../src/modules/catalog/domain/catalog.repository';
+import { BookingCustomerUnavailableError } from '../src/modules/customers/domain/customer-errors';
 
 interface MockResponsePayload {
   statusCode: number;
@@ -193,6 +194,17 @@ describe('AllExceptionsFilter', () => {
         statusCode: HttpStatus.CONFLICT,
         code: CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS,
       });
+    });
+
+    it('maps an unavailable booking customer without exposing profile metadata', () => {
+      filter.catch(new BookingCustomerUnavailableError(), mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(sentPayload).toMatchObject({
+        statusCode: HttpStatus.CONFLICT,
+        code: 'BOOKING_CUSTOMER_UNAVAILABLE',
+      });
+      expect(sentPayload.details).toBeUndefined();
     });
   });
 

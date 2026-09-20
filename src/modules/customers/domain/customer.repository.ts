@@ -16,6 +16,8 @@ export interface CustomerRepository {
     shopId: string,
     normalizedPhone: string,
   ): Promise<CustomerLookupRecord | null>;
+  /** Tenant-scoped exact-phone capability for guest booking only. */
+  resolveForBooking(input: BookingCustomerResolutionInput): Promise<BookingCustomerResolution>;
   findById(shopId: string, id: string): Promise<CustomerDetails>;
   create(
     shopId: string,
@@ -38,6 +40,18 @@ export interface CustomerRepository {
   addAddress(input: CustomerAddAddressData): Promise<CustomerAddressResult>;
   updateAddress(input: CustomerUpdateAddressData): Promise<CustomerAddressResult>;
   deleteAddress(shopId: string, customerId: string, addressId: string): Promise<boolean>;
+}
+
+export interface BookingCustomerResolutionInput {
+  shopId: string;
+  fullName: string;
+  phone: string;
+  email?: string | null;
+  facebook?: string | null;
+}
+
+export interface BookingCustomerResolution {
+  id: string;
 }
 
 export interface CustomerLookupCriteria {

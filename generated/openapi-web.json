@@ -881,7 +881,7 @@
             }
           },
           "409": {
-            "description": "Sản phẩm không đủ tồn kho khả dụng trong khoảng ngày đã chọn",
+            "description": "Sản phẩm không đủ tồn kho khả dụng hoặc thông tin khách hàng không thể dùng để đặt thuê",
             "content": {
               "application/json": {
                 "schema": {
