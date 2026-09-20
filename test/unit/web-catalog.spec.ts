@@ -16,6 +16,7 @@ import type {
   StorefrontProductDetails,
   StorefrontProductItem,
   StorefrontProductPage,
+  StorefrontSelectionResolution,
 } from '../../src/modules/catalog/domain/catalog.models';
 import type { ShopResolver } from '@common/tenant/shop-resolver';
 
@@ -209,11 +210,31 @@ describe('Web Catalog Presenters, Service and Controller', () => {
     });
   });
 
+  describe('WebCatalogMapper.toSelectionResolution', () => {
+    it('preserves input correlation and exposes only the selected variant metadata', () => {
+      const items: StorefrontSelectionResolution[] = [
+        {
+          status: 'RESOLVED',
+          index: 1,
+          quantity: 2,
+          product: { id: 'product-1', slug: 'dam-da-hoi', name: 'Đầm dạ hội' },
+          variant: { id: 'variant-m', code: 'DAM-M', size: 'M', color: 'Đỏ' },
+          imageUrl: 'https://img.test/dam-m.jpg',
+        },
+        { status: 'UNAVAILABLE', index: 0, quantity: 1 },
+      ];
+
+      expect(WebCatalogMapper.toSelectionResolution(items)).toEqual({ items });
+      expect(WebCatalogMapper.toSelectionResolution(items).items[1]).not.toHaveProperty('reason');
+    });
+  });
+
   describe('WebCatalogService', () => {
     let mockRepo: {
       listStorefrontCategories: jest.Mock;
       listStorefrontProducts: jest.Mock;
       findStorefrontProductBySlug: jest.Mock;
+      resolveStorefrontSelections: jest.Mock;
     };
     let service: WebCatalogService;
 
@@ -222,6 +243,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         listStorefrontCategories: jest.fn(),
         listStorefrontProducts: jest.fn(),
         findStorefrontProductBySlug: jest.fn(),
+        resolveStorefrontSelections: jest.fn(),
       };
       service = new WebCatalogService(mockRepo as unknown as StorefrontCatalogRepository);
     });
@@ -336,6 +358,28 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         NotFoundException,
       );
     });
+
+    it('delegates selected cart resolution without applying catalog pagination', async () => {
+      mockRepo.resolveStorefrontSelections.mockResolvedValue([
+        {
+          status: 'RESOLVED',
+          index: 0,
+          quantity: 3,
+          product: { id: 'p-25', slug: 'trang-phuc-trang-25', name: 'Sản phẩm trang 25' },
+          variant: { id: 'v-25-m', code: 'SP25-M', size: 'M', color: null },
+          imageUrl: null,
+        },
+      ]);
+
+      const selections = [{ productId: 'p-25', variantId: 'v-25-m', quantity: 3 }];
+      await expect(service.resolveSelections('shop-1', selections)).resolves.toMatchObject([
+        { status: 'RESOLVED', index: 0, quantity: 3 },
+      ]);
+      expect(mockRepo.resolveStorefrontSelections).toHaveBeenCalledWith({
+        shopId: 'shop-1',
+        selections,
+      });
+    });
   });
 
   describe('WebCatalogController', () => {
@@ -345,6 +389,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       listCategories: jest.Mock;
       listProducts: jest.Mock;
       getProduct: jest.Mock;
+      resolveSelections: jest.Mock;
     };
     const mockRequest = {} as Request;
 
@@ -409,6 +454,16 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             },
           ],
         }),
+        resolveSelections: jest.fn().mockResolvedValue([
+          {
+            status: 'RESOLVED',
+            index: 0,
+            quantity: 2,
+            product: { id: 'p-1', slug: 'ao-dai-do', name: 'Áo dài đỏ' },
+            variant: { id: 'v-1', code: 'AD01-M', size: 'M', color: 'Đỏ' },
+            imageUrl: 'https://img.com/ad-m.jpg',
+          },
+        ]),
       };
 
       controller = new WebCatalogController(
@@ -440,6 +495,16 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(mockService.getProduct).toHaveBeenCalledWith('shop-uuid-1', 'ao-dai-do');
       expect(res.slug).toBe('ao-dai-do');
       expect(res.variants).toHaveLength(1);
+    });
+
+    it('resolves a bounded cart selection through the public tenant resolver', async () => {
+      const body = { items: [{ productId: 'p-1', variantId: 'v-1', quantity: 2 }] };
+      const res = await controller.resolveSelections(mockRequest, body);
+      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith(mockRequest);
+      expect(mockService.resolveSelections).toHaveBeenCalledWith('shop-uuid-1', body.items);
+      expect(res.items).toEqual([
+        expect.objectContaining({ status: 'RESOLVED', index: 0, quantity: 2 }),
+      ]);
     });
   });
 });

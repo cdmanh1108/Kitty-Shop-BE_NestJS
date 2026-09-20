@@ -1,5 +1,6 @@
-import { Controller, Get, Param, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, HttpStatus, Param, Post, Query, Req } from '@nestjs/common';
 import {
+  ApiExtraModels,
   ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -18,11 +19,21 @@ import {
   WebProductDetailDto,
   WebProductListQueryDto,
   WebProductListResDto,
+  WebResolvedStorefrontSelectionDto,
+  WebSelectionRequiredStorefrontSelectionDto,
+  WebStorefrontSelectionResolveReqDto,
+  WebStorefrontSelectionResolveResDto,
+  WebUnavailableStorefrontSelectionDto,
 } from './dto/web-catalog.dto';
 
 @ApiTags('Web - Catalog')
 @ApiSurface('web')
 @Public()
+@ApiExtraModels(
+  WebResolvedStorefrontSelectionDto,
+  WebSelectionRequiredStorefrontSelectionDto,
+  WebUnavailableStorefrontSelectionDto,
+)
 @Controller('web')
 export class WebCatalogController {
   constructor(
@@ -62,6 +73,31 @@ export class WebCatalogController {
     const shopId = await this.shopResolver.resolveShopId(request);
     const result = await this.catalogService.listProducts(shopId, query);
     return WebCatalogMapper.toProductListResponse(result);
+  }
+
+  @Post('products/resolve')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    operationId: 'resolveWebStorefrontSelections',
+    summary: 'Resolve batch các dòng giỏ storefront theo product/variant đã chọn',
+  })
+  @ApiOkResponse({
+    type: WebStorefrontSelectionResolveResDto,
+    description:
+      'Mỗi input hợp lệ có một result cùng index; metadata chỉ có với sản phẩm public eligible.',
+  })
+  @ApiBadRequestResponse({
+    type: ErrorResDto,
+    description: 'Body selection không hợp lệ hoặc vượt giới hạn batch.',
+  })
+  async resolveSelections(
+    @Req() request: Request,
+    @Body() body: WebStorefrontSelectionResolveReqDto,
+  ): Promise<WebStorefrontSelectionResolveResDto> {
+    const shopId = await this.shopResolver.resolveShopId(request);
+    const items = await this.catalogService.resolveSelections(shopId, body.items);
+    return WebCatalogMapper.toSelectionResolution(items);
   }
 
   @Get('products/:slug')

@@ -635,6 +635,49 @@
         "x-api-surface": "web"
       }
     },
+    "/web/products/resolve": {
+      "post": {
+        "operationId": "resolveWebStorefrontSelections",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebStorefrontSelectionResolveReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mỗi input hợp lệ có một result cùng index; metadata chỉ có với sản phẩm public eligible.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebStorefrontSelectionResolveResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body selection không hợp lệ hoặc vượt giới hạn batch.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Resolve batch các dòng giỏ storefront theo product/variant đã chọn",
+        "tags": [
+          "Web - Catalog"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/products/{slug}": {
       "get": {
         "operationId": "getWebProductBySlug",
@@ -1210,6 +1253,46 @@
           "meta"
         ]
       },
+      "WebStorefrontSelectionResolveReqDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "maxItems": 50,
+            "description": "Các dòng giỏ cần resolve; thứ tự được giữ nguyên trong response.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebStorefrontSelectionInputDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "WebStorefrontSelectionResolveResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/WebResolvedStorefrontSelectionDto"
+                },
+                {
+                  "$ref": "#/components/schemas/WebSelectionRequiredStorefrontSelectionDto"
+                },
+                {
+                  "$ref": "#/components/schemas/WebUnavailableStorefrontSelectionDto"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "WebProductDetailDto": {
         "type": "object",
         "properties": {
@@ -1707,6 +1790,135 @@
           "totalPages"
         ]
       },
+      "WebStorefrontSelectionInputDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID sản phẩm; legacy alias chỉ resolve khi có đúng một biến thể storefront eligible."
+          },
+          "variantId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID biến thể đã chọn cụ thể."
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1,
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "WebResolvedStorefrontSelectionDto": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "number",
+            "example": 0,
+            "description": "Chỉ số input để correlate với dòng giỏ."
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1,
+            "description": "Quantity được echo nguyên trạng; không phải tồn kho."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "RESOLVED"
+            ],
+            "example": "RESOLVED"
+          },
+          "product": {
+            "$ref": "#/components/schemas/WebStorefrontSelectionProductDto"
+          },
+          "variant": {
+            "$ref": "#/components/schemas/WebStorefrontSelectionVariantDto"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://cdn.example.test/products/dam-m.jpg"
+          }
+        },
+        "required": [
+          "index",
+          "quantity",
+          "status",
+          "product",
+          "variant",
+          "imageUrl"
+        ]
+      },
+      "WebSelectionRequiredStorefrontSelectionDto": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "number",
+            "example": 0,
+            "description": "Chỉ số input để correlate với dòng giỏ."
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1,
+            "description": "Quantity được echo nguyên trạng; không phải tồn kho."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SELECTION_REQUIRED"
+            ],
+            "example": "SELECTION_REQUIRED"
+          },
+          "product": {
+            "$ref": "#/components/schemas/WebStorefrontSelectionProductDto"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://cdn.example.test/products/dam.jpg"
+          }
+        },
+        "required": [
+          "index",
+          "quantity",
+          "status",
+          "product",
+          "imageUrl"
+        ]
+      },
+      "WebUnavailableStorefrontSelectionDto": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "number",
+            "example": 0,
+            "description": "Chỉ số input để correlate với dòng giỏ."
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1,
+            "description": "Quantity được echo nguyên trạng; không phải tồn kho."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "UNAVAILABLE"
+            ],
+            "example": "UNAVAILABLE"
+          }
+        },
+        "required": [
+          "index",
+          "quantity",
+          "status"
+        ]
+      },
       "WebRentalPriceDto": {
         "type": "object",
         "properties": {
@@ -1867,6 +2079,57 @@
           "name",
           "imageUrl",
           "quantity"
+        ]
+      },
+      "WebStorefrontSelectionProductDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "example": "dam-da-hoi-trang"
+          },
+          "name": {
+            "type": "string",
+            "example": "Đầm dạ hội trắng"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name"
+        ]
+      },
+      "WebStorefrontSelectionVariantDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "DAM-TRANG-M"
+          },
+          "size": {
+            "type": "string",
+            "nullable": true,
+            "example": "M"
+          },
+          "color": {
+            "type": "string",
+            "nullable": true,
+            "example": "Trắng"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "size",
+          "color"
         ]
       }
     }

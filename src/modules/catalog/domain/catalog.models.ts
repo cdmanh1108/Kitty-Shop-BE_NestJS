@@ -233,3 +233,49 @@ export interface StorefrontProductListCriteria {
   color?: string;
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
 }
+
+/**
+ * A selected cart identity. `productId` remains an explicitly documented
+ * compatibility alias; a variant is selected only when the C09 rules can
+ * prove that the product has exactly one eligible variant.
+ */
+export interface StorefrontSelectionInput {
+  productId?: string;
+  variantId?: string;
+  quantity: number;
+}
+
+export interface StorefrontSelectedProduct {
+  id: string;
+  slug: string;
+  name: string;
+}
+
+export interface StorefrontSelectedVariant {
+  id: string;
+  code: string;
+  size: string | null;
+  color: string | null;
+}
+
+export type StorefrontSelectionResolution =
+  | {
+      status: 'RESOLVED';
+      index: number;
+      quantity: number;
+      product: StorefrontSelectedProduct;
+      variant: StorefrontSelectedVariant;
+      imageUrl: string | null;
+    }
+  | {
+      status: 'SELECTION_REQUIRED';
+      index: number;
+      quantity: number;
+      product: StorefrontSelectedProduct;
+      imageUrl: string | null;
+    }
+  | {
+      status: 'UNAVAILABLE';
+      index: number;
+      quantity: number;
+    };

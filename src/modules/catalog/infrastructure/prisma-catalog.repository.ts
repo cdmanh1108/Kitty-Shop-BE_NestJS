@@ -31,6 +31,7 @@ import {
 } from './product-commands';
 import { listStorefrontCategories } from './storefront-category.queries';
 import { listStorefrontProducts, findStorefrontProductBySlug } from './storefront-product.queries';
+import { resolveStorefrontSelections } from './storefront-selection.queries';
 import {
   addInventoryItem,
   updateInventoryStatus,
@@ -66,6 +67,12 @@ export class PrismaCatalogRepository
     slug: string,
   ): ReturnType<CatalogPersistenceAdapter['findStorefrontProductBySlug']> {
     return findStorefrontProductBySlug(this.prisma, this.mediaUrls, shopId, slug);
+  }
+
+  resolveStorefrontSelections(
+    input: Parameters<CatalogPersistenceAdapter['resolveStorefrontSelections']>[0],
+  ): ReturnType<CatalogPersistenceAdapter['resolveStorefrontSelections']> {
+    return resolveStorefrontSelections(this.prisma, this.mediaUrls, input);
   }
 
   lookupProducts(

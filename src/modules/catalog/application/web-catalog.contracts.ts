@@ -3,6 +3,8 @@ import type {
   StorefrontProductDetails,
   StorefrontProductItem,
   StorefrontProductPage,
+  StorefrontSelectionInput,
+  StorefrontSelectionResolution,
 } from '../domain/catalog.models';
 
 export interface WebProductListFilterInput {
@@ -20,4 +22,6 @@ export type {
   StorefrontProductDetails,
   StorefrontProductItem,
   StorefrontProductPage,
+  StorefrontSelectionInput,
+  StorefrontSelectionResolution,
 };

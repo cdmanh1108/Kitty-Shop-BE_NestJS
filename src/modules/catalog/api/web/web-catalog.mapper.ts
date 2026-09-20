@@ -3,12 +3,14 @@ import type {
   StorefrontProductDetails,
   StorefrontProductItem,
   StorefrontProductPage,
+  StorefrontSelectionResolution,
 } from '../../domain/catalog.models';
 import type {
   WebCategoryDto,
   WebProductDetailDto,
   WebProductListItemDto,
   WebProductListResDto,
+  WebStorefrontSelectionResolveResDto,
 } from './dto/web-catalog.dto';
 
 /**
@@ -111,6 +113,12 @@ export const WebCatalogMapper = {
         depositAmount: v.depositAmount,
       })),
     };
+  },
+
+  toSelectionResolution(
+    items: StorefrontSelectionResolution[],
+  ): WebStorefrontSelectionResolveResDto {
+    return { items };
   },
 };
 

@@ -7,6 +7,8 @@ import type {
   StorefrontCategory,
   StorefrontProductDetails,
   StorefrontProductPage,
+  StorefrontSelectionInput,
+  StorefrontSelectionResolution,
   WebProductListFilterInput,
 } from './web-catalog.contracts';
 
@@ -47,5 +49,12 @@ export class WebCatalogService {
     }
 
     return product;
+  }
+
+  async resolveSelections(
+    shopId: string,
+    selections: StorefrontSelectionInput[],
+  ): Promise<StorefrontSelectionResolution[]> {
+    return this.repository.resolveStorefrontSelections({ shopId, selections });
   }
 }
