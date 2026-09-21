@@ -2,7 +2,17 @@ import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
 import { ShopResolver } from '@common/tenant/shop-resolver';
-import { Body, Controller, Get, Header, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -58,6 +68,7 @@ export class WebRentalController {
   }
 
   @Post('rental/quote')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     operationId: 'createWebRentalQuote',
     summary: 'Tính báo giá thuê tạm tính chính thức từ server',
@@ -130,6 +141,7 @@ export class WebRentalController {
   }
 
   @Post('rental-orders/lookup')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     operationId: 'lookupWebRentalOrder',
     summary: 'Tra cứu trạng thái đơn thuê bảo mật bằng mã đơn và SĐT',

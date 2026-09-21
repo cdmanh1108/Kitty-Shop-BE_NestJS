@@ -73,7 +73,7 @@ describe('Web order lookup ledger projection', () => {
       .post('/api/v1/web/rental-orders/lookup')
       .set('x-shop-code', fixture.shop.code)
       .send({ orderCode: order.orderNumber, phone: fixture.customer.phone })
-      .expect(201);
+      .expect(200);
     const rootBody = JSON.parse(root.text) as unknown as { paidAmount: number };
     expect(rootBody.paidAmount).toBe(500000);
     expect(typeof rootBody.paidAmount).toBe('number');
@@ -107,7 +107,7 @@ describe('Web order lookup ledger projection', () => {
       .post('/api/v1/web/rental-orders/lookup')
       .set('x-shop-code', fixture.shop.code)
       .send({ orderCode: order.orderNumber, phone: fixture.customer.phone })
-      .expect(201);
+      .expect(200);
     const webBody = JSON.parse(web.text) as unknown as {
       paidAmount: number;
       depositAmount: number;
