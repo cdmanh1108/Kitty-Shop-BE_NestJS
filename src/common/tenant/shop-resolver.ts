@@ -32,7 +32,8 @@ export class ShopResolver {
     try {
       return await this.resolveShopByCode(defaultCode, request);
     } catch (error) {
-      if (error instanceof NotFoundException) this.logDefaultResolutionFailure(defaultCode, request);
+      if (error instanceof NotFoundException)
+        this.logDefaultResolutionFailure(defaultCode, request);
       throw error;
     }
   }
@@ -58,7 +59,10 @@ export class ShopResolver {
     return new NotFoundException('Không tìm thấy cửa hàng hoạt động trong hệ thống.');
   }
 
-  private logDefaultResolutionFailure(defaultShopCode: string | undefined, request?: Request): void {
+  private logDefaultResolutionFailure(
+    defaultShopCode: string | undefined,
+    request?: Request,
+  ): void {
     this.logger.error({
       event: 'tenant.default_shop_unresolved',
       errorCode: 'DEFAULT_SHOP_UNRESOLVED',

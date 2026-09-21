@@ -3,5 +3,7 @@ import type { CatalogManagementRepository } from './catalog-management.repositor
 import type { CatalogProductRepository } from './catalog-product.repository';
 
 /** Aggregate consumed by the existing admin facade only. */
-export type CatalogAdminRepository = CatalogManagementRepository & CatalogProductRepository & CatalogInventoryRepository;
+export type CatalogAdminRepository = CatalogManagementRepository &
+  CatalogProductRepository &
+  CatalogInventoryRepository;
 export const CATALOG_ADMIN_REPOSITORY = Symbol('CATALOG_ADMIN_REPOSITORY');

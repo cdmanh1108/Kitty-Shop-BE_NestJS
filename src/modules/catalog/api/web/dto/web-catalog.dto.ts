@@ -236,7 +236,8 @@ export const WEB_STOREFRONT_SELECTION_BATCH_LIMIT = 50;
 export class WebStorefrontSelectionInputDto {
   @ApiPropertyOptional({
     format: 'uuid',
-    description: 'ID sản phẩm; legacy alias chỉ resolve khi có đúng một biến thể storefront eligible.',
+    description:
+      'ID sản phẩm; legacy alias chỉ resolve khi có đúng một biến thể storefront eligible.',
   })
   @ValidateIf((selection: WebStorefrontSelectionInputDto) => !selection.variantId)
   @IsUUID()
@@ -310,7 +311,11 @@ export class WebResolvedStorefrontSelectionDto extends WebStorefrontSelectionRes
   @ApiProperty({ type: WebStorefrontSelectionVariantDto })
   variant!: WebStorefrontSelectionVariantDto;
 
-  @ApiProperty({ type: String, nullable: true, example: 'https://cdn.example.test/products/dam-m.jpg' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'https://cdn.example.test/products/dam-m.jpg',
+  })
   imageUrl!: string | null;
 }
 
@@ -321,7 +326,11 @@ export class WebSelectionRequiredStorefrontSelectionDto extends WebStorefrontSel
   @ApiProperty({ type: WebStorefrontSelectionProductDto })
   product!: WebStorefrontSelectionProductDto;
 
-  @ApiProperty({ type: String, nullable: true, example: 'https://cdn.example.test/products/dam.jpg' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'https://cdn.example.test/products/dam.jpg',
+  })
   imageUrl!: string | null;
 }
 

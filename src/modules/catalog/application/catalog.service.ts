@@ -10,7 +10,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CATALOG_ADMIN_REPOSITORY, type CatalogAdminRepository } from '../domain/catalog-admin.repository';
+import {
+  CATALOG_ADMIN_REPOSITORY,
+  type CatalogAdminRepository,
+} from '../domain/catalog-admin.repository';
 import { CatalogInvariantError } from '../domain/catalog.repository';
 import { mapCatalogErrorToHttpStatus } from './catalog-error-http.mapper';
 import type {

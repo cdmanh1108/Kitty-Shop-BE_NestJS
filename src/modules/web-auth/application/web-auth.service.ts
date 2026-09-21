@@ -72,7 +72,8 @@ export class WebAuthService {
     this.validatePassword(input.password);
     const existing = await this.repository.findAccount(phone);
     if (existing) {
-      if (existing.phoneVerifiedAt || existing.disabledAt) authError('PHONE_ALREADY_REGISTERED', 409);
+      if (existing.phoneVerifiedAt || existing.disabledAt)
+        authError('PHONE_ALREADY_REGISTERED', 409);
     }
     const code = this.otp.generateCode();
     const attemptId = randomUUID();

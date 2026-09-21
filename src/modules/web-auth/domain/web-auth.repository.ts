@@ -52,7 +52,12 @@ export interface WebRefreshTokenData {
   ipAddress?: string;
 }
 export interface WebAuthRepository {
-  register(phone: string, passwordHash: string, attemptId: string, challenge: NewChallenge): Promise<OtpChallenge>;
+  register(
+    phone: string,
+    passwordHash: string,
+    attemptId: string,
+    challenge: NewChallenge,
+  ): Promise<OtpChallenge>;
   findAccount(phone: string): Promise<WebAccount | null>;
   findChallenge(id: string): Promise<OtpChallenge | null>;
   verify(id: string, otpHash: string, now: Date, maxAttempts: number): Promise<VerifyResult>;

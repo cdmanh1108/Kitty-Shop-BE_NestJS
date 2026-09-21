@@ -112,14 +112,23 @@ describe('WebAuthService', () => {
   it('starts a new credential-bound attempt when registration is still pending', async () => {
     const pending = { ...account('unused-hash'), phoneVerifiedAt: null };
     const register: WebAuthRepository['register'] = jest.fn().mockResolvedValue({
-      id: '00000000-0000-4000-8000-000000000002', accountId: pending.id, otpHash: 'a'.repeat(64),
-      registrationAttemptId: '00000000-0000-4000-8000-000000000003', expiresAt: new Date(now.getTime() + 300000),
-      resendAvailableAt: new Date(now.getTime() + 60000), attemptCount: 0, consumedAt: null, createdAt: now,
+      id: '00000000-0000-4000-8000-000000000002',
+      accountId: pending.id,
+      otpHash: 'a'.repeat(64),
+      registrationAttemptId: '00000000-0000-4000-8000-000000000003',
+      expiresAt: new Date(now.getTime() + 300000),
+      resendAvailableAt: new Date(now.getTime() + 60000),
+      attemptCount: 0,
+      consumedAt: null,
+      createdAt: now,
     } satisfies OtpChallenge);
     const repo = repository();
     repo.findAccount = jest.fn().mockResolvedValue(pending);
     repo.register = register;
-    const result = await service(repo).register({ phone: '0912345678', password: 'right-password' });
+    const result = await service(repo).register({
+      phone: '0912345678',
+      password: 'right-password',
+    });
     expect(result.challengeId).toEqual(expect.any(String));
     expect(register).toHaveBeenCalledTimes(1);
   });

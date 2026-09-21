@@ -503,7 +503,12 @@ describe('Tenant Resolution & Product Slug Identity Integration', () => {
         },
       });
       await prisma.productVariant.create({
-        data: { shopId: shop.id, productId: product.id, variantCode: `${product.code}-V1`, status: 'ACTIVE' },
+        data: {
+          shopId: shop.id,
+          productId: product.id,
+          variantCode: `${product.code}-V1`,
+          status: 'ACTIVE',
+        },
       });
 
       await request(server)

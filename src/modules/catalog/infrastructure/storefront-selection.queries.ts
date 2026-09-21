@@ -4,7 +4,10 @@ import type {
   StorefrontSelectionInput,
   StorefrontSelectionResolution,
 } from '../domain/catalog.models';
-import { storefrontProductEligibility, storefrontVariantEligibility } from '../domain/storefront-eligibility';
+import {
+  storefrontProductEligibility,
+  storefrontVariantEligibility,
+} from '../domain/storefront-eligibility';
 
 type StorefrontSelectionQuery = {
   shopId: string;

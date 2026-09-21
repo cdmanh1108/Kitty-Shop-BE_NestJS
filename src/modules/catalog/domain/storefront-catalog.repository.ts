@@ -13,7 +13,10 @@ export const STOREFRONT_CATALOG_REPOSITORY = Symbol('STOREFRONT_CATALOG_REPOSITO
 export interface StorefrontCatalogRepository {
   listStorefrontCategories(shopId: string): Promise<StorefrontCategory[]>;
   listStorefrontProducts(input: StorefrontProductListCriteria): Promise<StorefrontProductPage>;
-  findStorefrontProductBySlug(shopId: string, slug: string): Promise<StorefrontProductDetails | null>;
+  findStorefrontProductBySlug(
+    shopId: string,
+    slug: string,
+  ): Promise<StorefrontProductDetails | null>;
   resolveStorefrontSelections(input: {
     shopId: string;
     selections: StorefrontSelectionInput[];

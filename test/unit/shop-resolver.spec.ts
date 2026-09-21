@@ -11,10 +11,9 @@ describe('ShopResolver', () => {
   beforeEach(() => {
     configuredDefault = 'shop-a';
     prismaMock = { shop: { findUnique: jest.fn() } };
-    resolver = new ShopResolver(
-      prismaMock as unknown as PrismaService,
-      { get: () => configuredDefault },
-    );
+    resolver = new ShopResolver(prismaMock as unknown as PrismaService, {
+      get: () => configuredDefault,
+    });
   });
 
   const requestWith = (shopCode?: string): Request =>
@@ -26,22 +25,32 @@ describe('ShopResolver', () => {
 
     await expect(resolver.resolveShopId(request)).resolves.toBe('shop-a-id');
     expect(prismaMock.shop.findUnique).toHaveBeenCalledTimes(1);
-    expect(prismaMock.shop.findUnique).toHaveBeenCalledWith({ where: { code: 'shop-a' }, select: { id: true, status: true } });
+    expect(prismaMock.shop.findUnique).toHaveBeenCalledWith({
+      where: { code: 'shop-a' },
+      select: { id: true, status: true },
+    });
     expect((request as Request & { resolvedShopId?: string }).resolvedShopId).toBe('shop-a-id');
   });
 
   it('fails for an explicit unknown shop and never queries the configured default', async () => {
     prismaMock.shop.findUnique.mockResolvedValue(null);
 
-    await expect(resolver.resolveShopId(requestWith('missing-shop'))).rejects.toBeInstanceOf(NotFoundException);
+    await expect(resolver.resolveShopId(requestWith('missing-shop'))).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(prismaMock.shop.findUnique).toHaveBeenCalledTimes(1);
-    expect(prismaMock.shop.findUnique).toHaveBeenCalledWith({ where: { code: 'missing-shop' }, select: { id: true, status: true } });
+    expect(prismaMock.shop.findUnique).toHaveBeenCalledWith({
+      where: { code: 'missing-shop' },
+      select: { id: true, status: true },
+    });
   });
 
   it('fails for an explicit inactive shop and never selects another active tenant', async () => {
     prismaMock.shop.findUnique.mockResolvedValue({ id: 'shop-a-id', status: 'INACTIVE' });
 
-    await expect(resolver.resolveShopId(requestWith('shop-a'))).rejects.toBeInstanceOf(NotFoundException);
+    await expect(resolver.resolveShopId(requestWith('shop-a'))).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(prismaMock.shop.findUnique).toHaveBeenCalledTimes(1);
   });
 
@@ -50,7 +59,10 @@ describe('ShopResolver', () => {
     prismaMock.shop.findUnique.mockResolvedValue({ id: 'shop-b-id', status: 'ACTIVE' });
 
     await expect(resolver.resolveShopId(requestWith())).resolves.toBe('shop-b-id');
-    expect(prismaMock.shop.findUnique).toHaveBeenCalledWith({ where: { code: 'shop-b' }, select: { id: true, status: true } });
+    expect(prismaMock.shop.findUnique).toHaveBeenCalledWith({
+      where: { code: 'shop-b' },
+      select: { id: true, status: true },
+    });
   });
 
   it('fails closed when the configured default is unknown despite other active shops', async () => {
@@ -59,7 +71,10 @@ describe('ShopResolver', () => {
 
     await expect(resolver.resolveShopId(requestWith())).rejects.toBeInstanceOf(NotFoundException);
     expect(prismaMock.shop.findUnique).toHaveBeenCalledTimes(1);
-    expect(prismaMock.shop.findUnique).toHaveBeenCalledWith({ where: { code: 'missing-shop' }, select: { id: true, status: true } });
+    expect(prismaMock.shop.findUnique).toHaveBeenCalledWith({
+      where: { code: 'missing-shop' },
+      select: { id: true, status: true },
+    });
   });
 
   it('fails closed for an inactive configured default and for no configured default', async () => {
@@ -74,7 +89,9 @@ describe('ShopResolver', () => {
   });
 
   it('treats an empty explicit header as invalid instead of using the default', async () => {
-    await expect(resolver.resolveShopId(requestWith('   '))).rejects.toBeInstanceOf(NotFoundException);
+    await expect(resolver.resolveShopId(requestWith('   '))).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
     expect(prismaMock.shop.findUnique).not.toHaveBeenCalled();
   });
 });

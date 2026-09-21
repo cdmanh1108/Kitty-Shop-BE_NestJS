@@ -3,15 +3,7 @@ import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
 import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsDateString,
-  IsIn,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { ColorSummaryResDto, ShopLocationSummaryResDto, SizeSummaryResDto } from './category.dto';
 import { RentalRateResDto } from './product.dto';
 
