@@ -86,4 +86,36 @@ describe('rental deposit settlement', () => {
       depositOut: '20000',
     });
   });
+
+  it('uses every non-deposit ledger purpose, signs refunds, and preserves overpayment', () => {
+    expect(
+      calculateRentalPaymentTotals({
+        grandTotal: '100.00',
+        payments: [
+          { purpose: 'RENTAL_PAYMENT', direction: 'IN', amount: '100.10' },
+          { purpose: 'SHIPPING', direction: 'IN', amount: '20.20' },
+          { purpose: 'LATE_FEE', direction: 'IN', amount: '3.03' },
+          { purpose: 'DAMAGE_FEE', direction: 'IN', amount: '4.04' },
+          { purpose: 'OTHER', direction: 'IN', amount: '5.05' },
+          { purpose: 'ORDER_REFUND', direction: 'OUT', amount: '10.11' },
+          { purpose: 'DEPOSIT', direction: 'IN', amount: '50.00' },
+          { purpose: 'DEPOSIT_REFUND', direction: 'OUT', amount: '20.00' },
+        ],
+      }),
+    ).toEqual({
+      paidAmount: '122.31',
+      remainingAmount: '0',
+      depositIn: '50',
+      depositOut: '20',
+    });
+  });
+
+  it('does not clamp a synthetic negative net payment total', () => {
+    expect(
+      calculateRentalPaymentTotals({
+        grandTotal: '100.00',
+        payments: [{ purpose: 'ORDER_REFUND', direction: 'OUT', amount: '120.50' }],
+      }),
+    ).toMatchObject({ paidAmount: '-120.5', remainingAmount: '220.5' });
+  });
 });

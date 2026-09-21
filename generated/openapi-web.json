@@ -1632,7 +1632,8 @@
           },
           "paidAmount": {
             "type": "number",
-            "example": 0
+            "example": 450000,
+            "description": "Net completed, non-voided non-deposit payment amount: inbound payments less outbound refunds. Deposit movements are excluded; a deposit offset contributes only its rental-payment leg."
           },
           "items": {
             "type": "array",

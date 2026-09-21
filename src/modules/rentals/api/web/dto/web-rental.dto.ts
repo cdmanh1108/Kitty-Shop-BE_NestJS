@@ -266,7 +266,11 @@ export class WebOrderLookupResDto {
   @ApiProperty({ example: 500000 })
   depositAmount!: number;
 
-  @ApiProperty({ example: 0 })
+  @ApiProperty({
+    example: 450000,
+    description:
+      'Net completed, non-voided non-deposit payment amount: inbound payments less outbound refunds. Deposit movements are excluded; a deposit offset contributes only its rental-payment leg.',
+  })
   paidAmount!: number;
 
   @ApiProperty({ type: [WebOrderLookupItemDto] })

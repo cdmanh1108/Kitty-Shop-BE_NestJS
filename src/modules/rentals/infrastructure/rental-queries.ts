@@ -9,6 +9,7 @@ import {
   type RentalRepository,
   type StorefrontOrderLookupRecord,
 } from '../domain/rental.repository';
+import { calculateRentalPaymentTotals } from '../domain/rental-settlement';
 
 export async function customerExists(
   prisma: PrismaService,
@@ -228,18 +229,28 @@ export async function lookupStorefrontOrder(
     return null;
   }
 
-  const payments = await prisma.paymentTransaction.aggregate({
+  // Keep the public projection on the same ledger semantics as the admin
+  // presenter.  The shared calculator deliberately excludes collateral
+  // movements and signs all other completed payment directions.
+  const payments = await prisma.paymentTransaction.findMany({
     where: {
       shopId,
       orderId: order.id,
-      status: 'COMPLETED',
+      status: TRANSACTION_STATUS.COMPLETED,
       voidedAt: null,
-      direction: 'INBOUND',
     },
-    _sum: { amount: true },
+    select: { amount: true, direction: true, purpose: true },
   });
 
-  const paidAmount = payments._sum?.amount ? decimalToNumber(payments._sum.amount) : 0;
+  const paymentTotals = calculateRentalPaymentTotals({
+    grandTotal: order.grandTotal.toString(),
+    payments: payments.map((payment) => ({
+      amount: payment.amount.toString(),
+      direction: payment.direction,
+      purpose: payment.purpose,
+    })),
+  });
+  const paidAmount = Number(paymentTotals.paidAmount);
 
   return {
     orderNumber: order.orderNumber,

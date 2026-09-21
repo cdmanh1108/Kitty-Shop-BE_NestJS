@@ -490,7 +490,13 @@ export class RentalOrderResDto extends RentalOrderListItemResDto {
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) actualReturnedAt!:
     | string
     | null;
-  @ApiProperty({ type: String, example: '250000.00' }) paidAmount!: string;
+  @ApiProperty({
+    type: String,
+    example: '250000.00',
+    description:
+      'Net completed, non-voided non-deposit payment amount: inbound payments less outbound refunds. Deposit movements are excluded.',
+  })
+  paidAmount!: string;
   @ApiProperty({ type: String, example: '250000.00' }) remainingAmount!: string;
   @ApiProperty({ type: () => RentalSettlementResDto }) settlement!: RentalSettlementResDto;
   @ApiProperty({ type: () => RentalReturnResDto, nullable: true })

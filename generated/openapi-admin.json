@@ -5563,7 +5563,8 @@
           },
           "paidAmount": {
             "type": "string",
-            "example": "250000.00"
+            "example": "250000.00",
+            "description": "Net completed, non-voided non-deposit payment amount: inbound payments less outbound refunds. Deposit movements are excluded."
           },
           "remainingAmount": {
             "type": "string",
