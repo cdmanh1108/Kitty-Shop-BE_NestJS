@@ -1,4 +1,5 @@
 import type { CurrentUser } from '@common/types/current-user';
+import { prepareAuditLogData } from '@modules/audit/application/audit-entry-preparer';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import {
   BadRequestException,
@@ -8,7 +9,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { hash } from 'bcryptjs';
-import { MEMBER_REPOSITORY, type MemberRepository } from '../domain/member.repository';
+import {
+  MEMBER_REPOSITORY,
+  MemberRoleCodesEmptyError,
+  MemberRoleNotFoundError,
+  type MemberRepository,
+} from '../domain/member.repository';
 import type { CreateMemberInput, UpdateMemberInput } from './member.contracts';
 
 @Injectable()
@@ -57,17 +63,44 @@ export class MemberService {
         'Bạn không thể vô hiệu hóa tư cách thành viên hiện tại của chính mình.',
       );
     }
-    const member = await this.repository.update({ shopId: user.shopId, memberId: id, ...input });
+    if (input.roleCodes?.length === 0) {
+      throw new BadRequestException({
+        code: 'MEMBER_ROLE_CODES_EMPTY',
+        message: 'Danh sách mã vai trò phải có ít nhất một phần tử.',
+      });
+    }
+    let member: Awaited<ReturnType<MemberRepository['update']>>;
+    try {
+      member = await this.repository.update({
+        shopId: user.shopId,
+        memberId: id,
+        ...input,
+        audit: prepareAuditLogData({
+          shopId: user.shopId,
+          actorUserId: user.userId,
+          actorMemberId: user.memberId,
+          action: 'UPDATE',
+          entityType: 'shop_member',
+          entityId: id,
+          newValues: { ...input },
+        }),
+      });
+    } catch (error) {
+      if (error instanceof MemberRoleCodesEmptyError) {
+        throw new BadRequestException({
+          code: 'MEMBER_ROLE_CODES_EMPTY',
+          message: 'Danh sách mã vai trò phải có ít nhất một phần tử.',
+        });
+      }
+      if (error instanceof MemberRoleNotFoundError) {
+        throw new BadRequestException({
+          code: 'MEMBER_ROLE_NOT_FOUND',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
     if (!member) throw new NotFoundException('Không tìm thấy thành viên hoặc vai trò.');
-    await this.audit.log({
-      shopId: user.shopId,
-      actorUserId: user.userId,
-      actorMemberId: user.memberId,
-      action: 'UPDATE',
-      entityType: 'shop_member',
-      entityId: id,
-      newValues: { ...input },
-    });
     return member;
   }
 }

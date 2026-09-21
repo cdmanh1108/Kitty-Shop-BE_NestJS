@@ -1,5 +1,18 @@
 import type { MemberDetails, MemberList } from './member.models';
+import type { CreateAuditLogData } from '@modules/audit/domain/audit.repository';
 export const MEMBER_REPOSITORY = Symbol('MEMBER_REPOSITORY');
+
+export class MemberRoleNotFoundError extends Error {
+  constructor() {
+    super('One or more roles do not exist in this shop.');
+  }
+}
+
+export class MemberRoleCodesEmptyError extends Error {
+  constructor() {
+    super('At least one role code is required when replacing member roles.');
+  }
+}
 
 export interface MemberRepository {
   list(shopId: string): Promise<MemberList>;
@@ -23,4 +36,6 @@ export interface MemberUpdateData {
   memberId: string;
   status?: string;
   roleCodes?: string[];
+  /** Prepared by the application layer and persisted with the member mutation. */
+  audit: CreateAuditLogData;
 }

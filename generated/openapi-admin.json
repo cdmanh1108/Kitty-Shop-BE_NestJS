@@ -3842,7 +3842,10 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Member status and role assignments updated."
+          },
+          "400": {
+            "description": "Invalid member update, including role codes that do not exist in the current shop."
           }
         },
         "security": [

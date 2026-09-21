@@ -3,7 +3,13 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { MemberService } from '../application/member.service';
 import { CreateMemberReqDto, UpdateMemberReqDto } from './member.dto';
@@ -37,6 +43,11 @@ export class MemberController {
 
   @Patch(':id')
   @Permissions(PERMISSIONS.MEMBERS_MANAGE)
+  @ApiOkResponse({ description: 'Member status and role assignments updated.' })
+  @ApiBadRequestResponse({
+    description:
+      'Invalid member update, including role codes that do not exist in the current shop.',
+  })
   update(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,

@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
-import type { MemberRepository } from '../domain/member.repository';
+import { serializableTransaction } from '@database/prisma/transaction';
+import type { Prisma } from '@prisma/client';
+import {
+  MemberRoleNotFoundError,
+  MemberRoleCodesEmptyError,
+  type MemberRepository,
+} from '../domain/member.repository';
 
 @Injectable()
 export class PrismaMemberRepository implements MemberRepository {
@@ -79,24 +85,40 @@ export class PrismaMemberRepository implements MemberRepository {
     });
   }
 
-  update(input: { shopId: string; memberId: string; status?: string; roleCodes?: string[] }) {
-    return this.prisma.$transaction(async (tx) => {
+  update(input: Parameters<MemberRepository['update']>[0]) {
+    return serializableTransaction(this.prisma, async (tx) => {
       const member = await tx.shopMember.findFirst({
         where: { id: input.memberId, shopId: input.shopId },
       });
       if (!member) return null;
-      if (input.status)
+      if (input.roleCodes?.length === 0) throw new MemberRoleCodesEmptyError();
+
+      const roles =
+        input.roleCodes === undefined
+          ? undefined
+          : await tx.role.findMany({
+              where: { shopId: input.shopId, code: { in: input.roleCodes } },
+              select: { id: true },
+            });
+      if (roles && roles.length !== new Set(input.roleCodes).size) {
+        throw new MemberRoleNotFoundError();
+      }
+
+      if (input.status !== undefined)
         await tx.shopMember.update({ where: { id: member.id }, data: { status: input.status } });
-      if (input.roleCodes) {
-        const roles = await tx.role.findMany({
-          where: { shopId: input.shopId, code: { in: input.roleCodes } },
-        });
-        if (roles.length !== new Set(input.roleCodes).size) return null;
+      if (roles) {
         await tx.memberRole.deleteMany({ where: { memberId: member.id } });
         await tx.memberRole.createMany({
           data: roles.map((role) => ({ memberId: member.id, roleId: role.id })),
         });
       }
+      await tx.auditLog.create({
+        data: {
+          ...input.audit,
+          oldValues: input.audit.oldValues as Prisma.InputJsonValue | undefined,
+          newValues: input.audit.newValues as Prisma.InputJsonValue | undefined,
+        },
+      });
       return tx.shopMember.findUnique({
         where: { id: member.id },
         include: {

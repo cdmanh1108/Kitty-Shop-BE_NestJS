@@ -1,12 +1,12 @@
 import { currentRequestMetadata } from '@common/request-context/request-context';
 import type { AuditPort, AuditEntry } from '../domain/audit.port';
-import { sanitizeAuditSnapshot, sanitizeAuditText } from './audit-snapshot';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   AUDIT_REPOSITORY,
   type AuditRepository,
   type CreateAuditLogData,
 } from '../domain/audit.repository';
+import { prepareAuditLogData } from './audit-entry-preparer';
 
 export type AuditContext = Pick<
   CreateAuditLogData,
@@ -24,25 +24,18 @@ export class AuditService implements AuditPort {
    * Critical domain events are also persisted through the transactional outbox.
    */
   async log(input: AuditEntry): Promise<void> {
+    let requestId: string | undefined;
     try {
-      const metadata = currentRequestMetadata();
-      await this.repository.create({
-        ...input,
-        requestId: metadata?.requestId,
-        ipAddress: metadata?.ipAddress,
-        userAgent: metadata?.userAgent
-          ? sanitizeAuditText(metadata.userAgent).slice(0, 512)
-          : undefined,
-        oldValues: sanitizeAuditSnapshot(input.oldValues),
-        newValues: sanitizeAuditSnapshot(input.newValues),
-      });
+      const prepared = prepareAuditLogData(input);
+      requestId = prepared.requestId;
+      await this.repository.create(prepared);
     } catch (error) {
       this.logger.error({
         event: 'audit.persist.failed',
         action: input.action,
         entityId: input.entityId,
         shopId: input.shopId,
-        requestId: currentRequestMetadata()?.requestId,
+        requestId: requestId ?? currentRequestMetadata()?.requestId,
         error: error instanceof Error ? error : new Error('Lỗi không xác định.'),
       });
     }
