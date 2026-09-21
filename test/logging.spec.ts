@@ -1,7 +1,11 @@
 import { Logger } from '@nestjs/common';
 import { EventEmitter } from 'node:events';
 import type { Request, Response } from 'express';
-import { ApplicationLogger, redactLog } from '../src/common/logging/application-logger';
+import {
+  ApplicationLogger,
+  redactLog,
+  summarizeError,
+} from '../src/common/logging/application-logger';
 import { RequestContextMiddleware } from '../src/common/middleware/request-context.middleware';
 import { withRequestContext } from '../src/common/request-context/request-context';
 
@@ -22,6 +26,24 @@ describe('application logging', () => {
     expect(result).not.toContain('sensitive');
     expect(result).toContain('Truncated');
     expect(result).toContain('errorType');
+  });
+
+  it('classifies safe startup and Prisma connection failures without exposing messages', () => {
+    const configurationError = new Error('OTP bypass is forbidden in production');
+    const databaseError = Object.assign(new Error('sensitive database failure'), {
+      errorCode: 'P1001',
+    });
+
+    expect(summarizeError(configurationError)).toEqual({
+      errorType: 'Error',
+      reason: 'CONFIG_AUTH_OTP_BYPASS_FORBIDDEN',
+    });
+    expect(summarizeError(databaseError)).toEqual({
+      errorType: 'Error',
+      errorCode: 'P1001',
+      reason: 'DATABASE_SERVER_UNREACHABLE',
+    });
+    expect(JSON.stringify(redactLog(databaseError))).not.toContain('sensitive database failure');
   });
 
   it('writes parseable JSON and does not forward raw error stacks', () => {

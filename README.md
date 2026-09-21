@@ -120,3 +120,27 @@ npm run quality
 See [Task 7 stabilization](docs/STABILIZATION.md) for the latest verification. Earlier dated counts are historical, not the current suite contract.
 
 Metadata-only OpenAPI export still validates application configuration. Without a configured local .env, provide an explicit synthetic JWT_ACCESS_SECRET of at least 32 characters for verification. The export command itself sets SKIP_DATABASE_CONNECT; let test harnesses manage their own NODE_ENV. Never reuse the synthetic signing key in a deployment. No database connection is needed for export.
+
+## Production container deployment
+
+`docker-compose.yml` is the production deployment manifest. It runs only the backend API plus an opt-in migration job; PostgreSQL is an external service configured through `DATABASE_URL`.
+
+Build and push both immutable release images from the backend repository:
+
+```bash
+docker build --target runner -t docker.io/<namespace>/kitty-be:<tag> .
+docker build --target migrator -t docker.io/<namespace>/kitty-be-migrate:<tag> .
+docker push docker.io/<namespace>/kitty-be:<tag>
+docker push docker.io/<namespace>/kitty-be-migrate:<tag>
+```
+
+On the server, copy `.env.production.example` to a protected `.env`, replace every placeholder, log in to Docker Hub, then deploy in this order:
+
+```bash
+docker compose --env-file .env pull
+docker compose --env-file .env --profile migrate run --rm migrate
+docker compose --env-file .env up -d api
+docker compose --env-file .env ps
+```
+
+The API is bound to `127.0.0.1:3000` by default for a host reverse proxy. Configure TLS at that proxy and use the `/api/v1/health/live` and `/api/v1/health/ready` endpoints for liveness and database readiness. Never expose PostgreSQL credentials, JWT/OTP secrets, or a server PEM key in an image, repository, or Docker build context.

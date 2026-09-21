@@ -1,20 +1,43 @@
 services:
-  postgres:
-    image: postgres:17-alpine
+  api:
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE in .env}:${IMAGE_TAG:?Set IMAGE_TAG in .env}
     restart: unless-stopped
+    init: true
+    env_file:
+      - ./.env
     environment:
-      POSTGRES_DB: rental_shop
-      POSTGRES_USER: rental
-      POSTGRES_PASSWORD: rental
+      NODE_ENV: production
+      PORT: '${PORT:-3000}'
+      API_PREFIX: api/v1
+      SWAGGER_ENABLED: 'false'
     ports:
-      - '5432:5432'
-    volumes:
-      - rental_shop_postgres:/var/lib/postgresql/data
+      - '${BACKEND_BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:${PORT:-3000}'
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U rental -d rental_shop']
-      interval: 3s
-      timeout: 3s
-      retries: 20
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:'' + process.env.PORT + ''/'' + process.env.API_PREFIX + ''/health/live'').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: '3'
 
-volumes:
-  rental_shop_postgres:
+  migrate:
+    image: ${BACKEND_MIGRATOR_IMAGE:?Set BACKEND_MIGRATOR_IMAGE in .env}:${IMAGE_TAG:?Set IMAGE_TAG in .env}
+    profiles: ['migrate']
+    env_file:
+      - ./.env
+    environment:
+      NODE_ENV: production
+    restart: 'no'
+    security_opt:
+      - no-new-privileges:true

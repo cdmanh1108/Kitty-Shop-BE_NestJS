@@ -74,6 +74,6 @@ describe('MemberService update', () => {
         roleCodes: [],
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(members.update).not.toHaveBeenCalled();
+    expect(members.update.mock.calls).toHaveLength(0);
   });
 });

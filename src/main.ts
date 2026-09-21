@@ -39,6 +39,7 @@ if (require.main === module) {
       {
         event: 'application.start_failed',
         errorClass: error instanceof Error ? error.constructor.name : 'UnknownError',
+        error: error instanceof Error ? error : undefined,
       },
       undefined,
       'Bootstrap',
