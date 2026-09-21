@@ -1,3 +1,5 @@
+import type { WebPaymentPreference } from '../domain/web-payment-preference';
+
 export interface WebAvailabilityQueryInput {
   productId?: string;
   variantId?: string;
@@ -48,7 +50,7 @@ export interface WebCreateOrderInput {
     method: 'self_pickup' | 'shop_delivery';
     address?: string;
   };
-  paymentMethod: 'cash' | 'bank_transfer' | 'momo';
+  paymentMethod: WebPaymentPreference;
   collateral?: {
     method?: 'CASH' | 'DOCUMENT';
     documentType?: 'CCCD' | 'GPLX';

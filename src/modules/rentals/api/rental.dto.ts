@@ -4,6 +4,7 @@ import { DELIVERY_DIRECTION, DELIVERY_METHOD } from '@modules/deliveries/domain/
 
 import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
 import { ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
+import { WEB_PAYMENT_PREFERENCES } from '@modules/rentals/domain/web-payment-preference';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -471,6 +472,13 @@ export class RentalSettlementResDto {
 }
 
 export class RentalOrderResDto extends RentalOrderListItemResDto {
+  @ApiProperty({
+    enum: WEB_PAYMENT_PREFERENCES,
+    nullable: true,
+    description:
+      'Phương thức thanh toán khách mong muốn khi tạo đơn Web; không xác nhận đã thanh toán và không thay thế phương thức trên phiếu thu thực tế.',
+  })
+  preferredPaymentMethod!: (typeof WEB_PAYMENT_PREFERENCES)[number] | null;
   @ApiProperty({ type: () => RentalConfirmationResDto, nullable: true })
   confirmation!: RentalConfirmationResDto | null;
   @ApiProperty({ type: [RentalItemResDto] }) items!: RentalItemResDto[];

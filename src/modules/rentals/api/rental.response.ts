@@ -30,6 +30,7 @@ export function toRentalResponse(row: RentalDetailsResult | null): RentalOrderRe
   if (!row) return null;
   return {
     ...toRentalSummary(row),
+    preferredPaymentMethod: row.preferredPaymentMethod,
     confirmation: row.confirmation
       ? {
           confirmedAt: timestamp(row.confirmation.confirmedAt),

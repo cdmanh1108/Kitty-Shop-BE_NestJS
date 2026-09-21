@@ -296,6 +296,7 @@ export class WebRentalService {
         rentalStartAt: from,
         rentalEndAt: until,
         discountTotal: 0,
+        preferredPaymentMethod: req.paymentMethod,
         storefrontEligibility: true,
         idempotency: {
           scope: WEB_CREATE_IDEMPOTENCY_SCOPE,

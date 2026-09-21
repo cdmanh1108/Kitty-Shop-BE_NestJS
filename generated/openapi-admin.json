@@ -5508,6 +5508,16 @@
           "productCount": {
             "type": "number"
           },
+          "preferredPaymentMethod": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "bank_transfer",
+              "momo"
+            ],
+            "nullable": true,
+            "description": "Phương thức thanh toán khách mong muốn khi tạo đơn Web; không xác nhận đã thanh toán và không thay thế phương thức trên phiếu thu thực tế."
+          },
           "confirmation": {
             "nullable": true,
             "type": "object",
@@ -5640,6 +5650,7 @@
           "customer",
           "itemCount",
           "productCount",
+          "preferredPaymentMethod",
           "confirmation",
           "items",
           "rentalSubtotal",

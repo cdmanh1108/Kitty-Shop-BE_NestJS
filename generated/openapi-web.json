@@ -1534,7 +1534,8 @@
               "cash",
               "bank_transfer",
               "momo"
-            ]
+            ],
+            "description": "Phương thức khách mong muốn. Lựa chọn này được lưu cho đơn thuê, không tạo giao dịch, không xác nhận đã thanh toán, và không khởi tạo cổng thanh toán."
           },
           "collateral": {
             "$ref": "#/components/schemas/WebCreateOrderCollateralDto"

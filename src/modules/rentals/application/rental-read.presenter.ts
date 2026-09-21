@@ -9,6 +9,7 @@ import {
   calculateRentalPaymentTotals,
   calculateRentalSettlement,
 } from '../domain/rental-settlement';
+import { toWebPaymentPreference } from '../domain/web-payment-preference';
 import type { RentalDetailsResult, RentalOrderSummaryResult } from './rental-read.models';
 
 type SummarySource = RentalOrderPage['items'][number] | NonNullable<RentalOrderDetails>;
@@ -79,6 +80,7 @@ export class RentalReadPresenter {
 
     return {
       ...summary,
+      preferredPaymentMethod: toWebPaymentPreference(row.preferredPaymentMethod),
       confirmation: row.confirmation
         ? {
             confirmedAt: row.confirmation.confirmedAt,

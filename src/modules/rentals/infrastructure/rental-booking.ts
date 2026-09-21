@@ -84,6 +84,7 @@ export async function createOrder(
           rentalEndAt: data.rentalEndAt,
           status: RENTAL_STATUS.RESERVED,
           paymentStatus: grandTotal === 0 ? ORDER_PAYMENT_STATUS.PAID : ORDER_PAYMENT_STATUS.UNPAID,
+          preferredPaymentMethod: data.preferredPaymentMethod,
           depositStatus:
             depositRequired === 0 ? DEPOSIT_STATUS.NOT_REQUIRED : DEPOSIT_STATUS.PENDING,
           rentalSubtotal,

@@ -1,4 +1,5 @@
 import type { RentalSettlement } from '../domain/rental-settlement';
+import type { WebPaymentPreference } from '../domain/web-payment-preference';
 
 export type RentalReadTimestamp = Date | string;
 
@@ -18,6 +19,7 @@ export interface RentalOrderSummaryResult {
 }
 
 export interface RentalDetailsResult extends RentalOrderSummaryResult {
+  preferredPaymentMethod: WebPaymentPreference | null;
   confirmation: {
     confirmedAt: RentalReadTimestamp;
     confirmedBy: string;

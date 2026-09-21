@@ -31,6 +31,7 @@ export interface RentalOrderRecord {
   cancelledAt: Date | null;
   status: string;
   paymentStatus: string;
+  preferredPaymentMethod?: string | null;
   depositStatus: string;
   currency: string;
   rentalSubtotal: DecimalValue;

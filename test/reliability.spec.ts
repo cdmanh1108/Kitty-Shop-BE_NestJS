@@ -68,6 +68,7 @@ function orderDetails(): NonNullable<RentalOrderDetails> {
     cancelledAt: null,
     status: 'RESERVED',
     paymentStatus: 'UNPAID',
+    preferredPaymentMethod: null,
     depositStatus: 'PENDING',
     currency: 'VND',
     rentalSubtotal: new Prisma.Decimal(50000),
@@ -426,6 +427,7 @@ function bookingTransaction(prisma: PrismaService) {
     depositRequired: new Prisma.Decimal(200000),
     grandTotal: new Prisma.Decimal(50000),
     metadata: null,
+    preferredPaymentMethod: order.preferredPaymentMethod ?? null,
   });
   const detail = jest.spyOn(tx.rentalOrder, 'findFirst').mockResolvedValue({
     ...order,
@@ -435,6 +437,7 @@ function bookingTransaction(prisma: PrismaService) {
     depositRequired: new Prisma.Decimal(200000),
     grandTotal: new Prisma.Decimal(50000),
     metadata: null,
+    preferredPaymentMethod: order.preferredPaymentMethod ?? null,
   });
   const history = jest.spyOn(tx.rentalOrderStatusHistory, 'create').mockResolvedValue({
     id: 'history',

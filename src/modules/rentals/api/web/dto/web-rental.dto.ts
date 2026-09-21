@@ -29,6 +29,7 @@ import {
   WEB_RENTAL_MAX_QUANTITY_PER_ITEM,
   WEB_RENTAL_MAX_SOCIAL_CONTACT_LENGTH,
 } from '../../../application/web-rental-input-validation';
+import { WEB_PAYMENT_PREFERENCES } from '../../../domain/web-payment-preference';
 
 @ValidatorConstraint({ name: 'webRentalSelection', async: false })
 class WebRentalSelectionConstraint implements ValidatorConstraintInterface {
@@ -253,9 +254,14 @@ export class WebCreateOrderReqDto {
   @Type(() => WebCreateOrderDeliveryDto)
   delivery!: WebCreateOrderDeliveryDto;
 
-  @ApiProperty({ example: 'bank_transfer', enum: ['cash', 'bank_transfer', 'momo'] })
-  @IsIn(['cash', 'bank_transfer', 'momo'])
-  paymentMethod!: 'cash' | 'bank_transfer' | 'momo';
+  @ApiProperty({
+    example: 'bank_transfer',
+    enum: WEB_PAYMENT_PREFERENCES,
+    description:
+      'Phương thức khách mong muốn. Lựa chọn này được lưu cho đơn thuê, không tạo giao dịch, không xác nhận đã thanh toán, và không khởi tạo cổng thanh toán.',
+  })
+  @IsIn(WEB_PAYMENT_PREFERENCES)
+  paymentMethod!: (typeof WEB_PAYMENT_PREFERENCES)[number];
 
   @ApiPropertyOptional({ type: WebCreateOrderCollateralDto })
   @IsOptional()

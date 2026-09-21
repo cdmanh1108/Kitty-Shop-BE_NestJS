@@ -429,6 +429,7 @@ describe('WebRentalService', () => {
         email: undefined,
         facebook: undefined,
       });
+      expect(firstCreateOrderInput().preferredPaymentMethod).toBe('bank_transfer');
     });
 
     it('maps only the typed invalid-phone error from the resolver to a client error', async () => {

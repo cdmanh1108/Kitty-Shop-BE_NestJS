@@ -15,6 +15,7 @@ function rental(): RentalDetailsResult {
     status: 'RETURNED',
     paymentStatus: 'PARTIAL',
     depositStatus: 'RECEIVED',
+    preferredPaymentMethod: 'momo',
     grandTotal: '120000',
     itemCount: 1,
     productCount: 1,
@@ -75,6 +76,7 @@ describe('rental response mapper', () => {
       grandTotal: '120000',
       paidAmount: '100000',
       remainingAmount: '20000',
+      preferredPaymentMethod: 'momo',
       items: [{ imageUrl: 'https://assets.example.com/dress.jpg' }],
       rentalStartAt: '2026-09-01T00:00:00.000Z',
     });

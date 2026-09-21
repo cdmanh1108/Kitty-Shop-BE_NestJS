@@ -2,6 +2,7 @@ import type { RentalStatus } from './rental-status';
 import type { ConfirmRentalData } from './rental-confirmation';
 import type { JsonValue } from '@common/types/json';
 import type { RentalOrderDetails, RentalOrderPage } from './rental.models';
+import type { WebPaymentPreference } from './web-payment-preference';
 
 export class RentalOverlapError extends Error {
   constructor() {
@@ -37,6 +38,8 @@ export interface CreateRentalOrderData {
   rentalStartAt: Date;
   rentalEndAt: Date;
   discountTotal: number;
+  /** Storefront-only preference; it is not an actual payment or receipt method. */
+  preferredPaymentMethod?: WebPaymentPreference;
   note?: string;
   internalNote?: string;
   createdBy?: string;

@@ -571,6 +571,7 @@ model RentalOrder {
   cancelledAt          DateTime? @map("cancelled_at") @db.Timestamptz(6)
   status               String    @default("RESERVED") @db.VarChar(30)
   paymentStatus        String    @default("UNPAID") @map("payment_status") @db.VarChar(30)
+  preferredPaymentMethod String? @map("preferred_payment_method") @db.VarChar(30)
   depositStatus        String    @default("PENDING") @map("deposit_status") @db.VarChar(30)
   currency             String    @default("VND") @db.Char(3)
   rentalSubtotal       Decimal   @default(0) @map("rental_subtotal") @db.Decimal(18, 2)
