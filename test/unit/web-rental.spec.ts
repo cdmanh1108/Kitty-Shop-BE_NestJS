@@ -14,6 +14,8 @@ describe('WebRentalService', () => {
   let mockRepository: {
     getBookableVariant: jest.Mock;
     createOrder: jest.Mock;
+    claimIdempotency: jest.Mock;
+    releaseIdempotency: jest.Mock;
     findActiveVariantIdsByProduct: jest.Mock;
     lookupStorefrontOrder: jest.Mock;
   };
@@ -28,6 +30,8 @@ describe('WebRentalService', () => {
     mockRepository = {
       getBookableVariant: jest.fn(),
       createOrder: jest.fn(),
+      claimIdempotency: jest.fn().mockResolvedValue({ state: 'CLAIMED', claimId: 'claim-1' }),
+      releaseIdempotency: jest.fn().mockResolvedValue(undefined),
       findActiveVariantIdsByProduct: jest.fn(),
       lookupStorefrontOrder: jest.fn(),
     };
@@ -44,6 +48,7 @@ describe('WebRentalService', () => {
       mockRepository as unknown as RentalRepository,
       mockPolicyProvider as unknown as RentalPolicyProvider,
       mockCustomerRepo as unknown as CustomerRepository,
+      { now: () => new Date('2026-09-20T00:00:00.000Z') },
     );
   });
 
@@ -240,6 +245,74 @@ describe('WebRentalService', () => {
   });
 
   describe('createOrder', () => {
+    const webOrderInput = () => ({
+      customer: { name: 'Trần Thị B', phone: '0987654321' },
+      pickupDate: '2026-09-20',
+      returnDate: '2026-09-23',
+      items: [{ variantId: 'var-1', quantity: 1 }],
+      delivery: { method: 'self_pickup' as const },
+      paymentMethod: 'cash' as const,
+    });
+
+    it('requires an opaque idempotency key before any customer or booking work', async () => {
+      await expect(service.createOrder('shop-1', webOrderInput())).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockRepository.claimIdempotency).not.toHaveBeenCalled();
+      expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
+      expect(mockRepository.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('rejects ambiguous multi-value keys before claiming', async () => {
+      await expect(
+        service.createOrder('shop-1', webOrderInput(), ['key-a', 'key-b']),
+      ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_KEY_INVALID' } });
+      expect(mockRepository.claimIdempotency).not.toHaveBeenCalled();
+    });
+
+    it('replays the stored Web-safe result before selection or customer resolution', async () => {
+      mockRepository.claimIdempotency.mockResolvedValue({
+        state: 'COMPLETED',
+        responseBody: {
+          version: 1,
+          kind: 'web-rental-order-create',
+          result: {
+            orderCode: 'RT-REPLAY',
+            totalAmount: 250000,
+            depositAmount: 600000,
+            status: 'reserved',
+            paymentStatus: 'unpaid',
+          },
+        },
+      });
+
+      await expect(
+        service.createOrder('shop-1', webOrderInput(), 'web-replay-key'),
+      ).resolves.toEqual({
+        orderCode: 'RT-REPLAY',
+        totalAmount: 250000,
+        depositAmount: 600000,
+        status: 'reserved',
+        paymentStatus: 'unpaid',
+      });
+      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+      expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
+      expect(mockRepository.createOrder).not.toHaveBeenCalled();
+    });
+
+    it('returns a machine-readable conflict when the retained key has another command hash', async () => {
+      mockRepository.claimIdempotency.mockResolvedValue({ state: 'HASH_MISMATCH' });
+
+      await expect(
+        service.createOrder('shop-1', webOrderInput(), 'web-reused-key'),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'IDEMPOTENCY_KEY_REUSED',
+        },
+      });
+      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+    });
+
     it('validates phone and rejects if available stock is insufficient', async () => {
       mockRepository.getBookableVariant.mockResolvedValue({
         id: 'var-1',
@@ -251,14 +324,18 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder('shop-1', {
-          customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
-          pickupDate: '2026-09-20',
-          returnDate: '2026-09-23',
-          items: [{ variantId: 'var-1', quantity: 1 }],
-          delivery: { method: 'self_pickup' },
-          paymentMethod: 'bank_transfer',
-        }),
+        service.createOrder(
+          'shop-1',
+          {
+            customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
+            pickupDate: '2026-09-20',
+            returnDate: '2026-09-23',
+            items: [{ variantId: 'var-1', quantity: 1 }],
+            delivery: { method: 'self_pickup' },
+            paymentMethod: 'bank_transfer',
+          },
+          'web-test-stock',
+        ),
       ).rejects.toThrow(ConflictException);
       expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
     });
@@ -284,15 +361,19 @@ describe('WebRentalService', () => {
         paymentStatus: 'UNPAID',
       });
 
-      const res = await service.createOrder('shop-1', {
-        customer: { name: 'Trần Thị B', phone: '0987654321' },
-        pickupDate: '2026-09-20',
-        returnDate: '2026-09-23',
-        items: [{ variantId: 'var-1', quantity: 1 }],
-        delivery: { method: 'self_pickup' },
-        paymentMethod: 'bank_transfer',
-        collateral: { method: 'CASH' },
-      });
+      const res = await service.createOrder(
+        'shop-1',
+        {
+          customer: { name: 'Trần Thị B', phone: '0987654321' },
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [{ variantId: 'var-1', quantity: 1 }],
+          delivery: { method: 'self_pickup' },
+          paymentMethod: 'bank_transfer',
+          collateral: { method: 'CASH' },
+        },
+        'web-test-create',
+      );
 
       expect(res.orderCode).toBe('RT-20260920-001');
       expect(res.totalAmount).toBe(250000);
@@ -321,14 +402,18 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder('shop-1', {
-          customer: { name: 'Trần Thị B', phone: 'invalid-phone' },
-          pickupDate: '2026-09-20',
-          returnDate: '2026-09-23',
-          items: [{ variantId: 'var-1', quantity: 1 }],
-          delivery: { method: 'self_pickup' },
-          paymentMethod: 'cash',
-        }),
+        service.createOrder(
+          'shop-1',
+          {
+            customer: { name: 'Trần Thị B', phone: 'invalid-phone' },
+            pickupDate: '2026-09-20',
+            returnDate: '2026-09-23',
+            items: [{ variantId: 'var-1', quantity: 1 }],
+            delivery: { method: 'self_pickup' },
+            paymentMethod: 'cash',
+          },
+          'web-test-invalid-phone',
+        ),
       ).rejects.toThrow(BadRequestException);
       expect(mockRepository.createOrder).not.toHaveBeenCalled();
     });
@@ -361,14 +446,18 @@ describe('WebRentalService', () => {
         items: [{ variantId: 'var-1', quantity: 1 }],
         deliveryMethod: 'shop_delivery',
       });
-      const result = await service.createOrder('shop-1', {
-        customer: { name: 'Trần Thị B', phone: '0987654321' },
-        pickupDate: '2026-09-20',
-        returnDate: '2026-09-23',
-        items: [{ variantId: 'var-1', quantity: 1 }],
-        delivery: { method: 'shop_delivery', address: '1 Nguyễn Huệ' },
-        paymentMethod: 'cash',
-      });
+      const result = await service.createOrder(
+        'shop-1',
+        {
+          customer: { name: 'Trần Thị B', phone: '0987654321' },
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [{ variantId: 'var-1', quantity: 1 }],
+          delivery: { method: 'shop_delivery', address: '1 Nguyễn Huệ' },
+          paymentMethod: 'cash',
+        },
+        'web-test-delivery',
+      );
 
       expect(quote).toMatchObject({
         rentalSubtotal: 450000,
@@ -407,17 +496,21 @@ describe('WebRentalService', () => {
         paymentStatus: 'UNPAID',
       });
 
-      await service.createOrder('shop-1', {
-        customer: { name: 'Trần Thị B', phone: '0987654321' },
-        pickupDate: '2026-09-20',
-        returnDate: '2026-09-23',
-        items: [
-          { variantId: 'var-1', quantity: 1 },
-          { variantId: 'var-1', quantity: 1 },
-        ],
-        delivery: { method: 'self_pickup' },
-        paymentMethod: 'cash',
-      });
+      await service.createOrder(
+        'shop-1',
+        {
+          customer: { name: 'Trần Thị B', phone: '0987654321' },
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [
+            { variantId: 'var-1', quantity: 1 },
+            { variantId: 'var-1', quantity: 1 },
+          ],
+          delivery: { method: 'self_pickup' },
+          paymentMethod: 'cash',
+        },
+        'web-test-duplicates',
+      );
 
       expect(firstCreateOrderInput().lines).toEqual([
         expect.objectContaining({
@@ -441,14 +534,18 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder('shop-1', {
-          customer: { name: 'Trần Thị B', phone: '0987654321' },
-          pickupDate: '2026-09-20',
-          returnDate: '2026-09-23',
-          items: [{ productId: 'prod-2', variantId: 'var-1', quantity: 1 }],
-          delivery: { method: 'self_pickup' },
-          paymentMethod: 'cash',
-        }),
+        service.createOrder(
+          'shop-1',
+          {
+            customer: { name: 'Trần Thị B', phone: '0987654321' },
+            pickupDate: '2026-09-20',
+            returnDate: '2026-09-23',
+            items: [{ productId: 'prod-2', variantId: 'var-1', quantity: 1 }],
+            delivery: { method: 'self_pickup' },
+            paymentMethod: 'cash',
+          },
+          'web-test-parent',
+        ),
       ).rejects.toThrow();
       expect(mockRepository.createOrder).not.toHaveBeenCalled();
     });
@@ -463,15 +560,19 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder('shop-1', {
-          customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
-          pickupDate: '2026-09-20',
-          returnDate: '2026-09-23',
-          items: [{ variantId: 'var-1', quantity: 1 }],
-          delivery: { method: 'self_pickup' },
-          paymentMethod: 'cash',
-          collateral: { method: 'DOCUMENT', documentType: 'CCCD' },
-        }),
+        service.createOrder(
+          'shop-1',
+          {
+            customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
+            pickupDate: '2026-09-20',
+            returnDate: '2026-09-23',
+            items: [{ variantId: 'var-1', quantity: 1 }],
+            delivery: { method: 'self_pickup' },
+            paymentMethod: 'cash',
+            collateral: { method: 'DOCUMENT', documentType: 'CCCD' },
+          },
+          'web-test-collateral',
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });

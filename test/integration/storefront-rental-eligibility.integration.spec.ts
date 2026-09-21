@@ -24,7 +24,7 @@ describe('Storefront rental eligibility boundary', () => {
       log: () => Promise.resolve(),
     });
     rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(rentals, settings, new PrismaCustomerRepository(prisma));
+    web = new WebRentalService(rentals, settings, new PrismaCustomerRepository(prisma), fixedClock);
   });
 
   beforeEach(async () => {
@@ -54,13 +54,17 @@ describe('Storefront rental eligibility boundary', () => {
     ).resolves.toMatchObject({ available: false, rentalSubtotal: 0, depositAmount: 0 });
 
     await expect(
-      web.createOrder(f.shop.id, {
-        ...interval,
-        customer: { name: f.customer.fullName, phone: f.customer.phone },
-        items: [{ variantId: f.variant.id, quantity: 1 }],
-        delivery: { method: 'self_pickup' },
-        paymentMethod: 'cash',
-      }),
+      web.createOrder(
+        f.shop.id,
+        {
+          ...interval,
+          customer: { name: f.customer.fullName, phone: f.customer.phone },
+          items: [{ variantId: f.variant.id, quantity: 1 }],
+          delivery: { method: 'self_pickup' },
+          paymentMethod: 'cash',
+        },
+        'web-eligibility-key',
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(await prisma.rentalOrder.count({ where: { shopId: f.shop.id } })).toBe(0);
   });

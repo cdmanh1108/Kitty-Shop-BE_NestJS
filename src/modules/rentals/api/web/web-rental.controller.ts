@@ -2,11 +2,12 @@ import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
 import { ShopResolver } from '@common/tenant/shop-resolver';
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Header, Post, Query, Req } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -78,6 +79,13 @@ export class WebRentalController {
   }
 
   @Post('rental-orders')
+  @Header('Cache-Control', 'no-store')
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description:
+      'Opaque ASCII key (1-255 characters) created once per checkout intent and reused for retries.',
+  })
   @ApiOperation({
     operationId: 'createWebRentalOrder',
     summary: 'Tạo đơn đặt thuê từ Web Storefront',
@@ -88,7 +96,8 @@ export class WebRentalController {
   })
   @ApiBadRequestResponse({
     type: ErrorResDto,
-    description: 'Dữ liệu người thuê, khoảng ngày hoặc phương thức thế chân không hợp lệ',
+    description:
+      'Dữ liệu người thuê, khoảng ngày, phương thức thế chân hoặc Idempotency-Key không hợp lệ',
   })
   @ApiNotFoundResponse({
     type: ErrorResDto,
@@ -97,14 +106,27 @@ export class WebRentalController {
   @ApiConflictResponse({
     type: ErrorResDto,
     description:
-      'Sản phẩm không đủ tồn kho khả dụng hoặc thông tin khách hàng không thể dùng để đặt thuê',
+      'Sản phẩm không đủ tồn kho, thông tin khách hàng không thể dùng để đặt thuê, hoặc Idempotency-Key đang được dùng',
   })
   async createOrder(
     @Req() request: Request,
     @Body() body: WebCreateOrderReqDto,
   ): Promise<WebCreateOrderResDto> {
     const shopId = await this.shopResolver.resolveShopId(request);
-    return this.rentalService.createOrder(shopId, body);
+    const idempotencyKeys = request.rawHeaders
+      .filter((_, index) => index % 2 === 0)
+      .map((header, index) => ({ header, value: request.rawHeaders[index * 2 + 1] }))
+      .filter(({ header }) => header.toLowerCase() === 'idempotency-key')
+      .map(({ value }) => value ?? '');
+    return this.rentalService.createOrder(
+      shopId,
+      body,
+      idempotencyKeys.length === 0
+        ? undefined
+        : idempotencyKeys.length === 1
+          ? idempotencyKeys[0]
+          : idempotencyKeys,
+    );
   }
 
   @Post('rental-orders/lookup')

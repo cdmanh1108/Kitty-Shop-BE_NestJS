@@ -30,7 +30,7 @@ describe('Web rental shipping persistence', () => {
       log: () => Promise.resolve(),
     });
     rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(rentals, settings, new PrismaCustomerRepository(prisma));
+    web = new WebRentalService(rentals, settings, new PrismaCustomerRepository(prisma), fixedClock);
   });
 
   beforeEach(async () => {
@@ -77,17 +77,21 @@ describe('Web rental shipping persistence', () => {
       deliveryMethod: input.delivery,
     };
     const quote = await web.calculateQuote(input.shopId, quoteRequest);
-    const response = await web.createOrder(input.shopId, {
-      customer: { name: input.customer.fullName, phone: input.customer.phone },
-      pickupDate: quoteRequest.pickupDate,
-      returnDate: quoteRequest.returnDate,
-      items: quoteRequest.items,
-      delivery: {
-        method: input.delivery,
-        ...(input.delivery === 'shop_delivery' ? { address: '1 Nguyễn Huệ' } : {}),
+    const response = await web.createOrder(
+      input.shopId,
+      {
+        customer: { name: input.customer.fullName, phone: input.customer.phone },
+        pickupDate: quoteRequest.pickupDate,
+        returnDate: quoteRequest.returnDate,
+        items: quoteRequest.items,
+        delivery: {
+          method: input.delivery,
+          ...(input.delivery === 'shop_delivery' ? { address: '1 Nguyễn Huệ' } : {}),
+        },
+        paymentMethod: 'cash',
       },
-      paymentMethod: 'cash',
-    });
+      'web-shipping-key',
+    );
     const order = await prisma.rentalOrder.findFirstOrThrow({
       where: { shopId: input.shopId, orderNumber: response.orderCode },
       include: { charges: true, deliveries: true, items: { include: { allocations: true } } },

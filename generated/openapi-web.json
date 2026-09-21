@@ -838,7 +838,17 @@
     "/web/rental-orders": {
       "post": {
         "operationId": "createWebRentalOrder",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque ASCII key (1-255 characters) created once per checkout intent and reused for retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -861,7 +871,7 @@
             }
           },
           "400": {
-            "description": "Dữ liệu người thuê, khoảng ngày hoặc phương thức thế chân không hợp lệ",
+            "description": "Dữ liệu người thuê, khoảng ngày, phương thức thế chân hoặc Idempotency-Key không hợp lệ",
             "content": {
               "application/json": {
                 "schema": {
@@ -881,7 +891,7 @@
             }
           },
           "409": {
-            "description": "Sản phẩm không đủ tồn kho khả dụng hoặc thông tin khách hàng không thể dùng để đặt thuê",
+            "description": "Sản phẩm không đủ tồn kho, thông tin khách hàng không thể dùng để đặt thuê, hoặc Idempotency-Key đang được dùng",
             "content": {
               "application/json": {
                 "schema": {

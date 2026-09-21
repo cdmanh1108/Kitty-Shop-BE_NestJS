@@ -1,12 +1,13 @@
 import { currentRequestMetadata } from '@common/request-context/request-context';
 import type { Clock } from '@common/clock/clock';
-import type { JsonSerialized } from '@common/types/json';
+import type { JsonValue } from '@common/types/json';
 import { Logger } from '@nestjs/common';
 import { Prisma, type IdempotencyRecord } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { RentalClaimLostError } from '../domain/rental-errors';
 import type { RentalOrderDetails } from '../domain/rental.models';
 import type { CreateRentalOrderData, RentalRepository } from '../domain/rental.repository';
+import { toWebRentalCreateResult } from '../domain/web-rental-create-result';
 
 // Processing lease is independent of the caller's existing 24-hour replay retention.
 export const RENTAL_CLAIM_LEASE_MS = 5 * 60 * 1000;
@@ -69,8 +70,7 @@ export async function claimIdempotency(
     if (existing.completedAt)
       return {
         state: 'COMPLETED',
-        // This scope stores only the serialized rental detail in its business transaction.
-        responseBody: existing.responseBody as JsonSerialized<RentalOrderDetails>,
+        responseBody: existing.responseBody as JsonValue,
       };
     if (existing.createdAt > staleBefore) return { state: 'IN_PROGRESS' };
 
@@ -122,11 +122,27 @@ export async function completeRentalClaim(
   claim: RentalClaim,
   result: RentalOrderDetails,
 ): Promise<void> {
+  if (!result) throw new RentalClaimLostError();
+  const webResult = toWebRentalCreateResult(result);
+  const responseBody: Prisma.InputJsonValue =
+    claim.responseFormat === 'WEB_RENTAL_ORDER_CREATE_V1'
+      ? ({
+          version: 1,
+          kind: 'web-rental-order-create',
+          result: {
+            orderCode: webResult.orderCode,
+            totalAmount: webResult.totalAmount,
+            depositAmount: webResult.depositAmount,
+            status: webResult.status,
+            paymentStatus: webResult.paymentStatus,
+          },
+        } satisfies Prisma.InputJsonObject)
+      : (JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue);
   const completed = await tx.idempotencyRecord.updateMany({
     where: { id: claim.claimId, shopId, scope: claim.scope, key: claim.key, completedAt: null },
     data: {
       responseCode: 201,
-      responseBody: JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue,
+      responseBody,
       completedAt: new Date(),
     },
   });

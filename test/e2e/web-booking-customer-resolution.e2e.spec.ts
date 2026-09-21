@@ -49,6 +49,7 @@ describe('Web booking customer resolution HTTP boundary', () => {
     const response = await request(server)
       .post('/api/v1/web/rental-orders')
       .set('x-shop-code', fixture.shop.code)
+      .set('Idempotency-Key', 'web-customer-active-key')
       .send(webOrderInput(fixture.variant.id, `+84${original.phone.slice(1)}`))
       .expect(201);
 
@@ -74,6 +75,7 @@ describe('Web booking customer resolution HTTP boundary', () => {
     const response = await request(server)
       .post('/api/v1/web/rental-orders')
       .set('x-shop-code', fixture.shop.code)
+      .set('Idempotency-Key', 'web-customer-blocked-key')
       .send(webOrderInput(fixture.variant.id, blocked.phone))
       .expect(409);
 

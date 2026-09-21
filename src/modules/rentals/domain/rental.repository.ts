@@ -1,6 +1,6 @@
 import type { RentalStatus } from './rental-status';
 import type { ConfirmRentalData } from './rental-confirmation';
-import type { JsonSerialized } from '@common/types/json';
+import type { JsonValue } from '@common/types/json';
 import type { RentalOrderDetails, RentalOrderPage } from './rental.models';
 
 export class RentalOverlapError extends Error {
@@ -27,7 +27,7 @@ export type IdempotencyClaim =
   | { state: 'CLAIMED'; claimId: string }
   | { state: 'IN_PROGRESS' }
   | { state: 'HASH_MISMATCH' }
-  | { state: 'COMPLETED'; responseBody: JsonSerialized<RentalOrderDetails> };
+  | { state: 'COMPLETED'; responseBody: JsonValue };
 
 export interface CreateRentalOrderData {
   orderNumber: string;
@@ -42,7 +42,12 @@ export interface CreateRentalOrderData {
   createdBy?: string;
   /** Server-owned context set only by the Web rental application service. */
   storefrontEligibility?: true;
-  idempotency?: { scope: string; key: string; claimId: string };
+  idempotency?: {
+    scope: string;
+    key: string;
+    claimId: string;
+    responseFormat?: 'WEB_RENTAL_ORDER_CREATE_V1';
+  };
   lines: Array<{
     productId: string;
     variantId: string;

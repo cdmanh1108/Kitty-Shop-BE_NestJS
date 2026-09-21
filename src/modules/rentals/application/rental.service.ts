@@ -16,6 +16,8 @@ import {
 import { PERMISSIONS } from '@common/constants/permissions';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import { createHash } from 'node:crypto';
+import type { JsonSerialized } from '@common/types/json';
+import type { RentalOrderDetails } from '../domain/rental.models';
 import {
   calculateRentalDurationDays,
   canRescheduleRental,
@@ -127,7 +129,8 @@ export class RentalService {
           'Mã chống trùng đã được sử dụng cho một yêu cầu khác. Vui lòng gửi lại với mã mới.',
         );
       }
-      if (claim.state === 'COMPLETED') return claim.responseBody;
+      if (claim.state === 'COMPLETED')
+        return claim.responseBody as JsonSerialized<RentalOrderDetails>;
       if (claim.state === 'IN_PROGRESS') {
         throw new ConflictException('Yêu cầu này đang được xử lý. Vui lòng chờ và thử lại.');
       }

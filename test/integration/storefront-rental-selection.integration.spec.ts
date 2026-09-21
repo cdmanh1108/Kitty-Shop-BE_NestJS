@@ -25,7 +25,7 @@ describe('Storefront rental selection and allocation', () => {
       log: () => Promise.resolve(),
     });
     rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(rentals, settings, new PrismaCustomerRepository(prisma));
+    web = new WebRentalService(rentals, settings, new PrismaCustomerRepository(prisma), fixedClock);
   });
 
   beforeEach(async () => {
@@ -58,7 +58,7 @@ describe('Storefront rental selection and allocation', () => {
     ).resolves.toMatchObject({ available: true, rentalSubtotal: 200000 });
 
     await expect(
-      web.createOrder(f.shop.id, createWebOrderInput(f.product.id)),
+      web.createOrder(f.shop.id, createWebOrderInput(f.product.id), 'web-selection-key'),
     ).resolves.toMatchObject({
       status: 'reserved',
     });
@@ -86,7 +86,7 @@ describe('Storefront rental selection and allocation', () => {
       }),
     ).resolves.toMatchObject({ available: false, rentalSubtotal: 0 });
     await expect(
-      web.createOrder(f.shop.id, createWebOrderInput(f.product.id)),
+      web.createOrder(f.shop.id, createWebOrderInput(f.product.id), 'web-selection-key'),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -105,10 +105,14 @@ describe('Storefront rental selection and allocation', () => {
       }),
     ).resolves.toMatchObject({ available: false, rentalSubtotal: 400000, depositAmount: 400000 });
     await expect(
-      web.createOrder(f.shop.id, {
-        ...createWebOrderInput(f.product.id),
-        items: duplicateItems,
-      }),
+      web.createOrder(
+        f.shop.id,
+        {
+          ...createWebOrderInput(f.product.id),
+          items: duplicateItems,
+        },
+        'web-selection-key',
+      ),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
@@ -124,13 +128,17 @@ describe('Storefront rental selection and allocation', () => {
       },
     });
 
-    await web.createOrder(f.shop.id, {
-      ...createWebOrderInput(f.product.id),
-      items: [
-        { variantId: f.variant.id, quantity: 1 },
-        { productId: f.product.id, variantId: f.variant.id, quantity: 1 },
-      ],
-    });
+    await web.createOrder(
+      f.shop.id,
+      {
+        ...createWebOrderInput(f.product.id),
+        items: [
+          { variantId: f.variant.id, quantity: 1 },
+          { productId: f.product.id, variantId: f.variant.id, quantity: 1 },
+        ],
+      },
+      'web-selection-key',
+    );
 
     const order = await prisma.rentalOrder.findFirstOrThrow({
       where: { shopId: f.shop.id },
