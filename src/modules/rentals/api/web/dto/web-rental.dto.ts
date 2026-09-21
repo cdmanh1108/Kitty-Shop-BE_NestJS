@@ -1,39 +1,67 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
+  IsDefined,
   IsArray,
-  IsEnum,
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
+  Max,
   MaxLength,
   Min,
+  Validate,
+  ValidateIf,
+  ValidatorConstraint,
+  type ValidationArguments,
+  type ValidatorConstraintInterface,
   ValidateNested,
 } from 'class-validator';
+import {
+  WEB_RENTAL_MAX_ADDRESS_LENGTH,
+  WEB_RENTAL_MAX_ITEM_COUNT,
+  WEB_RENTAL_MAX_QUANTITY_PER_ITEM,
+  WEB_RENTAL_MAX_SOCIAL_CONTACT_LENGTH,
+} from '../../../application/web-rental-input-validation';
+
+@ValidatorConstraint({ name: 'webRentalSelection', async: false })
+class WebRentalSelectionConstraint implements ValidatorConstraintInterface {
+  validate(_: unknown, args: ValidationArguments): boolean {
+    const value = args.object as { productId?: unknown; variantId?: unknown };
+    return value.productId !== undefined || value.variantId !== undefined;
+  }
+
+  defaultMessage(): string {
+    return 'Vui lòng cung cấp productId hoặc variantId.';
+  }
+}
 
 export class WebAvailabilityQueryDto {
-  @ApiPropertyOptional({ description: 'ID của sản phẩm hoặc biến thể' })
-  @IsOptional()
-  @IsString()
+  @ApiPropertyOptional({ format: 'uuid', description: 'ID của sản phẩm hoặc biến thể' })
+  @ValidateIf((_: WebAvailabilityQueryDto, value: unknown) => value !== undefined)
+  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
   productId?: string;
 
-  @ApiPropertyOptional({ description: 'ID của biến thể cụ thể' })
-  @IsOptional()
-  @IsString()
+  @ApiPropertyOptional({ format: 'uuid', description: 'ID của biến thể cụ thể' })
+  @ValidateIf((_: WebAvailabilityQueryDto, value: unknown) => value !== undefined)
+  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
   variantId?: string;
 
-  @ApiProperty({ example: '2026-09-20', description: 'Ngày nhận (YYYY-MM-DD)' })
+  @ApiProperty({ example: '2026-09-20', format: 'date', description: 'Ngày nhận (YYYY-MM-DD)' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'pickupDate phải có định dạng YYYY-MM-DD.' })
   pickupDate!: string;
 
-  @ApiProperty({ example: '2026-09-23', description: 'Ngày trả (YYYY-MM-DD)' })
+  @ApiProperty({ example: '2026-09-23', format: 'date', description: 'Ngày trả (YYYY-MM-DD)' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'returnDate phải có định dạng YYYY-MM-DD.' })
+  @Validate(WebRentalSelectionConstraint)
   returnDate!: string;
 }
 
@@ -46,36 +74,40 @@ export class WebAvailabilityResDto {
 }
 
 export class WebRentalItemInputDto {
-  @ApiPropertyOptional({ description: 'ID biến thể sản phẩm' })
-  @IsOptional()
-  @IsString()
+  @ApiPropertyOptional({ format: 'uuid', description: 'ID biến thể sản phẩm' })
+  @ValidateIf((_: WebRentalItemInputDto, value: unknown) => value !== undefined)
+  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
   variantId?: string;
 
-  @ApiPropertyOptional({ description: 'ID sản phẩm' })
-  @IsOptional()
-  @IsString()
+  @ApiPropertyOptional({ format: 'uuid', description: 'ID sản phẩm' })
+  @ValidateIf((_: WebRentalItemInputDto, value: unknown) => value !== undefined)
+  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
   productId?: string;
 
-  @ApiProperty({ example: 1, default: 1, minimum: 1 })
+  @ApiProperty({ example: 1, minimum: 1, maximum: WEB_RENTAL_MAX_QUANTITY_PER_ITEM })
   @IsInt()
   @Min(1)
+  @Max(WEB_RENTAL_MAX_QUANTITY_PER_ITEM)
+  @Validate(WebRentalSelectionConstraint)
   quantity!: number;
 }
 
 export class WebRentalQuoteReqDto {
-  @ApiProperty({ example: '2026-09-20' })
+  @ApiProperty({ example: '2026-09-20', format: 'date' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'pickupDate phải có định dạng YYYY-MM-DD.' })
   pickupDate!: string;
 
-  @ApiProperty({ example: '2026-09-23' })
+  @ApiProperty({ example: '2026-09-23', format: 'date' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'returnDate phải có định dạng YYYY-MM-DD.' })
   returnDate!: string;
 
-  @ApiProperty({ type: [WebRentalItemInputDto] })
+  @ApiProperty({ type: [WebRentalItemInputDto], maxItems: WEB_RENTAL_MAX_ITEM_COUNT })
+  @IsDefined()
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(WEB_RENTAL_MAX_ITEM_COUNT)
   @ValidateNested({ each: true })
   @Type(() => WebRentalItemInputDto)
   items!: WebRentalItemInputDto[];
@@ -113,6 +145,7 @@ export class WebCreateOrderCustomerDto {
   @ApiProperty({ example: 'Nguyễn Văn A' })
   @IsString()
   @IsNotEmpty({ message: 'Vui lòng nhập tên người thuê.' })
+  @Matches(/\S/, { message: 'Tên người thuê không được chỉ gồm khoảng trắng.' })
   @MaxLength(100)
   name!: string;
 
@@ -122,14 +155,28 @@ export class WebCreateOrderCustomerDto {
   @Matches(/^(0|\+84)[0-9\s.-]{8,12}$/, { message: 'Số điện thoại không đúng định dạng.' })
   phone!: string;
 
-  @ApiPropertyOptional({ example: 'nguyenvana@gmail.com' })
+  @ApiPropertyOptional({
+    example: 'nguyenvana@gmail.com',
+    maxLength: 255,
+    description: 'Có thể bỏ trống; nếu có nội dung phải là email hợp lệ.',
+  })
   @IsOptional()
+  @ValidateIf(
+    (_: WebCreateOrderCustomerDto, value: unknown) =>
+      typeof value !== 'string' || value.trim().length > 0,
+  )
   @IsString()
+  @Matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: 'Email không đúng định dạng.' })
+  @MaxLength(255)
   email?: string;
 
-  @ApiPropertyOptional({ example: 'https://facebook.com/nguyenvana' })
+  @ApiPropertyOptional({
+    example: 'https://facebook.com/nguyenvana',
+    maxLength: WEB_RENTAL_MAX_SOCIAL_CONTACT_LENGTH,
+  })
   @IsOptional()
   @IsString()
+  @MaxLength(WEB_RENTAL_MAX_SOCIAL_CONTACT_LENGTH)
   facebookOrZalo?: string;
 
   @ApiPropertyOptional({ example: 'Giao buổi sáng' })
@@ -141,12 +188,22 @@ export class WebCreateOrderCustomerDto {
 
 export class WebCreateOrderDeliveryDto {
   @ApiProperty({ example: 'self_pickup', enum: ['self_pickup', 'shop_delivery'] })
-  @IsEnum(['self_pickup', 'shop_delivery'])
+  @IsIn(['self_pickup', 'shop_delivery'])
   method!: 'self_pickup' | 'shop_delivery';
 
-  @ApiPropertyOptional({ example: '123 Đường 30/4, Ninh Kiều, Cần Thơ' })
-  @IsOptional()
+  @ApiPropertyOptional({
+    example: '123 Đường 30/4, Ninh Kiều, Cần Thơ',
+    maxLength: WEB_RENTAL_MAX_ADDRESS_LENGTH,
+    description: 'Bắt buộc khi method là shop_delivery.',
+  })
+  @ValidateIf(
+    (delivery: WebCreateOrderDeliveryDto, value: unknown) =>
+      delivery.method === 'shop_delivery' || value !== undefined,
+  )
   @IsString()
+  @IsNotEmpty({ message: 'Vui lòng nhập địa chỉ giao hàng.' })
+  @Matches(/\S/, { message: 'Địa chỉ giao hàng không được chỉ gồm khoảng trắng.' })
+  @MaxLength(WEB_RENTAL_MAX_ADDRESS_LENGTH)
   address?: string;
 }
 
@@ -164,28 +221,34 @@ export class WebCreateOrderCollateralDto {
 
 export class WebCreateOrderReqDto {
   @ApiProperty({ type: WebCreateOrderCustomerDto })
+  @IsDefined()
+  @IsObject()
   @ValidateNested()
   @Type(() => WebCreateOrderCustomerDto)
   customer!: WebCreateOrderCustomerDto;
 
-  @ApiProperty({ example: '2026-09-20' })
+  @ApiProperty({ example: '2026-09-20', format: 'date' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'pickupDate phải có định dạng YYYY-MM-DD.' })
   pickupDate!: string;
 
-  @ApiProperty({ example: '2026-09-23' })
+  @ApiProperty({ example: '2026-09-23', format: 'date' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'returnDate phải có định dạng YYYY-MM-DD.' })
   returnDate!: string;
 
-  @ApiProperty({ type: [WebRentalItemInputDto] })
+  @ApiProperty({ type: [WebRentalItemInputDto], maxItems: WEB_RENTAL_MAX_ITEM_COUNT })
+  @IsDefined()
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(WEB_RENTAL_MAX_ITEM_COUNT)
   @ValidateNested({ each: true })
   @Type(() => WebRentalItemInputDto)
   items!: WebRentalItemInputDto[];
 
   @ApiProperty({ type: WebCreateOrderDeliveryDto })
+  @IsDefined()
+  @IsObject()
   @ValidateNested()
   @Type(() => WebCreateOrderDeliveryDto)
   delivery!: WebCreateOrderDeliveryDto;

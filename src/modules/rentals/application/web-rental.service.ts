@@ -37,7 +37,15 @@ import type {
   WebRentalQuoteInput,
   WebRentalQuoteResult,
 } from './web-rental.contracts';
-import { resolveWebRentalSelection } from './web-rental-selection';
+import { resolveWebRentalSelection, type WebRentalSelectionFailure } from './web-rental-selection';
+import {
+  assertWebRentalItems,
+  parseWebRentalDateRange,
+  WEB_RENTAL_MAX_ITEM_COUNT,
+  WEB_RENTAL_MAX_QUANTITY_PER_ITEM,
+  WEB_RENTAL_MAX_TOTAL_QUANTITY,
+  WebRentalInputValidationError,
+} from './web-rental-input-validation';
 import {
   isStoredWebRentalCreateResult,
   toWebRentalCreateResult,
@@ -81,16 +89,10 @@ export class WebRentalService {
     shopId: string,
     query: WebAvailabilityQueryInput,
   ): Promise<WebAvailabilityResult> {
-    const from = new Date(query.pickupDate);
-    const until = new Date(query.returnDate);
-    if (isNaN(from.getTime()) || isNaN(until.getTime()) || from >= until) {
-      throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc.');
-    }
+    const { from, until } = this.parseDateRange(query);
+    this.assertItems([{ productId: query.productId, variantId: query.variantId, quantity: 1 }]);
 
     const durationDays = calculateRentalDurationDays(from, until);
-    if (!query.productId && !query.variantId) {
-      throw new BadRequestException('Vui lòng cung cấp productId hoặc variantId.');
-    }
 
     const selection = await resolveWebRentalSelection(this.repository, {
       shopId,
@@ -99,7 +101,10 @@ export class WebRentalService {
       from,
       until,
     });
-    if (!selection.valid) return { available: false, availableQuantity: 0 };
+    if (!selection.valid) {
+      this.throwForInvalidSelection(selection.reason);
+      return { available: false, availableQuantity: 0 };
+    }
 
     const demand = selection.demands[0];
     if (!demand) return { available: false, availableQuantity: 0 };
@@ -108,11 +113,8 @@ export class WebRentalService {
   }
 
   async calculateQuote(shopId: string, req: WebRentalQuoteInput): Promise<WebRentalQuoteResult> {
-    const from = new Date(req.pickupDate);
-    const until = new Date(req.returnDate);
-    if (isNaN(from.getTime()) || isNaN(until.getTime()) || from >= until) {
-      throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc.');
-    }
+    const { from, until } = this.parseDateRange(req);
+    this.assertItems(req.items);
 
     const policy = await this.policyProvider.getPolicy(shopId);
     const durationDays = calculateRentalDurationDays(from, until);
@@ -123,8 +125,8 @@ export class WebRentalService {
       from,
       until,
     });
-    if (!selection.valid && selection.reason === 'INVALID_QUANTITY') {
-      throw new BadRequestException('Số lượng thuê phải là số nguyên dương.');
+    if (!selection.valid) {
+      this.throwForInvalidSelection(selection.reason);
     }
     let rentalSubtotal = 0;
     let depositAmount = 0;
@@ -162,11 +164,8 @@ export class WebRentalService {
     req: WebCreateOrderInput,
     rawIdempotencyKey?: string | string[],
   ): Promise<WebCreateOrderResult> {
-    const from = new Date(req.pickupDate);
-    const until = new Date(req.returnDate);
-    if (isNaN(from.getTime()) || isNaN(until.getTime()) || from >= until) {
-      throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc.');
-    }
+    const { from, until } = this.parseDateRange(req);
+    this.assertItems(req.items);
 
     const idempotencyKey = this.requireIdempotencyKey(rawIdempotencyKey);
     const requestHash = createHash('sha256')
@@ -226,9 +225,7 @@ export class WebRentalService {
         until,
       });
       if (!selection.valid) {
-        if (selection.reason === 'INVALID_QUANTITY') {
-          throw new BadRequestException('Số lượng thuê phải là số nguyên dương.');
-        }
+        this.throwForInvalidSelection(selection.reason);
         throw new NotFoundException('Sản phẩm đã chọn không khả dụng để thuê.');
       }
 
@@ -367,6 +364,58 @@ export class WebRentalService {
       });
     }
     return value;
+  }
+
+  private parseDateRange(input: { pickupDate: string; returnDate: string }) {
+    try {
+      return parseWebRentalDateRange(input);
+    } catch (error) {
+      if (!(error instanceof WebRentalInputValidationError)) throw error;
+      if (error.code === 'INVALID_CALENDAR_DATE') {
+        throw new BadRequestException(
+          'Ngày thuê phải là ngày lịch hợp lệ theo định dạng YYYY-MM-DD.',
+        );
+      }
+      throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc.');
+    }
+  }
+
+  private assertItems(items: WebRentalQuoteInput['items']): void {
+    try {
+      assertWebRentalItems(items);
+    } catch (error) {
+      if (!(error instanceof WebRentalInputValidationError)) throw error;
+      switch (error.code) {
+        case 'INVALID_SELECTION':
+          throw new BadRequestException('Vui lòng cung cấp productId hoặc variantId.');
+        case 'INVALID_QUANTITY':
+          throw new BadRequestException(
+            `Số lượng thuê mỗi dòng phải là số nguyên từ 1 đến ${WEB_RENTAL_MAX_QUANTITY_PER_ITEM}.`,
+          );
+        case 'TOTAL_QUANTITY_EXCEEDED':
+          throw new BadRequestException(
+            `Tổng số lượng thuê không được vượt quá ${WEB_RENTAL_MAX_TOTAL_QUANTITY} món.`,
+          );
+        case 'TOO_MANY_ITEMS':
+          throw new BadRequestException(
+            `Đơn thuê không được có quá ${WEB_RENTAL_MAX_ITEM_COUNT} dòng sản phẩm.`,
+          );
+        default:
+          throw error;
+      }
+    }
+  }
+
+  private throwForInvalidSelection(reason: WebRentalSelectionFailure): void {
+    if (reason === 'INVALID_QUANTITY') {
+      throw new BadRequestException('Số lượng thuê phải là số nguyên dương.');
+    }
+    if (reason === 'MISSING_SELECTION') {
+      throw new BadRequestException('Vui lòng cung cấp productId hoặc variantId.');
+    }
+    if (reason === 'PRODUCT_VARIANT_MISMATCH') {
+      throw new BadRequestException('productId không khớp với variantId đã chọn.');
+    }
   }
 
   private webCommandIdentity(req: WebCreateOrderInput): StableJsonValue {

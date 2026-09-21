@@ -730,6 +730,7 @@
             "in": "query",
             "description": "ID của sản phẩm hoặc biến thể",
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -739,6 +740,7 @@
             "in": "query",
             "description": "ID của biến thể cụ thể",
             "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -748,6 +750,7 @@
             "in": "query",
             "description": "Ngày nhận (YYYY-MM-DD)",
             "schema": {
+              "format": "date",
               "example": "2026-09-20",
               "type": "string"
             }
@@ -758,6 +761,7 @@
             "in": "query",
             "description": "Ngày trả (YYYY-MM-DD)",
             "schema": {
+              "format": "date",
               "example": "2026-09-23",
               "type": "string"
             }
@@ -1419,13 +1423,16 @@
         "properties": {
           "pickupDate": {
             "type": "string",
-            "example": "2026-09-20"
+            "example": "2026-09-20",
+            "format": "date"
           },
           "returnDate": {
             "type": "string",
-            "example": "2026-09-23"
+            "example": "2026-09-23",
+            "format": "date"
           },
           "items": {
+            "maxItems": 20,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/WebRentalItemInputDto"
@@ -1502,13 +1509,16 @@
           },
           "pickupDate": {
             "type": "string",
-            "example": "2026-09-20"
+            "example": "2026-09-20",
+            "format": "date"
           },
           "returnDate": {
             "type": "string",
-            "example": "2026-09-23"
+            "example": "2026-09-23",
+            "format": "date"
           },
           "items": {
+            "maxItems": 20,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/WebRentalItemInputDto"
@@ -1983,17 +1993,19 @@
         "properties": {
           "variantId": {
             "type": "string",
+            "format": "uuid",
             "description": "ID biến thể sản phẩm"
           },
           "productId": {
             "type": "string",
+            "format": "uuid",
             "description": "ID sản phẩm"
           },
           "quantity": {
             "type": "number",
             "example": 1,
-            "default": 1,
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 20
           }
         },
         "required": [
@@ -2013,11 +2025,14 @@
           },
           "email": {
             "type": "string",
-            "example": "nguyenvana@gmail.com"
+            "example": "nguyenvana@gmail.com",
+            "maxLength": 255,
+            "description": "Có thể bỏ trống; nếu có nội dung phải là email hợp lệ."
           },
           "facebookOrZalo": {
             "type": "string",
-            "example": "https://facebook.com/nguyenvana"
+            "example": "https://facebook.com/nguyenvana",
+            "maxLength": 500
           },
           "note": {
             "type": "string",
@@ -2042,7 +2057,9 @@
           },
           "address": {
             "type": "string",
-            "example": "123 Đường 30/4, Ninh Kiều, Cần Thơ"
+            "example": "123 Đường 30/4, Ninh Kiều, Cần Thơ",
+            "maxLength": 500,
+            "description": "Bắt buộc khi method là shop_delivery."
           }
         },
         "required": [

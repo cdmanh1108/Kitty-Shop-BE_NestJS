@@ -60,6 +60,18 @@ describe('WebRentalService', () => {
   }
 
   describe('checkAvailability', () => {
+    it('rejects invalid calendar dates before catalog access', async () => {
+      await expect(
+        service.checkAvailability('shop-1', {
+          pickupDate: '2026-02-29',
+          returnDate: '2026-03-01',
+          variantId: 'var-1',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+      expect(mockRepository.findActiveVariantIdsByProduct).not.toHaveBeenCalled();
+    });
+
     it('throws BadRequestException if pickupDate is equal to or after returnDate', async () => {
       await expect(
         service.checkAvailability('shop-1', {
@@ -144,6 +156,18 @@ describe('WebRentalService', () => {
   });
 
   describe('calculateQuote', () => {
+    it('rejects oversized item quantities before policy or catalog access', async () => {
+      await expect(
+        service.calculateQuote('shop-1', {
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [{ variantId: 'var-1', quantity: 21 }],
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockPolicyProvider.getPolicy).not.toHaveBeenCalled();
+      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+    });
+
     it('uses unified shipping fee from RentalPolicy single source of truth', async () => {
       mockPolicyProvider.getPolicy.mockResolvedValue({
         ...DEFAULT_RENTAL_POLICY,
@@ -245,6 +269,24 @@ describe('WebRentalService', () => {
   });
 
   describe('createOrder', () => {
+    it('rejects invalid calendar dates before an idempotency claim', async () => {
+      await expect(
+        service.createOrder(
+          'shop-1',
+          {
+            customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
+            pickupDate: '2026-04-31',
+            returnDate: '2026-05-02',
+            items: [{ variantId: 'var-1', quantity: 1 }],
+            delivery: { method: 'self_pickup' },
+            paymentMethod: 'cash',
+          },
+          'web-invalid-calendar',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockRepository.claimIdempotency).not.toHaveBeenCalled();
+    });
+
     const webOrderInput = () => ({
       customer: { name: 'Trần Thị B', phone: '0987654321' },
       pickupDate: '2026-09-20',

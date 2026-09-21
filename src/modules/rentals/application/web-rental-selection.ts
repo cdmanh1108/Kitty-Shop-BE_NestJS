@@ -1,5 +1,6 @@
 import type { BookableVariant, RentalRepository } from '../domain/rental.repository';
 import type { WebRentalItemInput } from './web-rental.contracts';
+import { WEB_RENTAL_MAX_TOTAL_QUANTITY } from './web-rental-input-validation';
 
 export type WebRentalSelectionFailure =
   | 'AMBIGUOUS_PRODUCT'
@@ -33,9 +34,14 @@ export async function resolveWebRentalSelection(
   },
 ): Promise<WebRentalSelectionPlan> {
   const demands = new Map<string, WebRentalDemand>();
+  let totalQuantity = 0;
 
   for (const item of input.items) {
     if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0) {
+      return { valid: false, reason: 'INVALID_QUANTITY' };
+    }
+    totalQuantity += item.quantity;
+    if (!Number.isSafeInteger(totalQuantity) || totalQuantity > WEB_RENTAL_MAX_TOTAL_QUANTITY) {
       return { valid: false, reason: 'INVALID_QUANTITY' };
     }
 
