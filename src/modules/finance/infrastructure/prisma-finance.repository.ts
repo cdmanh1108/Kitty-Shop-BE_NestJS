@@ -5,21 +5,51 @@ import { paginateMeta } from '@common/types/pagination';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { CLOCK, type Clock } from '@common/clock/clock';
 import {
   assertPaymentCreationAllowed,
   assertPaymentVoidAllowed,
 } from '@modules/rentals/domain/rental-monetary.policy';
 import { lockRentalMonetaryOrder } from '@modules/rentals/infrastructure/rental-monetary-boundary';
+import {
+  claimIdempotency,
+  lockRentalClaim,
+  releaseIdempotency,
+} from '@modules/rentals/infrastructure/rental-idempotency';
+import { RentalClaimLostError } from '@modules/rentals/domain/rental-errors';
 import { FinanceInvariantError, type FinanceRepository } from '../domain/finance.repository';
+import {
+  FinancePaymentClaimLostError,
+  toStoredManualPaymentCreateResult,
+} from '../domain/manual-payment-idempotency';
 
 @Injectable()
 export class PrismaFinanceRepository implements FinanceRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(CLOCK) private readonly clock: Clock = { now: () => new Date() },
+  ) {}
+
+  claimPaymentIdempotency(input: Parameters<FinanceRepository['claimPaymentIdempotency']>[0]) {
+    return claimIdempotency(this.prisma, this.clock, input);
+  }
+
+  releasePaymentIdempotency(shopId: string, scope: string, key: string, claimId: string) {
+    return releaseIdempotency(this.prisma, shopId, scope, key, claimId);
+  }
 
   async createPayment(input: Parameters<FinanceRepository['createPayment']>[0]) {
     return serializableTransaction(this.prisma, async (tx) => {
+      if (input.idempotency) {
+        try {
+          await lockRentalClaim(tx, input.shopId, input.idempotency);
+        } catch (error) {
+          if (error instanceof RentalClaimLostError) throw new FinancePaymentClaimLostError();
+          throw error;
+        }
+      }
       if (!(await lockRentalMonetaryOrder(tx, input))) return null;
       const order = await tx.rentalOrder.findFirst({
         where: { id: input.orderId, shopId: input.shopId },
@@ -84,6 +114,43 @@ export class PrismaFinanceRepository implements FinanceRepository {
           payload: { paymentId: payment.id, orderId: order.id },
         } satisfies PaymentRecordedEvent,
       });
+      if (input.idempotency) {
+        if (!input.audit)
+          throw new FinanceInvariantError('Thiếu dữ liệu kiểm toán cho giao dịch thủ công.');
+        await tx.auditLog.create({
+          data: {
+            shopId: input.shopId,
+            actorUserId: input.audit.actorUserId,
+            actorMemberId: input.audit.actorMemberId,
+            action: 'CREATE',
+            entityType: 'payment_transaction',
+            entityId: payment.id,
+            newValues: {
+              orderId: payment.orderId,
+              direction: payment.direction,
+              purpose: payment.purpose,
+              amount: payment.amount.toString(),
+            },
+          },
+        });
+        const completed = await tx.idempotencyRecord.updateMany({
+          where: {
+            id: input.idempotency.claimId,
+            shopId: input.shopId,
+            scope: input.idempotency.scope,
+            key: input.idempotency.key,
+            completedAt: null,
+          },
+          data: {
+            responseCode: 201,
+            responseBody: toStoredManualPaymentCreateResult(
+              payment,
+            ) as unknown as Prisma.InputJsonValue,
+            completedAt: this.clock.now(),
+          },
+        });
+        if (completed.count !== 1) throw new FinancePaymentClaimLostError();
+      }
       return payment;
     });
   }

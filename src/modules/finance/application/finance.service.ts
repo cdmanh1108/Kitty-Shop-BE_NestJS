@@ -1,14 +1,33 @@
 import { generateDatedReference } from '@common/utils/reference-number';
+import { CLOCK, type Clock } from '@common/clock/clock';
+import type { JsonValue } from '@common/types/json';
 import { PAYMENT_PURPOSE, PAYMENT_DIRECTION } from '@modules/finance/domain/payment-types';
 
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import {
   FINANCE_REPOSITORY,
   FinanceInvariantError,
   type FinanceRepository,
 } from '../domain/finance.repository';
+import {
+  FINANCE_MANUAL_PAYMENT_IDEMPOTENCY_SCOPE,
+  FINANCE_MANUAL_PAYMENT_REPLAY_RETENTION_MS,
+  FinancePaymentClaimLostError,
+  isStoredManualPaymentCreateResult,
+  toManualPaymentCreateResult,
+  type ManualPaymentCreateResult,
+} from '../domain/manual-payment-idempotency';
 import type {
   CreateExpenseInput,
   CreatePaymentInput,
@@ -17,12 +36,14 @@ import type {
 } from './finance.contracts';
 
 const PAYMENT_PURPOSES: ReadonlySet<string> = new Set(Object.values(PAYMENT_PURPOSE));
+const logger = new Logger('FinanceService');
 
 @Injectable()
 export class FinanceService {
   constructor(
     @Inject(FINANCE_REPOSITORY) private readonly repository: FinanceRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   listPayments(user: CurrentUser, query: PaymentListQuery) {
@@ -37,7 +58,12 @@ export class FinanceService {
     });
   }
 
-  async createPayment(user: CurrentUser, orderId: string, input: CreatePaymentInput) {
+  async createPayment(
+    user: CurrentUser,
+    orderId: string,
+    input: CreatePaymentInput,
+    rawIdempotencyKey?: string | string[],
+  ): Promise<ManualPaymentCreateResult> {
     if (!PAYMENT_PURPOSES.has(input.purpose)) {
       throw new BadRequestException('Mục đích thanh toán không hợp lệ.');
     }
@@ -54,7 +80,38 @@ export class FinanceService {
     ) {
       throw new BadRequestException('Giao dịch chi phải có mục đích hoàn tiền hoặc mục đích khác.');
     }
-    let payment: Awaited<ReturnType<FinanceRepository['createPayment']>>;
+    const key = requireIdempotencyKey(rawIdempotencyKey);
+    const paidAt = input.paidAt ? parsePaidAt(input.paidAt) : undefined;
+    const scope = `${FINANCE_MANUAL_PAYMENT_IDEMPOTENCY_SCOPE}:${user.memberId}`;
+    const claim = await this.repository.claimPaymentIdempotency({
+      shopId: user.shopId,
+      scope,
+      key,
+      requestHash: hashManualPaymentCommand(orderId, input, paidAt),
+      expiresAt: new Date(this.clock.now().getTime() + FINANCE_MANUAL_PAYMENT_REPLAY_RETENTION_MS),
+    });
+    if (claim.state === 'HASH_MISMATCH') {
+      throw new ConflictException({
+        code: 'IDEMPOTENCY_KEY_REUSED',
+        message: 'Mã chống trùng đã được dùng cho một yêu cầu ghi nhận tiền khác.',
+      });
+    }
+    if (claim.state === 'IN_PROGRESS') {
+      throw new ConflictException({
+        code: 'IDEMPOTENCY_IN_PROGRESS',
+        message: 'Yêu cầu ghi nhận tiền đang được xử lý. Vui lòng thử lại với cùng mã.',
+      });
+    }
+    if (claim.state === 'COMPLETED') {
+      if (!isStoredManualPaymentCreateResult(claim.responseBody)) {
+        throw new InternalServerErrorException({
+          code: 'IDEMPOTENCY_REPLAY_INVALID',
+          message: 'Không thể khôi phục kết quả giao dịch đã ghi nhận.',
+        });
+      }
+      return claim.responseBody.result;
+    }
+    let payment: Awaited<ReturnType<FinanceRepository['createPayment']>> | undefined;
     try {
       payment = await this.repository.createPayment({
         shopId: user.shopId,
@@ -67,29 +124,35 @@ export class FinanceService {
         externalReference: input.externalReference,
         bankReference: input.bankReference,
         note: input.note,
-        paidAt: input.paidAt ? new Date(input.paidAt) : new Date(),
+        paidAt: paidAt ?? this.clock.now(),
         createdBy: user.memberId,
+        idempotency: { scope, key, claimId: claim.claimId },
+        audit: { actorUserId: user.userId, actorMemberId: user.memberId },
       });
     } catch (error) {
+      if (error instanceof FinancePaymentClaimLostError) {
+        throw new ConflictException({
+          code: 'IDEMPOTENCY_CLAIM_LOST',
+          message: 'Yêu cầu ghi nhận tiền đã được thay thế. Vui lòng thử lại với cùng mã.',
+        });
+      }
       if (error instanceof FinanceInvariantError) throw new BadRequestException(error.message);
       throw error;
+    } finally {
+      if (!payment) {
+        try {
+          await this.repository.releasePaymentIdempotency(user.shopId, scope, key, claim.claimId);
+        } catch (releaseError) {
+          logger.error({
+            event: 'finance.manual-payment.idempotency.release.failed',
+            shopId: user.shopId,
+            error: releaseError instanceof Error ? releaseError.message : 'unknown',
+          });
+        }
+      }
     }
     if (!payment) throw new NotFoundException('Không tìm thấy đơn thuê.');
-    await this.audit.log({
-      shopId: user.shopId,
-      actorUserId: user.userId,
-      actorMemberId: user.memberId,
-      action: 'CREATE',
-      entityType: 'payment_transaction',
-      entityId: payment?.id,
-      newValues: {
-        orderId,
-        direction: input.direction,
-        purpose: input.purpose,
-        amount: input.amount,
-      },
-    });
-    return payment;
+    return toManualPaymentCreateResult(payment);
   }
 
   async voidPayment(user: CurrentUser, id: string) {
@@ -184,4 +247,60 @@ export class FinanceService {
     });
     return expense;
   }
+}
+
+function requireIdempotencyKey(value: string | string[] | undefined): string {
+  if (value === undefined) {
+    throw new BadRequestException({
+      code: 'IDEMPOTENCY_KEY_REQUIRED',
+      message: 'Cần có Idempotency-Key để ghi nhận tiền.',
+    });
+  }
+  if (Array.isArray(value) || !/^[\x21-\x7e]{1,255}$/.test(value)) {
+    throw new BadRequestException({
+      code: 'IDEMPOTENCY_KEY_INVALID',
+      message: 'Idempotency-Key không hợp lệ.',
+    });
+  }
+  return value;
+}
+
+function parsePaidAt(value: string): Date {
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime()))
+    throw new BadRequestException('Thời gian thanh toán không hợp lệ.');
+  return parsed;
+}
+
+function hashManualPaymentCommand(
+  orderId: string,
+  input: CreatePaymentInput,
+  paidAt: Date | undefined,
+): string {
+  return createHash('sha256')
+    .update(
+      stableJson({
+        version: 1,
+        orderId,
+        direction: input.direction,
+        purpose: input.purpose,
+        paymentMethod: input.paymentMethod,
+        amount: input.amount,
+        externalReference: input.externalReference ?? null,
+        bankReference: input.bankReference ?? null,
+        note: input.note ?? null,
+        paidAt: paidAt?.toISOString() ?? null,
+      }),
+    )
+    .digest('hex');
+}
+
+function stableJson(value: JsonValue): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  return `{${Object.entries(value)
+    .filter((entry): entry is [string, JsonValue] => entry[1] !== undefined)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
+    .join(',')}}`;
 }

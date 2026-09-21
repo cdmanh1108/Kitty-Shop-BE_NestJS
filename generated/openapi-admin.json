@@ -2925,6 +2925,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque ASCII key (1-255 characters) created once per manual receipt intent and reused for retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -2947,6 +2956,12 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Dữ liệu receipt hoặc Idempotency-Key không hợp lệ."
+          },
+          "409": {
+            "description": "Idempotency-Key đang được xử lý hoặc đã dùng cho receipt khác."
           }
         },
         "security": [

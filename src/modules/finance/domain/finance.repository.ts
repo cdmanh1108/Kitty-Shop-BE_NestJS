@@ -11,6 +11,7 @@ import type {
   ListPaymentsResult,
   VoidExpenseResult,
 } from './finance.models';
+import type { FinanceIdempotencyClaim } from './manual-payment-idempotency';
 
 export class FinanceInvariantError extends Error {}
 
@@ -18,6 +19,15 @@ export const FINANCE_REPOSITORY = Symbol('FINANCE_REPOSITORY');
 
 export interface FinanceRepository {
   createPayment(input: FinanceCreatePaymentData): Promise<CreatePaymentResult>;
+  claimPaymentIdempotency(
+    input: FinanceClaimPaymentIdempotencyData,
+  ): Promise<FinanceIdempotencyClaim>;
+  releasePaymentIdempotency(
+    shopId: string,
+    scope: string,
+    key: string,
+    claimId: string,
+  ): Promise<void>;
   voidPayment(input: {
     shopId: string;
     paymentId: string;
@@ -43,6 +53,16 @@ export interface FinanceCreatePaymentData {
   note?: string;
   paidAt: Date;
   createdBy: string;
+  idempotency?: { scope: string; key: string; claimId: string };
+  audit?: { actorUserId: string; actorMemberId: string };
+}
+
+export interface FinanceClaimPaymentIdempotencyData {
+  shopId: string;
+  scope: string;
+  key: string;
+  requestHash: string;
+  expiresAt: Date;
 }
 
 export interface FinanceListPaymentsCriteria {

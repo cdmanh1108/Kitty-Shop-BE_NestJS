@@ -5,21 +5,22 @@
 The previous AuditService explicitly documented best-effort behavior and caught/logged
 persistence failures. This policy is preserved; no post-commit audit becomes mandatory.
 
-| Command / module                     | Transactional business records                                            | audit_logs                                                 | Required outbox                                  |
-| ------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
-| Rental creation                      | Order/items/allocations/charges/delivery/status history/replay completion | Best effort after commit                                   | RENTAL_ORDER_CREATED in the same transaction     |
-| Rental confirm/start/complete/cancel | Order/items/allocations, applicable inventory/history                     | Best effort after commit                                   | RENTAL*ORDER*{status} in the same transaction    |
-| Rental reschedule                    | Order/items/allocations dates                                             | Best effort after commit                                   | RENTAL_ORDER_RESCHEDULED in the same transaction |
-| Rental charge                        | Charge/totals/payment state                                               | Best effort after commit                                   | None currently                                   |
-| Payment creation                     | Payment and payment/deposit recomputation                                 | Best effort after commit                                   | PAYMENT_RECORDED in the same transaction         |
-| Payment void                         | Void and payment/deposit recomputation                                    | Best effort after commit                                   | None currently                                   |
-| Expense create/void                  | Existing expense persistence boundaries                                   | Best effort after success                                  | None currently                                   |
-| Product/variant/media                | Existing aggregate/media transactions                                     | Existing audited commands remain best effort after success | None currently                                   |
-| Inventory state                      | Inventory and status history                                              | Best effort after commit                                   | None currently                                   |
-| Customer/member/settings             | Existing repository boundaries                                            | Existing audited commands remain best effort after success | None currently                                   |
-| Delivery creation                    | Delivery and optional shipping charge/totals/payment state                | No new audit introduced                                    | DELIVERY_CREATED in the same transaction         |
-| Delivery status                      | Existing update                                                           | Best effort after success                                  | None currently                                   |
-| Auth                                 | Existing authentication persistence                                       | HTTP outcome logs, no new business audit                   | None currently                                   |
+| Command / module                     | Transactional business records                                            | audit_logs                                                 | Required outbox                                   |
+| ------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------- |
+| Rental creation                      | Order/items/allocations/charges/delivery/status history/replay completion | Best effort after commit                                   | RENTAL_ORDER_CREATED in the same transaction      |
+| Rental confirm/start/complete/cancel | Order/items/allocations, applicable inventory/history                     | Best effort after commit                                   | RENTAL*ORDER*{status} in the same transaction     |
+| Rental reschedule                    | Order/items/allocations dates                                             | Best effort after commit                                   | RENTAL_ORDER_RESCHEDULED in the same transaction  |
+| Rental charge                        | Charge/totals/payment state                                               | Best effort after commit                                   | None currently                                    |
+| Manual keyed payment creation        | Payment and payment/deposit recomputation                                 | Durable CREATE audit in the same transaction               | PAYMENT_RECORDED and completion snapshot together |
+| Legacy/internal payment creation     | Payment and payment/deposit recomputation                                 | Best effort after commit where its caller uses AuditPort   | PAYMENT_RECORDED in the same transaction          |
+| Payment void                         | Void and payment/deposit recomputation                                    | Best effort after commit                                   | None currently                                    |
+| Expense create/void                  | Existing expense persistence boundaries                                   | Best effort after success                                  | None currently                                    |
+| Product/variant/media                | Existing aggregate/media transactions                                     | Existing audited commands remain best effort after success | None currently                                    |
+| Inventory state                      | Inventory and status history                                              | Best effort after commit                                   | None currently                                    |
+| Customer/member/settings             | Existing repository boundaries                                            | Existing audited commands remain best effort after success | None currently                                    |
+| Delivery creation                    | Delivery and optional shipping charge/totals/payment state                | No new audit introduced                                    | DELIVERY_CREATED in the same transaction          |
+| Delivery status                      | Existing update                                                           | Best effort after success                                  | None currently                                    |
+| Auth                                 | Existing authentication persistence                                       | HTTP outcome logs, no new business audit                   | None currently                                    |
 
 Not every existing mutation emits an audit record. Coverage is unchanged except known
 entity IDs added to existing creation audits. There is no new mandatory audit_logs writer:
@@ -120,6 +121,11 @@ Only schema change: audit_logs.request_id UUID -> VARCHAR(100), in migration
 preserves existing UUID strings and stores the same correlation ID instead of failing
 inserts or generating a second ID. Apply this migration before new audit enrichment.
 There are no idempotency/outbox schema changes.
+
+Manual Admin receipts use the same fenced record table with their own actor-scoped
+`finance.manual-payment.create.v1:<memberId>` namespace. Their 30-day result
+retention, stable omitted-`paidAt` marker, transactional audit and caller rollout are
+documented in [Manual receipt idempotency](MANUAL_RECEIPT_IDEMPOTENCY.md).
 
 Drain/stop all old backend instances and in-flight rentals before enabling recovery.
 Old code completes/releases by key without fencing; a mixed-version rolling deployment

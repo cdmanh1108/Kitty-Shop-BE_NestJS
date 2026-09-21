@@ -8,7 +8,7 @@ import {
   TRANSACTION_STATUS,
   EXPENSE_STATUS,
 } from '../../src/modules/finance/domain/payment-status';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 describe('FinanceService Unit Tests', () => {
@@ -17,6 +17,9 @@ describe('FinanceService Unit Tests', () => {
   let audit: jest.Mocked<AuditPort>;
 
   let createPaymentMock: jest.MockedFunction<FinanceRepository['createPayment']>;
+  let claimPaymentIdempotencyMock: jest.MockedFunction<
+    FinanceRepository['claimPaymentIdempotency']
+  >;
   let voidPaymentMock: jest.MockedFunction<FinanceRepository['voidPayment']>;
   let createExpenseMock: jest.MockedFunction<FinanceRepository['createExpense']>;
   let voidExpenseMock: jest.MockedFunction<FinanceRepository['voidExpense']>;
@@ -77,6 +80,9 @@ describe('FinanceService Unit Tests', () => {
 
   beforeEach(() => {
     createPaymentMock = jest.fn().mockResolvedValue(samplePayment);
+    claimPaymentIdempotencyMock = jest
+      .fn()
+      .mockResolvedValue({ state: 'CLAIMED', claimId: 'claim-1' });
     voidPaymentMock = jest.fn().mockResolvedValue(samplePayment);
     createExpenseMock = jest.fn().mockResolvedValue(sampleExpense);
     voidExpenseMock = jest.fn().mockResolvedValue(sampleExpense);
@@ -84,6 +90,8 @@ describe('FinanceService Unit Tests', () => {
 
     repo = {
       createPayment: createPaymentMock,
+      claimPaymentIdempotency: claimPaymentIdempotencyMock,
+      releasePaymentIdempotency: jest.fn().mockResolvedValue(undefined),
       voidPayment: voidPaymentMock,
       listPayments: jest.fn(),
       listExpenseCategories: jest.fn(),
@@ -96,10 +104,77 @@ describe('FinanceService Unit Tests', () => {
       log: auditLogMock,
     };
 
-    service = new FinanceService(repo, audit);
+    service = new FinanceService(repo, audit, { now: () => new Date('2026-10-01T12:00:00.000Z') });
   });
 
   describe('createPayment', () => {
+    it('requires an opaque idempotency key before claiming or recording a receipt', async () => {
+      await expect(
+        service.createPayment(currentUser, 'order-1', {
+          direction: PAYMENT_DIRECTION.IN,
+          purpose: PAYMENT_PURPOSE.RENTAL_PAYMENT,
+          paymentMethod: 'CASH',
+          amount: 100000,
+        }),
+      ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_KEY_REQUIRED' } });
+      expect(claimPaymentIdempotencyMock).not.toHaveBeenCalled();
+      expect(createPaymentMock).not.toHaveBeenCalled();
+    });
+
+    it('replays a completed receipt without recording a second payment or audit', async () => {
+      const result = {
+        id: 'pay-1',
+        orderId: 'order-1',
+        customerId: 'cust-1',
+        transactionNumber: 'PAY-20261001-001',
+        direction: 'IN',
+        purpose: 'RENTAL_PAYMENT',
+        paymentMethod: 'CASH',
+        amount: '100000',
+        status: 'COMPLETED',
+        paidAt: '2026-10-01T12:00:00.000Z',
+      };
+      claimPaymentIdempotencyMock.mockResolvedValueOnce({
+        state: 'COMPLETED',
+        responseBody: { version: 1, kind: 'finance-manual-payment-create', result },
+      });
+
+      await expect(
+        service.createPayment(
+          currentUser,
+          'order-1',
+          {
+            direction: PAYMENT_DIRECTION.IN,
+            purpose: PAYMENT_PURPOSE.RENTAL_PAYMENT,
+            paymentMethod: 'CASH',
+            amount: 100000,
+          },
+          'payment-replay',
+        ),
+      ).resolves.toEqual(result);
+      expect(createPaymentMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it('uses a stable missing-paidAt marker and rejects a key reused for a different command', async () => {
+      claimPaymentIdempotencyMock
+        .mockResolvedValueOnce({ state: 'CLAIMED', claimId: 'claim-1' })
+        .mockResolvedValueOnce({ state: 'HASH_MISMATCH' });
+      const command = {
+        direction: PAYMENT_DIRECTION.IN,
+        purpose: PAYMENT_PURPOSE.RENTAL_PAYMENT,
+        paymentMethod: 'CASH' as const,
+        amount: 100000,
+      };
+      await service.createPayment(currentUser, 'order-1', command, 'payment-stable');
+      await expect(
+        service.createPayment(currentUser, 'order-1', command, 'payment-stable'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(claimPaymentIdempotencyMock.mock.calls[0]?.[0]?.requestHash).toBe(
+        claimPaymentIdempotencyMock.mock.calls[1]?.[0]?.requestHash,
+      );
+    });
+
     it('throws BadRequestException if refund purpose is used with IN direction', async () => {
       await expect(
         service.createPayment(currentUser, 'order-1', {
@@ -132,12 +207,17 @@ describe('FinanceService Unit Tests', () => {
       );
 
       await expect(
-        service.createPayment(currentUser, 'order-1', {
-          direction: PAYMENT_DIRECTION.OUT,
-          purpose: PAYMENT_PURPOSE.DEPOSIT_REFUND,
-          paymentMethod: 'CASH',
-          amount: 500000,
-        }),
+        service.createPayment(
+          currentUser,
+          'order-1',
+          {
+            direction: PAYMENT_DIRECTION.OUT,
+            purpose: PAYMENT_PURPOSE.DEPOSIT_REFUND,
+            paymentMethod: 'CASH',
+            amount: 500000,
+          },
+          'payment-invariant',
+        ),
       ).rejects.toThrow(
         new BadRequestException('Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'),
       );
@@ -147,33 +227,42 @@ describe('FinanceService Unit Tests', () => {
       repo.createPayment.mockResolvedValueOnce(null);
 
       await expect(
-        service.createPayment(currentUser, 'non-existent', {
-          direction: PAYMENT_DIRECTION.IN,
-          purpose: PAYMENT_PURPOSE.RENTAL_PAYMENT,
-          paymentMethod: 'CASH',
-          amount: 100000,
-        }),
+        service.createPayment(
+          currentUser,
+          'non-existent',
+          {
+            direction: PAYMENT_DIRECTION.IN,
+            purpose: PAYMENT_PURPOSE.RENTAL_PAYMENT,
+            paymentMethod: 'CASH',
+            amount: 100000,
+          },
+          'payment-missing-order',
+        ),
       ).rejects.toThrow(new NotFoundException('Không tìm thấy đơn thuê.'));
     });
 
     it('creates payment successfully and logs audit event', async () => {
-      const result = await service.createPayment(currentUser, 'order-1', {
-        direction: PAYMENT_DIRECTION.IN,
-        purpose: PAYMENT_PURPOSE.RENTAL_PAYMENT,
-        paymentMethod: 'CASH',
-        amount: 100000,
-      });
+      const result = await service.createPayment(
+        currentUser,
+        'order-1',
+        {
+          direction: PAYMENT_DIRECTION.IN,
+          purpose: PAYMENT_PURPOSE.RENTAL_PAYMENT,
+          paymentMethod: 'CASH',
+          amount: 100000,
+        },
+        'payment-success',
+      );
 
       expect(result).toBeDefined();
       expect(createPaymentMock).toHaveBeenCalledTimes(1);
-      expect(auditLogMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          shopId: currentUser.shopId,
-          action: 'CREATE',
-          entityType: 'payment_transaction',
-          entityId: samplePayment.id,
-        }),
-      );
+      const createInput = createPaymentMock.mock.calls[0]?.[0];
+      expect(createInput?.idempotency?.key).toBe('payment-success');
+      expect(createInput?.audit).toEqual({
+        actorUserId: currentUser.userId,
+        actorMemberId: currentUser.memberId,
+      });
+      expect(auditLogMock).not.toHaveBeenCalled();
     });
   });
 
