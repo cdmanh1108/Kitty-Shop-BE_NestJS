@@ -11,6 +11,23 @@ export interface WebRequest extends Request {
 }
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+interface WebAccessPayload {
+  sub: string;
+  surface: 'web';
+}
+
+function isWebAccessPayload(payload: unknown): payload is WebAccessPayload {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'sub' in payload &&
+    typeof payload.sub === 'string' &&
+    uuid.test(payload.sub) &&
+    'surface' in payload &&
+    payload.surface === 'web'
+  );
+}
+
 @Injectable()
 export class WebAuthCookies {
   constructor(private readonly config: ConfigService<AppConfiguration, true>) {}
@@ -60,27 +77,24 @@ export class WebJwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<WebRequest>();
     const token = this.cookies.readAccess(request);
     if (!token) authError('AUTH_REQUIRED', 401);
+
+    let payload: unknown;
     try {
-      const payload: unknown = await this.jwt.verifyAsync(token, {
+      payload = await this.jwt.verifyAsync(token, {
         algorithms: ['HS256'],
         issuer: 'kitty-api',
         audience: 'kitty-web',
       });
-      if (
-        typeof payload !== 'object' ||
-        payload === null ||
-        !('sub' in payload) ||
-        typeof payload.sub !== 'string' ||
-        !uuid.test(payload.sub) ||
-        !('surface' in payload) ||
-        payload.surface !== 'web'
-      )
-        authError('AUTH_REQUIRED', 401);
-      request.webUser = await this.auth.accountForAccessToken(payload.sub);
-      return true;
     } catch {
       authError('AUTH_REQUIRED', 401);
     }
+
+    if (!isWebAccessPayload(payload)) authError('AUTH_REQUIRED', 401);
+
+    // Account reload is intentionally outside the token-failure boundary: a repository outage
+    // must reach the global error filter as infrastructure failure, never become a false 401.
+    request.webUser = await this.auth.accountForAccessToken(payload.sub);
+    return true;
   }
 }
 
