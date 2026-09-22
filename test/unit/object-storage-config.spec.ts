@@ -14,6 +14,9 @@ describe('Object storage configuration boundary', () => {
       bucket: 'assets',
       region: 'auto',
       publicBaseUrl: 'https://assets.example.com/',
+      operationTimeoutMs: 10000,
+      cleanupTimeoutMs: 3000,
+      maxAttempts: 2,
     });
     expect(parseObjectStorageConfiguration({}).bucket).toBe('');
   });
@@ -52,6 +55,23 @@ describe('Object storage configuration boundary', () => {
     expect(() =>
       parseObjectStorageConfiguration({ ...env, OBJECT_STORAGE_PUBLIC_BASE_URL: 'https://' }),
     ).toThrow('HTTP(S)');
+  });
+  it.each([
+    ['OBJECT_STORAGE_OPERATION_TIMEOUT_MS', '0'],
+    ['OBJECT_STORAGE_CLEANUP_TIMEOUT_MS', '120001'],
+    ['OBJECT_STORAGE_MAX_ATTEMPTS', '0'],
+    ['OBJECT_STORAGE_MAX_ATTEMPTS', '6'],
+  ])('rejects an invalid bounded storage policy %s=%s', (field, value) => {
+    expect(() => parseObjectStorageConfiguration({ ...env, [field]: value })).toThrow(field);
+  });
+  it('rejects cleanup budgets larger than the normal operation deadline', () => {
+    expect(() =>
+      parseObjectStorageConfiguration({
+        ...env,
+        OBJECT_STORAGE_OPERATION_TIMEOUT_MS: '1000',
+        OBJECT_STORAGE_CLEANUP_TIMEOUT_MS: '1001',
+      }),
+    ).toThrow('CLEANUP_TIMEOUT_MS');
   });
   it('preserves external URLs without storage configuration and derives internal URLs centrally', () => {
     const external = { storageKey: null, url: 'https://legacy.example.com/a.jpg' };

@@ -95,12 +95,15 @@ export class RentalConfirmationService {
     }
     try {
       if (evidence && file)
-        await this.storage.putObject({
-          key: evidence.key,
-          body: file.buffer,
-          contentType: evidence.mimeType,
-          cacheControl: 'private, no-store',
-        });
+        await this.storage.putObject(
+          {
+            key: evidence.key,
+            body: file.buffer,
+            contentType: evidence.mimeType,
+            cacheControl: 'private, no-store',
+          },
+          { purpose: 'default' },
+        );
       const result = await this.repository.confirm({
         ...input,
         orderId,
@@ -119,7 +122,7 @@ export class RentalConfirmationService {
         try {
           const saved = await this.repository.get(user.shopId, orderId);
           if (saved?.confirmation?.evidenceKey !== evidence.key)
-            await this.storage.deleteObject(evidence.key);
+            await this.storage.deleteObject(evidence.key, { purpose: 'cleanup' });
         } catch {
           this.logger.error({ event: 'rental.confirmation.evidence.cleanup_failed', orderId });
         }

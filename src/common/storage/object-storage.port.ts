@@ -19,11 +19,31 @@ export interface PutObjectInput {
   cacheControl?: string;
 }
 
+/**
+ * Provider-neutral operation controls. A caller-owned signal is never aborted
+ * by the adapter; adapter timeouts are composed with it internally.
+ */
+export interface ObjectStorageOperationOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
+  purpose?: 'default' | 'cleanup';
+}
+
+export class ObjectStorageTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(`Thao tác kho lưu trữ vượt quá thời gian chờ ${timeoutMs}ms.`);
+    this.name = 'ObjectStorageTimeoutError';
+  }
+}
+
 export interface ObjectStoragePort {
-  getObject(key: string): Promise<Uint8Array>;
-  putObject(input: PutObjectInput): Promise<StoredObject>;
-  headObject(key: string): Promise<StoredObjectMetadata | null>;
-  deleteObject(key: string): Promise<void>;
+  getObject(key: string, options?: ObjectStorageOperationOptions): Promise<Uint8Array>;
+  putObject(input: PutObjectInput, options?: ObjectStorageOperationOptions): Promise<StoredObject>;
+  headObject(
+    key: string,
+    options?: ObjectStorageOperationOptions,
+  ): Promise<StoredObjectMetadata | null>;
+  deleteObject(key: string, options?: ObjectStorageOperationOptions): Promise<void>;
   getPublicUrl(key: string): string;
 }
 

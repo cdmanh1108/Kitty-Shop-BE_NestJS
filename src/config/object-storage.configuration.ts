@@ -7,6 +7,9 @@ export interface ObjectStorageConfiguration {
   accessKeyId: string;
   secretAccessKey: string;
   publicBaseUrl: string;
+  operationTimeoutMs: number;
+  cleanupTimeoutMs: number;
+  maxAttempts: number;
 }
 
 /** Shared by Nest configuration and standalone maintenance commands. */
@@ -19,6 +22,19 @@ export function parseObjectStorageConfiguration(
     if (typeof value !== 'string') throw new Error(`OBJECT_STORAGE_${name} phải là chuỗi ký tự.`);
     return value.trim();
   };
+  const readPositiveInteger = (
+    name: string,
+    fallback: number,
+    min: number,
+    max: number,
+  ): number => {
+    const raw = read(name, String(fallback));
+    if (!/^\d+$/.test(raw)) throw new Error(`OBJECT_STORAGE_${name} phải là số nguyên dương.`);
+    const value = Number(raw);
+    if (!Number.isSafeInteger(value) || value < min || value > max)
+      throw new Error(`OBJECT_STORAGE_${name} phải nằm trong khoảng ${min} đến ${max}.`);
+    return value;
+  };
   const config = {
     provider: read('PROVIDER', 's3'),
     endpoint: read('ENDPOINT'),
@@ -28,7 +44,14 @@ export function parseObjectStorageConfiguration(
     accessKeyId: read('ACCESS_KEY_ID'),
     secretAccessKey: read('SECRET_ACCESS_KEY'),
     publicBaseUrl: read('PUBLIC_BASE_URL'),
+    operationTimeoutMs: readPositiveInteger('OPERATION_TIMEOUT_MS', 10_000, 100, 120_000),
+    cleanupTimeoutMs: readPositiveInteger('CLEANUP_TIMEOUT_MS', 3_000, 100, 60_000),
+    maxAttempts: readPositiveInteger('MAX_ATTEMPTS', 2, 1, 5),
   };
+  if (config.cleanupTimeoutMs > config.operationTimeoutMs)
+    throw new Error(
+      'OBJECT_STORAGE_CLEANUP_TIMEOUT_MS không được lớn hơn OBJECT_STORAGE_OPERATION_TIMEOUT_MS.',
+    );
   if (config.provider !== 's3') throw new Error('OBJECT_STORAGE_PROVIDER phải là s3.');
   if (config.privateBucket && config.privateBucket === config.bucket)
     throw new Error('OBJECT_STORAGE_PRIVATE_BUCKET phải khác bucket hình ảnh công khai.');

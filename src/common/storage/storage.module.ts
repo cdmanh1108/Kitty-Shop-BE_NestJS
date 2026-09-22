@@ -32,6 +32,9 @@ import {
           accessKeyId,
           secretAccessKey,
           publicBaseUrl,
+          operationTimeoutMs,
+          cleanupTimeoutMs,
+          maxAttempts,
         } = configService.get('objectStorage', { infer: true });
 
         if (!bucket) {
@@ -55,6 +58,9 @@ import {
           accessKeyId,
           secretAccessKey,
           publicBaseUrl,
+          operationTimeoutMs,
+          cleanupTimeoutMs,
+          maxAttempts,
         });
       },
     },

@@ -1,4 +1,5 @@
 import { S3ObjectStorageAdapter } from '../../src/common/storage/s3-object-storage.adapter';
+import { ObjectStorageTimeoutError } from '../../src/common/storage/object-storage.port';
 import {
   S3Client,
   PutObjectCommand,
@@ -9,9 +10,16 @@ import {
 
 jest.mock('@aws-sdk/client-s3');
 
+type SendOptions = { abortSignal?: AbortSignal };
+type SendMock = jest.Mock<Promise<unknown>, [unknown, SendOptions?]>;
+
+function abortedError(signal: AbortSignal): Error {
+  return signal.reason instanceof Error ? signal.reason : new Error('Storage operation aborted.');
+}
+
 describe('S3ObjectStorageAdapter', () => {
   let adapter: S3ObjectStorageAdapter;
-  let mockSend: jest.Mock;
+  let mockSend: SendMock;
 
   const config = {
     endpoint: 'https://test-account.r2.cloudflarestorage.com',
@@ -20,16 +28,23 @@ describe('S3ObjectStorageAdapter', () => {
     accessKeyId: 'test-access-key',
     secretAccessKey: 'test-secret-key',
     publicBaseUrl: 'https://assets.test.com',
+    operationTimeoutMs: 10000,
+    cleanupTimeoutMs: 3000,
+    maxAttempts: 2,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSend = jest.fn();
+    mockSend = jest.fn<Promise<unknown>, [unknown, SendOptions?]>();
     (S3Client as jest.Mock).mockImplementation(() => ({
       send: mockSend,
     }));
 
     adapter = new S3ObjectStorageAdapter(config);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('constructor', () => {
@@ -52,6 +67,7 @@ describe('S3ObjectStorageAdapter', () => {
           secretAccessKey: config.secretAccessKey,
         },
         forcePathStyle: true,
+        maxAttempts: 2,
       });
     });
   });
@@ -82,6 +98,70 @@ describe('S3ObjectStorageAdapter', () => {
         contentType: 'image/jpeg',
         contentLength: body.length,
       });
+    });
+
+    it('aborts a hanging provider operation at the configured deadline', async () => {
+      jest.useFakeTimers();
+      let signal: AbortSignal | undefined;
+      mockSend.mockImplementation((_command, options) => {
+        const providerSignal = options?.abortSignal;
+        if (!providerSignal) return Promise.reject(new Error('Expected adapter abort signal.'));
+        signal = providerSignal;
+        return new Promise((_, reject) => {
+          providerSignal.addEventListener('abort', () => reject(abortedError(providerSignal)), {
+            once: true,
+          });
+        });
+      });
+
+      const operation = adapter.putObject({
+        key: 'shops/main/products/sp001/hang.jpg',
+        body: Buffer.from('image'),
+        contentType: 'image/jpeg',
+      });
+      const failure = expect(operation).rejects.toBeInstanceOf(ObjectStorageTimeoutError);
+      await jest.advanceTimersByTimeAsync(config.operationTimeoutMs);
+
+      await failure;
+      expect(signal?.aborted).toBe(true);
+    });
+  });
+
+  describe('getObject', () => {
+    it('keeps the deadline active while consuming a stalled object body and destroys the stream', async () => {
+      jest.useFakeTimers();
+      let rejectRead!: (reason?: unknown) => void;
+      const destroy = jest.fn((reason?: Error) => rejectRead(reason));
+      mockSend.mockResolvedValueOnce({
+        Body: {
+          transformToByteArray: () =>
+            new Promise<Uint8Array>((_resolve, reject) => {
+              rejectRead = reject;
+            }),
+          destroy,
+        },
+      });
+
+      const operation = adapter.getObject('shops/main/products/sp001/hang.jpg', { timeoutMs: 50 });
+      const failure = expect(operation).rejects.toBeInstanceOf(ObjectStorageTimeoutError);
+      await jest.advanceTimersByTimeAsync(50);
+
+      await failure;
+      expect(destroy).toHaveBeenCalledTimes(1);
+    });
+
+    it('preserves a caller cancellation instead of rewriting it as a timeout', async () => {
+      const caller = new AbortController();
+      const abort = new Error('caller cancelled');
+      abort.name = 'AbortError';
+      caller.abort(abort);
+      mockSend.mockImplementation((_command, options) =>
+        Promise.reject(abortedError(options?.abortSignal ?? caller.signal)),
+      );
+
+      await expect(
+        adapter.getObject('shops/main/products/sp001/cancel.jpg', { signal: caller.signal }),
+      ).rejects.toBe(abort);
     });
   });
 
@@ -134,6 +214,22 @@ describe('S3ObjectStorageAdapter', () => {
 
       await expect(adapter.headObject('key')).rejects.toThrow('Connection refused');
     });
+
+    it('does not classify a timeout as a missing object', async () => {
+      jest.useFakeTimers();
+      mockSend.mockImplementation(
+        (_command, options) =>
+          new Promise((_, reject) => {
+            const signal = options?.abortSignal;
+            if (!signal) throw new Error('Expected adapter abort signal.');
+            signal.addEventListener('abort', () => reject(abortedError(signal)), { once: true });
+          }),
+      );
+      const operation = adapter.headObject('shops/main/products/sp001/hang.jpg', { timeoutMs: 50 });
+      const failure = expect(operation).rejects.toBeInstanceOf(ObjectStorageTimeoutError);
+      await jest.advanceTimersByTimeAsync(50);
+      await failure;
+    });
   });
 
   describe('deleteObject', () => {
@@ -146,6 +242,30 @@ describe('S3ObjectStorageAdapter', () => {
         Bucket: 'test-bucket',
         Key: 'shops/main/products/sp001/old.jpg',
       });
+    });
+
+    it('uses the shorter cleanup deadline and aborts a hanging delete', async () => {
+      jest.useFakeTimers();
+      let signal: AbortSignal | undefined;
+      mockSend.mockImplementation((_command, options) => {
+        const providerSignal = options?.abortSignal;
+        if (!providerSignal) return Promise.reject(new Error('Expected adapter abort signal.'));
+        signal = providerSignal;
+        return new Promise((_, reject) => {
+          providerSignal.addEventListener('abort', () => reject(abortedError(providerSignal)), {
+            once: true,
+          });
+        });
+      });
+
+      const operation = adapter.deleteObject('shops/main/products/sp001/orphan.jpg', {
+        purpose: 'cleanup',
+      });
+      const failure = expect(operation).rejects.toBeInstanceOf(ObjectStorageTimeoutError);
+      await jest.advanceTimersByTimeAsync(config.cleanupTimeoutMs);
+
+      await failure;
+      expect(signal?.aborted).toBe(true);
     });
   });
 

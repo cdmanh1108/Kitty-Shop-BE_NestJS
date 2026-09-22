@@ -37,6 +37,9 @@ OBJECT_STORAGE_BUCKET=product-assets
 OBJECT_STORAGE_ACCESS_KEY_ID=example-access-key
 OBJECT_STORAGE_SECRET_ACCESS_KEY=example-secret-key
 OBJECT_STORAGE_PUBLIC_BASE_URL=https://assets.example.com
+OBJECT_STORAGE_OPERATION_TIMEOUT_MS=10000
+OBJECT_STORAGE_CLEANUP_TIMEOUT_MS=3000
+OBJECT_STORAGE_MAX_ATTEMPTS=2
 ```
 
 The endpoint may be omitted for AWS S3; set the appropriate AWS region. Cloudflare R2 uses its S3-compatible account endpoint and region `auto`. MinIO also uses provider `s3`, not a different provider label.
@@ -44,6 +47,12 @@ The endpoint may be omitted for AWS S3; set the appropriate AWS region. Cloudfla
 All storage values may be omitted when storage is unused. A publicBaseUrl alone supports read-only URL resolution. Configuring bucket, endpoint or either credential activates upload validation: bucket, region, both credentials and publicBaseUrl must be present, in every environment including production. URLs must be valid HTTP(S) without credentials, query or fragment. Validation errors name fields without echoing values.
 
 Missing storage mutation configuration rejects PUT/HEAD/DELETE rather than pretending an object is absent. Missing publicBaseUrl for a key-backed media read fails explicitly instead of generating a broken relative URL. Deployments serving internal media must configure publicBaseUrl even when uploads are disabled.
+
+## Operation deadlines
+
+Every S3-compatible PUT, GET, HEAD and DELETE is bounded by `OBJECT_STORAGE_OPERATION_TIMEOUT_MS` (default 10 seconds). The limit covers the complete SDK attempt sequence, including retries, and `GET` keeps its deadline until `transformToByteArray()` has finished consuming the response body. `OBJECT_STORAGE_MAX_ATTEMPTS` (default 2, range 1–5) bounds SDK retries inside that overall deadline.
+
+Rental confirmation and settlement evidence cleanup uses `OBJECT_STORAGE_CLEANUP_TIMEOUT_MS` (default 3 seconds) through the port's `cleanup` operation purpose. On any outer failure, the service first re-reads the order: it deletes only when the exact evidence key is proven unreferenced. An unknown DB outcome or cleanup timeout retains the object and logs the cleanup failure, because timeout is not proof that an upload or delete did not commit.
 
 ## Keys and public access
 

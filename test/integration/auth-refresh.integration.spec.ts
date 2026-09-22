@@ -62,6 +62,9 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
         accessKeyId: '',
         secretAccessKey: '',
         publicBaseUrl: '',
+        operationTimeoutMs: 10000,
+        cleanupTimeoutMs: 3000,
+        maxAttempts: 2,
       },
     };
     const configService = new ConfigService<AppConfiguration, true>(testConfig);

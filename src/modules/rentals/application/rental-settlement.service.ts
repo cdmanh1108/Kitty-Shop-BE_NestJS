@@ -79,12 +79,15 @@ export class RentalSettlementService {
 
     try {
       if (evidence && file) {
-        await this.storage.putObject({
-          key: evidence.key,
-          body: file.buffer,
-          contentType: evidence.mimeType,
-          cacheControl: 'private, no-store',
-        });
+        await this.storage.putObject(
+          {
+            key: evidence.key,
+            body: file.buffer,
+            contentType: evidence.mimeType,
+            cacheControl: 'private, no-store',
+          },
+          { purpose: 'default' },
+        );
       }
 
       const result = await this.repository.settleOrder({
@@ -107,7 +110,7 @@ export class RentalSettlementService {
         try {
           const saved = await this.repository.get(user.shopId, orderId);
           if (saved?.settlement?.evidenceKey !== evidence.key) {
-            await this.storage.deleteObject(evidence.key);
+            await this.storage.deleteObject(evidence.key, { purpose: 'cleanup' });
           }
         } catch {
           this.logger.error({ event: 'rental.settlement.evidence.cleanup_failed', orderId });

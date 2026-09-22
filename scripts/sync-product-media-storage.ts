@@ -207,7 +207,17 @@ export async function main() {
   const prisma = new PrismaClient();
 
   const storageConfig = parseObjectStorageConfiguration(process.env);
-  const { bucket, endpoint, region, accessKeyId, secretAccessKey, publicBaseUrl } = storageConfig;
+  const {
+    bucket,
+    endpoint,
+    region,
+    accessKeyId,
+    secretAccessKey,
+    publicBaseUrl,
+    operationTimeoutMs,
+    cleanupTimeoutMs,
+    maxAttempts,
+  } = storageConfig;
 
   let storageAdapter: S3ObjectStorageAdapter | null = null;
   if (args.apply) {
@@ -224,6 +234,9 @@ export async function main() {
       accessKeyId,
       secretAccessKey,
       publicBaseUrl,
+      operationTimeoutMs,
+      cleanupTimeoutMs,
+      maxAttempts,
     });
   } else if (bucket && accessKeyId && secretAccessKey) {
     // In dry-run, if credentials exist, we can optionally use adapter for HEAD checks
@@ -234,6 +247,9 @@ export async function main() {
       accessKeyId,
       secretAccessKey,
       publicBaseUrl,
+      operationTimeoutMs,
+      cleanupTimeoutMs,
+      maxAttempts,
     });
   }
 

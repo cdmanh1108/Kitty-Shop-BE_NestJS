@@ -8,14 +8,27 @@ async function main() {
   console.log('=== Object Storage Health Check ===');
 
   const storageConfig = parseObjectStorageConfiguration(process.env);
-  const { bucket, endpoint, region, accessKeyId, secretAccessKey, publicBaseUrl, provider } =
-    storageConfig;
+  const {
+    bucket,
+    endpoint,
+    region,
+    accessKeyId,
+    secretAccessKey,
+    publicBaseUrl,
+    provider,
+    operationTimeoutMs,
+    cleanupTimeoutMs,
+    maxAttempts,
+  } = storageConfig;
 
   console.log(`Provider:        ${provider}`);
   console.log(`Endpoint:        ${endpoint || '(default AWS S3)'}`);
   console.log(`Region:          ${region}`);
   console.log(`Bucket:          ${bucket || '(not configured)'}`);
   console.log(`Public Base URL: ${publicBaseUrl || '(not configured)'}`);
+  console.log(`Operation timeout: ${operationTimeoutMs}ms`);
+  console.log(`Cleanup timeout: ${cleanupTimeoutMs}ms`);
+  console.log(`Max attempts:     ${maxAttempts}`);
 
   if (!bucket || !accessKeyId || !secretAccessKey) {
     console.warn('\n[WARN] Object storage credentials are not fully configured in environment.');
@@ -33,6 +46,9 @@ async function main() {
       accessKeyId,
       secretAccessKey,
       publicBaseUrl,
+      operationTimeoutMs,
+      cleanupTimeoutMs,
+      maxAttempts,
     });
 
     const testKey = `_healthcheck/ping-${Date.now()}.txt`;
