@@ -72,6 +72,12 @@ export function zonedDayRange(reference: Date, timeZone: string): { start: Date;
   return { start, end };
 }
 
+/** Stable YYYY-MM-DD identity in the shop timezone, never the server or UTC day. */
+export function zonedDateKey(reference: Date, timeZone: string): string {
+  const current = parts(reference, timeZone);
+  return `${current.year}-${String(current.month).padStart(2, '0')}-${String(current.day).padStart(2, '0')}`;
+}
+
 export function zonedMonthRange(reference: Date, timeZone: string): { start: Date; end: Date } {
   const current = parts(reference, timeZone);
   const start = localMidnightUtc(current.year, current.month, 1, timeZone);

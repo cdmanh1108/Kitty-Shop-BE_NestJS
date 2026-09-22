@@ -45,9 +45,6 @@ export class PrismaReminderRepository implements ReminderRepository {
         priority: input.priority,
         title: input.title,
         content: input.content,
-        status: 'PENDING',
-        dismissedAt: null,
-        dismissedBy: null,
       },
     });
   }

@@ -5,7 +5,7 @@ import { CLOCK, type Clock } from '@common/clock/clock';
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { CurrentUser } from '@common/types/current-user';
-import { zonedDayRange } from '@common/utils/timezone';
+import { zonedDateKey, zonedDayRange } from '@common/utils/timezone';
 import { REMINDER_REPOSITORY, type ReminderRepository } from '../domain/reminder.repository';
 
 @Injectable()
@@ -52,6 +52,7 @@ export class ReminderService {
   private async refreshShop(shopId: string, timezone: string): Promise<void> {
     const now = this.clock.now();
     const day = zonedDayRange(now, timezone);
+    const dayKey = zonedDateKey(now, timezone);
     const returnSoonEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const candidates = await this.repository.candidates(shopId);
     const activeKeys: string[] = [];
@@ -64,7 +65,7 @@ export class ReminderService {
       content: string,
       scheduledFor: Date,
     ) => {
-      const key = `${type}:${order.id}:${day.start.toISOString().slice(0, 10)}`;
+      const key = `${type}:${order.id}:${dayKey}`;
       activeKeys.push(key);
       await this.repository.upsert({
         shopId,
