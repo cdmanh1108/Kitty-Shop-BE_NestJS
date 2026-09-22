@@ -3488,6 +3488,36 @@
         "responses": {
           "200": {
             "description": ""
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The requested delivery transition is not allowed or lost a concurrent update race.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -6427,6 +6457,43 @@
           "status"
         ]
       },
+      "ErrorResDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "code": {
+            "type": "string",
+            "example": "HTTP_400"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "nullable": true
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
+        ]
+      },
       "RevenueReportRowResDto": {
         "type": "object",
         "properties": {
@@ -8581,43 +8648,6 @@
         "required": [
           "fullName",
           "phone"
-        ]
-      },
-      "ErrorResDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 400
-          },
-          "code": {
-            "type": "string",
-            "example": "HTTP_400"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {
-            "type": "object",
-            "nullable": true
-          },
-          "requestId": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "statusCode",
-          "code",
-          "message",
-          "path",
-          "timestamp"
         ]
       }
     }

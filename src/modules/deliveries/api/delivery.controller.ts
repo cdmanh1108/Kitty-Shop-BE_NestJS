@@ -3,9 +3,17 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { IsOptional, IsUUID } from 'class-validator';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
+import { ErrorResDto } from '@common/dto/response.dto';
 import { DeliveryService } from '../application/delivery.service';
 import { CreateDeliveryReqDto, UpdateDeliveryStatusReqDto } from './delivery.dto';
 import { toCreateDeliveryInput, toUpdateDeliveryStatusInput } from './delivery.mapper';
@@ -41,6 +49,14 @@ export class DeliveryController {
 
   @Patch(':id/status')
   @Permissions(PERMISSIONS.DELIVERIES_MANAGE)
+  @ApiOkResponse()
+  @ApiBadRequestResponse({ type: ErrorResDto })
+  @ApiConflictResponse({
+    type: ErrorResDto,
+    description:
+      'The requested delivery transition is not allowed or lost a concurrent update race.',
+  })
+  @ApiNotFoundResponse({ type: ErrorResDto })
   updateStatus(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,

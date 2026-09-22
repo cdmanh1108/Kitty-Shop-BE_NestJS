@@ -13,3 +13,9 @@ export type DeliveryList = Array<
 >;
 
 export type DeliveryResult = null | DeliveryJobRecord;
+
+export type DeliveryStatusUpdateResult =
+  | { kind: 'UPDATED'; delivery: DeliveryJobRecord; fromStatus: string }
+  | { kind: 'NOT_FOUND' }
+  | { kind: 'INVALID_TRANSITION' }
+  | { kind: 'CONCURRENT_MODIFICATION' };

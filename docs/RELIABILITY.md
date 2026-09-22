@@ -19,7 +19,7 @@ persistence failures. This policy is preserved; no post-commit audit becomes man
 | Inventory state                      | Inventory and status history                                              | Best effort after commit                                   | None currently                                    |
 | Customer/member/settings             | Existing repository boundaries                                            | Existing audited commands remain best effort after success | None currently                                    |
 | Delivery creation                    | Delivery and optional shipping charge/totals/payment state                | No new audit introduced                                    | DELIVERY_CREATED in the same transaction          |
-| Delivery status                      | Existing update                                                           | Best effort after success                                  | None currently                                    |
+| Delivery status                      | Atomic compare-and-swap lifecycle update                                  | Best effort after success                                  | None currently                                    |
 | Auth                                 | Existing authentication persistence                                       | HTTP outcome logs, no new business audit                   | None currently                                    |
 
 Not every existing mutation emits an audit record. Coverage is unchanged except known

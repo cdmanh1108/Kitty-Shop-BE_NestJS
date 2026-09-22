@@ -1,6 +1,7 @@
 import type { DeliveryCreatedEvent } from '../domain/delivery.events';
-import { DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
-import { Injectable } from '@nestjs/common';
+import { CLOCK, type Clock } from '@common/clock/clock';
+import { DELIVERY_STATUS, canTransitionDelivery } from '@modules/deliveries/domain/delivery-status';
+import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import { serializableTransaction } from '@database/prisma/transaction';
@@ -10,7 +11,10 @@ import type { DeliveryRepository } from '../domain/delivery.repository';
 
 @Injectable()
 export class PrismaDeliveryRepository implements DeliveryRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(CLOCK) private readonly clock: Clock = { now: () => new Date() },
+  ) {}
 
   list(shopId: string, orderId?: string) {
     return this.prisma.deliveryJob.findMany({
@@ -87,21 +91,34 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
   }
 
   async updateStatus(input: Parameters<DeliveryRepository['updateStatus']>[0]) {
-    const existing = await this.prisma.deliveryJob.findFirst({
-      where: { id: input.id, shopId: input.shopId },
-    });
-    if (!existing) return null;
-    const now = new Date();
-    return this.prisma.deliveryJob.update({
-      where: { id: input.id },
-      data: {
-        status: input.status,
-        shipperName: input.shipperName,
-        shipperPhone: input.shipperPhone,
-        trackingCode: input.trackingCode,
-        ...(input.status === DELIVERY_STATUS.PICKED_UP ? { pickedUpAt: now } : {}),
-        ...(input.status === DELIVERY_STATUS.DELIVERED ? { deliveredAt: now } : {}),
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.deliveryJob.findFirst({
+        where: { id: input.id, shopId: input.shopId },
+      });
+      if (!existing) return { kind: 'NOT_FOUND' } as const;
+      if (!canTransitionDelivery(existing.status, input.status)) {
+        return { kind: 'INVALID_TRANSITION' } as const;
+      }
+
+      const now = this.clock.now();
+      const updated = await tx.deliveryJob.updateMany({
+        where: { id: existing.id, shopId: input.shopId, status: existing.status },
+        data: {
+          status: input.status,
+          shipperName: input.shipperName,
+          shipperPhone: input.shipperPhone,
+          trackingCode: input.trackingCode,
+          ...(input.status === DELIVERY_STATUS.PICKED_UP ? { pickedUpAt: now } : {}),
+          ...(input.status === DELIVERY_STATUS.DELIVERED ? { deliveredAt: now } : {}),
+        },
+      });
+      if (updated.count !== 1) return { kind: 'CONCURRENT_MODIFICATION' } as const;
+
+      const delivery = await tx.deliveryJob.findFirst({
+        where: { id: existing.id, shopId: input.shopId, status: input.status },
+      });
+      if (!delivery) return { kind: 'CONCURRENT_MODIFICATION' } as const;
+      return { kind: 'UPDATED', delivery, fromStatus: existing.status } as const;
     });
   }
 }

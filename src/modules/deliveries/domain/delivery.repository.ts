@@ -3,12 +3,12 @@ import type {
   DeliveryMethod,
   DeliveryStatus,
 } from '@modules/deliveries/domain/delivery-status';
-import type { DeliveryList, DeliveryResult } from './delivery.models';
+import type { DeliveryList, DeliveryResult, DeliveryStatusUpdateResult } from './delivery.models';
 export const DELIVERY_REPOSITORY = Symbol('DELIVERY_REPOSITORY');
 export interface DeliveryRepository {
   list(shopId: string, orderId?: string): Promise<DeliveryList>;
   create(input: DeliveryCreateData): Promise<DeliveryResult>;
-  updateStatus(input: DeliveryUpdateStatusData): Promise<DeliveryResult>;
+  updateStatus(input: DeliveryUpdateStatusData): Promise<DeliveryStatusUpdateResult>;
 }
 
 export interface DeliveryCreateData {

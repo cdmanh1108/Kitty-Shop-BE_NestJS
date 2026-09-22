@@ -1,7 +1,13 @@
 import { DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DELIVERY_REPOSITORY, type DeliveryRepository } from '../domain/delivery.repository';
 import type { CreateDeliveryInput, UpdateDeliveryStatusInput } from './delivery.contracts';
 
@@ -45,8 +51,21 @@ export class DeliveryService {
     const allowed: readonly string[] = Object.values(DELIVERY_STATUS);
     if (!allowed.includes(input.status))
       throw new BadRequestException('Trạng thái giao hàng không hợp lệ.');
-    const delivery = await this.repository.updateStatus({ shopId: user.shopId, id, ...input });
-    if (!delivery) throw new NotFoundException('Không tìm thấy công việc giao hàng.');
+    const result = await this.repository.updateStatus({ shopId: user.shopId, id, ...input });
+    if (result.kind === 'NOT_FOUND')
+      throw new NotFoundException('Không tìm thấy công việc giao hàng.');
+    if (result.kind === 'INVALID_TRANSITION') {
+      throw new ConflictException({
+        code: 'DELIVERY_INVALID_TRANSITION',
+        message: 'Không thể chuyển trạng thái giao hàng theo quy trình hiện tại.',
+      });
+    }
+    if (result.kind === 'CONCURRENT_MODIFICATION') {
+      throw new ConflictException({
+        code: 'DELIVERY_CONCURRENT_MODIFICATION',
+        message: 'Công việc giao hàng vừa được thay đổi. Vui lòng tải lại và thử lại.',
+      });
+    }
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -54,8 +73,9 @@ export class DeliveryService {
       action: 'STATUS_CHANGE',
       entityType: 'delivery_job',
       entityId: id,
+      oldValues: { status: result.fromStatus },
       newValues: { status: input.status },
     });
-    return delivery;
+    return result.delivery;
   }
 }
