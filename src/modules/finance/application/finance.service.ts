@@ -146,7 +146,10 @@ export class FinanceService {
           logger.error({
             event: 'finance.manual-payment.idempotency.release.failed',
             shopId: user.shopId,
-            error: releaseError instanceof Error ? releaseError.message : 'unknown',
+            error:
+              releaseError instanceof Error
+                ? releaseError
+                : new Error('Lỗi không xác định khi giải phóng khóa idempotency.'),
           });
         }
       }

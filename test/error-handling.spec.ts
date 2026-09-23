@@ -11,6 +11,7 @@ import {
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
+import { redactLog } from '../src/common/logging/application-logger';
 import { RentalOverlapError } from '../src/modules/rentals/domain/rental.repository';
 import {
   InvalidRentalIntervalError,
@@ -126,7 +127,7 @@ describe('AllExceptionsFilter', () => {
         code: 'RENTAL_OVERLAP',
         message: 'Một hoặc nhiều món đồ không còn trống trong khoảng thời gian đã chọn.',
         requestId: 'req-test-12345',
-        path: '/api/v1/rentals?item=123',
+        path: '/api/v1/rentals',
       });
       expect(sentPayload.details).toBeUndefined();
     });
@@ -315,6 +316,21 @@ describe('AllExceptionsFilter', () => {
           errorClass: 'Error',
         }),
       );
+      const loggedEvent: unknown = loggerSpy.mock.calls[0]?.[0];
+      const redactedLog = JSON.stringify(redactLog(loggedEvent));
+      expect(redactedLog).toContain('fingerprint');
+      expect(redactedLog).not.toMatch(/SELECT|secrets|xyz|token/);
+    });
+
+    it('removes query values from failed request logs and public responses', () => {
+      const loggerSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      mockRequest.url = '/api/v1/rentals?phone=0900123456&token=secret';
+
+      filter.catch(new Error('internal failure'), mockHost);
+
+      expect(sentPayload.path).toBe('/api/v1/rentals');
+      expect(JSON.stringify(sentPayload)).not.toMatch(/0900123456|secret/);
+      expect(loggerSpy).toHaveBeenCalledWith(expect.objectContaining({ path: '/api/v1/rentals' }));
     });
 
     it('also hides raw internal messages in development', () => {

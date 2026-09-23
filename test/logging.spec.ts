@@ -6,6 +6,7 @@ import {
   redactLog,
   summarizeError,
 } from '../src/common/logging/application-logger';
+import { safeErrorDiagnostic } from '../src/common/logging/safe-error-diagnostic';
 import { RequestContextMiddleware } from '../src/common/middleware/request-context.middleware';
 import { withRequestContext } from '../src/common/request-context/request-context';
 
@@ -34,16 +35,120 @@ describe('application logging', () => {
       errorCode: 'P1001',
     });
 
-    expect(summarizeError(configurationError)).toEqual({
+    const configurationDiagnostic = summarizeError(configurationError);
+    const databaseDiagnostic = summarizeError(databaseError);
+    expect(configurationDiagnostic).toMatchObject({
       errorType: 'Error',
       reason: 'CONFIG_AUTH_OTP_BYPASS_FORBIDDEN',
     });
-    expect(summarizeError(databaseError)).toEqual({
+    expect(configurationDiagnostic.fingerprint).toMatch(/^v1:[a-f0-9]{24}$/);
+    expect(databaseDiagnostic).toMatchObject({
       errorType: 'Error',
       errorCode: 'P1001',
       reason: 'DATABASE_SERVER_UNREACHABLE',
     });
+    expect(databaseDiagnostic.fingerprint).toMatch(/^v1:[a-f0-9]{24}$/);
     expect(JSON.stringify(redactLog(databaseError))).not.toContain('sensitive database failure');
+  });
+
+  it('keeps bounded app frames and distinguishes same-class errors by location', () => {
+    const rentalError = new Error('token=secret-rental');
+    Object.defineProperty(rentalError, 'stack', {
+      value:
+        'Error: token=secret-rental\n    at fn (/app/src/modules/rentals/rental.service.ts:10:5)',
+    });
+    const financeError = new Error('phone=0900123456');
+    Object.defineProperty(financeError, 'stack', {
+      value:
+        'Error: phone=0900123456\n    at fn (/app/src/modules/finance/finance.service.ts:20:7)',
+    });
+
+    const rentalDiagnostic = safeErrorDiagnostic(rentalError);
+    const financeDiagnostic = safeErrorDiagnostic(financeError);
+
+    expect(rentalDiagnostic.frames).toEqual(['src/modules/rentals/rental.service.ts:10']);
+    expect(financeDiagnostic.frames).toEqual(['src/modules/finance/finance.service.ts:20']);
+    expect(rentalDiagnostic.fingerprint).not.toBe(financeDiagnostic.fingerprint);
+    expect(JSON.stringify([rentalDiagnostic, financeDiagnostic])).not.toMatch(
+      /secret-rental|0900123456|\/app\//,
+    );
+  });
+
+  it('does not use error messages in diagnostic fingerprints', () => {
+    const first = Object.assign(new Error('token=secret-A'), { code: 'P2034' });
+    Object.defineProperty(first, 'stack', {
+      value: 'Error: token=secret-A\n    at fn (/app/src/modules/rentals/rental.service.ts:10:5)',
+    });
+    const second = Object.assign(new Error('phone=0900123456 secret-B'), { code: 'P2034' });
+    Object.defineProperty(second, 'stack', {
+      value:
+        'Error: phone=0900123456 secret-B\n    at fn (/app/src/modules/rentals/rental.service.ts:10:5)',
+    });
+
+    const firstDiagnostic = safeErrorDiagnostic(first);
+    const secondDiagnostic = safeErrorDiagnostic(second);
+
+    expect(firstDiagnostic.fingerprint).toBe(secondDiagnostic.fingerprint);
+    expect(JSON.stringify([firstDiagnostic, secondDiagnostic])).not.toMatch(
+      /secret-A|secret-B|0900123456/,
+    );
+  });
+
+  it('accepts reviewed machine codes and classifies a bounded Error cause', () => {
+    for (const code of [
+      'P2034',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'ERR_STREAM_PREMATURE_CLOSE',
+      'ABORT_ERR',
+    ]) {
+      expect(safeErrorDiagnostic(Object.assign(new Error('secret'), { code })).errorCode).toBe(
+        code,
+      );
+    }
+    for (const code of [
+      'secret token value',
+      'https://user:pass@host',
+      'a'.repeat(65),
+      'P2034\n',
+    ]) {
+      expect(
+        safeErrorDiagnostic(Object.assign(new Error('secret'), { code })).errorCode,
+      ).toBeUndefined();
+    }
+
+    const cause = Object.assign(new Error('SELECT * FROM customers WHERE phone=0900123456'), {
+      code: 'ECONNREFUSED',
+    });
+    const diagnostic = safeErrorDiagnostic(new Error('outer secret', { cause }));
+    expect(diagnostic).toMatchObject({
+      causeCategory: 'network',
+      causeType: 'Error',
+      causeCode: 'ECONNREFUSED',
+    });
+    expect(JSON.stringify(diagnostic)).not.toMatch(/SELECT|0900123456|outer secret/);
+
+    class PrismaClientInitializationError extends Error {}
+    expect(
+      safeErrorDiagnostic(
+        new Error('outer', { cause: new PrismaClientInitializationError('postgres://secret') }),
+      ),
+    ).toMatchObject({ causeCategory: 'database', causeType: 'PrismaClientInitializationError' });
+  });
+
+  it('fails closed for malformed stacks and circular causes', () => {
+    const malformed = new Error('secret');
+    Object.defineProperty(malformed, 'stack', {
+      get: () => {
+        throw new Error('stack secret');
+      },
+    });
+    Object.defineProperty(malformed, 'cause', { value: malformed });
+
+    expect(() => safeErrorDiagnostic(malformed)).not.toThrow();
+    const diagnostic = safeErrorDiagnostic(malformed);
+    expect(diagnostic.errorType).toBe('Error');
+    expect(diagnostic.fingerprint).toMatch(/^v1:(?:[a-f0-9]{24}|fallback-[a-f0-9]{8})$/);
   });
 
   it('writes parseable JSON and does not forward raw error stacks', () => {
@@ -58,7 +163,25 @@ describe('application logging', () => {
     });
     const logger = new ApplicationLogger('log');
     logger.log({ event: 'test', password: 'sensitive' });
-    logger.error({ event: 'failure', error: new Error('sensitive') }, 'sensitive stack', 'Test');
+    const failure = new Error(
+      'SELECT * FROM customers WHERE phone=0900123456 token=secret postgres://user:password@db.internal:5432/app',
+    );
+    Object.defineProperty(failure, 'stack', {
+      value:
+        'Error: SELECT * FROM customers WHERE phone=0900123456 token=secret postgres://user:password@db.internal:5432/app\n    at fn (/app/src/modules/rentals/rental.service.ts:10:5)',
+    });
+    logger.error(
+      {
+        event: 'failure',
+        error: failure,
+        email: 'user@example.com',
+        address: '1 Private Street',
+        body: { phone: '0900123456' },
+        headers: { authorization: 'Bearer secret' },
+      },
+      'sensitive stack',
+      'Test',
+    );
     logger.debug('hidden');
     expect(output).toHaveLength(2);
     for (const line of output) {
@@ -66,7 +189,21 @@ describe('application logging', () => {
         JSON.parse(line);
       }).not.toThrow();
       expect(line).not.toContain('sensitive');
+      expect(line).not.toMatch(
+        /SELECT|0900123456|user@example.com|1 Private Street|secret|postgres:\/\//,
+      );
     }
+    const structuredOutput: unknown = JSON.parse(output[1] ?? '{}');
+    expect(structuredOutput).toMatchObject({
+      message: {
+        event: 'failure',
+        error: {
+          errorType: 'Error',
+          frames: ['src/modules/rentals/rental.service.ts:10'],
+        },
+      },
+    });
+    expect(JSON.stringify(structuredOutput)).toMatch(/"fingerprint":"v1:[a-f0-9]{24}"/);
   });
 
   it('adds the active request ID to structured application logs', () => {
@@ -84,6 +221,42 @@ describe('application logging', () => {
         requestId: 'request-correlation-1',
       },
     });
+  });
+
+  it('enriches background error events with safe diagnostics and the active request ID', () => {
+    const output: string[] = [];
+    jest.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      output.push(String(chunk));
+      return true;
+    });
+    const error = new Error('Bearer secret phone=0900123456');
+    Object.defineProperty(error, 'stack', {
+      value:
+        'Error: Bearer secret phone=0900123456\n    at fn (/app/src/modules/audit/application/audit.service.ts:40:5)',
+    });
+
+    withRequestContext({ requestId: 'request-audit-failure' }, () => {
+      new ApplicationLogger('log').error(
+        { event: 'audit.persist.failed', error },
+        undefined,
+        'Audit',
+      );
+    });
+
+    const line = output[0] ?? '';
+    expect(line).not.toMatch(/secret|0900123456/);
+    const structuredOutput: unknown = JSON.parse(line);
+    expect(structuredOutput).toMatchObject({
+      message: {
+        event: 'audit.persist.failed',
+        requestId: 'request-audit-failure',
+        error: {
+          errorType: 'Error',
+          frames: ['src/modules/audit/application/audit.service.ts:40'],
+        },
+      },
+    });
+    expect(JSON.stringify(structuredOutput)).toMatch(/"fingerprint":"v1:[a-f0-9]{24}"/);
   });
 
   it.each([

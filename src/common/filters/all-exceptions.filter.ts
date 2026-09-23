@@ -29,6 +29,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const context = host.switchToHttp();
     const request = context.getRequest<Request>();
     const response = context.getResponse<Response>();
+    const path = request.url?.split('?')[0] ?? request.url;
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code = 'INTERNAL_SERVER_ERROR';
@@ -165,7 +166,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         method: request.method,
         statusCode: status,
         code,
-        path: request.url?.split('?')[0] ?? request.url,
+        path,
         userId: request.currentUser?.userId,
         shopId: request.currentUser?.shopId,
         errorClass:
@@ -184,7 +185,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message,
       details,
       requestId: request.requestId,
-      path: request.url,
+      path,
       timestamp: new Date().toISOString(),
     });
   }
