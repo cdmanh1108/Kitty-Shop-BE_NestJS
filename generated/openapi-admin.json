@@ -3999,11 +3999,6 @@
           "password": {
             "type": "string",
             "example": "ChangeMe123!"
-          },
-          "shopCode": {
-            "type": "string",
-            "example": "MAIN",
-            "description": "Optional when a user belongs to one shop."
           }
         },
         "required": [

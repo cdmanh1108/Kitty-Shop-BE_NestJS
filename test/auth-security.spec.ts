@@ -15,6 +15,7 @@ import * as request from 'supertest';
 import { CurrentUser } from '../src/common/decorators/current-user.decorator';
 import { Permissions } from '../src/common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
+import { ShopResolver } from '../src/common/tenant/shop-resolver';
 import { PermissionsGuard } from '../src/common/guards/permissions.guard';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import type { CurrentUser as Principal } from '../src/common/types/current-user';
@@ -55,6 +56,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
   let service: AuthService;
   let identity: AuthIdentity;
   let repository: jest.Mocked<AuthRepository>;
+  let findIdentityByEmail: jest.Mock;
   let rows: Map<string, CreateRefreshTokenData & { revoked: boolean }>;
   let passwordHash: string;
   const membership = jest.fn();
@@ -75,8 +77,9 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       memberStatus: 'ACTIVE',
       permissions: [],
     };
+    findIdentityByEmail = jest.fn().mockImplementation(() => Promise.resolve(identity));
     repository = {
-      findIdentityByEmail: jest.fn().mockImplementation(() => Promise.resolve(identity)),
+      findIdentityByEmail,
       updateLastLogin: jest.fn().mockResolvedValue(undefined),
       createRefreshToken: jest.fn().mockImplementation((data: CreateRefreshTokenData) => {
         rows.set(data.tokenHash, { ...data, revoked: false });
@@ -154,6 +157,10 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
           }),
         },
         { provide: PrismaService, useValue: { shopMember: { findUnique: membership } } },
+        {
+          provide: ShopResolver,
+          useValue: { resolveShopId: jest.fn().mockResolvedValue(ids.sid) },
+        },
         { provide: APP_GUARD, useClass: ThrottlerGuard },
         { provide: APP_GUARD, useClass: JwtAuthGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
@@ -199,6 +206,17 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       exp: expect.any(Number) as number,
     });
     expect(session.tokens.expiresIn).toBe(900);
+    expect(findIdentityByEmail).toHaveBeenCalledWith(credentials.email, ids.sid);
+  });
+
+  it('does not allow a legacy x-shop-code header to select a different shop during login', async () => {
+    await request(server)
+      .post('/admin/auth/login')
+      .set('x-shop-code', 'other-shop')
+      .send(credentials)
+      .expect(201);
+
+    expect(findIdentityByEmail).toHaveBeenCalledWith(credentials.email, ids.sid);
   });
 
   it.each(['missing', 'wrong', 'inactive-user', 'inactive-member'] as const)(

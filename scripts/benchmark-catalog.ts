@@ -25,7 +25,6 @@ interface ScenarioReport {
 }
 
 const BASE_URL = process.env.BENCHMARK_BASE_URL ?? 'http://localhost:3007/api/v1/web/products';
-const SHOP_CODE = process.env.BENCHMARK_SHOP_CODE ?? 'MAIN';
 
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
@@ -43,7 +42,6 @@ async function request(
       url,
       {
         headers: {
-          'x-shop-code': SHOP_CODE,
           Accept: 'application/json',
         },
       },
@@ -172,7 +170,7 @@ async function runConcurrentMix(
 async function main() {
   console.log(`=======================================================`);
   console.log(`  Catalog Performance Benchmark & Load Test           `);
-  console.log(`  Target: ${BASE_URL} (Shop: ${SHOP_CODE})            `);
+  console.log(`  Target: ${BASE_URL}                                `);
   console.log(`=======================================================\n`);
 
   // First verify backend is reachable and get a sample product slug

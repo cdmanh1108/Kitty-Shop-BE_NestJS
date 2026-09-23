@@ -13,7 +13,7 @@ interface CliArgs {
 
 function parseCliArgs(argv: string[]): CliArgs {
   let file = '';
-  let shop = process.env.DEFAULT_SHOP_CODE ?? 'MAIN';
+  let shop = 'MAIN';
   let apply = false;
   let dryRun = false;
 

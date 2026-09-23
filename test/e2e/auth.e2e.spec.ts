@@ -153,7 +153,6 @@ describe('Auth & Security End-to-End Tests', () => {
         .send({
           email,
           password: TEST_PASSWORD,
-          shopCode: shop.code,
         })
         .expect(201);
 

@@ -2,8 +2,8 @@
 
 ## Audit and retained architecture
 
-The backend uses email/password login (email lowercased in persistence), optional
-shopCode membership selection, HS256 access JWTs, and opaque bearer refresh tokens
+The backend uses email/password login (email lowercased in persistence), the deployment's
+single persisted shop for membership verification, HS256 access JWTs, and opaque bearer refresh tokens
 in request bodies. Password creation/change uses bcrypt cost 12. JWT_ACCESS_SECRET
 is supplied by environment and validated as a non-placeholder secret of at least
 32 characters. Length validation does not establish entropy; provision a random secret.
@@ -84,13 +84,13 @@ forwarded headers correctly. Application code does not parse X-Forwarded-For its
 ## Tenant, permissions and public inventory
 
 The global JWT guard is default-deny, with existing method-over-class Public metadata.
-It reloads the membership/user and permissions and matches JWT sub/mid/sid against DB.
+It resolves the single shop, reloads the membership/user and permissions, and matches JWT sub/mid/sid against DB.
 Inactive users/members fail 401; permission failures remain 403. Authenticated tenant
 and actor come from CurrentUser. DTO validation rejects unknown fields, so callers
 cannot inject shopId/userId/permissions into login or override authenticated scope.
 Business controllers retain their existing tenant-aware services/repository filters.
-Shop.status exists but has no implemented shop suspension policy in authentication;
-no new shop-state business rule was invented here.
+The canonical resolver requires that exactly one persisted shop exists and that it is active;
+zero, multiple, or inactive shops fail safely before authentication can use their context.
 
 Intentionally public controller endpoints (under configurable API_PREFIX, default api/v1):
 

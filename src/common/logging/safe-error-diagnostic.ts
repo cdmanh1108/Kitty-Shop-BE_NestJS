@@ -77,7 +77,6 @@ function environmentFailureReason(error: Error): string | undefined {
     'CORS_ORIGINS',
     'DATABASE_URL',
     'DEFAULT_ADMIN_PASSWORD',
-    'DEFAULT_SHOP_CODE',
     'JWT_ACCESS_SECRET',
     'LOG_LEVEL',
     'NODE_ENV',

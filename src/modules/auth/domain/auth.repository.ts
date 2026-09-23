@@ -25,10 +25,11 @@ export interface CreateRefreshTokenData extends RefreshTokenData {
 export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
 
 export interface AuthRepository {
-  findIdentityByEmail(email: string, shopCode?: string): Promise<AuthIdentity | null>;
+  findIdentityByEmail(email: string, shopId: string): Promise<AuthIdentity | null>;
   rotateRefreshToken(
     tokenHash: string,
     replacement: RefreshTokenData,
+    shopId: string,
   ): Promise<AuthIdentity | null>;
   createRefreshToken(input: CreateRefreshTokenData): Promise<void>;
   revokeRefreshToken(tokenHash: string, userId: string, memberId: string): Promise<void>;

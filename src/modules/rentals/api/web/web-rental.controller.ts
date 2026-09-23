@@ -59,11 +59,8 @@ export class WebRentalController {
     type: ErrorResDto,
     description: 'Khoảng thời gian thuê không hợp lệ hoặc thiếu productId/variantId',
   })
-  async checkAvailability(
-    @Req() request: Request,
-    @Query() query: WebAvailabilityQueryDto,
-  ): Promise<WebAvailabilityResDto> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+  async checkAvailability(@Query() query: WebAvailabilityQueryDto): Promise<WebAvailabilityResDto> {
+    const shopId = await this.shopResolver.resolveShopId();
     return this.rentalService.checkAvailability(shopId, query);
   }
 
@@ -81,11 +78,8 @@ export class WebRentalController {
     type: ErrorResDto,
     description: 'Dữ liệu tính báo giá không hợp lệ hoặc khoảng ngày không đúng',
   })
-  async calculateQuote(
-    @Req() request: Request,
-    @Body() body: WebRentalQuoteReqDto,
-  ): Promise<WebRentalQuoteResDto> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+  async calculateQuote(@Body() body: WebRentalQuoteReqDto): Promise<WebRentalQuoteResDto> {
+    const shopId = await this.shopResolver.resolveShopId();
     return this.rentalService.calculateQuote(shopId, body);
   }
 
@@ -123,7 +117,7 @@ export class WebRentalController {
     @Req() request: Request,
     @Body() body: WebCreateOrderReqDto,
   ): Promise<WebCreateOrderResDto> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+    const shopId = await this.shopResolver.resolveShopId();
     const idempotencyKeys = request.rawHeaders
       .filter((_, index) => index % 2 === 0)
       .map((header, index) => ({ header, value: request.rawHeaders[index * 2 + 1] }))
@@ -155,11 +149,8 @@ export class WebRentalController {
     type: ErrorResDto,
     description: 'Không tìm thấy đơn thuê hoặc số điện thoại không khớp',
   })
-  async lookupOrder(
-    @Req() request: Request,
-    @Body() body: WebOrderLookupReqDto,
-  ): Promise<WebOrderLookupResDto> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+  async lookupOrder(@Body() body: WebOrderLookupReqDto): Promise<WebOrderLookupResDto> {
+    const shopId = await this.shopResolver.resolveShopId();
     return this.rentalService.lookupOrder(shopId, body);
   }
 }

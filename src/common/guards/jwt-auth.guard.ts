@@ -3,6 +3,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { ShopResolver } from '@common/tenant/shop-resolver';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { isVerifiedAccessPayload } from '../types/verified-access-payload';
 import type { JwtAccessPayload } from '../types/current-user';
@@ -13,6 +14,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
+    private readonly shopResolver: ShopResolver,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -44,6 +46,7 @@ export class JwtAuthGuard implements CanActivate {
       );
     }
 
+    const resolvedShopId = await this.shopResolver.resolveShopId();
     const member = await this.prisma.shopMember.findUnique({
       where: { id: payload.mid },
       include: {
@@ -65,7 +68,8 @@ export class JwtAuthGuard implements CanActivate {
       member.status !== 'ACTIVE' ||
       member.user.status !== 'ACTIVE' ||
       member.userId !== payload.sub ||
-      member.shopId !== payload.sid
+      member.shopId !== payload.sid ||
+      member.shopId !== resolvedShopId
     ) {
       throw new UnauthorizedException(
         'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',

@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsString, MinLength } from 'class-validator';
 
 export class LoginReqDto {
   @ApiProperty({ example: 'admin@example.com' })
@@ -10,14 +10,6 @@ export class LoginReqDto {
   @IsString({ message: 'Mật khẩu phải là chuỗi ký tự.' })
   @MinLength(8, { message: 'Mật khẩu phải có ít nhất $constraint1 ký tự.' })
   password!: string;
-
-  @ApiPropertyOptional({
-    example: 'MAIN',
-    description: 'Optional when a user belongs to one shop.',
-  })
-  @IsString({ message: 'Mã cửa hàng phải là chuỗi ký tự.' })
-  @IsOptional()
-  shopCode?: string;
 }
 
 export class RefreshTokenReqDto {

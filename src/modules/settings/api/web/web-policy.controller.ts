@@ -1,9 +1,8 @@
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ShopResolver } from '@common/tenant/shop-resolver';
-import { Controller, Get, Inject, Req } from '@nestjs/common';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Request } from 'express';
 import { RENTAL_POLICY_PROVIDER, type RentalPolicyProvider } from '../../domain/rental-policy';
 import { WebRentalPolicyDto } from './dto/web-policy.dto';
 
@@ -26,8 +25,8 @@ export class WebPolicyController {
     type: WebRentalPolicyDto,
     description: 'Chính sách cọc, phí trễ hạn và vận chuyển công khai cho storefront',
   })
-  async getPolicies(@Req() request: Request): Promise<WebRentalPolicyDto> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+  async getPolicies(): Promise<WebRentalPolicyDto> {
+    const shopId = await this.shopResolver.resolveShopId();
     const policy = await this.policyProvider.getPolicy(shopId);
     return {
       depositMethods: policy.deposit.allowedMethods,

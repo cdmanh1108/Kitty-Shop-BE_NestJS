@@ -62,7 +62,7 @@ src/
 │   ├── swagger/
 │   │   └── openapi.ts          # Admin & Web Swagger document generation & isolation
 │   └── tenant/
-│       ├── shop-resolver.ts    # Multi-tenant resolver for public storefront requests
+│       ├── shop-resolver.ts    # Canonical single-shop resolver for application requests
 │       └── tenant.module.ts
 │
 ├── modules/

@@ -36,7 +36,7 @@ const sizes = [
 ] as const;
 
 async function main(): Promise<void> {
-  const shopCode = process.env.DEFAULT_SHOP_CODE ?? 'MAIN';
+  const shopCode = 'MAIN';
   const shopName = process.env.DEFAULT_SHOP_NAME ?? 'Rental Shop';
   const adminEmail = (process.env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com').toLowerCase();
   const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD ?? 'ChangeMe123!';

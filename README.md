@@ -53,7 +53,7 @@ Change it before any real deployment.
 5. `PaymentTransaction != RentalOrder`; one order can have many money movements.
 6. Deposits are held money and are excluded from realized revenue.
 7. Financial records and completed/cancelled orders are voided/statused rather than hard-deleted.
-8. All tenant-facing repository queries are scoped by `shopId` derived from authenticated membership.
+8. The application resolves exactly one persisted active shop per deployment; repository queries remain scoped by its internal `shopId` and authenticated membership.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DATABASE.md](docs/DATABASE.md) before changing these areas.
 

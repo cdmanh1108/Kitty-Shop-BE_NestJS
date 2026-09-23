@@ -10,6 +10,11 @@ const required = (config: Record<string, unknown>, key: string): string => {
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {
   parseWebAuthConfiguration(config);
+  if (config.DEFAULT_SHOP_CODE !== undefined || config.SHOP_CODE !== undefined) {
+    throw new Error(
+      'DEFAULT_SHOP_CODE và SHOP_CODE không còn được hỗ trợ. Mỗi deployment tự resolve cửa hàng duy nhất.',
+    );
+  }
   if (
     config.NODE_ENV !== undefined &&
     (typeof config.NODE_ENV !== 'string' ||
@@ -33,15 +38,6 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
       typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
     if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 65535) {
       throw new Error('PORT phải là số nguyên từ 1 đến 65535.');
-    }
-  }
-
-  if (config.DEFAULT_SHOP_CODE !== undefined) {
-    const value = config.DEFAULT_SHOP_CODE;
-    if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(value.trim())) {
-      throw new Error(
-        'DEFAULT_SHOP_CODE phải là mã cửa hàng không rỗng, gồm chữ cái, số, gạch dưới hoặc gạch ngang (tối đa 64 ký tự).',
-      );
     }
   }
 

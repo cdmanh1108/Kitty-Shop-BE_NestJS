@@ -62,7 +62,9 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
 
   it('keeps hash lookup, conditional consume and replacement insert inside one transaction', async () => {
     const { transaction, find, consume, create } = setup();
-    await expect(repository.rotateRefreshToken('old-hash', replacement)).resolves.toMatchObject({
+    await expect(
+      repository.rotateRefreshToken('old-hash', replacement, 'shop'),
+    ).resolves.toMatchObject({
       userId: 'user',
       memberId: 'member',
     });
@@ -87,8 +89,12 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
     const { consume, create } = setup();
     consume.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
     const results = await Promise.all([
-      repository.rotateRefreshToken('old-hash', replacement),
-      repository.rotateRefreshToken('old-hash', { ...replacement, tokenHash: 'second-hash' }),
+      repository.rotateRefreshToken('old-hash', replacement, 'shop'),
+      repository.rotateRefreshToken(
+        'old-hash',
+        { ...replacement, tokenHash: 'second-hash' },
+        'shop',
+      ),
     ]);
     expect(results.filter(Boolean)).toHaveLength(1);
     expect(results.filter((result) => result === null)).toHaveLength(1);
@@ -99,7 +105,9 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
     const { create } = setup();
     const failure = new Error('Persistence unavailable');
     create.mockRejectedValue(failure);
-    await expect(repository.rotateRefreshToken('old-hash', replacement)).rejects.toBe(failure);
+    await expect(repository.rotateRefreshToken('old-hash', replacement, 'shop')).rejects.toBe(
+      failure,
+    );
   });
 
   it.each([
@@ -109,6 +117,7 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
     'inactive-user',
     'inactive-member',
     'mismatched-user',
+    'wrong-shop',
   ] as const)('does not write for %s tokens', async (state) => {
     const { token, find, consume, create } = setup();
     if (state === 'missing') find.mockResolvedValue(null);
@@ -117,7 +126,13 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
     if (state === 'inactive-user') token.user.status = 'INACTIVE';
     if (state === 'inactive-member') token.member.status = 'INACTIVE';
     if (state === 'mismatched-user') token.member.userId = 'another-user';
-    await expect(repository.rotateRefreshToken('old-hash', replacement)).resolves.toBeNull();
+    await expect(
+      repository.rotateRefreshToken(
+        'old-hash',
+        replacement,
+        state === 'wrong-shop' ? 'other-shop' : 'shop',
+      ),
+    ).resolves.toBeNull();
     expect(consume.mock.calls).toHaveLength(0);
     expect(create.mock.calls).toHaveLength(0);
   });

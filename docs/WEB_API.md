@@ -9,7 +9,7 @@ The **Web Sale API** serves the public customer storefront (`kitty-web-nextjs`).
 ## 2. Security & Public Boundary
 
 - **Public Access**: Endpoints are decorated with `@Public()` and do not require Bearer JWT authentication.
-- **Tenant Scope**: Tenant context (`shopId`) is resolved dynamically by `ShopResolver` from the `x-shop-code` request header or fallback default shop.
+- **Shop Scope**: `ShopResolver` resolves the deployment's one persisted active shop. Browser-controlled headers and shop-code configuration cannot select a shop; downstream services continue to use the resolved internal `shopId`.
 - **Isolated Read Models**: DTOs expose only customer-safe data. Internal cost prices, physical inventory item IDs, warehouse bin locations, staff audit trails, and internal operator notes are strictly excluded.
 - **Authoritative Server Calculations**:
   - The frontend never dictates prices, deposits, shipping fees, or line totals.

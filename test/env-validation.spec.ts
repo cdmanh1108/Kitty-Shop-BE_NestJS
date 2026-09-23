@@ -24,13 +24,8 @@ describe('environment validation and configuration', () => {
       expect(() => validateEnvironment(baseConfig)).not.toThrow();
     });
 
-    it('validates DEFAULT_SHOP_CODE when it is configured', () => {
-      expect(() =>
-        validateEnvironment({ ...baseConfig, DEFAULT_SHOP_CODE: 'invalid shop code' }),
-      ).toThrow('DEFAULT_SHOP_CODE');
-      expect(() =>
-        validateEnvironment({ ...baseConfig, DEFAULT_SHOP_CODE: 'shop-main_01' }),
-      ).not.toThrow();
+    it.each(['DEFAULT_SHOP_CODE', 'SHOP_CODE'])('rejects deprecated tenant setting %s', (key) => {
+      expect(() => validateEnvironment({ ...baseConfig, [key]: 'MAIN' })).toThrow(key);
     });
 
     it('requires distinct Admin, Web and OTP secrets in production', () => {

@@ -8,7 +8,6 @@ import {
   Param,
   Post,
   Query,
-  Req,
 } from '@nestjs/common';
 import {
   ApiExtraModels,
@@ -22,7 +21,6 @@ import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
 import { ShopResolver } from '@common/tenant/shop-resolver';
-import type { Request } from 'express';
 import { WebCatalogService } from '../../application/web-catalog.service';
 import { WebCatalogMapper } from './web-catalog.mapper';
 import {
@@ -58,8 +56,8 @@ export class WebCatalogController {
     summary: 'Danh sách danh mục sản phẩm cho storefront',
   })
   @ApiOkResponse({ type: [WebCategoryDto], description: 'Danh sách danh mục sản phẩm công khai' })
-  async listCategories(@Req() request: Request): Promise<WebCategoryDto[]> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+  async listCategories(): Promise<WebCategoryDto[]> {
+    const shopId = await this.shopResolver.resolveShopId();
     const categories = await this.catalogService.listCategories(shopId);
     return WebCatalogMapper.toCategoryList(categories);
   }
@@ -77,11 +75,8 @@ export class WebCatalogController {
     type: ErrorResDto,
     description: 'Tham số bộ lọc hoặc phân trang không hợp lệ',
   })
-  async listProducts(
-    @Req() request: Request,
-    @Query() query: WebProductListQueryDto,
-  ): Promise<WebProductListResDto> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+  async listProducts(@Query() query: WebProductListQueryDto): Promise<WebProductListResDto> {
+    const shopId = await this.shopResolver.resolveShopId();
     const result = await this.catalogService.listProducts(shopId, query);
     return WebCatalogMapper.toProductListResponse(result);
   }
@@ -103,10 +98,9 @@ export class WebCatalogController {
     description: 'Body selection không hợp lệ hoặc vượt giới hạn batch.',
   })
   async resolveSelections(
-    @Req() request: Request,
     @Body() body: WebStorefrontSelectionResolveReqDto,
   ): Promise<WebStorefrontSelectionResolveResDto> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+    const shopId = await this.shopResolver.resolveShopId();
     const items = await this.catalogService.resolveSelections(shopId, body.items);
     return WebCatalogMapper.toSelectionResolution(items);
   }
@@ -124,11 +118,8 @@ export class WebCatalogController {
     type: ErrorResDto,
     description: 'Không tìm thấy sản phẩm với slug tương ứng',
   })
-  async getProduct(
-    @Req() request: Request,
-    @Param('slug') slug: string,
-  ): Promise<WebProductDetailDto> {
-    const shopId = await this.shopResolver.resolveShopId(request);
+  async getProduct(@Param('slug') slug: string): Promise<WebProductDetailDto> {
+    const shopId = await this.shopResolver.resolveShopId();
     const product = await this.catalogService.getProduct(shopId, slug);
     return WebCatalogMapper.toProductDetail(product);
   }

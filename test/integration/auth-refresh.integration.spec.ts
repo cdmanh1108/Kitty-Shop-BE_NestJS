@@ -7,6 +7,7 @@ import {
 import { createTestShop, createTestUserAndMember, TEST_PASSWORD } from '../fixtures/test-factories';
 import { PrismaAuthRepository } from '../../src/modules/auth/infrastructure/prisma-auth.repository';
 import { AuthService } from '../../src/modules/auth/application/auth.service';
+import { ShopResolver } from '../../src/common/tenant/shop-resolver';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
@@ -69,7 +70,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     };
     const configService = new ConfigService<AppConfiguration, true>(testConfig);
 
-    authService = new AuthService(authRepo, jwtService, configService);
+    authService = new AuthService(authRepo, jwtService, configService, new ShopResolver(prisma));
   });
 
   beforeEach(async () => {
@@ -87,7 +88,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
 
     // 1. Initial login -> issues Session A (AccessToken A + RefreshToken A)
     const loginResult = await authService.login(
-      { email, password: TEST_PASSWORD, shopCode: shop.code },
+      { email, password: TEST_PASSWORD },
       { ipAddress: '127.0.0.1', userAgent: 'Jest-Test' },
     );
     expect(loginResult.tokens.accessToken).toBeDefined();
@@ -127,7 +128,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     const email = user.email!;
 
     const loginResult = await authService.login(
-      { email, password: TEST_PASSWORD, shopCode: shop.code },
+      { email, password: TEST_PASSWORD },
       { ipAddress: '127.0.0.1', userAgent: 'Jest-Test' },
     );
     const tokenA = loginResult.tokens.refreshToken;
@@ -171,7 +172,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     const email = user.email!;
 
     const loginResult = await authService.login(
-      { email, password: TEST_PASSWORD, shopCode: shop.code },
+      { email, password: TEST_PASSWORD },
       { ipAddress: '127.0.0.1', userAgent: 'Jest-Test' },
     );
     const token = loginResult.tokens.refreshToken;
@@ -206,7 +207,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     const row = await prisma.refreshToken.findUniqueOrThrow({ where: { tokenHash: digest } });
     // Duplicate unique hash fails after conditional consumption, inside the real transaction.
     await expect(
-      authRepo.rotateRefreshToken(digest, { tokenHash: digest, expiresAt: row.expiresAt }),
+      authRepo.rotateRefreshToken(digest, { tokenHash: digest, expiresAt: row.expiresAt }, shop.id),
     ).rejects.toThrow();
     expect(
       (await prisma.refreshToken.findUniqueOrThrow({ where: { tokenHash: digest } })).revokedAt,

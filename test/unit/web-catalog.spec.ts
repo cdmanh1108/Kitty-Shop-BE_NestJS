@@ -1,5 +1,4 @@
 import { NotFoundException } from '@nestjs/common';
-import type { Request } from 'express';
 import {
   WebCatalogMapper,
   toWebCategory,
@@ -391,7 +390,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       getProduct: jest.Mock;
       resolveSelections: jest.Mock;
     };
-    const mockRequest = {} as Request;
 
     beforeEach(() => {
       mockShopResolver = {
@@ -472,9 +470,9 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       );
     });
 
-    it('delegates listCategories to shopResolver and WebCatalogMapper', async () => {
-      const res = await controller.listCategories(mockRequest);
-      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith(mockRequest);
+    it('delegates listCategories to the single-shop resolver and WebCatalogMapper', async () => {
+      const res = await controller.listCategories();
+      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith();
       expect(mockService.listCategories).toHaveBeenCalledWith('shop-uuid-1');
       expect(res).toHaveLength(1);
       expect(res[0]?.code).toBe('AO_DAI');
@@ -482,25 +480,25 @@ describe('Web Catalog Presenters, Service and Controller', () => {
 
     it('delegates listProducts to shopResolver and WebCatalogMapper', async () => {
       const query = { page: 1, limit: 20, q: 'ao dai' };
-      const res = await controller.listProducts(mockRequest, query);
-      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith(mockRequest);
+      const res = await controller.listProducts(query);
+      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith();
       expect(mockService.listProducts).toHaveBeenCalledWith('shop-uuid-1', query);
       expect(res.items).toHaveLength(1);
       expect(res.meta.total).toBe(1);
     });
 
     it('delegates getProduct to shopResolver and WebCatalogMapper', async () => {
-      const res = await controller.getProduct(mockRequest, 'ao-dai-do');
-      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith(mockRequest);
+      const res = await controller.getProduct('ao-dai-do');
+      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith();
       expect(mockService.getProduct).toHaveBeenCalledWith('shop-uuid-1', 'ao-dai-do');
       expect(res.slug).toBe('ao-dai-do');
       expect(res.variants).toHaveLength(1);
     });
 
-    it('resolves a bounded cart selection through the public tenant resolver', async () => {
+    it('resolves a bounded cart selection through the single-shop resolver', async () => {
       const body = { items: [{ productId: 'p-1', variantId: 'v-1', quantity: 2 }] };
-      const res = await controller.resolveSelections(mockRequest, body);
-      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith(mockRequest);
+      const res = await controller.resolveSelections(body);
+      expect(mockShopResolver.resolveShopId).toHaveBeenCalledWith();
       expect(mockService.resolveSelections).toHaveBeenCalledWith('shop-uuid-1', body.items);
       expect(res.items).toEqual([
         expect.objectContaining({ status: 'RESOLVED', index: 0, quantity: 2 }),

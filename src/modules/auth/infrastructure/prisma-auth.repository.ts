@@ -11,12 +11,12 @@ import type {
 export class PrismaAuthRepository implements AuthRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findIdentityByEmail(email: string, shopCode?: string): Promise<AuthIdentity | null> {
+  async findIdentityByEmail(email: string, shopId: string): Promise<AuthIdentity | null> {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
       include: {
         memberships: {
-          where: shopCode ? { shop: { code: shopCode } } : undefined,
+          where: { shopId },
           include: {
             shop: true,
             memberRoles: {
@@ -41,6 +41,7 @@ export class PrismaAuthRepository implements AuthRepository {
   async rotateRefreshToken(
     tokenHash: string,
     replacement: RefreshTokenData,
+    shopId: string,
   ): Promise<AuthIdentity | null> {
     return this.prisma.$transaction(async (tx) => {
       const token = await tx.refreshToken.findUnique({
@@ -69,7 +70,8 @@ export class PrismaAuthRepository implements AuthRepository {
         token.expiresAt.getTime() <= Date.now() ||
         token.user.status !== 'ACTIVE' ||
         token.member.status !== 'ACTIVE' ||
-        token.member.userId !== token.userId
+        token.member.userId !== token.userId ||
+        token.member.shopId !== shopId
       )
         return null;
 

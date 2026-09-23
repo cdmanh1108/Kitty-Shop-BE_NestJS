@@ -7,7 +7,6 @@ export interface ChangePasswordInput {
 export interface LoginInput {
   email: string;
   password: string;
-  shopCode?: string;
 }
 
 export interface LoginResult {

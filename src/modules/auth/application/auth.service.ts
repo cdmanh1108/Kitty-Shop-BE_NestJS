@@ -3,6 +3,7 @@ import type { AppConfiguration } from '@config/configuration';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { ShopResolver } from '@common/tenant/shop-resolver';
 import { compare, hash } from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { AUTH_REPOSITORY, type AuthIdentity, type AuthRepository } from '../domain/auth.repository';
@@ -14,13 +15,15 @@ export class AuthService {
     @Inject(AUTH_REPOSITORY) private readonly repository: AuthRepository,
     private readonly jwt: JwtService,
     private readonly config: ConfigService<AppConfiguration, true>,
+    private readonly shopResolver: ShopResolver,
   ) {}
 
   async login(
     input: LoginInput,
     context: { ipAddress?: string; userAgent?: string },
   ): Promise<LoginResult> {
-    const identity = await this.repository.findIdentityByEmail(input.email, input.shopCode);
+    const shopId = await this.shopResolver.resolveShopId();
+    const identity = await this.repository.findIdentityByEmail(input.email, shopId);
     if (
       !identity?.passwordHash ||
       identity.userStatus !== 'ACTIVE' ||
@@ -45,10 +48,12 @@ export class AuthService {
     rawToken: string,
     context: { ipAddress?: string; userAgent?: string },
   ): Promise<LoginResult> {
+    const shopId = await this.shopResolver.resolveShopId();
     const refresh = this.prepareRefreshToken(context);
     const identity = await this.repository.rotateRefreshToken(
       this.hashToken(rawToken),
       refresh.data,
+      shopId,
     );
     if (!identity) {
       throw new UnauthorizedException(

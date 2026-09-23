@@ -5,5 +5,5 @@ export function toChangePasswordInput(dto: ChangePasswordReqDto): ChangePassword
   return { ...dto };
 }
 export function toLoginInput(dto: LoginReqDto): LoginInput {
-  return { ...dto };
+  return { email: dto.email, password: dto.password };
 }
