@@ -93,3 +93,84 @@ export class UpdateDeliveryStatusReqDto {
   @IsOptional()
   trackingCode?: string;
 }
+
+export class DeliveryCustomerResDto {
+  @ApiProperty()
+  fullName!: string;
+
+  @ApiProperty()
+  phone!: string;
+}
+
+export class DeliveryOrderResDto {
+  @ApiProperty()
+  orderNumber!: string;
+
+  @ApiPropertyOptional({ type: DeliveryCustomerResDto, nullable: true })
+  customer!: DeliveryCustomerResDto | null;
+}
+
+export class DeliveryResDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  orderId!: string;
+
+  @ApiProperty({ enum: Object.values(DELIVERY_DIRECTION) })
+  direction!: DeliveryDirection;
+
+  @ApiProperty({ enum: Object.values(DELIVERY_METHOD) })
+  method!: DeliveryMethod;
+
+  @ApiProperty({ enum: Object.values(DELIVERY_STATUS) })
+  status!: DeliveryStatus;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
+  scheduledAt!: string | null;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
+  pickedUpAt!: string | null;
+
+  @ApiPropertyOptional({ type: String, format: 'date-time', nullable: true })
+  deliveredAt!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  recipientName!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  recipientPhone!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  addressLine!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  ward!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  district!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  city!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  province!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  shipperName!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  shipperPhone!: string | null;
+
+  @ApiProperty({ type: String, example: '30000.00' })
+  shippingFee!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  trackingCode!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  notes!: string | null;
+
+  @ApiPropertyOptional({ type: DeliveryOrderResDto, nullable: true })
+  order?: DeliveryOrderResDto | null;
+}

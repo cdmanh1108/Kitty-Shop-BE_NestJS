@@ -3409,7 +3409,17 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeliveryResDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3448,7 +3458,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3487,7 +3504,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResDto"
+                }
+              }
+            }
           },
           "400": {
             "description": "",
@@ -3546,7 +3570,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReminderResDto"
+                  }
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3595,7 +3629,14 @@
         ],
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderResDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -3683,11 +3724,7 @@
             "in": "query",
             "schema": {
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -3744,11 +3781,7 @@
             "in": "query",
             "schema": {
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "type": "number"
             }
           }
         ],
@@ -6364,6 +6397,124 @@
           "meta"
         ]
       },
+      "DeliveryResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "OUTBOUND",
+              "RETURN"
+            ]
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "CUSTOMER_PICKUP",
+              "SHOP_DELIVERY",
+              "THIRD_PARTY_SHIPPER"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "READY",
+              "PICKED_UP",
+              "DELIVERING",
+              "DELIVERED",
+              "FAILED",
+              "CANCELLED"
+            ]
+          },
+          "scheduledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "pickedUpAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deliveredAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "recipientName": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipientPhone": {
+            "type": "string",
+            "nullable": true
+          },
+          "addressLine": {
+            "type": "string",
+            "nullable": true
+          },
+          "ward": {
+            "type": "string",
+            "nullable": true
+          },
+          "district": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "province": {
+            "type": "string",
+            "nullable": true
+          },
+          "shipperName": {
+            "type": "string",
+            "nullable": true
+          },
+          "shipperPhone": {
+            "type": "string",
+            "nullable": true
+          },
+          "shippingFee": {
+            "type": "string",
+            "example": "30000.00"
+          },
+          "trackingCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "order": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryOrderResDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "direction",
+          "method",
+          "status",
+          "shippingFee"
+        ]
+      },
       "CreateDeliveryReqDto": {
         "type": "object",
         "properties": {
@@ -6494,6 +6645,68 @@
           "timestamp"
         ]
       },
+      "ReminderResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string"
+          },
+          "scheduledFor": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "customer": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReminderCustomerResDto"
+              }
+            ]
+          },
+          "order": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReminderOrderResDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "scheduledFor",
+          "status",
+          "priority",
+          "title"
+        ]
+      },
       "RevenueReportRowResDto": {
         "type": "object",
         "properties": {
@@ -6520,10 +6733,6 @@
           "expense",
           "profit"
         ]
-      },
-      "Object": {
-        "type": "object",
-        "properties": {}
       },
       "ProductPerformanceResDto": {
         "type": "object",
@@ -8439,6 +8648,56 @@
           "orderCode"
         ]
       },
+      "DeliveryOrderResDto": {
+        "type": "object",
+        "properties": {
+          "orderNumber": {
+            "type": "string"
+          },
+          "customer": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryCustomerResDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "orderNumber"
+        ]
+      },
+      "ReminderCustomerResDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fullName",
+          "phone"
+        ]
+      },
+      "ReminderOrderResDto": {
+        "type": "object",
+        "properties": {
+          "orderNumber": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "orderNumber",
+          "status"
+        ]
+      },
       "RentalStatus": {
         "type": "string",
         "enum": [
@@ -8633,6 +8892,21 @@
         "required": [
           "categoryId",
           "cashAmount"
+        ]
+      },
+      "DeliveryCustomerResDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fullName",
+          "phone"
         ]
       },
       "InventoryAllocationOrderCustomerResDto": {

@@ -18,7 +18,7 @@ export class ReportRangeQueryDto {
 }
 
 export class PerformanceQueryDto extends ReportRangeQueryDto {
-  @ApiPropertyOptional({ default: 20 })
+  @ApiPropertyOptional({ type: Number, default: 20 })
   @Type(() => Number)
   @IsInt({ message: 'Số kết quả mỗi trang phải là số nguyên.' })
   @Min(1, { message: 'Số kết quả mỗi trang phải lớn hơn hoặc bằng $constraint1.' })

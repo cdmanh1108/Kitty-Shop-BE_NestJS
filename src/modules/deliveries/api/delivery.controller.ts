@@ -7,6 +7,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
@@ -15,7 +16,7 @@ import { IsOptional, IsUUID } from 'class-validator';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
 import { DeliveryService } from '../application/delivery.service';
-import { CreateDeliveryReqDto, UpdateDeliveryStatusReqDto } from './delivery.dto';
+import { CreateDeliveryReqDto, DeliveryResDto, UpdateDeliveryStatusReqDto } from './delivery.dto';
 import { toCreateDeliveryInput, toUpdateDeliveryStatusInput } from './delivery.mapper';
 
 class DeliveryListQueryDto {
@@ -33,12 +34,14 @@ export class DeliveryController {
 
   @Get()
   @Permissions(PERMISSIONS.DELIVERIES_VIEW)
+  @ApiOkResponse({ type: [DeliveryResDto] })
   list(@CurrentUser() user: CurrentUserType, @Query() query: DeliveryListQueryDto) {
     return this.service.list(user, query.orderId);
   }
 
   @Post('orders/:orderId')
   @Permissions(PERMISSIONS.DELIVERIES_MANAGE)
+  @ApiCreatedResponse({ type: DeliveryResDto })
   create(
     @CurrentUser() user: CurrentUserType,
     @Param('orderId') orderId: string,
@@ -49,7 +52,7 @@ export class DeliveryController {
 
   @Patch(':id/status')
   @Permissions(PERMISSIONS.DELIVERIES_MANAGE)
-  @ApiOkResponse()
+  @ApiOkResponse({ type: DeliveryResDto })
   @ApiBadRequestResponse({ type: ErrorResDto })
   @ApiConflictResponse({
     type: ErrorResDto,
