@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiPropertyOptional,
@@ -39,6 +40,7 @@ export class ReminderController {
   @Post('refresh')
   @Permissions(PERMISSIONS.REMINDERS_MANAGE)
   @ApiCreatedResponse()
+  @ApiConflictResponse({ description: 'A refresh for this shop is already in progress.' })
   refresh(@CurrentUser() user: CurrentUserType) {
     return this.service.refreshForUser(user);
   }

@@ -2,6 +2,7 @@ import type { Clock } from '../../src/common/clock/clock';
 import type { CurrentUser } from '../../src/common/types/current-user';
 import { ReminderService } from '../../src/modules/reminders/application/reminder.service';
 import type { ReminderRepository } from '../../src/modules/reminders/domain/reminder.repository';
+import { immediatelyAcquireReminderRefresh } from '../helpers/reminder-refresh-coordinator';
 
 const user: CurrentUser = {
   userId: 'user-1',
@@ -45,7 +46,7 @@ describe('Reminder logical occurrence lifecycle', () => {
       dismiss: jest.fn(),
     };
     const clock: Clock = { now: () => new Date(now) };
-    const service = new ReminderService(repository, clock);
+    const service = new ReminderService(repository, clock, immediatelyAcquireReminderRefresh());
 
     await service.refreshForUser(user);
     const firstKey = 'PAYMENT_DUE:order-1:2026-09-22';
@@ -92,9 +93,11 @@ describe('Reminder logical occurrence lifecycle', () => {
       list: jest.fn(),
       dismiss: jest.fn(),
     };
-    const service = new ReminderService(repository, {
-      now: () => new Date('2026-09-22T03:00:00.000Z'),
-    });
+    const service = new ReminderService(
+      repository,
+      { now: () => new Date('2026-09-22T03:00:00.000Z') },
+      immediatelyAcquireReminderRefresh(),
+    );
 
     await service.refreshForUser(user);
     const key = 'PAYMENT_DUE:order-1:2026-09-22';

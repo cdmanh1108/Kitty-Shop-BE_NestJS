@@ -10,6 +10,7 @@ import {
 import { InvalidRentalIntervalError } from '../src/modules/rentals/domain/rental-errors';
 import { calculateOrderPaymentState } from '../src/modules/finance/domain/payment-state';
 import { ReminderService } from '../src/modules/reminders/application/reminder.service';
+import { immediatelyAcquireReminderRefresh } from './helpers/reminder-refresh-coordinator';
 import type {
   ReminderRepository,
   ReminderOrderCandidate,
@@ -128,7 +129,11 @@ describe('business Clock consumers', () => {
       list: jest.fn(),
       dismiss: jest.fn(),
     };
-    await new ReminderService(repository, clock).refreshForUser(user);
+    await new ReminderService(
+      repository,
+      clock,
+      immediatelyAcquireReminderRefresh(),
+    ).refreshForUser(user);
     const overdue = repository.upsert.mock.calls
       .map(([value]) => value)
       .filter((value) => value.type === 'OVERDUE');

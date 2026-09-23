@@ -2,7 +2,7 @@ import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
 import { canRescheduleRental } from '@modules/rentals/domain/rental-policy';
 import { ORDER_PAYMENT_STATUS, DEPOSIT_STATUS } from '@modules/finance/domain/payment-status';
 import { CLOCK, type Clock } from '@common/clock/clock';
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { CurrentUser } from '@common/types/current-user';
 import { zonedDateKey, zonedDayRange } from '@common/utils/timezone';
@@ -11,6 +11,11 @@ import {
   type ReminderOrderCandidate,
   type ReminderRepository,
 } from '../domain/reminder.repository';
+import {
+  REMINDER_REFRESH_COORDINATOR,
+  type ReminderRefreshCoordinator,
+  type ReminderRefreshOwnership,
+} from '../domain/reminder-refresh-coordinator';
 
 /** Bounds query materialization and sequential reminder writes for one shop refresh page. */
 export const REMINDER_CANDIDATE_BATCH_SIZE = 100;
@@ -22,6 +27,8 @@ export class ReminderService {
   constructor(
     @Inject(REMINDER_REPOSITORY) private readonly repository: ReminderRepository,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(REMINDER_REFRESH_COORDINATOR)
+    private readonly refreshCoordinator: ReminderRefreshCoordinator,
   ) {}
 
   @Cron('0 */10 * * * *')
@@ -29,7 +36,14 @@ export class ReminderService {
     const shops = await this.repository.activeShops();
     for (const shop of shops) {
       try {
-        await this.refreshShop(shop.id, shop.timezone);
+        const refreshed = await this.refreshShop(shop.id, shop.timezone);
+        if (!refreshed) {
+          this.logger.log({
+            event: 'reminders.refresh.skipped_busy',
+            shopId: shop.id,
+            coordinationMode: 'database_lease',
+          });
+        }
       } catch (error) {
         this.logger.error({
           event: 'reminders.refresh.failed',
@@ -42,7 +56,10 @@ export class ReminderService {
 
   async refreshForUser(user: CurrentUser): Promise<{ refreshed: true }> {
     const shop = (await this.repository.activeShops()).find((item) => item.id === user.shopId);
-    await this.refreshShop(user.shopId, shop?.timezone ?? 'Asia/Ho_Chi_Minh');
+    const refreshed = await this.refreshShop(user.shopId, shop?.timezone ?? 'Asia/Ho_Chi_Minh');
+    if (!refreshed) {
+      throw new ConflictException('Đang có tiến trình làm mới lời nhắc cho cửa hàng này.');
+    }
     return { refreshed: true };
   }
 
@@ -56,7 +73,19 @@ export class ReminderService {
     return reminder;
   }
 
-  private async refreshShop(shopId: string, timezone: string): Promise<void> {
+  private async refreshShop(shopId: string, timezone: string): Promise<boolean> {
+    const result = await this.refreshCoordinator.runIfOwner(shopId, (ownership) =>
+      this.refreshShopOwned(shopId, timezone, ownership),
+    );
+    return result.acquired;
+  }
+
+  private async refreshShopOwned(
+    shopId: string,
+    timezone: string,
+    ownership: ReminderRefreshOwnership,
+  ): Promise<void> {
+    ownership.assertActive();
     const startedAt = Date.now();
     const now = this.clock.now();
     const day = zonedDayRange(now, timezone);
@@ -76,6 +105,7 @@ export class ReminderService {
       content: string,
       scheduledFor: Date,
     ) => {
+      ownership.assertActive();
       const key = `${type}:${order.id}:${dayKey}`;
       activeKeys.add(key);
       reminderUpserts += 1;
@@ -93,6 +123,7 @@ export class ReminderService {
     };
 
     do {
+      ownership.assertActive();
       const page = await this.repository.candidatePage({
         shopId,
         now,
@@ -191,6 +222,7 @@ export class ReminderService {
       cursor = page.nextCursor ?? undefined;
     } while (cursor);
 
+    ownership.assertActive();
     const resolvedCount = await this.repository.resolveMissing(shopId, [...activeKeys]);
     this.logger.log({
       event: 'reminders.refresh.completed',
@@ -202,6 +234,8 @@ export class ReminderService {
       activeReminderKeys: activeKeys.size,
       resolvedCount,
       batchSize: REMINDER_CANDIDATE_BATCH_SIZE,
+      coordinationMode: 'database_lease',
+      ownerAcquired: true,
     });
   }
 }

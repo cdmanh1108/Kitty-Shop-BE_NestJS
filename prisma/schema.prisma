@@ -1029,6 +1029,17 @@ model Reminder {
   @@map("reminders")
 }
 
+/// Narrow scheduler-owned lease rows. They are not business reminders and have no tenant relation.
+model SchedulerJobLease {
+  jobKey     String   @id @map("job_key") @db.VarChar(200)
+  ownerToken String   @map("owner_token") @db.VarChar(64)
+  leaseUntil DateTime @map("lease_until") @db.Timestamptz(6)
+  acquiredAt DateTime @map("acquired_at") @db.Timestamptz(6)
+  updatedAt  DateTime @map("updated_at") @db.Timestamptz(6)
+
+  @@map("scheduler_job_leases")
+}
+
 model NotificationLog {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId            String    @map("shop_id") @db.Uuid

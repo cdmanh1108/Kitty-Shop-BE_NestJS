@@ -108,6 +108,7 @@ describe('Reminder due workset PostgreSQL regression', () => {
       createOrder(shop.id, customer.id, {
         status: 'CONFIRMED',
         rentalStartAt: new Date('2026-09-22T05:00:00.000Z'),
+        rentalEndAt: new Date('2026-09-25T03:00:00.000Z'),
         paymentStatus: 'UNPAID',
         depositStatus: 'PARTIALLY_HELD',
         depositRequired: 100000,
@@ -139,7 +140,7 @@ describe('Reminder due workset PostgreSQL regression', () => {
 
     expect(pages).toHaveLength(4);
     expect(ids).toHaveLength(expected.length);
-    expect(new Set(ids)).toHaveLength(expected.length);
+    expect(new Set(ids).size).toBe(expected.length);
     expect(ids.sort()).toEqual(expected.map((order) => order.id).sort());
   });
 });

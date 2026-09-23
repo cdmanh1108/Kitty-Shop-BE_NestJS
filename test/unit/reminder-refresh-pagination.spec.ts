@@ -9,6 +9,7 @@ import type {
   ReminderOrderCandidate,
   ReminderRepository,
 } from '../../src/modules/reminders/domain/reminder.repository';
+import { immediatelyAcquireReminderRefresh } from '../helpers/reminder-refresh-coordinator';
 
 const now = new Date('2026-09-22T03:00:00.000Z');
 const clock: Clock = { now: () => new Date(now) };
@@ -79,7 +80,11 @@ describe('Reminder refresh pagination', () => {
     const { persistence, resolveMissing } = repository(candidatePage);
     const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
-    await new ReminderService(persistence, clock).refreshForUser(user);
+    await new ReminderService(
+      persistence,
+      clock,
+      immediatelyAcquireReminderRefresh(),
+    ).refreshForUser(user);
 
     expect(candidatePage).toHaveBeenCalledTimes(2);
     const [first, second] = candidatePage.mock.calls.map(([input]) => input);
@@ -125,7 +130,7 @@ describe('Reminder refresh pagination', () => {
     const { persistence, upsert, resolveMissing } = repository(candidatePage);
     const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
-    await new ReminderService(persistence, clock).refreshAll();
+    await new ReminderService(persistence, clock, immediatelyAcquireReminderRefresh()).refreshAll();
 
     expect(upsert).toHaveBeenCalled();
     expect(resolveMissing).not.toHaveBeenCalled();

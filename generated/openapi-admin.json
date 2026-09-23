@@ -3601,6 +3601,9 @@
         "responses": {
           "201": {
             "description": ""
+          },
+          "409": {
+            "description": "A refresh for this shop is already in progress."
           }
         },
         "security": [
