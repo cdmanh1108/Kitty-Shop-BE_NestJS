@@ -18,26 +18,29 @@ describe('Reminder logical occurrence lifecycle', () => {
     const rows = new Map<string, { status: 'PENDING' | 'DISMISSED' | 'RESOLVED' }>();
     const repository: jest.Mocked<ReminderRepository> = {
       activeShops: jest.fn().mockResolvedValue([{ id: user.shopId, timezone: 'Asia/Ho_Chi_Minh' }]),
-      candidates: jest.fn().mockResolvedValue([
-        {
-          id: 'order-1',
-          orderNumber: 'RT-1',
-          status: 'RESERVED',
-          paymentStatus: 'UNPAID',
-          depositStatus: 'HELD',
-          depositRequired: 0,
-          rentalStartAt: new Date('2026-09-25T03:00:00.000Z'),
-          rentalEndAt: new Date('2026-09-26T03:00:00.000Z'),
-          customerId: 'customer-1',
-          customerName: 'Customer',
-          customerPhone: '0900000000',
-        },
-      ]),
+      candidatePage: jest.fn().mockResolvedValue({
+        items: [
+          {
+            id: 'order-1',
+            orderNumber: 'RT-1',
+            status: 'RESERVED',
+            paymentStatus: 'UNPAID',
+            depositStatus: 'HELD',
+            depositRequired: 0,
+            rentalStartAt: new Date('2026-09-25T03:00:00.000Z'),
+            rentalEndAt: new Date('2026-09-26T03:00:00.000Z'),
+            customerId: 'customer-1',
+            customerName: 'Customer',
+            customerPhone: '0900000000',
+          },
+        ],
+        nextCursor: null,
+      }),
       upsert: jest.fn((input) => {
         if (!rows.has(input.dedupeKey)) rows.set(input.dedupeKey, { status: 'PENDING' });
         return Promise.resolve();
       }),
-      resolveMissing: jest.fn().mockResolvedValue(undefined),
+      resolveMissing: jest.fn().mockResolvedValue(0),
       list: jest.fn(),
       dismiss: jest.fn(),
     };
@@ -63,26 +66,29 @@ describe('Reminder logical occurrence lifecycle', () => {
     const rows = new Map<string, { status: 'PENDING' | 'DISMISSED' | 'RESOLVED' }>();
     const repository: jest.Mocked<ReminderRepository> = {
       activeShops: jest.fn().mockResolvedValue([{ id: user.shopId, timezone: 'Asia/Ho_Chi_Minh' }]),
-      candidates: jest.fn().mockResolvedValue([
-        {
-          id: 'order-1',
-          orderNumber: 'RT-1',
-          status: 'RESERVED',
-          paymentStatus: 'UNPAID',
-          depositStatus: 'HELD',
-          depositRequired: 0,
-          rentalStartAt: new Date('2026-09-25T03:00:00.000Z'),
-          rentalEndAt: new Date('2026-09-26T03:00:00.000Z'),
-          customerId: 'customer-1',
-          customerName: 'Customer',
-          customerPhone: '0900000000',
-        },
-      ]),
+      candidatePage: jest.fn().mockResolvedValue({
+        items: [
+          {
+            id: 'order-1',
+            orderNumber: 'RT-1',
+            status: 'RESERVED',
+            paymentStatus: 'UNPAID',
+            depositStatus: 'HELD',
+            depositRequired: 0,
+            rentalStartAt: new Date('2026-09-25T03:00:00.000Z'),
+            rentalEndAt: new Date('2026-09-26T03:00:00.000Z'),
+            customerId: 'customer-1',
+            customerName: 'Customer',
+            customerPhone: '0900000000',
+          },
+        ],
+        nextCursor: null,
+      }),
       upsert: jest.fn((input) => {
         if (!rows.has(input.dedupeKey)) rows.set(input.dedupeKey, { status: 'PENDING' });
         return Promise.resolve();
       }),
-      resolveMissing: jest.fn().mockResolvedValue(undefined),
+      resolveMissing: jest.fn().mockResolvedValue(0),
       list: jest.fn(),
       dismiss: jest.fn(),
     };

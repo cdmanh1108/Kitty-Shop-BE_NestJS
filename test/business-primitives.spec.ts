@@ -119,11 +119,12 @@ describe('business Clock consumers', () => {
     };
     const repository: jest.Mocked<ReminderRepository> = {
       activeShops: jest.fn().mockResolvedValue([{ id: 'shop', timezone: 'Asia/Ho_Chi_Minh' }]),
-      candidates: jest
-        .fn()
-        .mockResolvedValue([candidate, { ...candidate, id: 'exact', rentalEndAt: now }]),
+      candidatePage: jest.fn().mockResolvedValue({
+        items: [candidate, { ...candidate, id: 'exact', rentalEndAt: now }],
+        nextCursor: null,
+      }),
       upsert: jest.fn().mockResolvedValue(undefined),
-      resolveMissing: jest.fn().mockResolvedValue(undefined),
+      resolveMissing: jest.fn().mockResolvedValue(0),
       list: jest.fn(),
       dismiss: jest.fn(),
     };

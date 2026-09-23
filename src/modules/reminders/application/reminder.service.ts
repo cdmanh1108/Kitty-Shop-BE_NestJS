@@ -6,7 +6,14 @@ import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { CurrentUser } from '@common/types/current-user';
 import { zonedDateKey, zonedDayRange } from '@common/utils/timezone';
-import { REMINDER_REPOSITORY, type ReminderRepository } from '../domain/reminder.repository';
+import {
+  REMINDER_REPOSITORY,
+  type ReminderOrderCandidate,
+  type ReminderRepository,
+} from '../domain/reminder.repository';
+
+/** Bounds query materialization and sequential reminder writes for one shop refresh page. */
+export const REMINDER_CANDIDATE_BATCH_SIZE = 100;
 
 @Injectable()
 export class ReminderService {
@@ -50,15 +57,19 @@ export class ReminderService {
   }
 
   private async refreshShop(shopId: string, timezone: string): Promise<void> {
+    const startedAt = Date.now();
     const now = this.clock.now();
     const day = zonedDayRange(now, timezone);
     const dayKey = zonedDateKey(now, timezone);
     const returnSoonEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const candidates = await this.repository.candidates(shopId);
-    const activeKeys: string[] = [];
+    const activeKeys = new Set<string>();
+    let cursor: string | undefined;
+    let pages = 0;
+    let candidateOrders = 0;
+    let reminderUpserts = 0;
 
     const add = async (
-      order: (typeof candidates)[number],
+      order: ReminderOrderCandidate,
       type: string,
       priority: number,
       title: string,
@@ -66,7 +77,8 @@ export class ReminderService {
       scheduledFor: Date,
     ) => {
       const key = `${type}:${order.id}:${dayKey}`;
-      activeKeys.push(key);
+      activeKeys.add(key);
+      reminderUpserts += 1;
       await this.repository.upsert({
         shopId,
         orderId: order.id,
@@ -80,91 +92,116 @@ export class ReminderService {
       });
     };
 
-    for (const order of candidates) {
-      if (
-        canRescheduleRental(order.status) &&
-        order.rentalStartAt >= day.start &&
-        order.rentalStartAt < day.end
-      ) {
-        await add(
-          order,
-          'PICKUP_TODAY',
-          50,
-          `Nhận đồ hôm nay · ${order.orderNumber}`,
-          `${order.customerName} · ${order.customerPhone}`,
-          order.rentalStartAt,
-        );
+    do {
+      const page = await this.repository.candidatePage({
+        shopId,
+        now,
+        dayStart: day.start,
+        dayEnd: day.end,
+        returnSoonEnd,
+        cursor,
+        limit: REMINDER_CANDIDATE_BATCH_SIZE,
+      });
+      pages += 1;
+      candidateOrders += page.items.length;
+      for (const order of page.items) {
+        if (
+          canRescheduleRental(order.status) &&
+          order.rentalStartAt >= day.start &&
+          order.rentalStartAt < day.end
+        ) {
+          await add(
+            order,
+            'PICKUP_TODAY',
+            50,
+            `Nhận đồ hôm nay · ${order.orderNumber}`,
+            `${order.customerName} · ${order.customerPhone}`,
+            order.rentalStartAt,
+          );
+        }
+        if (
+          (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
+          order.rentalEndAt >= day.start &&
+          order.rentalEndAt < day.end
+        ) {
+          await add(
+            order,
+            'RETURN_TODAY',
+            60,
+            `Trả đồ hôm nay · ${order.orderNumber}`,
+            `${order.customerName} · ${order.customerPhone}`,
+            order.rentalEndAt,
+          );
+        } else if (
+          (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
+          order.rentalEndAt > now &&
+          order.rentalEndAt <= returnSoonEnd
+        ) {
+          await add(
+            order,
+            'RETURN_SOON',
+            40,
+            `Sắp tới hạn trả · ${order.orderNumber}`,
+            `${order.customerName} · ${order.customerPhone}`,
+            order.rentalEndAt,
+          );
+        }
+        if (
+          (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
+          order.rentalEndAt < now
+        ) {
+          await add(
+            order,
+            'OVERDUE',
+            100,
+            `Quá hạn · ${order.orderNumber}`,
+            `${order.customerName} · ${order.customerPhone}`,
+            now,
+          );
+        }
+        if (
+          order.paymentStatus !== ORDER_PAYMENT_STATUS.PAID &&
+          order.status !== RENTAL_STATUS.CANCELLED
+        ) {
+          await add(
+            order,
+            'PAYMENT_DUE',
+            70,
+            `Còn thiếu tiền · ${order.orderNumber}`,
+            `${order.customerName} · ${order.customerPhone}`,
+            now,
+          );
+        }
+        if (
+          order.depositRequired > 0 &&
+          (order.depositStatus === DEPOSIT_STATUS.PENDING ||
+            order.depositStatus === DEPOSIT_STATUS.PARTIALLY_HELD) &&
+          canRescheduleRental(order.status)
+        ) {
+          await add(
+            order,
+            'DEPOSIT_DUE',
+            80,
+            `Chưa đủ cọc · ${order.orderNumber}`,
+            `${order.customerName} · ${order.customerPhone}`,
+            now,
+          );
+        }
       }
-      if (
-        (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
-        order.rentalEndAt >= day.start &&
-        order.rentalEndAt < day.end
-      ) {
-        await add(
-          order,
-          'RETURN_TODAY',
-          60,
-          `Trả đồ hôm nay · ${order.orderNumber}`,
-          `${order.customerName} · ${order.customerPhone}`,
-          order.rentalEndAt,
-        );
-      } else if (
-        (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
-        order.rentalEndAt > now &&
-        order.rentalEndAt <= returnSoonEnd
-      ) {
-        await add(
-          order,
-          'RETURN_SOON',
-          40,
-          `Sắp tới hạn trả · ${order.orderNumber}`,
-          `${order.customerName} · ${order.customerPhone}`,
-          order.rentalEndAt,
-        );
-      }
-      if (
-        (order.status === RENTAL_STATUS.CONFIRMED || order.status === RENTAL_STATUS.ACTIVE) &&
-        order.rentalEndAt < now
-      ) {
-        await add(
-          order,
-          'OVERDUE',
-          100,
-          `Quá hạn · ${order.orderNumber}`,
-          `${order.customerName} · ${order.customerPhone}`,
-          now,
-        );
-      }
-      if (
-        order.paymentStatus !== ORDER_PAYMENT_STATUS.PAID &&
-        order.status !== RENTAL_STATUS.CANCELLED
-      ) {
-        await add(
-          order,
-          'PAYMENT_DUE',
-          70,
-          `Còn thiếu tiền · ${order.orderNumber}`,
-          `${order.customerName} · ${order.customerPhone}`,
-          now,
-        );
-      }
-      if (
-        order.depositRequired > 0 &&
-        (order.depositStatus === DEPOSIT_STATUS.PENDING ||
-          order.depositStatus === DEPOSIT_STATUS.PARTIALLY_HELD) &&
-        canRescheduleRental(order.status)
-      ) {
-        await add(
-          order,
-          'DEPOSIT_DUE',
-          80,
-          `Chưa đủ cọc · ${order.orderNumber}`,
-          `${order.customerName} · ${order.customerPhone}`,
-          now,
-        );
-      }
-    }
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
 
-    await this.repository.resolveMissing(shopId, activeKeys);
+    const resolvedCount = await this.repository.resolveMissing(shopId, [...activeKeys]);
+    this.logger.log({
+      event: 'reminders.refresh.completed',
+      shopId,
+      durationMs: Date.now() - startedAt,
+      pages,
+      candidateOrders,
+      reminderUpserts,
+      activeReminderKeys: activeKeys.size,
+      resolvedCount,
+      batchSize: REMINDER_CANDIDATE_BATCH_SIZE,
+    });
   }
 }

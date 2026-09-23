@@ -18,13 +18,33 @@ export interface ActiveShop {
   timezone: string;
 }
 
+/** Immutable application-calculated boundaries for one reminder refresh run. */
+export interface ReminderCandidateCriteria {
+  shopId: string;
+  now: Date;
+  dayStart: Date;
+  dayEnd: Date;
+  returnSoonEnd: Date;
+}
+
+export interface ReminderCandidatePageRequest extends ReminderCandidateCriteria {
+  /** Internal keyset cursor: the last immutable RentalOrder ID processed for this shop. */
+  cursor?: string;
+  limit: number;
+}
+
+export interface ReminderCandidatePage {
+  items: ReminderOrderCandidate[];
+  nextCursor: string | null;
+}
+
 export const REMINDER_REPOSITORY = Symbol('REMINDER_REPOSITORY');
 
 export interface ReminderRepository {
   activeShops(): Promise<ActiveShop[]>;
-  candidates(shopId: string): Promise<ReminderOrderCandidate[]>;
+  candidatePage(input: ReminderCandidatePageRequest): Promise<ReminderCandidatePage>;
   upsert(input: ReminderUpsertData): Promise<void>;
-  resolveMissing(shopId: string, activeKeys: string[]): Promise<void>;
+  resolveMissing(shopId: string, activeKeys: string[]): Promise<number>;
   list(shopId: string, status?: string): Promise<ReminderList>;
   dismiss(shopId: string, id: string, dismissedBy: string): Promise<ReminderResult>;
 }
