@@ -278,6 +278,16 @@ describe('Catalog persistence invariants', () => {
     await prisma.rentalRate.create({
       data: { shopId: f.shop.id, productId: f.product.id, durationDays: 9, price: 50000 },
     });
+    await prisma.rentalRate.create({
+      data: {
+        shopId: f.shop.id,
+        productId: f.product.id,
+        variantId: f.variant.id,
+        durationDays: 9,
+        price: 90000,
+        isActive: false,
+      },
+    });
     const query = {
       shopId: f.shop.id,
       durationDays: 9,

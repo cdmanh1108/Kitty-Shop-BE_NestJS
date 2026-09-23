@@ -1,6 +1,7 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { Prisma } from '@prisma/client';
 import type { BookableVariant, RentalRepository } from '../domain/rental.repository';
+import { resolveRentalPricing } from '../domain/rental-pricing';
 import { availableInventoryWhere } from '@database/prisma/inventory-availability';
 
 export function bookableVariantInclude(
@@ -37,32 +38,23 @@ export function toBookableVariant(
   durationDays = 1,
 ): BookableVariant | null {
   if (!variant) return null;
-  // Partial unique indexes guarantee one active row per duration in each scope.
-  // Variant-specific pricing takes precedence over the product fallback.
-  const days = Math.max(1, durationDays);
-  const findRate = (d: number) =>
-    variant.rentalRates.find((r) => r.durationDays === d) ??
-    variant.product.rentalRates.find((r) => r.durationDays === d);
+  const pricing = resolveRentalPricing({
+    durationDays,
+    variantRates: variant.rentalRates.map((rate) => ({
+      durationDays: rate.durationDays,
+      price: decimalToNumber(rate.price),
+    })),
+    productRates: variant.product.rentalRates.map((rate) => ({
+      durationDays: rate.durationDays,
+      price: decimalToNumber(rate.price),
+    })),
+    variantDepositOverride:
+      variant.depositAmountOverride === null
+        ? null
+        : decimalToNumber(variant.depositAmountOverride),
+    productDefaultDeposit: decimalToNumber(variant.product.defaultDepositAmount),
+  });
 
-  const exactRate = findRate(days);
-  let ratePrice: number | null = null;
-
-  if (exactRate) {
-    ratePrice = decimalToNumber(exactRate.price);
-  } else {
-    const dailyRate = findRate(1);
-    if (dailyRate) {
-      ratePrice = decimalToNumber(dailyRate.price) * days;
-    } else {
-      const anyRate = variant.rentalRates[0] ?? variant.product.rentalRates[0];
-      if (anyRate && anyRate.durationDays > 0) {
-        const perDay = decimalToNumber(anyRate.price) / anyRate.durationDays;
-        ratePrice = Math.round(perDay * days);
-      }
-    }
-  }
-
-  const deposit = variant.depositAmountOverride ?? variant.product.defaultDepositAmount;
   return {
     id: variant.id,
     variantCode: variant.variantCode,
@@ -70,8 +62,8 @@ export function toBookableVariant(
     productName: variant.product.name,
     sizeName: variant.size?.name ?? null,
     colorName: variant.color?.name ?? null,
-    depositPerItem: decimalToNumber(deposit),
-    ratePrice,
+    depositPerItem: pricing.depositPerItem,
+    ratePrice: pricing.ratePrice,
     availableInventory: variant.inventoryItems.map((item) => ({ id: item.id, sku: item.sku })),
   };
 }
