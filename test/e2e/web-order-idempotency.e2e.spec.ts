@@ -43,23 +43,17 @@ describe('Web order idempotency HTTP contract', () => {
     const fixture = await rentalScenario(prisma);
     const body = command(fixture.variant.id, fixture.customer.phone);
 
-    const missing = await request(server)
-      .post('/api/v1/web/rental-orders')
-      .set('x-shop-code', fixture.shop.code)
-      .send(body)
-      .expect(400);
+    const missing = await request(server).post('/api/v1/web/rental-orders').send(body).expect(400);
     expect(missing.body).toMatchObject({ code: 'IDEMPOTENCY_KEY_REQUIRED' });
     await expect(prisma.rentalOrder.count({ where: { shopId: fixture.shop.id } })).resolves.toBe(0);
 
     const first = await request(server)
       .post('/api/v1/web/rental-orders')
-      .set('x-shop-code', fixture.shop.code)
       .set('Idempotency-Key', 'http-replay-key')
       .send(body)
       .expect(201);
     const replay = await request(server)
       .post('/api/v1/web/rental-orders')
-      .set('x-shop-code', fixture.shop.code)
       .set('Idempotency-Key', 'http-replay-key')
       .send(body)
       .expect(201);

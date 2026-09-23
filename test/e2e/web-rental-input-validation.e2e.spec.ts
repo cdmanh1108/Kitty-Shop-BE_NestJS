@@ -45,7 +45,6 @@ describe('Web rental input validation HTTP boundary', () => {
 
     await request(server)
       .get('/api/v1/web/availability')
-      .set('x-shop-code', fixture.shop.code)
       .query({
         variantId: 'not-a-uuid',
         pickupDate: '2026-10-10',
@@ -55,7 +54,6 @@ describe('Web rental input validation HTTP boundary', () => {
 
     await request(server)
       .post('/api/v1/web/rental/quote')
-      .set('x-shop-code', fixture.shop.code)
       .send({
         pickupDate: '2026-02-30',
         returnDate: '2026-03-02',
@@ -75,7 +73,6 @@ describe('Web rental input validation HTTP boundary', () => {
 
     await request(server)
       .post('/api/v1/web/rental-orders')
-      .set('x-shop-code', fixture.shop.code)
       .set('Idempotency-Key', 'invalid-web-input')
       .send(invalid)
       .expect(400);
@@ -95,7 +92,6 @@ describe('Web rental input validation HTTP boundary', () => {
 
     await request(server)
       .post('/api/v1/web/rental/quote')
-      .set('x-shop-code', fixture.shop.code)
       .send({
         pickupDate: '2026-10-10',
         returnDate: '2026-10-12',
@@ -105,7 +101,6 @@ describe('Web rental input validation HTTP boundary', () => {
 
     await request(server)
       .post('/api/v1/web/rental-orders')
-      .set('x-shop-code', fixture.shop.code)
       .set('Idempotency-Key', 'mismatched-web-selection')
       .send({
         ...command(fixture.variant.id),

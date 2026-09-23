@@ -50,15 +50,10 @@ describe('Web rental response statuses', () => {
       deliveryMethod: 'self_pickup',
     };
 
-    await request(server)
-      .post('/api/v1/web/rental/quote')
-      .set('x-shop-code', fixture.shop.code)
-      .send(quoteRequest)
-      .expect(200);
+    await request(server).post('/api/v1/web/rental/quote').send(quoteRequest).expect(200);
 
     const create = await request(server)
       .post('/api/v1/web/rental-orders')
-      .set('x-shop-code', fixture.shop.code)
       .set('Idempotency-Key', 'web-status-matrix-create')
       .send({
         customer: { name: 'Status guest', phone: fixture.customer.phone },
@@ -73,7 +68,6 @@ describe('Web rental response statuses', () => {
 
     await request(server)
       .post('/api/v1/web/rental-orders/lookup')
-      .set('x-shop-code', fixture.shop.code)
       .send({ orderCode, phone: fixture.customer.phone })
       .expect(200);
   });
@@ -93,7 +87,6 @@ describe('Web rental response statuses', () => {
 
     await request(server)
       .post('/api/v1/web/rental/quote')
-      .set('x-shop-code', fixture.shop.code)
       .send({
         pickupDate: '2026-02-30',
         returnDate: '2026-03-02',
@@ -103,7 +96,6 @@ describe('Web rental response statuses', () => {
 
     await request(server)
       .post('/api/v1/web/rental-orders/lookup')
-      .set('x-shop-code', fixture.shop.code)
       .send({ orderCode: order.orderNumber, phone: '0999999999' })
       .expect(404);
   });

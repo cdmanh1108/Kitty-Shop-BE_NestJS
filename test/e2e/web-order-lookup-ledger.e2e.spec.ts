@@ -71,7 +71,6 @@ describe('Web order lookup ledger projection', () => {
     await record({ direction: 'IN', purpose: 'RENTAL_PAYMENT', amount: 500000 });
     const root = await request(server)
       .post('/api/v1/web/rental-orders/lookup')
-      .set('x-shop-code', fixture.shop.code)
       .send({ orderCode: order.orderNumber, phone: fixture.customer.phone })
       .expect(200);
     const rootBody = JSON.parse(root.text) as unknown as { paidAmount: number };
@@ -105,7 +104,6 @@ describe('Web order lookup ledger projection', () => {
     const beforePayments = await prisma.paymentTransaction.count({ where: { orderId: order.id } });
     const web = await request(server)
       .post('/api/v1/web/rental-orders/lookup')
-      .set('x-shop-code', fixture.shop.code)
       .send({ orderCode: order.orderNumber, phone: fixture.customer.phone })
       .expect(200);
     const webBody = JSON.parse(web.text) as unknown as {
@@ -143,7 +141,6 @@ describe('Web order lookup ledger projection', () => {
     });
     const response = await request(server)
       .post('/api/v1/web/rental-orders/lookup')
-      .set('x-shop-code', fixture.shop.code)
       .send({ orderCode: order.orderNumber, phone: '0999999999' })
       .expect(404);
     expect(response.body).not.toHaveProperty('paidAmount');

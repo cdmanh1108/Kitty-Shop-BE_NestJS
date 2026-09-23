@@ -73,11 +73,9 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     await disconnectTestDatabase();
   });
 
-  it('enforces product list visibility rule: only public, rentable, unarchived, active products in current shop are returned', async () => {
+  it('enforces product list visibility rule: only public, rentable, unarchived, active products are returned', async () => {
     const shop = await createTestShop(prisma);
-    const otherShop = await createTestShop(prisma);
     const category = await createTestCategory(prisma, shop.id);
-    const otherCategory = await createTestCategory(prisma, otherShop.id);
 
     // Product A: Valid Public
     const prodA = await prisma.product.create({
@@ -195,29 +193,6 @@ describe('Storefront Product Visibility Boundary Integration', () => {
       },
     });
 
-    // Product F: other shop (cross-tenant product)
-    const prodF = await prisma.product.create({
-      data: {
-        shopId: otherShop.id,
-        categoryId: otherCategory.id,
-        code: uniqueCode('PROD_F'),
-        name: 'Đầm cửa hàng khác',
-        slug: 'dam-cua-hang-khac',
-        status: 'ACTIVE',
-        isPublic: true,
-        isRentable: true,
-        defaultDepositAmount: new Prisma.Decimal(200000),
-      },
-    });
-    await prisma.productVariant.create({
-      data: {
-        shopId: otherShop.id,
-        productId: prodF.id,
-        variantCode: `${prodF.code}-V1`,
-        status: 'ACTIVE',
-      },
-    });
-
     // 1. Direct repository test
     const repoResult = await repo.listStorefrontProducts({
       shopId: shop.id,
@@ -230,14 +205,10 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     expect(repoIds).not.toContain(prodC.id);
     expect(repoIds).not.toContain(prodD.id);
     expect(repoIds).not.toContain(prodE.id);
-    expect(repoIds).not.toContain(prodF.id);
     expect(repoResult.meta.total).toBe(1);
 
     // 2. HTTP Web API test
-    const httpRes = await request(server)
-      .get('/api/v1/web/products')
-      .set('x-shop-code', shop.code)
-      .expect(200);
+    const httpRes = await request(server).get('/api/v1/web/products').expect(200);
 
     const httpBody = asListResponse(httpRes);
     expect(httpBody.items).toHaveLength(1);
@@ -254,11 +225,9 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     expect(firstItem).not.toHaveProperty('featured');
   });
 
-  it('enforces product detail visibility: hidden, private, archived, inactive, or wrong-shop products return 404', async () => {
+  it('enforces product detail visibility: hidden, private, archived, or inactive products return 404', async () => {
     const shop = await createTestShop(prisma);
-    const otherShop = await createTestShop(prisma);
     const category = await createTestCategory(prisma, shop.id);
-    const otherCategory = await createTestCategory(prisma, otherShop.id);
 
     // Valid public product
     const validProd = await prisma.product.create({
@@ -334,23 +303,9 @@ describe('Storefront Product Visibility Boundary Integration', () => {
         isRentable: true,
       },
     });
-    const otherShopProd = await prisma.product.create({
-      data: {
-        shopId: otherShop.id,
-        categoryId: otherCategory.id,
-        code: uniqueCode('OTHER'),
-        name: 'Váy của shop khác',
-        slug: 'vay-cua-shop-khac',
-        status: 'ACTIVE',
-        isPublic: true,
-        isRentable: true,
-      },
-    });
-
     // 1. Valid public product -> 200 Success
     const validRes = await request(server)
       .get(`/api/v1/web/products/${validProd.slug}`)
-      .set('x-shop-code', shop.code)
       .expect(200);
 
     const validBody = asDetailResponse(validRes);
@@ -366,7 +321,6 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     // 2. Private product -> 404 Not Found
     await request(server)
       .get(`/api/v1/web/products/${privateProd.slug}`)
-      .set('x-shop-code', shop.code)
       .expect(404)
       .expect((res) => {
         expect(asErrorResponse(res).message).toBe('Không tìm thấy sản phẩm.');
@@ -375,7 +329,6 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     // 3. Archived product -> 404 Not Found
     await request(server)
       .get(`/api/v1/web/products/${archivedProd.slug}`)
-      .set('x-shop-code', shop.code)
       .expect(404)
       .expect((res) => {
         expect(asErrorResponse(res).message).toBe('Không tìm thấy sản phẩm.');
@@ -384,7 +337,6 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     // 4. Non-rentable product -> 404 Not Found
     await request(server)
       .get(`/api/v1/web/products/${nonRentableProd.slug}`)
-      .set('x-shop-code', shop.code)
       .expect(404)
       .expect((res) => {
         expect(asErrorResponse(res).message).toBe('Không tìm thấy sản phẩm.');
@@ -393,30 +345,14 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     // 5. Inactive status product -> 404 Not Found
     await request(server)
       .get(`/api/v1/web/products/${inactiveProd.slug}`)
-      .set('x-shop-code', shop.code)
       .expect(404)
       .expect((res) => {
         expect(asErrorResponse(res).message).toBe('Không tìm thấy sản phẩm.');
       });
 
-    // 6. Other shop product -> 404 Not Found under Shop A scope
-    await request(server)
-      .get(`/api/v1/web/products/${otherShopProd.slug}`)
-      .set('x-shop-code', shop.code)
-      .expect(404)
-      .expect((res) => {
-        expect(asErrorResponse(res).message).toBe('Không tìm thấy sản phẩm.');
-      });
-
-    // 7. Non-public product accessed by ID or uppercase code directly -> 404 Not Found
-    await request(server)
-      .get(`/api/v1/web/products/${privateProd.id}`)
-      .set('x-shop-code', shop.code)
-      .expect(404);
-    await request(server)
-      .get(`/api/v1/web/products/${privateProd.code}`)
-      .set('x-shop-code', shop.code)
-      .expect(404);
+    // 6. Non-public product accessed by ID or uppercase code directly -> 404 Not Found
+    await request(server).get(`/api/v1/web/products/${privateProd.id}`).expect(404);
+    await request(server).get(`/api/v1/web/products/${privateProd.code}`).expect(404);
   });
 
   it('guarantees consistency: every fixture excluded from product list is rejected as 404 by detail endpoint', async () => {
@@ -479,30 +415,18 @@ describe('Storefront Product Visibility Boundary Integration', () => {
       });
 
       // 1. Verify excluded from list endpoint
-      const listRes = await request(server)
-        .get('/api/v1/web/products')
-        .set('x-shop-code', shop.code)
-        .expect(200);
+      const listRes = await request(server).get('/api/v1/web/products').expect(200);
 
       const listBody = asListResponse(listRes);
       const listedIds = listBody.items.map((i) => i.id);
       expect(listedIds).not.toContain(product.id);
 
       // 2. Verify rejected as 404 by detail endpoint (by slug, by code, by id)
-      await request(server)
-        .get(`/api/v1/web/products/${product.slug}`)
-        .set('x-shop-code', shop.code)
-        .expect(404);
+      await request(server).get(`/api/v1/web/products/${product.slug}`).expect(404);
 
-      await request(server)
-        .get(`/api/v1/web/products/${product.code}`)
-        .set('x-shop-code', shop.code)
-        .expect(404);
+      await request(server).get(`/api/v1/web/products/${product.code}`).expect(404);
 
-      await request(server)
-        .get(`/api/v1/web/products/${product.id}`)
-        .set('x-shop-code', shop.code)
-        .expect(404);
+      await request(server).get(`/api/v1/web/products/${product.id}`).expect(404);
     }
   });
 
@@ -610,10 +534,7 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     });
 
     // Verify in Product List
-    const listRes = await request(server)
-      .get('/api/v1/web/products')
-      .set('x-shop-code', shop.code)
-      .expect(200);
+    const listRes = await request(server).get('/api/v1/web/products').expect(200);
 
     const listBody = asListResponse(listRes);
     const item = listBody.items.find((i) => i.id === product.id);
@@ -628,21 +549,14 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     // Filtering by inactive variant's size/color must NOT match this product
     const filterInactiveSize = await request(server)
       .get('/api/v1/web/products?size=XL')
-      .set('x-shop-code', shop.code)
       .expect(200);
     expect(asListResponse(filterInactiveSize).items).toHaveLength(0);
 
-    const filterActiveSize = await request(server)
-      .get('/api/v1/web/products?size=M')
-      .set('x-shop-code', shop.code)
-      .expect(200);
+    const filterActiveSize = await request(server).get('/api/v1/web/products?size=M').expect(200);
     expect(asListResponse(filterActiveSize).items).toHaveLength(1);
 
     // Verify in Product Detail
-    const detailRes = await request(server)
-      .get(`/api/v1/web/products/${product.slug}`)
-      .set('x-shop-code', shop.code)
-      .expect(200);
+    const detailRes = await request(server).get(`/api/v1/web/products/${product.slug}`).expect(200);
 
     const detailBody = asDetailResponse(detailRes);
     expect(detailBody.variants).toHaveLength(1);

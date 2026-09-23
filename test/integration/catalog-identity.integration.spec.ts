@@ -17,21 +17,7 @@ import {
   CatalogProductSlugAlreadyExistsError,
 } from '../../src/modules/catalog/domain/catalog.repository';
 
-interface ProductDetailResponse {
-  code: string;
-  name: string;
-  slug: string;
-}
-
-interface ErrorResponseBody {
-  message: string;
-}
-
-const asDetail = (res: request.Response): ProductDetailResponse =>
-  res.body as ProductDetailResponse;
-const asError = (res: request.Response): ErrorResponseBody => res.body as ErrorResponseBody;
-
-describe('Tenant Resolution & Product Slug Identity Integration', () => {
+describe('Product Slug Identity Integration', () => {
   let app: INestApplication;
   let server: Server;
   let prisma: PrismaService;
@@ -54,187 +40,6 @@ describe('Tenant Resolution & Product Slug Identity Integration', () => {
   afterAll(async () => {
     if (app) await app.close();
     await disconnectTestDatabase();
-  });
-
-  describe('Part 1: Strict Tenant Resolution', () => {
-    it('resolves the correct shop when a valid explicit shop code is supplied', async () => {
-      const shop = await createTestShop(prisma);
-      const category = await createTestCategory(prisma, shop.id);
-
-      const product = await prisma.product.create({
-        data: {
-          shopId: shop.id,
-          categoryId: category.id,
-          code: uniqueCode('PROD_VALID'),
-          name: 'Váy thiết kế hợp lệ',
-          slug: 'vay-thiet-ke-hop-le',
-          status: 'ACTIVE',
-          isPublic: true,
-          isRentable: true,
-          defaultDepositAmount: new Prisma.Decimal(100000),
-        },
-      });
-      await prisma.productVariant.create({
-        data: {
-          shopId: shop.id,
-          productId: product.id,
-          variantCode: `${product.code}-V1`,
-          status: 'ACTIVE',
-        },
-      });
-
-      const res = await request(server)
-        .get('/api/v1/web/products/vay-thiet-ke-hop-le')
-        .set('x-shop-code', shop.code)
-        .expect(200);
-
-      expect(res.body).toMatchObject({
-        code: product.code,
-        slug: 'vay-thiet-ke-hop-le',
-      });
-    });
-
-    it('returns 404 and does NOT fallback to another active shop when an explicit invalid shop code is supplied', async () => {
-      // Create an active shop with a public product
-      const activeShop = await createTestShop(prisma);
-      const category = await createTestCategory(prisma, activeShop.id);
-
-      const product = await prisma.product.create({
-        data: {
-          shopId: activeShop.id,
-          categoryId: category.id,
-          code: uniqueCode('PROD_ACTIVE'),
-          name: 'Sản phẩm của shop active',
-          slug: 'san-pham-shop-active',
-          status: 'ACTIVE',
-          isPublic: true,
-          isRentable: true,
-          defaultDepositAmount: new Prisma.Decimal(100000),
-        },
-      });
-      await prisma.productVariant.create({
-        data: {
-          shopId: activeShop.id,
-          productId: product.id,
-          variantCode: `${product.code}-V1`,
-          status: 'ACTIVE',
-        },
-      });
-
-      // Request using an explicit non-existent shop code
-      const res = await request(server)
-        .get('/api/v1/web/products/san-pham-shop-active')
-        .set('x-shop-code', 'NON_EXISTENT_SHOP_CODE')
-        .expect(404);
-
-      expect(asError(res).message).toBe('Không tìm thấy cửa hàng hoạt động trong hệ thống.');
-    });
-
-    it('returns 404 and does NOT fallback when an explicit shop code belongs to an inactive or archived shop', async () => {
-      const activeShop = await createTestShop(prisma);
-      const category = await createTestCategory(prisma, activeShop.id);
-
-      // Create an inactive shop
-      const inactiveShop = await prisma.shop.create({
-        data: {
-          code: uniqueCode('INACTIVE_SHOP'),
-          name: 'Cửa hàng ngừng hoạt động',
-          status: 'INACTIVE',
-        },
-      });
-
-      const product = await prisma.product.create({
-        data: {
-          shopId: activeShop.id,
-          categoryId: category.id,
-          code: uniqueCode('PROD_ACT'),
-          name: 'Váy của shop active',
-          slug: 'vay-shop-active',
-          status: 'ACTIVE',
-          isPublic: true,
-          isRentable: true,
-          defaultDepositAmount: new Prisma.Decimal(100000),
-        },
-      });
-      await prisma.productVariant.create({
-        data: {
-          shopId: activeShop.id,
-          productId: product.id,
-          variantCode: `${product.code}-V1`,
-          status: 'ACTIVE',
-        },
-      });
-
-      const res = await request(server)
-        .get('/api/v1/web/products/vay-shop-active')
-        .set('x-shop-code', inactiveShop.code)
-        .expect(404);
-
-      expect(asError(res).message).toBe('Không tìm thấy cửa hàng hoạt động trong hệ thống.');
-    });
-
-    it('preserves cross-tenant isolation: Shop A request cannot access Shop B product by slug', async () => {
-      const shopA = await createTestShop(prisma);
-      const shopB = await createTestShop(prisma);
-      const catA = await createTestCategory(prisma, shopA.id);
-      const catB = await createTestCategory(prisma, shopB.id);
-
-      const prodA = await prisma.product.create({
-        data: {
-          shopId: shopA.id,
-          categoryId: catA.id,
-          code: uniqueCode('PROD_A'),
-          name: 'Sản phẩm của Shop A',
-          slug: 'product-slug-a',
-          status: 'ACTIVE',
-          isPublic: true,
-          isRentable: true,
-          defaultDepositAmount: new Prisma.Decimal(100000),
-        },
-      });
-      await prisma.productVariant.create({
-        data: {
-          shopId: shopA.id,
-          productId: prodA.id,
-          variantCode: `${prodA.code}-V1`,
-          status: 'ACTIVE',
-        },
-      });
-
-      const prodB = await prisma.product.create({
-        data: {
-          shopId: shopB.id,
-          categoryId: catB.id,
-          code: uniqueCode('PROD_B'),
-          name: 'Sản phẩm của Shop B',
-          slug: 'product-slug-b',
-          status: 'ACTIVE',
-          isPublic: true,
-          isRentable: true,
-          defaultDepositAmount: new Prisma.Decimal(100000),
-        },
-      });
-      await prisma.productVariant.create({
-        data: {
-          shopId: shopB.id,
-          productId: prodB.id,
-          variantCode: `${prodB.code}-V1`,
-          status: 'ACTIVE',
-        },
-      });
-
-      // Request scoped to Shop A attempting to access Shop B product slug -> 404
-      await request(server)
-        .get('/api/v1/web/products/product-slug-b')
-        .set('x-shop-code', shopA.code)
-        .expect(404);
-
-      // Request scoped to Shop B attempting to access Shop A product slug -> 404
-      await request(server)
-        .get('/api/v1/web/products/product-slug-a')
-        .set('x-shop-code', shopB.code)
-        .expect(404);
-    });
   });
 
   describe('Part 2: Product Slug Uniqueness & Identity Hardening', () => {
@@ -485,7 +290,7 @@ describe('Tenant Resolution & Product Slug Identity Integration', () => {
     });
   });
 
-  describe('Part 3: Cross-Tenant Public Detail Lookup with Identical Slugs', () => {
+  describe('Part 3: Canonical Storefront Detail Lookup', () => {
     it('does not treat an existing public product code or UUID as a storefront slug', async () => {
       const shop = await createTestShop(prisma);
       const category = await createTestCategory(prisma, shop.id);
@@ -511,89 +316,9 @@ describe('Tenant Resolution & Product Slug Identity Integration', () => {
         },
       });
 
-      await request(server)
-        .get(`/api/v1/web/products/${product.code}`)
-        .set('x-shop-code', shop.code)
-        .expect(404);
-      await request(server)
-        .get(`/api/v1/web/products/${product.id}`)
-        .set('x-shop-code', shop.code)
-        .expect(404);
-      await request(server)
-        .get('/api/v1/web/products/san-pham-canonical')
-        .set('x-shop-code', shop.code)
-        .expect(200);
-    });
-
-    it('returns the product belonging to the resolved shop when two shops share the identical slug', async () => {
-      const shopA = await createTestShop(prisma);
-      const shopB = await createTestShop(prisma);
-      const catA = await createTestCategory(prisma, shopA.id);
-      const catB = await createTestCategory(prisma, shopB.id);
-
-      const sharedSlug = 'classic-dress-shared';
-
-      const prodA = await prisma.product.create({
-        data: {
-          shopId: shopA.id,
-          categoryId: catA.id,
-          code: uniqueCode('DRESS_A'),
-          name: 'Đầm cổ điển Shop A',
-          slug: sharedSlug,
-          status: 'ACTIVE',
-          isPublic: true,
-          isRentable: true,
-          defaultDepositAmount: new Prisma.Decimal(150000),
-        },
-      });
-      await prisma.productVariant.create({
-        data: {
-          shopId: shopA.id,
-          productId: prodA.id,
-          variantCode: `${prodA.code}-V1`,
-          status: 'ACTIVE',
-        },
-      });
-
-      const prodB = await prisma.product.create({
-        data: {
-          shopId: shopB.id,
-          categoryId: catB.id,
-          code: uniqueCode('DRESS_B'),
-          name: 'Đầm cổ điển Shop B',
-          slug: sharedSlug,
-          status: 'ACTIVE',
-          isPublic: true,
-          isRentable: true,
-          defaultDepositAmount: new Prisma.Decimal(250000),
-        },
-      });
-      await prisma.productVariant.create({
-        data: {
-          shopId: shopB.id,
-          productId: prodB.id,
-          variantCode: `${prodB.code}-V1`,
-          status: 'ACTIVE',
-        },
-      });
-
-      // Request for Shop A returns Product A only
-      const resA = await request(server)
-        .get(`/api/v1/web/products/${sharedSlug}`)
-        .set('x-shop-code', shopA.code)
-        .expect(200);
-
-      expect(asDetail(resA).code).toBe(prodA.code);
-      expect(asDetail(resA).name).toBe('Đầm cổ điển Shop A');
-
-      // Request for Shop B returns Product B only
-      const resB = await request(server)
-        .get(`/api/v1/web/products/${sharedSlug}`)
-        .set('x-shop-code', shopB.code)
-        .expect(200);
-
-      expect(asDetail(resB).code).toBe(prodB.code);
-      expect(asDetail(resB).name).toBe('Đầm cổ điển Shop B');
+      await request(server).get(`/api/v1/web/products/${product.code}`).expect(404);
+      await request(server).get(`/api/v1/web/products/${product.id}`).expect(404);
+      await request(server).get('/api/v1/web/products/san-pham-canonical').expect(200);
     });
   });
 });

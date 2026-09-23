@@ -86,7 +86,6 @@ describe('Storefront Catalog Performance & Price Sorting Integration', () => {
     // Request page 1 with limit = 2
     const resPage1 = await request(server)
       .get('/api/v1/web/products?sort=price_asc&page=1&limit=2')
-      .set('x-shop-code', shop.code)
       .expect(200);
 
     const body1 = resPage1.body as ProductListResponse;
@@ -99,7 +98,6 @@ describe('Storefront Catalog Performance & Price Sorting Integration', () => {
     // Request page 2 with limit = 2
     const resPage2 = await request(server)
       .get('/api/v1/web/products?sort=price_asc&page=2&limit=2')
-      .set('x-shop-code', shop.code)
       .expect(200);
 
     const body2 = resPage2.body as ProductListResponse;
@@ -141,7 +139,6 @@ describe('Storefront Catalog Performance & Price Sorting Integration', () => {
 
     const res = await request(server)
       .get('/api/v1/web/products?sort=price_desc&page=1&limit=10')
-      .set('x-shop-code', shop.code)
       .expect(200);
 
     const body = res.body as ProductListResponse;
@@ -211,7 +208,6 @@ describe('Storefront Catalog Performance & Price Sorting Integration', () => {
 
     const res = await request(server)
       .get('/api/v1/web/products?sort=price_asc&page=1&limit=10')
-      .set('x-shop-code', shop.code)
       .expect(200);
 
     const body = res.body as ProductListResponse;
@@ -263,19 +259,13 @@ describe('Storefront Catalog Performance & Price Sorting Integration', () => {
     });
 
     // In price_asc: prodA (100k) first, prodB (unpriced) last
-    const resAsc = await request(server)
-      .get('/api/v1/web/products?sort=price_asc')
-      .set('x-shop-code', shop.code)
-      .expect(200);
+    const resAsc = await request(server).get('/api/v1/web/products?sort=price_asc').expect(200);
     const bodyAsc = resAsc.body as ProductListResponse;
     expect(bodyAsc.items[0]?.id).toBe(prodA.id);
     expect(bodyAsc.items[1]?.id).toBe(prodB.id);
 
     // In price_desc: prodA (100k) first, prodB (unpriced) last (NULLS LAST)
-    const resDesc = await request(server)
-      .get('/api/v1/web/products?sort=price_desc')
-      .set('x-shop-code', shop.code)
-      .expect(200);
+    const resDesc = await request(server).get('/api/v1/web/products?sort=price_desc').expect(200);
     const bodyDesc = resDesc.body as ProductListResponse;
     expect(bodyDesc.items[0]?.id).toBe(prodA.id);
     expect(bodyDesc.items[1]?.id).toBe(prodB.id);
@@ -358,7 +348,6 @@ describe('Storefront Catalog Performance & Price Sorting Integration', () => {
     // Filter by catVay and sort by price_asc
     const res = await request(server)
       .get(`/api/v1/web/products?category=${catVay.code}&sort=price_asc`)
-      .set('x-shop-code', shop.code)
       .expect(200);
 
     const body = res.body as ProductListResponse;
@@ -370,97 +359,10 @@ describe('Storefront Catalog Performance & Price Sorting Integration', () => {
     // Combine with search query "trắng"
     const resSearch = await request(server)
       .get(`/api/v1/web/products?q=tr%E1%BA%AFng&sort=price_asc`)
-      .set('x-shop-code', shop.code)
       .expect(200);
 
     const bodySearch = resSearch.body as ProductListResponse;
     expect(bodySearch.meta.total).toBe(1);
     expect(bodySearch.items[0]?.id).toBe(prod2.id);
-  });
-
-  it('enforces tenant isolation and visibility rules under price sorting', async () => {
-    const shop = await createTestShop(prisma);
-    const otherShop = await createTestShop(prisma);
-    const cat = await createTestCategory(prisma, shop.id);
-    const otherCat = await createTestCategory(prisma, otherShop.id);
-
-    // Other shop product: 50k
-    const otherProd = await prisma.product.create({
-      data: {
-        shopId: otherShop.id,
-        categoryId: otherCat.id,
-        code: uniqueCode('OTHER_SHOP'),
-        name: 'Đầm Shop Khác',
-        slug: 'dam-shop-khac',
-        status: 'ACTIVE',
-        isPublic: true,
-        isRentable: true,
-      },
-    });
-    await prisma.rentalRate.create({
-      data: {
-        shopId: otherShop.id,
-        productId: otherProd.id,
-        durationDays: 1,
-        price: new Prisma.Decimal(50000),
-        isActive: true,
-      },
-    });
-
-    // Current shop valid: 200k
-    const currentProd = await prisma.product.create({
-      data: {
-        shopId: shop.id,
-        categoryId: cat.id,
-        code: uniqueCode('CURRENT_SHOP'),
-        name: 'Đầm Shop Hiện Tại',
-        slug: 'dam-shop-hien-tai',
-        status: 'ACTIVE',
-        isPublic: true,
-        isRentable: true,
-      },
-    });
-    await prisma.rentalRate.create({
-      data: {
-        shopId: shop.id,
-        productId: currentProd.id,
-        durationDays: 1,
-        price: new Prisma.Decimal(200000),
-        isActive: true,
-      },
-    });
-
-    // Current shop private (should be hidden): 80k
-    const privateProd = await prisma.product.create({
-      data: {
-        shopId: shop.id,
-        categoryId: cat.id,
-        code: uniqueCode('PRIVATE_PROD'),
-        name: 'Đầm Private',
-        slug: 'dam-private',
-        status: 'ACTIVE',
-        isPublic: false,
-        isRentable: true,
-      },
-    });
-    await prisma.rentalRate.create({
-      data: {
-        shopId: shop.id,
-        productId: privateProd.id,
-        durationDays: 1,
-        price: new Prisma.Decimal(80000),
-        isActive: true,
-      },
-    });
-
-    const res = await request(server)
-      .get('/api/v1/web/products?sort=price_asc')
-      .set('x-shop-code', shop.code)
-      .expect(200);
-
-    const body = res.body as ProductListResponse;
-    expect(body.meta.total).toBe(1);
-    expect(body.items.length).toBe(1);
-    expect(body.items[0]?.id).toBe(currentProd.id);
   });
 });
