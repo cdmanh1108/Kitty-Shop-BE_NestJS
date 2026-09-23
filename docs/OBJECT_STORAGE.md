@@ -19,7 +19,7 @@ The schema deliberately retains `storageKey String?` and `url String` during leg
 
 - With `storageKey`, the key is the canonical identity. API `url` is derived from configured publicBaseUrl. The stored `url` remains original external provenance for retry/force migration; it is not a serving fallback when a key exists.
 - Without `storageKey`, `url` is an external/legacy source and is returned unchanged.
-- Normal Product create/add-media currently accepts external URLs, not uploaded keys. There is no runtime upload endpoint in this task. Legacy importer writes external URLs. The media migration uploads first and updates only the key plus migration metadata; it never persists the generated public URL.
+- Normal Product create/add-media currently accepts external URLs, not uploaded keys. There is no runtime upload endpoint in this task. The media migration uploads first and updates only the key plus migration metadata; it never persists the generated public URL.
 
 No schema migration or data rewrite is needed. Existing rows are preserved. Historical full provider URLs without a key remain legacy external URLs until explicitly migrated.
 

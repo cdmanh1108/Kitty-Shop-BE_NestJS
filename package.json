@@ -42,7 +42,6 @@
     "typecheck": "tsc --noEmit --pretty false",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:db:migrate": "ts-node -r tsconfig-paths/register scripts/migrate-test-database.ts",
-    "import:legacy-catalog": "ts-node -r tsconfig-paths/register scripts/import-legacy-catalog.ts",
     "media:sync-storage": "ts-node -r tsconfig-paths/register scripts/sync-product-media-storage.ts",
     "object-storage:check": "ts-node -r tsconfig-paths/register scripts/check-object-storage.ts"
   },
@@ -62,8 +61,7 @@
     "class-validator": "0.14.2",
     "helmet": "8.1.0",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2",
-    "xlsx": "0.18.5"
+    "rxjs": "7.8.2"
   },
   "devDependencies": {
     "@eslint/js": "9.29.0",
