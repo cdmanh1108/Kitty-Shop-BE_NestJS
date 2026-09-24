@@ -1,6 +1,7 @@
 import type {
   StorefrontCategory,
   StorefrontProductDetails,
+  StorefrontProductItem,
   StorefrontProductListCriteria,
   StorefrontProductPage,
   StorefrontSelectionInput,
@@ -13,6 +14,10 @@ export const STOREFRONT_CATALOG_REPOSITORY = Symbol('STOREFRONT_CATALOG_REPOSITO
 export interface StorefrontCatalogRepository {
   listStorefrontCategories(shopId: string): Promise<StorefrontCategory[]>;
   listStorefrontProducts(input: StorefrontProductListCriteria): Promise<StorefrontProductPage>;
+  listStorefrontProductsByIds(
+    shopId: string,
+    productIds: string[],
+  ): Promise<StorefrontProductItem[]>;
   findStorefrontProductBySlug(
     shopId: string,
     slug: string,

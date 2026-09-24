@@ -234,455 +234,6 @@
         "x-api-surface": "admin"
       }
     },
-    "/admin/dashboard/summary": {
-      "get": {
-        "operationId": "DashboardController_summary",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardSummaryResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Shop dashboard revenue, rental KPIs and bounded operational lists",
-        "tags": [
-          "Dashboard"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/customers": {
-      "get": {
-        "operationId": "CustomerController_list",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "customerType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerPageResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Search and list customers",
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      },
-      "post": {
-        "operationId": "CustomerController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCustomerReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/customers/lookup": {
-      "get": {
-        "operationId": "CustomerController_lookup",
-        "parameters": [
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 20,
-              "default": 20,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CustomerLookupItemResDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Search lightweight customer options",
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/customers/{id}": {
-      "get": {
-        "operationId": "CustomerController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDetailResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      },
-      "patch": {
-        "operationId": "CustomerController_update",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCustomerReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/customers/{id}/notes": {
-      "post": {
-        "operationId": "CustomerController_addNote",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddCustomerNoteReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerNoteResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/customers/{id}/addresses": {
-      "post": {
-        "operationId": "CustomerController_addAddress",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CustomerAddressReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerAddressResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/customers/{id}/addresses/{addressId}": {
-      "patch": {
-        "operationId": "CustomerController_updateAddress",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "addressId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCustomerAddressReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerAddressResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      },
-      "delete": {
-        "operationId": "CustomerController_deleteAddress",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "addressId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Customers"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
     "/admin/catalog/lookups": {
       "get": {
         "operationId": "CatalogController_lookups",
@@ -1890,6 +1441,455 @@
         "summary": "Find physical items not allocated in a half-open [from, until) interval",
         "tags": [
           "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/dashboard/summary": {
+      "get": {
+        "operationId": "DashboardController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummaryResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Shop dashboard revenue, rental KPIs and bounded operational lists",
+        "tags": [
+          "Dashboard"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/customers": {
+      "get": {
+        "operationId": "CustomerController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerPageResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Search and list customers",
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      },
+      "post": {
+        "operationId": "CustomerController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/customers/lookup": {
+      "get": {
+        "operationId": "CustomerController_lookup",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerLookupItemResDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Search lightweight customer options",
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/customers/{id}": {
+      "get": {
+        "operationId": "CustomerController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetailResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      },
+      "patch": {
+        "operationId": "CustomerController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/customers/{id}/notes": {
+      "post": {
+        "operationId": "CustomerController_addNote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCustomerNoteReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerNoteResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/customers/{id}/addresses": {
+      "post": {
+        "operationId": "CustomerController_addAddress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerAddressReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/customers/{id}/addresses/{addressId}": {
+      "patch": {
+        "operationId": "CustomerController_updateAddress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "addressId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerAddressReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAddressResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      },
+      "delete": {
+        "operationId": "CustomerController_deleteAddress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "addressId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Customers"
         ],
         "x-api-surface": "admin"
       }
@@ -3940,13 +3940,13 @@
       "name": "Auth"
     },
     {
+      "name": "Admin - Catalog"
+    },
+    {
       "name": "Dashboard"
     },
     {
       "name": "Customers"
-    },
-    {
-      "name": "Admin - Catalog"
     },
     {
       "name": "Admin - Rental Orders"
@@ -4083,476 +4083,6 @@
           "currentPassword",
           "newPassword"
         ]
-      },
-      "DashboardSummaryResDto": {
-        "type": "object",
-        "properties": {
-          "revenueToday": {
-            "type": "number"
-          },
-          "revenueMonth": {
-            "type": "number"
-          },
-          "ordersToday": {
-            "type": "number",
-            "description": "Non-draft, non-cancelled orders scheduled for pickup today"
-          },
-          "rentingProducts": {
-            "type": "number",
-            "description": "Unreleased ACTIVE physical allocations"
-          },
-          "outstandingAmount": {
-            "type": "number"
-          },
-          "upcomingOrders": {
-            "maxItems": 6,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DashboardRentalResDto"
-            }
-          },
-          "attentionOrders": {
-            "maxItems": 6,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DashboardAttentionResDto"
-            }
-          },
-          "revenueSeries": {
-            "minItems": 7,
-            "maxItems": 7,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DashboardRevenuePointResDto"
-            }
-          }
-        },
-        "required": [
-          "revenueToday",
-          "revenueMonth",
-          "ordersToday",
-          "rentingProducts",
-          "outstandingAmount",
-          "upcomingOrders",
-          "attentionOrders",
-          "revenueSeries"
-        ]
-      },
-      "CustomerPageResDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CustomerListItemResDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/PaginationMetaResDto"
-          }
-        },
-        "required": [
-          "items",
-          "meta"
-        ]
-      },
-      "CreateCustomerReqDto": {
-        "type": "object",
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "example": "Nguyễn Thị A"
-          },
-          "phone": {
-            "type": "string",
-            "example": "0901234567"
-          },
-          "email": {
-            "type": "string"
-          },
-          "facebook": {
-            "type": "string"
-          },
-          "zalo": {
-            "type": "string"
-          },
-          "birthday": {
-            "type": "string",
-            "example": "2000-01-30"
-          },
-          "gender": {
-            "type": "string"
-          },
-          "customerType": {
-            "type": "string",
-            "example": "NORMAL"
-          },
-          "source": {
-            "type": "string",
-            "example": "Facebook"
-          },
-          "note": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "fullName",
-          "phone"
-        ]
-      },
-      "CustomerResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "customerCode": {
-            "type": "string"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "nullable": true
-          },
-          "facebook": {
-            "type": "string",
-            "nullable": true
-          },
-          "zalo": {
-            "type": "string",
-            "nullable": true
-          },
-          "customerType": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "customerCode",
-          "fullName",
-          "phone",
-          "customerType",
-          "status",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CustomerLookupItemResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "fullName",
-          "phone"
-        ]
-      },
-      "CustomerDetailResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "customerCode": {
-            "type": "string"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "facebook": {
-            "type": "string",
-            "nullable": true
-          },
-          "zalo": {
-            "type": "string",
-            "nullable": true
-          },
-          "addresses": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CustomerDetailAddressResDto"
-            }
-          },
-          "notes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CustomerDetailNoteResDto"
-            }
-          },
-          "stats": {
-            "$ref": "#/components/schemas/CustomerStatsResDto"
-          }
-        },
-        "required": [
-          "id",
-          "customerCode",
-          "fullName",
-          "phone",
-          "addresses",
-          "notes",
-          "stats"
-        ]
-      },
-      "UpdateCustomerReqDto": {
-        "type": "object",
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "example": "Nguyễn Thị A"
-          },
-          "phone": {
-            "type": "string",
-            "example": "0901234567"
-          },
-          "email": {
-            "type": "string"
-          },
-          "facebook": {
-            "type": "string"
-          },
-          "zalo": {
-            "type": "string"
-          },
-          "birthday": {
-            "type": "string",
-            "example": "2000-01-30"
-          },
-          "gender": {
-            "type": "string"
-          },
-          "customerType": {
-            "type": "string",
-            "example": "NORMAL"
-          },
-          "source": {
-            "type": "string",
-            "example": "Facebook"
-          },
-          "note": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "BLOCKED"
-            ]
-          }
-        }
-      },
-      "AddCustomerNoteReqDto": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "string"
-          },
-          "isPinned": {
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "required": [
-          "content"
-        ]
-      },
-      "CustomerNoteResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "customerId": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "isPinned": {
-            "type": "boolean"
-          },
-          "createdBy": {
-            "type": "string",
-            "nullable": true
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "customerId",
-          "content",
-          "isPinned",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "CustomerAddressReqDto": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": "string"
-          },
-          "recipientName": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "addressLine": {
-            "type": "string"
-          },
-          "ward": {
-            "type": "string"
-          },
-          "district": {
-            "type": "string"
-          },
-          "city": {
-            "type": "string"
-          },
-          "province": {
-            "type": "string"
-          },
-          "isDefault": {
-            "type": "object",
-            "default": false
-          }
-        },
-        "required": [
-          "addressLine"
-        ]
-      },
-      "CustomerAddressResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "customerId": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string",
-            "nullable": true
-          },
-          "recipientName": {
-            "type": "string",
-            "nullable": true
-          },
-          "phone": {
-            "type": "string",
-            "nullable": true
-          },
-          "addressLine": {
-            "type": "string"
-          },
-          "ward": {
-            "type": "string",
-            "nullable": true
-          },
-          "district": {
-            "type": "string",
-            "nullable": true
-          },
-          "city": {
-            "type": "string",
-            "nullable": true
-          },
-          "province": {
-            "type": "string",
-            "nullable": true
-          },
-          "country": {
-            "type": "string"
-          },
-          "isDefault": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "updatedAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "customerId",
-          "addressLine",
-          "country",
-          "isDefault",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "UpdateCustomerAddressReqDto": {
-        "type": "object",
-        "properties": {
-          "label": {
-            "type": "string"
-          },
-          "recipientName": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "addressLine": {
-            "type": "string"
-          },
-          "ward": {
-            "type": "string"
-          },
-          "district": {
-            "type": "string"
-          },
-          "city": {
-            "type": "string"
-          },
-          "province": {
-            "type": "string"
-          },
-          "isDefault": {
-            "type": "object",
-            "default": false
-          }
-        }
       },
       "CatalogLookupsResDto": {
         "type": "object",
@@ -5455,6 +4985,476 @@
         "required": [
           "status"
         ]
+      },
+      "DashboardSummaryResDto": {
+        "type": "object",
+        "properties": {
+          "revenueToday": {
+            "type": "number"
+          },
+          "revenueMonth": {
+            "type": "number"
+          },
+          "ordersToday": {
+            "type": "number",
+            "description": "Non-draft, non-cancelled orders scheduled for pickup today"
+          },
+          "rentingProducts": {
+            "type": "number",
+            "description": "Unreleased ACTIVE physical allocations"
+          },
+          "outstandingAmount": {
+            "type": "number"
+          },
+          "upcomingOrders": {
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardRentalResDto"
+            }
+          },
+          "attentionOrders": {
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardAttentionResDto"
+            }
+          },
+          "revenueSeries": {
+            "minItems": 7,
+            "maxItems": 7,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardRevenuePointResDto"
+            }
+          }
+        },
+        "required": [
+          "revenueToday",
+          "revenueMonth",
+          "ordersToday",
+          "rentingProducts",
+          "outstandingAmount",
+          "upcomingOrders",
+          "attentionOrders",
+          "revenueSeries"
+        ]
+      },
+      "CustomerPageResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerListItemResDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "CreateCustomerReqDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Nguyễn Thị A"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "email": {
+            "type": "string"
+          },
+          "facebook": {
+            "type": "string"
+          },
+          "zalo": {
+            "type": "string"
+          },
+          "birthday": {
+            "type": "string",
+            "example": "2000-01-30"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "customerType": {
+            "type": "string",
+            "example": "NORMAL"
+          },
+          "source": {
+            "type": "string",
+            "example": "Facebook"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fullName",
+          "phone"
+        ]
+      },
+      "CustomerResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customerCode": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "facebook": {
+            "type": "string",
+            "nullable": true
+          },
+          "zalo": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "customerCode",
+          "fullName",
+          "phone",
+          "customerType",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CustomerLookupItemResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "phone"
+        ]
+      },
+      "CustomerDetailResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customerCode": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "facebook": {
+            "type": "string",
+            "nullable": true
+          },
+          "zalo": {
+            "type": "string",
+            "nullable": true
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerDetailAddressResDto"
+            }
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerDetailNoteResDto"
+            }
+          },
+          "stats": {
+            "$ref": "#/components/schemas/CustomerStatsResDto"
+          }
+        },
+        "required": [
+          "id",
+          "customerCode",
+          "fullName",
+          "phone",
+          "addresses",
+          "notes",
+          "stats"
+        ]
+      },
+      "UpdateCustomerReqDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Nguyễn Thị A"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "email": {
+            "type": "string"
+          },
+          "facebook": {
+            "type": "string"
+          },
+          "zalo": {
+            "type": "string"
+          },
+          "birthday": {
+            "type": "string",
+            "example": "2000-01-30"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "customerType": {
+            "type": "string",
+            "example": "NORMAL"
+          },
+          "source": {
+            "type": "string",
+            "example": "Facebook"
+          },
+          "note": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "BLOCKED"
+            ]
+          }
+        }
+      },
+      "AddCustomerNoteReqDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "isPinned": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "CustomerNoteResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "isPinned": {
+            "type": "boolean"
+          },
+          "createdBy": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "customerId",
+          "content",
+          "isPinned",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CustomerAddressReqDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "addressLine": {
+            "type": "string"
+          },
+          "ward": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "object",
+            "default": false
+          }
+        },
+        "required": [
+          "addressLine"
+        ]
+      },
+      "CustomerAddressResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "nullable": true
+          },
+          "recipientName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "addressLine": {
+            "type": "string"
+          },
+          "ward": {
+            "type": "string",
+            "nullable": true
+          },
+          "district": {
+            "type": "string",
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "province": {
+            "type": "string",
+            "nullable": true
+          },
+          "country": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "customerId",
+          "addressLine",
+          "country",
+          "isDefault",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateCustomerAddressReqDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "addressLine": {
+            "type": "string"
+          },
+          "ward": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "object",
+            "default": false
+          }
+        }
       },
       "RentalOrderPageResDto": {
         "type": "object",
@@ -6863,240 +6863,6 @@
           "expiresIn"
         ]
       },
-      "DashboardRentalResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "customerName": {
-            "type": "string"
-          },
-          "pickupDate": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RentalStatus"
-              }
-            ]
-          },
-          "itemCount": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "customerName",
-          "pickupDate",
-          "status",
-          "itemCount"
-        ]
-      },
-      "DashboardAttentionResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "code": {
-            "type": "string"
-          },
-          "customerName": {
-            "type": "string"
-          },
-          "returnDate": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "status": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RentalStatus"
-              }
-            ]
-          },
-          "outstandingAmount": {
-            "type": "number",
-            "description": "Outstanding non-deposit order balance in VND"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "OVERDUE",
-              "RETURN_SETTLEMENT",
-              "OUTSTANDING"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "customerName",
-          "returnDate",
-          "status",
-          "outstandingAmount",
-          "type"
-        ]
-      },
-      "DashboardRevenuePointResDto": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "format": "date"
-          },
-          "revenue": {
-            "type": "number",
-            "description": "Net realized revenue in VND, excluding deposits"
-          }
-        },
-        "required": [
-          "date",
-          "revenue"
-        ]
-      },
-      "CustomerListItemResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "customerCode": {
-            "type": "string"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "phone": {
-            "type": "string"
-          },
-          "facebook": {
-            "type": "string",
-            "nullable": true
-          },
-          "zalo": {
-            "type": "string",
-            "nullable": true
-          },
-          "completedRentalCount": {
-            "type": "number"
-          },
-          "totalPaid": {
-            "type": "number",
-            "example": 2500000
-          },
-          "lastRentalAt": {
-            "format": "date-time",
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "customerCode",
-          "fullName",
-          "phone",
-          "completedRentalCount",
-          "totalPaid"
-        ]
-      },
-      "PaginationMetaResDto": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "number"
-          },
-          "limit": {
-            "type": "number"
-          },
-          "total": {
-            "type": "number"
-          },
-          "totalPages": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "totalPages"
-        ]
-      },
-      "CustomerDetailAddressResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "addressLine": {
-            "type": "string"
-          },
-          "isDefault": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "addressLine",
-          "isDefault"
-        ]
-      },
-      "CustomerDetailNoteResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "content": {
-            "type": "string"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "content",
-          "createdAt"
-        ]
-      },
-      "CustomerStatsResDto": {
-        "type": "object",
-        "properties": {
-          "completedRentalCount": {
-            "type": "number"
-          },
-          "totalPaid": {
-            "type": "number",
-            "example": 2500000
-          },
-          "depositHeld": {
-            "type": "number",
-            "example": 1000000
-          },
-          "lastRentalAt": {
-            "format": "date-time",
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "completedRentalCount",
-          "totalPaid",
-          "depositHeld"
-        ]
-      },
       "CategoryLookupResDto": {
         "type": "object",
         "properties": {
@@ -7222,6 +6988,29 @@
           "id",
           "code",
           "name"
+        ]
+      },
+      "PaginationMetaResDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
         ]
       },
       "ProductListItemResDto": {
@@ -7686,6 +7475,217 @@
           "toStatus",
           "reason",
           "changedAt"
+        ]
+      },
+      "DashboardRentalResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "pickupDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalStatus"
+              }
+            ]
+          },
+          "itemCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "customerName",
+          "pickupDate",
+          "status",
+          "itemCount"
+        ]
+      },
+      "DashboardAttentionResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "returnDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalStatus"
+              }
+            ]
+          },
+          "outstandingAmount": {
+            "type": "number",
+            "description": "Outstanding non-deposit order balance in VND"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "OVERDUE",
+              "RETURN_SETTLEMENT",
+              "OUTSTANDING"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "customerName",
+          "returnDate",
+          "status",
+          "outstandingAmount",
+          "type"
+        ]
+      },
+      "DashboardRevenuePointResDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "revenue": {
+            "type": "number",
+            "description": "Net realized revenue in VND, excluding deposits"
+          }
+        },
+        "required": [
+          "date",
+          "revenue"
+        ]
+      },
+      "CustomerListItemResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customerCode": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "facebook": {
+            "type": "string",
+            "nullable": true
+          },
+          "zalo": {
+            "type": "string",
+            "nullable": true
+          },
+          "completedRentalCount": {
+            "type": "number"
+          },
+          "totalPaid": {
+            "type": "number",
+            "example": 2500000
+          },
+          "lastRentalAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "customerCode",
+          "fullName",
+          "phone",
+          "completedRentalCount",
+          "totalPaid"
+        ]
+      },
+      "CustomerDetailAddressResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "addressLine": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "addressLine",
+          "isDefault"
+        ]
+      },
+      "CustomerDetailNoteResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "createdAt"
+        ]
+      },
+      "CustomerStatsResDto": {
+        "type": "object",
+        "properties": {
+          "completedRentalCount": {
+            "type": "number"
+          },
+          "totalPaid": {
+            "type": "number",
+            "example": 2500000
+          },
+          "depositHeld": {
+            "type": "number",
+            "example": 1000000
+          },
+          "lastRentalAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "completedRentalCount",
+          "totalPaid",
+          "depositHeld"
         ]
       },
       "RentalOrderListItemResDto": {
@@ -8696,18 +8696,6 @@
           "status"
         ]
       },
-      "RentalStatus": {
-        "type": "string",
-        "enum": [
-          "DRAFT",
-          "RESERVED",
-          "CONFIRMED",
-          "ACTIVE",
-          "RETURNED",
-          "COMPLETED",
-          "CANCELLED"
-        ]
-      },
       "ProductLookupRateResDto": {
         "type": "object",
         "properties": {
@@ -8798,6 +8786,18 @@
           "orderNumber",
           "status",
           "customer"
+        ]
+      },
+      "RentalStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "RESERVED",
+          "CONFIRMED",
+          "ACTIVE",
+          "RETURNED",
+          "COMPLETED",
+          "CANCELLED"
         ]
       },
       "RentalAllocationResDto": {

@@ -69,6 +69,76 @@ function extractRentalPrices(
     .map(([days, amount]) => ({ days, amount }));
 }
 
+const storefrontProductSelect = {
+  id: true,
+  code: true,
+  slug: true,
+  name: true,
+  categoryId: true,
+  defaultDepositAmount: true,
+  isRentable: true,
+  category: { select: { name: true } },
+  media: {
+    where: { OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }] },
+    orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }],
+    take: 1,
+    select: { storageKey: true, url: true, isPrimary: true },
+  },
+  rentalRates: {
+    where: {
+      isActive: true,
+      OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
+    },
+    orderBy: { durationDays: 'asc' as const },
+    select: { durationDays: true, price: true },
+  },
+  variants: {
+    where: storefrontVariantBaseWhere(),
+    select: {
+      size: { select: { name: true } },
+      color: { select: { name: true } },
+      rentalRates: {
+        where: { isActive: true },
+        orderBy: { durationDays: 'asc' as const },
+        select: { durationDays: true, price: true },
+      },
+    },
+  },
+};
+
+type StorefrontProductRecord = Prisma.ProductGetPayload<{ select: typeof storefrontProductSelect }>;
+
+function toStorefrontProductItem(
+  product: StorefrontProductRecord,
+  mediaUrls: PublicMediaUrlResolver,
+): StorefrontProductItem {
+  const primaryMediaObj = product.media[0] ?? null;
+  const imageUrl = primaryMediaObj ? mediaUrls.resolve(primaryMediaObj) : '';
+  const sizes = Array.from(
+    new Set(product.variants.map((v) => v.size?.name).filter((s): s is string => Boolean(s))),
+  );
+  const colors = Array.from(
+    new Set(product.variants.map((v) => v.color?.name).filter((c): c is string => Boolean(c))),
+  );
+  return {
+    id: product.id,
+    code: product.code,
+    slug: product.slug,
+    name: product.name,
+    categoryId: product.categoryId,
+    categoryName: product.category?.name ?? 'Sản phẩm',
+    imageUrl,
+    size: sizes.join(', ') || 'Free size',
+    color: colors.join(', ') || 'Nhiều màu',
+    rentalPrices: extractRentalPrices(
+      product.rentalRates,
+      product.variants.map((v) => v.rentalRates),
+    ),
+    depositAmount: decimalToNumber(product.defaultDepositAmount),
+    isRentable: product.isRentable,
+  };
+}
+
 /**
  * Retrieves a paginated list of public, rentable products matching search and filter criteria.
  */
@@ -127,47 +197,8 @@ export async function listStorefrontProducts(
     where.variants = { some: variantFilter };
   }
 
-  const productSelect = {
-    id: true,
-    code: true,
-    slug: true,
-    name: true,
-    categoryId: true,
-    defaultDepositAmount: true,
-    isRentable: true,
-    category: { select: { name: true } },
-    media: {
-      where: {
-        OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
-      },
-      orderBy: [{ isPrimary: 'desc' as const }, { sortOrder: 'asc' as const }],
-      take: 1,
-      select: { storageKey: true, url: true, isPrimary: true },
-    },
-    rentalRates: {
-      where: {
-        isActive: true,
-        OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
-      },
-      orderBy: { durationDays: 'asc' as const },
-      select: { durationDays: true, price: true },
-    },
-    variants: {
-      where: storefrontVariantBaseWhere(),
-      select: {
-        size: { select: { name: true } },
-        color: { select: { name: true } },
-        rentalRates: {
-          where: { isActive: true },
-          orderBy: { durationDays: 'asc' as const },
-          select: { durationDays: true, price: true },
-        },
-      },
-    },
-  };
-
   // Determine sort order
-  let products: Array<Prisma.ProductGetPayload<{ select: typeof productSelect }>>;
+  let products: StorefrontProductRecord[];
   let total: number;
 
   if (input.sort === 'price_asc' || input.sort === 'price_desc') {
@@ -281,7 +312,7 @@ export async function listStorefrontProducts(
       const pageIds = pageRows.map((r) => r.id);
       const hydrated = await prisma.product.findMany({
         where: { id: { in: pageIds } },
-        select: productSelect,
+        select: storefrontProductSelect,
       });
       const byId = new Map(hydrated.map((p) => [p.id, p]));
       products = pageIds.map((id) => byId.get(id)!).filter(Boolean);
@@ -300,7 +331,7 @@ export async function listStorefrontProducts(
         skip,
         take: limit,
         orderBy,
-        select: productSelect,
+        select: storefrontProductSelect,
       }),
       prisma.product.count({ where }),
     ]);
@@ -345,6 +376,30 @@ export async function listStorefrontProducts(
     items,
     meta: paginateMeta(page, limit, total),
   };
+}
+
+/**
+ * Hydrates a caller-provided, ordered set of product IDs through the same storefront
+ * visibility predicate and card projection used by the public catalog listing.
+ */
+export async function listStorefrontProductsByIds(
+  prisma: PrismaService,
+  mediaUrls: PublicMediaUrlResolver,
+  shopId: string,
+  productIds: string[],
+): Promise<StorefrontProductItem[]> {
+  const ids = [...new Set(productIds)];
+  if (ids.length === 0) return [];
+
+  const products = await prisma.product.findMany({
+    where: { ...storefrontProductBaseWhere(shopId), id: { in: ids } },
+    select: storefrontProductSelect,
+  });
+  const byId = new Map(products.map((product) => [product.id, product]));
+  return ids.flatMap((id) => {
+    const product = byId.get(id);
+    return product ? [toStorefrontProductItem(product, mediaUrls)] : [];
+  });
 }
 
 /**

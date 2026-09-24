@@ -103,7 +103,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
 
     it('contains only /web/ routes and zero admin or system routes', () => {
       const paths = Object.keys(webDoc.paths);
-      expect(paths.length).toBe(18);
+      expect(paths.length).toBe(21);
 
       const nonWebPaths = paths.filter((p) => !p.includes('/web/') && !p.endsWith('/web'));
       expect(nonWebPaths).toEqual([]);
@@ -200,6 +200,12 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(webDoc.paths['/web/cart']?.get?.operationId).toBe('getCart');
       expect(webDoc.paths['/web/cart']?.put?.operationId).toBe('replaceCart');
       expect(webDoc.paths['/web/cart/merge-guest']?.put?.operationId).toBe('mergeGuestCart');
+      expect(webDoc.paths['/web/favorites']?.get?.operationId).toBe('listFavorites');
+      expect(webDoc.paths['/web/favorites/status']?.get?.operationId).toBe('getFavoriteStatus');
+      expect(webDoc.paths['/web/favorites/{productId}']?.put?.operationId).toBe('addFavorite');
+      expect(webDoc.paths['/web/favorites/{productId}']?.delete?.operationId).toBe(
+        'removeFavorite',
+      );
     });
 
     it('documents comprehensive HTTP status codes and ErrorResDto schema references', () => {

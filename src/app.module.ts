@@ -13,6 +13,7 @@ import { AuditModule } from '@modules/audit/audit.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { WebAuthModule } from '@modules/web-auth/web-auth.module';
 import { CartModule } from '@modules/cart/cart.module';
+import { FavoritesModule } from '@modules/favorites/favorites.module';
 import { CatalogModule } from '@modules/catalog/catalog.module';
 import { CustomersModule } from '@modules/customers/customers.module';
 import { DashboardModule } from '@modules/dashboard/dashboard.module';
@@ -57,6 +58,7 @@ import { TenantModule } from '@common/tenant/tenant.module';
     AuthModule,
     WebAuthModule,
     CartModule,
+    FavoritesModule,
     HealthModule,
     DashboardModule,
     CustomersModule,

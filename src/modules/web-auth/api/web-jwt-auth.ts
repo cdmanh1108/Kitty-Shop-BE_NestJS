@@ -123,8 +123,10 @@ export class WebAuthOriginGuard implements CanActivate {
       ...this.config.get('corsOrigins', { infer: true }),
       new URL(this.config.get('appUrl', { infer: true })).origin,
     ];
+    const contentType = request.headers['content-type'];
+    const isJson = typeof contentType === 'string' && contentType.includes('application/json');
     if (
-      !request.is('application/json') ||
+      !isJson ||
       (origin && !allowed.includes(origin)) ||
       request.headers['sec-fetch-site'] === 'cross-site'
     ) {

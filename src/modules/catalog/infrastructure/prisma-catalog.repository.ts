@@ -30,7 +30,11 @@ import {
   removeProductMedia,
 } from './product-commands';
 import { listStorefrontCategories } from './storefront-category.queries';
-import { listStorefrontProducts, findStorefrontProductBySlug } from './storefront-product.queries';
+import {
+  listStorefrontProducts,
+  listStorefrontProductsByIds,
+  findStorefrontProductBySlug,
+} from './storefront-product.queries';
 import { resolveStorefrontSelections } from './storefront-selection.queries';
 import {
   addInventoryItem,
@@ -60,6 +64,13 @@ export class PrismaCatalogRepository
     input: Parameters<CatalogPersistenceAdapter['listStorefrontProducts']>[0],
   ): ReturnType<CatalogPersistenceAdapter['listStorefrontProducts']> {
     return listStorefrontProducts(this.prisma, this.mediaUrls, input);
+  }
+
+  listStorefrontProductsByIds(
+    shopId: string,
+    productIds: string[],
+  ): ReturnType<CatalogPersistenceAdapter['listStorefrontProductsByIds']> {
+    return listStorefrontProductsByIds(this.prisma, this.mediaUrls, shopId, productIds);
   }
 
   findStorefrontProductBySlug(

@@ -672,6 +672,208 @@
         "x-api-surface": "web"
       }
     },
+    "/web/favorites/status": {
+      "get": {
+        "operationId": "getFavoriteStatus",
+        "parameters": [
+          {
+            "name": "productIds",
+            "required": false,
+            "in": "query",
+            "description": "Danh sách ID sản phẩm, phân cách bằng dấu phẩy.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoritesStatusResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lấy trạng thái yêu thích theo sản phẩm",
+        "tags": [
+          "Web - Favorites"
+        ],
+        "x-api-surface": "web"
+      }
+    },
+    "/web/favorites": {
+      "get": {
+        "operationId": "listFavorites",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebProductListResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lấy sản phẩm yêu thích của tài khoản",
+        "tags": [
+          "Web - Favorites"
+        ],
+        "x-api-surface": "web"
+      }
+    },
+    "/web/favorites/{productId}": {
+      "put": {
+        "operationId": "addFavorite",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lưu sản phẩm yêu thích (idempotent)",
+        "tags": [
+          "Web - Favorites"
+        ],
+        "x-api-surface": "web"
+      },
+      "delete": {
+        "operationId": "removeFavorite",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Xóa sản phẩm yêu thích (idempotent)",
+        "tags": [
+          "Web - Favorites"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/categories": {
       "get": {
         "operationId": "getWebCategories",
@@ -1175,6 +1377,9 @@
       "name": "Web - Cart"
     },
     {
+      "name": "Web - Favorites"
+    },
+    {
       "name": "Web - Catalog"
     },
     {
@@ -1490,6 +1695,44 @@
           "items"
         ]
       },
+      "FavoritesStatusResDto": {
+        "type": "object",
+        "properties": {
+          "productIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "total": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "productIds",
+          "total"
+        ]
+      },
+      "WebProductListResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebProductListItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WebPaginationMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
       "WebCategoryDto": {
         "type": "object",
         "properties": {
@@ -1531,24 +1774,6 @@
           "slug",
           "parentId",
           "sortOrder"
-        ]
-      },
-      "WebProductListResDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WebProductListItemDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/WebPaginationMetaDto"
-          }
-        },
-        "required": [
-          "items",
-          "meta"
         ]
       },
       "WebStorefrontSelectionResolveReqDto": {
