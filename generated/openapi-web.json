@@ -500,6 +500,178 @@
         "x-api-surface": "web"
       }
     },
+    "/web/cart": {
+      "get": {
+        "operationId": "getCart",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartGetResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lấy giỏ thuê đã lưu của tài khoản đang đăng nhập",
+        "tags": [
+          "Web - Cart"
+        ],
+        "x-api-surface": "web"
+      },
+      "put": {
+        "operationId": "replaceCart",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CartReplaceReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lưu snapshot giỏ thuê theo phiên bản chống ghi đè",
+        "tags": [
+          "Web - Cart"
+        ],
+        "x-api-surface": "web"
+      }
+    },
+    "/web/cart/merge-guest": {
+      "put": {
+        "operationId": "mergeGuestCart",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CartDraftDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CartDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Nhập giỏ khách vào giỏ của tài khoản đang đăng nhập",
+        "tags": [
+          "Web - Cart"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/categories": {
       "get": {
         "operationId": "getWebCategories",
@@ -1000,6 +1172,9 @@
       "name": "Web - Auth"
     },
     {
+      "name": "Web - Cart"
+    },
+    {
       "name": "Web - Catalog"
     },
     {
@@ -1204,6 +1379,115 @@
         },
         "required": [
           "success"
+        ]
+      },
+      "CartGetResDto": {
+        "type": "object",
+        "properties": {
+          "cart": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CartDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "cart"
+        ]
+      },
+      "CartReplaceReqDto": {
+        "type": "object",
+        "properties": {
+          "pickupDate": {
+            "type": "string",
+            "example": "2026-10-01",
+            "format": "date"
+          },
+          "returnDate": {
+            "type": "string",
+            "example": "2026-10-03",
+            "format": "date"
+          },
+          "items": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartItemDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Phiên bản giỏ hiện tại; 0 khi tài khoản chưa có giỏ trên server."
+          }
+        },
+        "required": [
+          "pickupDate",
+          "returnDate",
+          "items",
+          "version"
+        ]
+      },
+      "CartDto": {
+        "type": "object",
+        "properties": {
+          "pickupDate": {
+            "type": "string",
+            "example": "2026-10-01",
+            "format": "date"
+          },
+          "returnDate": {
+            "type": "string",
+            "example": "2026-10-03",
+            "format": "date"
+          },
+          "items": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartItemDto"
+            }
+          },
+          "version": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "pickupDate",
+          "returnDate",
+          "items",
+          "version"
+        ]
+      },
+      "CartDraftDto": {
+        "type": "object",
+        "properties": {
+          "pickupDate": {
+            "type": "string",
+            "example": "2026-10-01",
+            "format": "date"
+          },
+          "returnDate": {
+            "type": "string",
+            "example": "2026-10-03",
+            "format": "date"
+          },
+          "items": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartItemDto"
+            }
+          }
+        },
+        "required": [
+          "pickupDate",
+          "returnDate",
+          "items"
         ]
       },
       "WebCategoryDto": {
@@ -1713,6 +1997,29 @@
           "defaultDepositAmount",
           "lateFeePerItemPerDay",
           "standardShippingFee"
+        ]
+      },
+      "CartItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "variantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20
+          }
+        },
+        "required": [
+          "productId",
+          "variantId",
+          "quantity"
         ]
       },
       "WebProductListItemDto": {

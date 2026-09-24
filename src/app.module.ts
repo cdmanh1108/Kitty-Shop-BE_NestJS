@@ -12,6 +12,7 @@ import { RequestContextMiddleware } from '@common/middleware/request-context.mid
 import { AuditModule } from '@modules/audit/audit.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { WebAuthModule } from '@modules/web-auth/web-auth.module';
+import { CartModule } from '@modules/cart/cart.module';
 import { CatalogModule } from '@modules/catalog/catalog.module';
 import { CustomersModule } from '@modules/customers/customers.module';
 import { DashboardModule } from '@modules/dashboard/dashboard.module';
@@ -55,6 +56,7 @@ import { TenantModule } from '@common/tenant/tenant.module';
     AuditModule,
     AuthModule,
     WebAuthModule,
+    CartModule,
     HealthModule,
     DashboardModule,
     CustomersModule,

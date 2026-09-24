@@ -30,6 +30,6 @@ import { ConfiguredOtpProvider } from './infrastructure/configured-otp.provider'
     { provide: WEB_AUTH_REPOSITORY, useClass: PrismaWebAuthRepository },
     { provide: OTP_PROVIDER, useClass: ConfiguredOtpProvider },
   ],
-  exports: [WebAuthService, WebJwtAuthGuard],
+  exports: [WebAuthService, WebAuthCookies, WebJwtAuthGuard, WebAuthOriginGuard, JwtModule],
 })
 export class WebAuthModule {}

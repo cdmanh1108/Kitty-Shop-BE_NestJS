@@ -103,7 +103,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
 
     it('contains only /web/ routes and zero admin or system routes', () => {
       const paths = Object.keys(webDoc.paths);
-      expect(paths.length).toBe(16);
+      expect(paths.length).toBe(18);
 
       const nonWebPaths = paths.filter((p) => !p.includes('/web/') && !p.endsWith('/web'));
       expect(nonWebPaths).toEqual([]);
@@ -151,6 +151,8 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(schemas).toContain('WebCreateOrderReqDto');
       expect(schemas).toContain('WebOrderLookupReqDto');
       expect(schemas).toContain('WebOrderLookupResDto');
+      expect(schemas).toContain('CartDto');
+      expect(schemas).toContain('CartGetResDto');
       expect(schemas).toContain('ErrorResDto');
 
       // MUST NOT contain internal / admin schemas
@@ -194,6 +196,10 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
         expect(operation).toBeDefined();
         expect(operation?.operationId).toBe(expected.id);
       }
+
+      expect(webDoc.paths['/web/cart']?.get?.operationId).toBe('getCart');
+      expect(webDoc.paths['/web/cart']?.put?.operationId).toBe('replaceCart');
+      expect(webDoc.paths['/web/cart/merge-guest']?.put?.operationId).toBe('mergeGuestCart');
     });
 
     it('documents comprehensive HTTP status codes and ErrorResDto schema references', () => {

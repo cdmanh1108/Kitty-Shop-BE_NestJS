@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  createParamDecorator,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { AppConfiguration } from '@config/configuration';
@@ -9,6 +15,14 @@ import type { WebProfile } from '../domain/web-auth.repository';
 export interface WebRequest extends Request {
   webUser?: WebProfile;
 }
+
+export const CurrentWebUser = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): WebProfile => {
+    const user = context.switchToHttp().getRequest<WebRequest>().webUser;
+    if (!user) throw new ForbiddenException('Không tìm thấy phiên đăng nhập hợp lệ.');
+    return user;
+  },
+);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface WebAccessPayload {

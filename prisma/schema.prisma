@@ -19,6 +19,7 @@ model WebAccount {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   challenges WebOtpChallenge[]
   refreshTokens WebRefreshToken[]
+  carts Cart[]
   @@map("web_accounts")
 }
 
@@ -51,6 +52,27 @@ model WebRefreshToken {
   @@index([accountId])
   @@index([expiresAt])
   @@map("web_refresh_tokens")
+}
+
+/// A storefront cart is a non-authoritative, account-owned selection draft.
+/// Pricing, availability and the final order remain server-calculated at checkout.
+model Cart {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId  String   @map("account_id") @db.Uuid
+  shopId     String   @map("shop_id") @db.Uuid
+  items      Json
+  pickupDate DateTime @map("pickup_date") @db.Date
+  returnDate DateTime @map("return_date") @db.Date
+  version    Int      @default(1)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  account WebAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  shop    Shop       @relation(fields: [shopId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, shopId])
+  @@index([shopId, updatedAt])
+  @@map("carts")
 }
 
 model Shop {
@@ -102,6 +124,7 @@ model Shop {
   auditLogs              AuditLog[]
   outboxEvents           OutboxEvent[]
   idempotencyRecords     IdempotencyRecord[]
+  carts                  Cart[]
 
   @@map("shops")
 }
