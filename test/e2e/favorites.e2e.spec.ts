@@ -53,12 +53,18 @@ describe('Account favorites end-to-end', () => {
       .put(`/api/v1/web/favorites/${product.id}`)
       .set('Cookie', firstCookie)
       .set('Content-Type', 'application/json')
-      .expect(204);
+      .expect(200)
+      .expect((response) =>
+        expect(response.body).toEqual({ productId: product.id, isFavorite: true, total: 1 }),
+      );
     await request(server)
       .put(`/api/v1/web/favorites/${product.id}`)
       .set('Cookie', firstCookie)
       .set('Content-Type', 'application/json')
-      .expect(204);
+      .expect(200)
+      .expect((response) =>
+        expect(response.body).toEqual({ productId: product.id, isFavorite: true, total: 1 }),
+      );
     await request(server)
       .get('/api/v1/web/favorites')
       .set('Cookie', firstCookie)
@@ -79,7 +85,10 @@ describe('Account favorites end-to-end', () => {
       .delete(`/api/v1/web/favorites/${product.id}`)
       .set('Cookie', secondCookie)
       .set('Content-Type', 'application/json')
-      .expect(204);
+      .expect(200)
+      .expect((response) =>
+        expect(response.body).toEqual({ productId: product.id, isFavorite: false, total: 0 }),
+      );
     await request(server)
       .get('/api/v1/web/favorites')
       .set('Cookie', firstCookie)

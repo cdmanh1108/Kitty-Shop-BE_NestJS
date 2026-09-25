@@ -28,3 +28,14 @@ export class FavoritesStatusResDto {
   @ApiProperty({ example: 3 })
   total!: number;
 }
+
+export class FavoriteMutationResDto {
+  @ApiProperty({ format: 'uuid' })
+  productId!: string;
+
+  @ApiProperty({ example: true })
+  isFavorite!: boolean;
+
+  @ApiProperty({ example: 3 })
+  total!: number;
+}

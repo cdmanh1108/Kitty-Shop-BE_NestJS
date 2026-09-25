@@ -28,8 +28,10 @@ describe('PrismaFavoriteRepository', () => {
     });
     const repository = new PrismaFavoriteRepository(prisma);
 
-    await Promise.all(Array.from({ length: 10 }, () => repository.add(first.id, product.id)));
-    await repository.add(second.id, product.id);
+    await Promise.all(
+      Array.from({ length: 10 }, () => repository.add(first.id, shop.id, product.id)),
+    );
+    await repository.add(second.id, shop.id, product.id);
 
     expect(
       await prisma.favorite.count({ where: { accountId: first.id, productId: product.id } }),
@@ -43,7 +45,7 @@ describe('PrismaFavoriteRepository', () => {
       total: 1,
     });
 
-    await repository.remove(second.id, product.id);
+    await repository.remove(second.id, shop.id, product.id);
     expect(await repository.listProductIds(first.id, shop.id, 1, 20)).toEqual({
       productIds: [product.id],
       total: 1,
@@ -63,8 +65,8 @@ describe('PrismaFavoriteRepository', () => {
     });
     const repository = new PrismaFavoriteRepository(prisma);
 
-    await repository.add(account.id, visible.id);
-    await repository.add(account.id, hidden.id);
+    await repository.add(account.id, shop.id, visible.id);
+    await repository.add(account.id, shop.id, hidden.id);
     await prisma.product.update({ data: { archivedAt: new Date() }, where: { id: hidden.id } });
 
     await expect(repository.listProductIds(account.id, shop.id, 1, 1)).resolves.toEqual({

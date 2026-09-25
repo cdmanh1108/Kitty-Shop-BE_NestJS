@@ -10,7 +10,11 @@ export interface FavoriteStatus {
   total: number;
 }
 
-export type FavoriteAddResult = 'stored' | 'product_missing';
+export interface FavoriteMutation {
+  total: number;
+}
+
+export type FavoriteAddResult = { kind: 'stored'; total: number } | { kind: 'product_missing' };
 
 export interface FavoriteRepository {
   listProductIds(
@@ -20,6 +24,6 @@ export interface FavoriteRepository {
     limit: number,
   ): Promise<FavoritePage>;
   status(accountId: string, shopId: string, productIds: string[]): Promise<FavoriteStatus>;
-  add(accountId: string, productId: string): Promise<FavoriteAddResult>;
-  remove(accountId: string, productId: string): Promise<void>;
+  add(accountId: string, shopId: string, productId: string): Promise<FavoriteAddResult>;
+  remove(accountId: string, shopId: string, productId: string): Promise<FavoriteMutation>;
 }

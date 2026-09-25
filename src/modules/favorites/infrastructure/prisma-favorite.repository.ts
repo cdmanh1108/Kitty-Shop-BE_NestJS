@@ -4,6 +4,7 @@ import { PrismaService } from '@database/prisma/prisma.service';
 import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
 import type {
   FavoriteAddResult,
+  FavoriteMutation,
   FavoritePage,
   FavoriteRepository,
   FavoriteStatus,
@@ -48,23 +49,33 @@ export class PrismaFavoriteRepository implements FavoriteRepository {
     return { productIds: favorites.map((favorite) => favorite.productId), total };
   }
 
-  async add(accountId: string, productId: string): Promise<FavoriteAddResult> {
+  async add(accountId: string, shopId: string, productId: string): Promise<FavoriteAddResult> {
     try {
-      await this.prisma.favorite.createMany({
-        data: [{ accountId, productId }],
-        skipDuplicates: true,
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.favorite.createMany({
+          data: [{ accountId, productId }],
+          skipDuplicates: true,
+        });
+        return {
+          kind: 'stored',
+          total: await tx.favorite.count({ where: storefrontFavoriteWhere(accountId, shopId) }),
+        };
       });
-      return 'stored';
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2003') return 'product_missing';
+        if (error.code === 'P2003') return { kind: 'product_missing' };
       }
       throw error;
     }
   }
 
-  async remove(accountId: string, productId: string): Promise<void> {
-    await this.prisma.favorite.deleteMany({ where: { accountId, productId } });
+  async remove(accountId: string, shopId: string, productId: string): Promise<FavoriteMutation> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.favorite.deleteMany({ where: { accountId, productId } });
+      return {
+        total: await tx.favorite.count({ where: storefrontFavoriteWhere(accountId, shopId) }),
+      };
+    });
   }
 }
 

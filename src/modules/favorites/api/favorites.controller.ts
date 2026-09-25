@@ -15,7 +15,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
-  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -34,6 +33,7 @@ import { WebProductListResDto } from '@modules/catalog/api/web/dto/web-catalog.d
 import { FavoritesService } from '../application/favorites.service';
 import {
   FavoritesListQueryDto,
+  FavoriteMutationResDto,
   FavoritesStatusQueryDto,
   FavoritesStatusResDto,
 } from './dto/favorites.dto';
@@ -76,31 +76,31 @@ export class FavoritesController {
   }
 
   @Put(':productId')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiCookieAuth('web-access')
   @ApiOperation({ operationId: 'addFavorite', summary: 'Lưu sản phẩm yêu thích (idempotent)' })
   @ApiParam({ name: 'productId', format: 'uuid' })
-  @ApiNoContentResponse()
+  @ApiOkResponse({ type: FavoriteMutationResDto })
   @ApiNotFoundResponse({ type: ErrorResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async add(
     @CurrentWebUser() user: WebProfile,
     @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
-  ): Promise<void> {
-    await this.favorites.add(user.id, productId);
+  ): Promise<FavoriteMutationResDto> {
+    return this.favorites.add(user.id, productId);
   }
 
   @Delete(':productId')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiCookieAuth('web-access')
   @ApiOperation({ operationId: 'removeFavorite', summary: 'Xóa sản phẩm yêu thích (idempotent)' })
   @ApiParam({ name: 'productId', format: 'uuid' })
-  @ApiNoContentResponse()
+  @ApiOkResponse({ type: FavoriteMutationResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async remove(
     @CurrentWebUser() user: WebProfile,
     @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
-  ): Promise<void> {
-    await this.favorites.remove(user.id, productId);
+  ): Promise<FavoriteMutationResDto> {
+    return this.favorites.remove(user.id, productId);
   }
 }

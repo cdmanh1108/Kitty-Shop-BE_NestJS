@@ -23,8 +23,8 @@ function repository(overrides: Partial<FavoriteRepository> = {}): FavoriteReposi
   return {
     listProductIds: jest.fn().mockResolvedValue({ productIds: [], total: 0 }),
     status: jest.fn().mockResolvedValue({ productIds: [], total: 0 }),
-    add: jest.fn().mockResolvedValue('stored'),
-    remove: jest.fn(),
+    add: jest.fn().mockResolvedValue({ kind: 'stored', total: 0 }),
+    remove: jest.fn().mockResolvedValue({ total: 0 }),
     ...overrides,
   };
 }
@@ -65,7 +65,7 @@ describe('FavoritesService', () => {
   });
 
   it('rejects a product that is not storefront-visible before persisting it', async () => {
-    const add = jest.fn().mockResolvedValue('stored');
+    const add = jest.fn().mockResolvedValue({ kind: 'stored', total: 1 });
     const repo = repository({ add });
     const storefront = catalog({ listStorefrontProductsByIds: jest.fn().mockResolvedValue([]) });
     const service = new FavoritesService(repo, storefront, {
@@ -77,8 +77,8 @@ describe('FavoritesService', () => {
   });
 
   it('keeps add idempotent and allows an idempotent account-scoped remove', async () => {
-    const add = jest.fn().mockResolvedValue('stored');
-    const remove = jest.fn();
+    const add = jest.fn().mockResolvedValue({ kind: 'stored', total: 1 });
+    const remove = jest.fn().mockResolvedValue({ total: 0 });
     const repo = repository({ add, remove });
     const storefront = catalog({
       listStorefrontProductsByIds: jest.fn().mockResolvedValue([product]),
@@ -87,10 +87,18 @@ describe('FavoritesService', () => {
       resolveShopId: jest.fn().mockResolvedValue('shop-id'),
     });
 
-    await service.add('account-id', product.id);
-    await service.remove('account-id', product.id);
-    expect(add).toHaveBeenCalledWith('account-id', product.id);
-    expect(remove).toHaveBeenCalledWith('account-id', product.id);
+    await expect(service.add('account-id', product.id)).resolves.toEqual({
+      productId: product.id,
+      isFavorite: true,
+      total: 1,
+    });
+    await expect(service.remove('account-id', product.id)).resolves.toEqual({
+      productId: product.id,
+      isFavorite: false,
+      total: 0,
+    });
+    expect(add).toHaveBeenCalledWith('account-id', 'shop-id', product.id);
+    expect(remove).toHaveBeenCalledWith('account-id', 'shop-id', product.id);
   });
 
   it('returns a bounded product status and visible count without loading every favorite', async () => {

@@ -799,8 +799,15 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": ""
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteMutationResDto"
+                }
+              }
+            }
           },
           "401": {
             "description": "",
@@ -848,8 +855,15 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": ""
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteMutationResDto"
+                }
+              }
+            }
           },
           "401": {
             "description": "",
@@ -1731,6 +1745,28 @@
         "required": [
           "items",
           "meta"
+        ]
+      },
+      "FavoriteMutationResDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "isFavorite": {
+            "type": "boolean",
+            "example": true
+          },
+          "total": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "productId",
+          "isFavorite",
+          "total"
         ]
       },
       "WebCategoryDto": {

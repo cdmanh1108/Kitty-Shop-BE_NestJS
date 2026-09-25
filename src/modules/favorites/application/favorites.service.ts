@@ -6,7 +6,16 @@ import {
   type StorefrontCatalogRepository,
 } from '@modules/catalog/domain/storefront-catalog.repository';
 import type { StorefrontProductPage } from '@modules/catalog/domain/catalog.models';
-import { FAVORITE_REPOSITORY, type FavoriteRepository } from '../domain/favorite.repository';
+import {
+  FAVORITE_REPOSITORY,
+  type FavoriteMutation,
+  type FavoriteRepository,
+} from '../domain/favorite.repository';
+
+export interface FavoriteMutationResult extends FavoriteMutation {
+  productId: string;
+  isFavorite: boolean;
+}
 
 @Injectable()
 export class FavoritesService {
@@ -28,18 +37,25 @@ export class FavoritesService {
     return this.repository.status(accountId, await this.shopResolver.resolveShopId(), productIds);
   }
 
-  async add(accountId: string, productId: string): Promise<void> {
+  async add(accountId: string, productId: string): Promise<FavoriteMutationResult> {
     const shopId = await this.shopResolver.resolveShopId();
     const products = await this.catalog.listStorefrontProductsByIds(shopId, [productId]);
-    if (
-      products.length !== 1 ||
-      (await this.repository.add(accountId, productId)) === 'product_missing'
-    ) {
+    if (products.length !== 1) {
       throw new NotFoundException('Không tìm thấy sản phẩm.');
     }
+    const result = await this.repository.add(accountId, shopId, productId);
+    if (result.kind === 'product_missing') {
+      throw new NotFoundException('Không tìm thấy sản phẩm.');
+    }
+    return { productId, isFavorite: true, total: result.total };
   }
 
-  remove(accountId: string, productId: string): Promise<void> {
-    return this.repository.remove(accountId, productId);
+  async remove(accountId: string, productId: string): Promise<FavoriteMutationResult> {
+    const result = await this.repository.remove(
+      accountId,
+      await this.shopResolver.resolveShopId(),
+      productId,
+    );
+    return { productId, isFavorite: false, total: result.total };
   }
 }
