@@ -1,5 +1,6 @@
 import type { DecimalValue } from '@common/types/decimal';
 import type { JsonValue } from '@common/types/json';
+import type { RentalOrderSource } from './rental-order-source';
 
 export interface RentalItemAllocationRecord {
   id: string;
@@ -22,6 +23,8 @@ export interface RentalOrderRecord {
   shopId: string;
   orderNumber: string;
   customerId: string;
+  source: RentalOrderSource | null;
+  webAccountId: string | null;
   locationId: string | null;
   rentalStartAt: Date;
   rentalEndAt: Date;

@@ -53,6 +53,7 @@ describe('Cross-Tenant Data Isolation & Query Filtering Integration', () => {
       orderNumber: uniqueCode('RT_A'),
       shopId: shopA.id,
       customerId: customerA.id,
+      source: 'OFFLINE',
       rentalStartAt: new Date('2026-10-10T00:00:00.000Z'),
       rentalEndAt: new Date('2026-10-12T00:00:00.000Z'),
       discountTotal: 0,

@@ -34,6 +34,7 @@ describe('Dashboard PostgreSQL read model', () => {
         shopId: f.shop.id,
         customerId: f.customer.id,
         orderNumber: uniqueCode('DASH'),
+        source: 'OFFLINE',
         rentalStartAt: new Date('2026-09-30T17:00:00Z'),
         rentalEndAt: new Date('2026-10-02T16:59:59Z'),
         status: 'ACTIVE',

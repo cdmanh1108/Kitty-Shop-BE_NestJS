@@ -290,6 +290,7 @@ describe('repository persistence boundaries', () => {
         shopId: 'shop',
         customerId: 'customer',
         orderNumber: 'R-01',
+        source: 'OFFLINE',
         rentalStartAt: now,
         rentalEndAt: now,
         createdBy: 'user',

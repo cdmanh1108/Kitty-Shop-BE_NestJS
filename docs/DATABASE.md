@@ -9,6 +9,7 @@ PostgreSQL is the source of truth. Prisma is the application ORM, while committe
 ```mermaid
 erDiagram
   Shop ||--o{ ShopMember : has
+  WebAccount ||--o{ RentalOrder : owns_on_storefront
   User ||--o{ ShopMember : joins
   ShopMember ||--o{ MemberRole : has
   Role ||--o{ MemberRole : assigned
@@ -119,6 +120,11 @@ lineage and compromise state for both admin and storefront sessions. Registratio
 verification and resend lock the account and update their related rows transactionally.
 `AUTH_CLEANUP_*` retention keeps OTP terminal records for 24 hours and complete refresh
 families for 30 days by default; see [Auth ephemeral-data cleanup](AUTH_CLEANUP.md).
+
+Rental order creation provenance is separate from both storefront authentication and CRM
+identity. `rental_orders.source` is `ONLINE` for storefront checkout (including guests) or
+`OFFLINE` for Admin/manual entry. `web_account_id` is nullable storefront ownership and does
+not replace `customer_id`; see [Rental order origin](RENTAL_ORDER_ORIGIN.md).
 
 ## Migration rules
 

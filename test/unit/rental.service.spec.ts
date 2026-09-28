@@ -39,6 +39,8 @@ describe('RentalService Unit Tests', () => {
     shopId: 'shop-123',
     orderNumber: 'RT-20261001-0001',
     customerId: 'cust-1',
+    source: 'OFFLINE',
+    webAccountId: null,
     locationId: 'loc-1',
     rentalStartAt: new Date('2026-10-05T00:00:00.000Z'),
     rentalEndAt: new Date('2026-10-07T00:00:00.000Z'),
@@ -323,6 +325,7 @@ describe('RentalService Unit Tests', () => {
 
       expect(result).toBeDefined();
       expect(createOrderMock).toHaveBeenCalledTimes(1);
+      expect(createOrderMock).toHaveBeenCalledWith(expect.objectContaining({ source: 'OFFLINE' }));
       expect(auditLogMock).toHaveBeenCalledWith(
         expect.objectContaining({
           shopId: currentUser.shopId,

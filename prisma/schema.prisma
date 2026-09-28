@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum RentalOrderSource {
+  ONLINE
+  OFFLINE
+}
+
 // Storefront identity is separate from staff membership and tenant CRM records.
 model WebAccount {
   id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -22,6 +27,7 @@ model WebAccount {
   refreshTokenFamilies  WebRefreshTokenFamily[]
   carts                 Cart[]
   favorites             Favorite[]
+  rentalOrders          RentalOrder[]
 
   @@map("web_accounts")
 }
@@ -657,42 +663,47 @@ model RentalRate {
 }
 
 model RentalOrder {
-  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shopId                 String    @map("shop_id") @db.Uuid
-  orderNumber            String    @map("order_number") @db.VarChar(50)
-  customerId             String    @map("customer_id") @db.Uuid
-  locationId             String?   @map("location_id") @db.Uuid
-  rentalStartAt          DateTime  @map("rental_start_at") @db.Timestamptz(6)
-  rentalEndAt            DateTime  @map("rental_end_at") @db.Timestamptz(6)
-  actualStartedAt        DateTime? @map("actual_started_at") @db.Timestamptz(6)
-  actualReturnedAt       DateTime? @map("actual_returned_at") @db.Timestamptz(6)
-  completedAt            DateTime? @map("completed_at") @db.Timestamptz(6)
-  cancelledAt            DateTime? @map("cancelled_at") @db.Timestamptz(6)
-  status                 String    @default("RESERVED") @db.VarChar(30)
-  paymentStatus          String    @default("UNPAID") @map("payment_status") @db.VarChar(30)
-  preferredPaymentMethod String?   @map("preferred_payment_method") @db.VarChar(30)
-  depositStatus          String    @default("PENDING") @map("deposit_status") @db.VarChar(30)
-  currency               String    @default("VND") @db.Char(3)
-  rentalSubtotal         Decimal   @default(0) @map("rental_subtotal") @db.Decimal(18, 2)
-  chargesTotal           Decimal   @default(0) @map("charges_total") @db.Decimal(18, 2)
-  discountTotal          Decimal   @default(0) @map("discount_total") @db.Decimal(18, 2)
-  depositRequired        Decimal   @default(0) @map("deposit_required") @db.Decimal(18, 2)
-  collateralMethod       String    @default("CASH") @map("collateral_method") @db.VarChar(20)
-  documentType           String?   @map("document_type") @db.VarChar(20)
-  collateralStatus       String    @default("REQUIRED") @map("collateral_status") @db.VarChar(20)
-  collateralReceivedAt   DateTime? @map("collateral_received_at") @db.Timestamptz(6)
-  collateralReturnedAt   DateTime? @map("collateral_returned_at") @db.Timestamptz(6)
-  grandTotal             Decimal   @default(0) @map("grand_total") @db.Decimal(18, 2)
-  note                   String?   @db.Text
-  internalNote           String?   @map("internal_note") @db.Text
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId                 String             @map("shop_id") @db.Uuid
+  orderNumber            String             @map("order_number") @db.VarChar(50)
+  customerId             String             @map("customer_id") @db.Uuid
+  /// Nullable for legacy orders whose origin cannot be reconstructed safely. New orders set this explicitly.
+  source                 RentalOrderSource?
+  /// Storefront ownership is separate from the shop CRM customer relation.
+  webAccountId           String?            @map("web_account_id") @db.Uuid
+  locationId             String?            @map("location_id") @db.Uuid
+  rentalStartAt          DateTime           @map("rental_start_at") @db.Timestamptz(6)
+  rentalEndAt            DateTime           @map("rental_end_at") @db.Timestamptz(6)
+  actualStartedAt        DateTime?          @map("actual_started_at") @db.Timestamptz(6)
+  actualReturnedAt       DateTime?          @map("actual_returned_at") @db.Timestamptz(6)
+  completedAt            DateTime?          @map("completed_at") @db.Timestamptz(6)
+  cancelledAt            DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  status                 String             @default("RESERVED") @db.VarChar(30)
+  paymentStatus          String             @default("UNPAID") @map("payment_status") @db.VarChar(30)
+  preferredPaymentMethod String?            @map("preferred_payment_method") @db.VarChar(30)
+  depositStatus          String             @default("PENDING") @map("deposit_status") @db.VarChar(30)
+  currency               String             @default("VND") @db.Char(3)
+  rentalSubtotal         Decimal            @default(0) @map("rental_subtotal") @db.Decimal(18, 2)
+  chargesTotal           Decimal            @default(0) @map("charges_total") @db.Decimal(18, 2)
+  discountTotal          Decimal            @default(0) @map("discount_total") @db.Decimal(18, 2)
+  depositRequired        Decimal            @default(0) @map("deposit_required") @db.Decimal(18, 2)
+  collateralMethod       String             @default("CASH") @map("collateral_method") @db.VarChar(20)
+  documentType           String?            @map("document_type") @db.VarChar(20)
+  collateralStatus       String             @default("REQUIRED") @map("collateral_status") @db.VarChar(20)
+  collateralReceivedAt   DateTime?          @map("collateral_received_at") @db.Timestamptz(6)
+  collateralReturnedAt   DateTime?          @map("collateral_returned_at") @db.Timestamptz(6)
+  grandTotal             Decimal            @default(0) @map("grand_total") @db.Decimal(18, 2)
+  note                   String?            @db.Text
+  internalNote           String?            @map("internal_note") @db.Text
   metadata               Json?
-  createdBy              String?   @map("created_by") @db.Uuid
-  updatedBy              String?   @map("updated_by") @db.Uuid
-  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy              String?            @map("created_by") @db.Uuid
+  updatedBy              String?            @map("updated_by") @db.Uuid
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   shop                   Shop                       @relation(fields: [shopId], references: [id], onDelete: Restrict)
   customer               Customer                   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  webAccount             WebAccount?                @relation(fields: [webAccountId], references: [id], onDelete: SetNull)
   location               ShopLocation?              @relation(fields: [locationId], references: [id], onDelete: SetNull)
   items                  RentalOrderItem[]
   allocations            RentalItemAllocation[]
@@ -715,6 +726,7 @@ model RentalOrder {
   @@index([shopId, rentalStartAt, rentalEndAt])
   @@index([shopId, status])
   @@index([customerId, createdAt])
+  @@index([webAccountId, createdAt(sort: Desc)])
   @@index([shopId, status, completedAt])
   @@map("rental_orders")
 }

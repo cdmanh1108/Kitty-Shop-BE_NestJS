@@ -79,6 +79,7 @@ describe('Web rental response statuses', () => {
         shopId: fixture.shop.id,
         customerId: fixture.customer.id,
         orderNumber: 'WEB_STATUS_PRIVATE',
+        source: 'ONLINE',
         rentalStartAt: new Date('2026-10-10T00:00:00.000Z'),
         rentalEndAt: new Date('2026-10-12T00:00:00.000Z'),
         grandTotal: 100000,

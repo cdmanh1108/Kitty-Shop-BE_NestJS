@@ -3,6 +3,7 @@ import type { ConfirmRentalData } from './rental-confirmation';
 import type { JsonValue } from '@common/types/json';
 import type { RentalOrderDetails, RentalOrderPage } from './rental.models';
 import type { WebPaymentPreference } from './web-payment-preference';
+import type { RentalOrderSource } from './rental-order-source';
 
 export class RentalOverlapError extends Error {
   constructor() {
@@ -34,6 +35,8 @@ export interface CreateRentalOrderData {
   orderNumber: string;
   shopId: string;
   customerId: string;
+  /** Required, trusted creation-channel provenance for every new order. */
+  source: RentalOrderSource;
   locationId?: string;
   rentalStartAt: Date;
   rentalEndAt: Date;

@@ -154,6 +154,7 @@ describe('Catalog and customer persistence boundaries', () => {
         shopId: f.shop.id,
         customerId: f.customer.id,
         orderNumber: uniqueCode('RT'),
+        source: 'OFFLINE',
         rentalStartAt: f.data.rentalStartAt,
         rentalEndAt: f.data.rentalEndAt,
         createdBy: f.member.id,

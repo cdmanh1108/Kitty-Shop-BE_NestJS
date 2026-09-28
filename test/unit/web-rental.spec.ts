@@ -430,6 +430,7 @@ describe('WebRentalService', () => {
         facebook: undefined,
       });
       expect(firstCreateOrderInput().preferredPaymentMethod).toBe('bank_transfer');
+      expect(firstCreateOrderInput().source).toBe('ONLINE');
     });
 
     it('maps only the typed invalid-phone error from the resolver to a client error', async () => {
@@ -508,6 +509,7 @@ describe('WebRentalService', () => {
         totalAmount: 495000,
       });
       const createInput = firstCreateOrderInput();
+      expect(createInput.source).toBe('ONLINE');
       expect(createInput.storefrontEligibility).toBe(true);
       expect(createInput.charges).toEqual([]);
       expect(createInput.delivery).toMatchObject({

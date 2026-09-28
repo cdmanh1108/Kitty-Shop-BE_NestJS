@@ -6,6 +6,7 @@ import type { Server } from 'node:http';
 import { configureApplication } from '../src/configure-application';
 import { LoginReqDto } from '../src/modules/auth/api/auth.dto';
 import { CreateRentalOrderReqDto } from '../src/modules/rentals/api/rental.dto';
+import { WebCreateOrderReqDto } from '../src/modules/rentals/api/web/dto/web-rental.dto';
 
 @Controller('validation')
 class ValidationController {
@@ -16,6 +17,11 @@ class ValidationController {
 
   @Post('rental')
   rental(@Body() body: CreateRentalOrderReqDto): CreateRentalOrderReqDto {
+    return body;
+  }
+
+  @Post('web-rental')
+  webRental(@Body() body: WebCreateOrderReqDto): WebCreateOrderReqDto {
     return body;
   }
 }
@@ -35,6 +41,16 @@ class ValidationController {
   ],
 })
 class ValidationModule {}
+
+function validationMessages(body: unknown): unknown[] {
+  if (typeof body !== 'object' || body === null) throw new Error('Expected error response body');
+  const details = (body as Record<string, unknown>).details;
+  if (typeof details !== 'object' || details === null)
+    throw new Error('Expected error response details');
+  const messages = (details as Record<string, unknown>).message;
+  if (!Array.isArray(messages)) throw new Error('Expected validation messages');
+  return messages;
+}
 
 describe('Vietnamese API error messages', () => {
   let app: INestApplication<Server>;
@@ -79,6 +95,38 @@ describe('Vietnamese API error messages', () => {
         'Số lượng phải lớn hơn hoặc bằng 1.',
         'Trường "items.0.unexpected" không được phép gửi trong yêu cầu.',
       ]),
+    );
+  });
+
+  it('rejects client-supplied order source for Admin and storefront commands', async () => {
+    const adminResponse = await request(app.getHttpServer())
+      .post('/api/v1/validation/rental')
+      .send({
+        customerId: '1b676f2c-80df-4e0c-8e9d-d10ecf28b2f5',
+        rentalStartAt: '2026-10-01T00:00:00.000Z',
+        rentalEndAt: '2026-10-02T00:00:00.000Z',
+        items: [{ variantId: '4d767d42-c065-4457-939f-8b30a9c9b28b', quantity: 1 }],
+        source: 'ONLINE',
+      })
+      .expect(400);
+    expect(validationMessages(adminResponse.body)).toEqual(
+      expect.arrayContaining([expect.stringContaining('"source"')]),
+    );
+
+    const webResponse = await request(app.getHttpServer())
+      .post('/api/v1/validation/web-rental')
+      .send({
+        customer: { name: 'Nguyá»…n VÄƒn A', phone: '0912345678' },
+        pickupDate: '2026-10-01',
+        returnDate: '2026-10-02',
+        items: [{ variantId: '4d767d42-c065-4457-939f-8b30a9c9b28b', quantity: 1 }],
+        delivery: { method: 'self_pickup' },
+        paymentMethod: 'cash',
+        source: 'OFFLINE',
+      })
+      .expect(400);
+    expect(validationMessages(webResponse.body)).toEqual(
+      expect.arrayContaining([expect.stringContaining('"source"')]),
     );
   });
 

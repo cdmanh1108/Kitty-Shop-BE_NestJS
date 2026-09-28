@@ -164,6 +164,7 @@ describe('Reminder refresh lease coordination', () => {
             shopId: shop.id,
             customerId: customer.id,
             orderNumber: uniqueCode(`REMINDER_${index}`),
+            source: 'OFFLINE',
             rentalStartAt: new Date('2026-09-01T03:00:00.000Z'),
             rentalEndAt: new Date('2026-09-02T03:00:00.000Z'),
             status: 'COMPLETED',

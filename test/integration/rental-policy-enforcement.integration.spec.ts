@@ -63,6 +63,8 @@ describe('Rental policy transaction enforcement', () => {
 
   it('cancels a reserved booking and releases its allocation atomically', async () => {
     const f = await booking();
+    const sourceBefore = (await prisma.rentalOrder.findUniqueOrThrow({ where: { id: f.order.id } }))
+      .source;
     const result = await repo.transition({
       shopId: f.shop.id,
       orderId: f.order.id,
@@ -76,6 +78,9 @@ describe('Rental policy transaction enforcement', () => {
     });
     expect(allocation.status).toBe('CANCELLED');
     expect(allocation.releasedAt).toBeInstanceOf(Date);
+    expect((await prisma.rentalOrder.findUniqueOrThrow({ where: { id: f.order.id } })).source).toBe(
+      sourceBefore,
+    );
   });
 
   it('uses the saved shop policy and never resets the original booking deadline', async () => {
@@ -315,6 +320,7 @@ describe('Rental policy transaction enforcement', () => {
           shopId: f.shop.id,
           customerId: f.customer.id,
           orderNumber: uniqueCode('RT'),
+          source: 'OFFLINE',
           rentalStartAt: new Date(start),
           rentalEndAt: new Date(end),
           createdBy: f.member.id,

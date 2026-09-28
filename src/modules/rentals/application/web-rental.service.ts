@@ -27,6 +27,7 @@ import {
   type CreateRentalOrderData,
   type RentalRepository,
 } from '../domain/rental.repository';
+import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type {
   WebAvailabilityQueryInput,
   WebAvailabilityResult,
@@ -293,6 +294,7 @@ export class WebRentalService {
         orderNumber: generateDatedReference('RT'),
         shopId,
         customerId: customer.id,
+        source: RENTAL_ORDER_SOURCE.ONLINE,
         rentalStartAt: from,
         rentalEndAt: until,
         discountTotal: 0,

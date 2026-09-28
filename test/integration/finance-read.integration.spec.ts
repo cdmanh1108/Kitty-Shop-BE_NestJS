@@ -30,6 +30,7 @@ describe('Finance normalized PostgreSQL read model', () => {
         shopId: f.shop.id,
         customerId: f.customer.id,
         orderNumber: uniqueCode('FIN'),
+        source: 'OFFLINE',
         rentalStartAt: new Date('2026-09-10T00:00:00Z'),
         rentalEndAt: now,
         status: 'COMPLETED',

@@ -3,6 +3,7 @@ import type { Clock } from '../../src/common/clock/clock';
 import type { CurrentUser } from '../../src/common/types/current-user';
 import type { CreateRentalOrderData } from '../../src/modules/rentals/domain/rental.repository';
 import type { CreateRentalOrderInput } from '../../src/modules/rentals/application/rental.contracts';
+import { RENTAL_ORDER_SOURCE } from '../../src/modules/rentals/domain/rental-order-source';
 import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';
 import {
   createTestShop,
@@ -71,6 +72,7 @@ export async function rentalScenario(prisma: PrismaService) {
     orderNumber: uniqueCode('RT'),
     shopId: shop.id,
     customerId: customer.id,
+    source: RENTAL_ORDER_SOURCE.OFFLINE,
     rentalStartAt: new Date(input.rentalStartAt),
     rentalEndAt: new Date(input.rentalEndAt),
     discountTotal: 0,

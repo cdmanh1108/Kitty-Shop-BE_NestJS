@@ -29,6 +29,7 @@ import {
   type CreateRentalOrderData,
   type RentalRepository,
 } from '../domain/rental.repository';
+import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type {
   AddRentalChargeInput,
   CreateRentalOrderInput,
@@ -211,6 +212,7 @@ export class RentalService {
         orderNumber: generateDatedReference('RT'),
         shopId: user.shopId,
         customerId: input.customerId,
+        source: RENTAL_ORDER_SOURCE.OFFLINE,
         locationId: input.locationId,
         rentalStartAt: start,
         rentalEndAt: end,

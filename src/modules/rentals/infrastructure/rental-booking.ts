@@ -79,6 +79,7 @@ export async function createOrder(
           shopId: data.shopId,
           orderNumber: data.orderNumber,
           customerId: data.customerId,
+          source: data.source,
           locationId: data.locationId,
           rentalStartAt: data.rentalStartAt,
           rentalEndAt: data.rentalEndAt,
