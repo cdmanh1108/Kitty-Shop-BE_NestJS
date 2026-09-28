@@ -4,7 +4,7 @@ Production-oriented NestJS API for a clothing rental shop admin platform. The co
 
 ## Stack
 
-- Node.js 22+
+- Node.js 22 LTS (`>=22.11.0 <23`)
 - NestJS 11
 - PostgreSQL 17
 - Prisma ORM 6
@@ -16,7 +16,7 @@ Production-oriented NestJS API for a clothing rental shop admin platform. The co
 
 ## Quick start
 
-Requirements: Node.js 22+, npm 10+, and Docker Desktop/Engine if you want the automatic local database.
+Requirements: Node.js 22 LTS (`>=22.11.0 <23`), npm 10+, and Docker Desktop/Engine if you want the automatic local database.
 
 ```bash
 npm run i

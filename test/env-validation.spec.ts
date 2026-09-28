@@ -114,6 +114,15 @@ describe('environment validation and configuration', () => {
       );
     });
 
+    it.each(['0', '-1', 'abc', '10.5'])(
+      'rejects invalid DB_SLOW_QUERY_THRESHOLD_MS %s',
+      (value) => {
+        expect(() =>
+          validateEnvironment({ ...baseConfig, DB_SLOW_QUERY_THRESHOLD_MS: value }),
+        ).toThrow('DB_SLOW_QUERY_THRESHOLD_MS');
+      },
+    );
+
     it.each(['yes', 'no', '1', '0', 'TRUE_VALUE'])('rejects non-boolean TRUST_PROXY %s', (val) => {
       expect(() => validateEnvironment({ ...baseConfig, TRUST_PROXY: val })).toThrow(
         'TRUST_PROXY phải là "true" hoặc "false".',

@@ -53,7 +53,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     }
   }
 
-  for (const key of ['RATE_LIMIT_TTL_MS', 'RATE_LIMIT_LIMIT']) {
+  for (const key of ['RATE_LIMIT_TTL_MS', 'RATE_LIMIT_LIMIT', 'DB_SLOW_QUERY_THRESHOLD_MS']) {
     const value = config[key];
     if (value === undefined) continue;
     const parsed =
