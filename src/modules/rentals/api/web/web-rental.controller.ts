@@ -12,6 +12,7 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -23,7 +24,11 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Request } from 'express';
+import {
+  OptionalWebJwtAuthGuard,
+  WebAuthOriginGuard,
+  type WebRequest,
+} from '@modules/web-auth/api/web-jwt-auth';
 import { WebRentalService } from '../../application/web-rental.service';
 import {
   WebAvailabilityQueryDto,
@@ -84,6 +89,7 @@ export class WebRentalController {
   }
 
   @Post('rental-orders')
+  @UseGuards(OptionalWebJwtAuthGuard, WebAuthOriginGuard)
   @Header('Cache-Control', 'no-store')
   @ApiHeader({
     name: 'Idempotency-Key',
@@ -114,7 +120,7 @@ export class WebRentalController {
       'Sản phẩm không đủ tồn kho, thông tin khách hàng không thể dùng để đặt thuê, hoặc Idempotency-Key đang được dùng',
   })
   async createOrder(
-    @Req() request: Request,
+    @Req() request: WebRequest,
     @Body() body: WebCreateOrderReqDto,
   ): Promise<WebCreateOrderResDto> {
     const shopId = await this.shopResolver.resolveShopId();
@@ -131,6 +137,7 @@ export class WebRentalController {
         : idempotencyKeys.length === 1
           ? idempotencyKeys[0]
           : idempotencyKeys,
+      { webAccountId: request.webUser?.id ?? null },
     );
   }
 

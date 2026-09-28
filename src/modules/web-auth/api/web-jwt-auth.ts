@@ -80,6 +80,33 @@ export class WebAuthCookies {
   }
 }
 
+async function resolveWebRequestUser(
+  request: WebRequest,
+  jwt: JwtService,
+  auth: WebAuthService,
+  cookies: WebAuthCookies,
+): Promise<WebProfile | null> {
+  const token = cookies.readAccess(request);
+  if (!token) return null;
+
+  let payload: unknown;
+  try {
+    payload = await jwt.verifyAsync(token, {
+      algorithms: ['HS256'],
+      issuer: 'kitty-api',
+      audience: 'kitty-web',
+    });
+  } catch {
+    authError('AUTH_REQUIRED', 401);
+  }
+
+  if (!isWebAccessPayload(payload)) authError('AUTH_REQUIRED', 401);
+
+  // Account reload is intentionally outside the token-failure boundary: a repository outage
+  // must reach the global error filter as infrastructure failure, never become a false 401.
+  return auth.accountForAccessToken(payload.sub);
+}
+
 @Injectable()
 export class WebJwtAuthGuard implements CanActivate {
   constructor(
@@ -89,25 +116,29 @@ export class WebJwtAuthGuard implements CanActivate {
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WebRequest>();
-    const token = this.cookies.readAccess(request);
-    if (!token) authError('AUTH_REQUIRED', 401);
+    const user = await resolveWebRequestUser(request, this.jwt, this.auth, this.cookies);
+    if (!user) authError('AUTH_REQUIRED', 401);
+    request.webUser = user;
+    return true;
+  }
+}
 
-    let payload: unknown;
-    try {
-      payload = await this.jwt.verifyAsync(token, {
-        algorithms: ['HS256'],
-        issuer: 'kitty-api',
-        audience: 'kitty-web',
-      });
-    } catch {
-      authError('AUTH_REQUIRED', 401);
-    }
-
-    if (!isWebAccessPayload(payload)) authError('AUTH_REQUIRED', 401);
-
-    // Account reload is intentionally outside the token-failure boundary: a repository outage
-    // must reach the global error filter as infrastructure failure, never become a false 401.
-    request.webUser = await this.auth.accountForAccessToken(payload.sub);
+/**
+ * Authenticates a WebAccount when an access cookie is present, while preserving
+ * true guest requests. A malformed or expired supplied credential is rejected;
+ * it is never silently treated as a guest session.
+ */
+@Injectable()
+export class OptionalWebJwtAuthGuard implements CanActivate {
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly auth: WebAuthService,
+    private readonly cookies: WebAuthCookies,
+  ) {}
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<WebRequest>();
+    const user = await resolveWebRequestUser(request, this.jwt, this.auth, this.cookies);
+    if (user) request.webUser = user;
     return true;
   }
 }

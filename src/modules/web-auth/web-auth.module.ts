@@ -5,7 +5,12 @@ import type { AppConfiguration } from '@config/configuration';
 import { ClockModule } from '@common/clock/clock.module';
 import { WebAuthController } from './api/web-auth.controller';
 import { WebAuthService } from './application/web-auth.service';
-import { WebAuthCookies, WebJwtAuthGuard, WebAuthOriginGuard } from './api/web-jwt-auth';
+import {
+  OptionalWebJwtAuthGuard,
+  WebAuthCookies,
+  WebJwtAuthGuard,
+  WebAuthOriginGuard,
+} from './api/web-jwt-auth';
 import { WEB_AUTH_REPOSITORY } from './domain/web-auth.repository';
 import { OTP_PROVIDER } from './domain/otp-provider';
 import { PrismaWebAuthRepository } from './infrastructure/prisma-web-auth.repository';
@@ -26,10 +31,18 @@ import { ConfiguredOtpProvider } from './infrastructure/configured-otp.provider'
     WebAuthService,
     WebAuthCookies,
     WebJwtAuthGuard,
+    OptionalWebJwtAuthGuard,
     WebAuthOriginGuard,
     { provide: WEB_AUTH_REPOSITORY, useClass: PrismaWebAuthRepository },
     { provide: OTP_PROVIDER, useClass: ConfiguredOtpProvider },
   ],
-  exports: [WebAuthService, WebAuthCookies, WebJwtAuthGuard, WebAuthOriginGuard, JwtModule],
+  exports: [
+    WebAuthService,
+    WebAuthCookies,
+    WebJwtAuthGuard,
+    OptionalWebJwtAuthGuard,
+    WebAuthOriginGuard,
+    JwtModule,
+  ],
 })
 export class WebAuthModule {}

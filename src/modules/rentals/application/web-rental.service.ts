@@ -33,6 +33,7 @@ import type {
   WebAvailabilityResult,
   WebCreateOrderInput,
   WebCreateOrderResult,
+  WebCheckoutOwnerContext,
   WebOrderLookupInput,
   WebOrderLookupResult,
   WebRentalQuoteInput,
@@ -164,13 +165,14 @@ export class WebRentalService {
     shopId: string,
     req: WebCreateOrderInput,
     rawIdempotencyKey?: string | string[],
+    owner: WebCheckoutOwnerContext = { webAccountId: null },
   ): Promise<WebCreateOrderResult> {
     const { from, until } = this.parseDateRange(req);
     this.assertItems(req.items);
 
     const idempotencyKey = this.requireIdempotencyKey(rawIdempotencyKey);
     const requestHash = createHash('sha256')
-      .update(stableJson(this.webCommandIdentity(req)))
+      .update(stableJson({ ownerScope: this.ownerScope(owner.webAccountId), command: this.webCommandIdentity(req) }))
       .digest('hex');
     const claim = await this.repository.claimIdempotency({
       shopId,
@@ -295,6 +297,7 @@ export class WebRentalService {
         shopId,
         customerId: customer.id,
         source: RENTAL_ORDER_SOURCE.ONLINE,
+        webAccountId: owner.webAccountId,
         rentalStartAt: from,
         rentalEndAt: until,
         discountTotal: 0,
@@ -450,6 +453,10 @@ export class WebRentalService {
         },
       },
     };
+  }
+
+  private ownerScope(webAccountId: string | null): string {
+    return webAccountId ? `web-account:${webAccountId}` : 'guest';
   }
 
   async lookupOrder(shopId: string, req: WebOrderLookupInput): Promise<WebOrderLookupResult> {

@@ -15,8 +15,14 @@ Only trusted backend application services choose the source. `WebRentalService` 
 writes `ONLINE`; `RentalService` always writes `OFFLINE`. Neither Admin nor storefront
 request DTO accepts source or web-account ownership, and no update command changes it.
 
-Task 01 intentionally does not attach the authenticated WebAccount during checkout.
-That ownership attachment, plus account order-history APIs, belongs to a later task.
+The checkout controller uses optional Web JWT authentication. A missing access cookie is a
+guest checkout and writes `web_account_id = NULL`; a valid cookie writes the verified
+`WebAccount.id` in the same order-creation transaction. An expired or invalid supplied
+cookie is rejected rather than silently downgraded to guest. The idempotency command hash
+also includes the stable owner scope (`guest` or the account ID), never a raw token, so a
+key cannot replay one owner's order to another owner.
+
+Account order-history APIs and historical guest-order claiming remain separate features.
 
 ## Legacy migration
 

@@ -80,6 +80,7 @@ export async function createOrder(
           orderNumber: data.orderNumber,
           customerId: data.customerId,
           source: data.source,
+          webAccountId: data.webAccountId ?? null,
           locationId: data.locationId,
           rentalStartAt: data.rentalStartAt,
           rentalEndAt: data.rentalEndAt,

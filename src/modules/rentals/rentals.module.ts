@@ -1,6 +1,7 @@
 import { ClockModule } from '@common/clock/clock.module';
 import { CustomersModule } from '@modules/customers/customers.module';
 import { SettingsModule } from '@modules/settings/settings.module';
+import { WebAuthModule } from '@modules/web-auth/web-auth.module';
 import { Module } from '@nestjs/common';
 import { AdminRentalController } from './api/admin/admin-rental.controller';
 import { WebRentalController } from './api/web/web-rental.controller';
@@ -13,7 +14,7 @@ import { RENTAL_REPOSITORY } from './domain/rental.repository';
 import { PrismaRentalRepository } from './infrastructure/prisma-rental.repository';
 
 @Module({
-  imports: [ClockModule, SettingsModule, CustomersModule],
+  imports: [ClockModule, SettingsModule, CustomersModule, WebAuthModule],
   controllers: [AdminRentalController, WebRentalController],
   providers: [
     RentalConfirmationService,

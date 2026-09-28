@@ -2,7 +2,11 @@ import type { ExecutionContext } from '@nestjs/common';
 import type { JwtService } from '@nestjs/jwt';
 import { authError } from '../../src/modules/web-auth/application/web-auth.service';
 import type { WebAuthService } from '../../src/modules/web-auth/application/web-auth.service';
-import { WebJwtAuthGuard, type WebRequest } from '../../src/modules/web-auth/api/web-jwt-auth';
+import {
+  OptionalWebJwtAuthGuard,
+  WebJwtAuthGuard,
+  type WebRequest,
+} from '../../src/modules/web-auth/api/web-jwt-auth';
 import type { WebAuthCookies } from '../../src/modules/web-auth/api/web-jwt-auth';
 import type { WebProfile } from '../../src/modules/web-auth/domain/web-auth.repository';
 
@@ -109,5 +113,50 @@ describe('WebJwtAuthGuard', () => {
     await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
     expect(accountForAccessToken).toHaveBeenCalledWith(accountId);
     expect(request.webUser).toEqual(profile);
+  });
+});
+
+describe('OptionalWebJwtAuthGuard', () => {
+  it('allows a true guest request without attempting JWT verification', async () => {
+    const { request, verifyAsync, accountForAccessToken, cookies } = setup({ token: undefined });
+    const guard = new OptionalWebJwtAuthGuard(
+      { verifyAsync } as unknown as JwtService,
+      { accountForAccessToken } as unknown as WebAuthService,
+      cookies,
+    );
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.webUser).toBeUndefined();
+    expect(verifyAsync).not.toHaveBeenCalled();
+    expect(accountForAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('attaches a verified account to an optional request', async () => {
+    const { request, verifyAsync, accountForAccessToken, cookies } = setup();
+    const guard = new OptionalWebJwtAuthGuard(
+      { verifyAsync } as unknown as JwtService,
+      { accountForAccessToken } as unknown as WebAuthService,
+      cookies,
+    );
+
+    await expect(guard.canActivate(contextFor(request))).resolves.toBe(true);
+    expect(request.webUser).toEqual(profile);
+  });
+
+  it('rejects an invalid supplied credential instead of downgrading it to a guest request', async () => {
+    const { request, verifyAsync, accountForAccessToken, cookies } = setup();
+    verifyAsync.mockRejectedValueOnce(new Error('tampered'));
+    const guard = new OptionalWebJwtAuthGuard(
+      { verifyAsync } as unknown as JwtService,
+      { accountForAccessToken } as unknown as WebAuthService,
+      cookies,
+    );
+
+    await expect(guard.canActivate(contextFor(request))).rejects.toMatchObject({
+      status: 401,
+      response: { code: 'AUTH_REQUIRED' },
+    });
+    expect(request.webUser).toBeUndefined();
+    expect(accountForAccessToken).not.toHaveBeenCalled();
   });
 });

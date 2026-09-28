@@ -124,7 +124,9 @@ families for 30 days by default; see [Auth ephemeral-data cleanup](AUTH_CLEANUP.
 Rental order creation provenance is separate from both storefront authentication and CRM
 identity. `rental_orders.source` is `ONLINE` for storefront checkout (including guests) or
 `OFFLINE` for Admin/manual entry. `web_account_id` is nullable storefront ownership and does
-not replace `customer_id`; see [Rental order origin](RENTAL_ORDER_ORIGIN.md).
+not replace `customer_id`. A checkout with a verified WebAccount stores that account ID;
+guest checkout and Admin/manual orders store NULL. Existing orders are never inferred or
+claimed from customer contact fields; see [Rental order origin](RENTAL_ORDER_ORIGIN.md).
 
 ## Migration rules
 

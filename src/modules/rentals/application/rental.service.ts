@@ -213,6 +213,7 @@ export class RentalService {
         shopId: user.shopId,
         customerId: input.customerId,
         source: RENTAL_ORDER_SOURCE.OFFLINE,
+        webAccountId: null,
         locationId: input.locationId,
         rentalStartAt: start,
         rentalEndAt: end,

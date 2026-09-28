@@ -37,6 +37,8 @@ export interface CreateRentalOrderData {
   customerId: string;
   /** Required, trusted creation-channel provenance for every new order. */
   source: RentalOrderSource;
+  /** Nullable storefront ownership, resolved from verified server-side Web auth only. */
+  webAccountId?: string | null;
   locationId?: string;
   rentalStartAt: Date;
   rentalEndAt: Date;

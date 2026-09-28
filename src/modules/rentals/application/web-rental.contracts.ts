@@ -65,6 +65,11 @@ export interface WebCreateOrderResult {
   paymentStatus: string;
 }
 
+/** Trusted request context supplied by optional Web authentication, never a transport DTO. */
+export interface WebCheckoutOwnerContext {
+  webAccountId: string | null;
+}
+
 export interface WebOrderLookupInput {
   orderCode: string;
   phone: string;
