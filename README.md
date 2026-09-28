@@ -63,6 +63,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/DATABASE.md](docs/DA
 npm run i                 # install dependencies only
 npm run bootstrap         # prepare env, database, seed and OpenAPI
 npm run start:dev         # watch mode
+npm run start:prod        # runs the built artifact at dist/src/main.js
 npm run quality           # lint + tests + production build + non-mutating OpenAPI freshness check
 npm run db:up             # start local PostgreSQL only
 npm run db:migrate        # apply committed migrations
@@ -142,4 +143,8 @@ docker compose --env-file .env up -d api
 docker compose --env-file .env ps
 ```
 
-The API is bound to `127.0.0.1:3000` by default for a host reverse proxy. Configure TLS at that proxy and use the `/api/v1/health/live` and `/api/v1/health/ready` endpoints for liveness and database readiness. Never expose PostgreSQL credentials, JWT/OTP secrets, or a server PEM key in an image, repository, or Docker build context.
+The API is bound to `127.0.0.1:3000` by default for a host reverse proxy. Use
+`/api/v1/health/live` only for process liveness, and `/api/v1/health/ready` for
+traffic/deployment readiness because it verifies PostgreSQL. The production Compose healthcheck
+uses readiness. Never expose PostgreSQL credentials, JWT/OTP secrets, or a server PEM key in an
+image, repository, or Docker build context.

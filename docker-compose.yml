@@ -16,7 +16,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'node -e "fetch(''http://127.0.0.1:'' + process.env.PORT + ''/'' + process.env.API_PREFIX + ''/health/live'').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"',
+          'node -e "fetch(''http://127.0.0.1:'' + process.env.PORT + ''/'' + process.env.API_PREFIX + ''/health/ready'').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"',
         ]
       interval: 30s
       timeout: 5s

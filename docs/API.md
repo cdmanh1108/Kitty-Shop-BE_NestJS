@@ -28,7 +28,8 @@ Browser refresh/logout calls must include credentials. They are protected by the
 - `/settings`
 - `/members`
 - `/audit-logs`
-- `/health/live`, `/health/ready`
+- `/health/live` is process liveness and does not query dependencies; `/health/ready` verifies
+  PostgreSQL and returns `503` while the instance is not ready for traffic.
 
 ## Calendar query
 

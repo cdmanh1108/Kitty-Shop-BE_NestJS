@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { HEALTH_REPOSITORY, type HealthRepository } from '../domain/health.repository';
 
 @Injectable()
@@ -10,7 +10,11 @@ export class HealthService {
   }
 
   async ready() {
-    await this.repository.databaseReady();
+    try {
+      await this.repository.databaseReady();
+    } catch {
+      throw new ServiceUnavailableException();
+    }
     return { status: 'ok', database: 'up', timestamp: new Date().toISOString() };
   }
 }

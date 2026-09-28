@@ -1,5 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiProperty,
+  ApiServiceUnavailableResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Public } from '@common/decorators/public.decorator';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { HealthService } from '../application/health.service';
@@ -31,6 +37,7 @@ export class HealthController {
   @Get('ready')
   @ApiOperation({ summary: 'Readiness probe including PostgreSQL' })
   @ApiOkResponse({ type: ReadyHealthResDto })
+  @ApiServiceUnavailableResponse({ description: 'A required dependency is unavailable.' })
   ready() {
     return this.service.ready();
   }
