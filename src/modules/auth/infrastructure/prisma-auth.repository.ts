@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import type {
   AuthIdentity,
   AuthRepository,
@@ -42,71 +43,119 @@ export class PrismaAuthRepository implements AuthRepository {
     tokenHash: string,
     replacement: RefreshTokenData,
     shopId: string,
-  ): Promise<AuthIdentity | null> {
-    return this.prisma.$transaction(async (tx) => {
-      const token = await tx.refreshToken.findUnique({
-        where: { tokenHash },
-        include: {
-          user: true,
-          member: {
+    now: Date,
+  ) {
+    try {
+      return await this.prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const locked = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM refresh_tokens WHERE token_hash = ${tokenHash} FOR UPDATE
+        `;
+          const tokenId = locked[0]?.id;
+          if (!tokenId) return { outcome: 'REJECTED' } as const;
+          const token = await tx.refreshToken.findUnique({
+            where: { id: tokenId },
             include: {
-              shop: true,
-              memberRoles: {
+              family: true,
+              user: true,
+              member: {
                 include: {
-                  role: {
+                  shop: true,
+                  memberRoles: {
                     include: {
-                      rolePermissions: { include: { permission: true } },
+                      role: {
+                        include: {
+                          rolePermissions: { include: { permission: true } },
+                        },
+                      },
                     },
                   },
                 },
               },
             },
-          },
+          });
+          if (!token || token.expiresAt <= now) return { outcome: 'REJECTED' } as const;
+
+          if (token.revokedAt) {
+            if (token.revocationReason !== 'ROTATED' || !token.consumedAt || token.family.revokedAt)
+              return { outcome: 'REJECTED' } as const;
+            const compromised = await tx.refreshTokenFamily.updateMany({
+              where: { id: token.familyId, revokedAt: null },
+              data: { revokedAt: now, revocationReason: 'REUSE_DETECTED', reuseDetectedAt: now },
+            });
+            if (compromised.count === 1) {
+              await tx.refreshToken.updateMany({
+                where: { familyId: token.familyId, revokedAt: null },
+                data: { revokedAt: now, revocationReason: 'FAMILY_COMPROMISED' },
+              });
+            }
+            return { outcome: 'REUSED' } as const;
+          }
+          if (
+            token.family.revokedAt ||
+            token.family.userId !== token.userId ||
+            token.family.memberId !== token.memberId ||
+            token.user.status !== 'ACTIVE' ||
+            token.member.status !== 'ACTIVE' ||
+            token.member.userId !== token.userId ||
+            token.member.shopId !== shopId
+          )
+            return { outcome: 'REJECTED' } as const;
+
+          // The row lock plus Serializable transaction makes a simultaneous request retry-safe:
+          // one transaction rotates; the other returns CONCURRENT from the serialization conflict.
+          const consumed = await tx.refreshToken.updateMany({
+            where: { id: token.id, revokedAt: null, expiresAt: { gt: now } },
+            data: { revokedAt: now, consumedAt: now, revocationReason: 'ROTATED' },
+          });
+          if (consumed.count !== 1) return { outcome: 'CONCURRENT' } as const;
+
+          // Inserting the replacement must roll back consumption if persistence fails.
+          await tx.refreshToken.create({
+            data: {
+              ...replacement,
+              userId: token.userId,
+              memberId: token.memberId,
+              familyId: token.familyId,
+              parentTokenId: token.id,
+            },
+          });
+          return {
+            outcome: 'ROTATED',
+            identity: this.mapIdentity(token.user, token.member),
+          } as const;
         },
-      });
-      if (
-        !token ||
-        token.revokedAt ||
-        token.expiresAt.getTime() <= Date.now() ||
-        token.user.status !== 'ACTIVE' ||
-        token.member.status !== 'ACTIVE' ||
-        token.member.userId !== token.userId ||
-        token.member.shopId !== shopId
-      )
-        return null;
-
-      // Atomic consume: only one concurrent refresh can flip revokedAt from NULL.
-      const consumed = await tx.refreshToken.updateMany({
-        where: { id: token.id, revokedAt: null, expiresAt: { gt: new Date() } },
-        data: { revokedAt: new Date() },
-      });
-      if (consumed.count !== 1) return null;
-
-      // Inserting the replacement must roll back consumption if persistence fails.
-      await tx.refreshToken.create({
-        data: { ...replacement, userId: token.userId, memberId: token.memberId },
-      });
-      return this.mapIdentity(token.user, token.member);
-    });
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (isConcurrentRefreshTransaction(error)) return { outcome: 'CONCURRENT' } as const;
+      throw error;
+    }
   }
 
   async createRefreshToken(input: CreateRefreshTokenData): Promise<void> {
-    await this.prisma.refreshToken.create({
-      data: {
-        userId: input.userId,
-        memberId: input.memberId,
-        tokenHash: input.tokenHash,
-        expiresAt: input.expiresAt,
-        ipAddress: input.ipAddress,
-        userAgent: input.userAgent,
-      },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.refreshTokenFamily.create({
+        data: { id: input.familyId, userId: input.userId, memberId: input.memberId },
+      });
+      await tx.refreshToken.create({
+        data: {
+          userId: input.userId,
+          memberId: input.memberId,
+          familyId: input.familyId,
+          tokenHash: input.tokenHash,
+          expiresAt: input.expiresAt,
+          ipAddress: input.ipAddress,
+          userAgent: input.userAgent,
+        },
+      });
     });
   }
 
   async revokeRefreshToken(tokenHash: string, userId: string, memberId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
       where: { tokenHash, userId, memberId, revokedAt: null },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: new Date(), revocationReason: 'LOGOUT' },
     });
   }
 
@@ -123,11 +172,16 @@ export class PrismaAuthRepository implements AuthRepository {
   }
 
   async updatePasswordAndRevokeSessions(userId: string, passwordHash: string): Promise<void> {
+    const now = new Date();
     await this.prisma.$transaction([
       this.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      this.prisma.refreshTokenFamily.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: now, revocationReason: 'PASSWORD_CHANGED' },
+      }),
       this.prisma.refreshToken.updateMany({
         where: { userId, revokedAt: null },
-        data: { revokedAt: new Date() },
+        data: { revokedAt: now, revocationReason: 'PASSWORD_CHANGED' },
       }),
     ]);
   }
@@ -165,4 +219,12 @@ export class PrismaAuthRepository implements AuthRepository {
       permissions: [...permissions],
     };
   }
+}
+
+function isConcurrentRefreshTransaction(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code === 'P2034') return true;
+  if (error.code !== 'P2010') return false;
+
+  return error.meta?.code === '40001';
 }

@@ -114,7 +114,8 @@ and tenant CRM customers. Their phone is globally unique in canonical E.164 form
 by a unique index and a format CHECK. `phone_verified_at` is the sole activation source.
 `web_otp_challenges` stores HMAC hashes, expiry, attempts, consumption and resend timing;
 its partial index permits one pending challenge per account. `web_refresh_tokens` stores only
-SHA-256 token hashes with expiry and revocation state. Registration and its first challenge are atomic. OTP
+SHA-256 token hashes with expiry, consumption and revocation state. Refresh-family tables retain
+lineage and compromise state for both admin and storefront sessions. Registration and its first challenge are atomic. OTP
 verification and resend lock the account and update their related rows transactionally.
 
 ## Migration rules

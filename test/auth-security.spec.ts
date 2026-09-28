@@ -57,7 +57,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
   let identity: AuthIdentity;
   let repository: jest.Mocked<AuthRepository>;
   let findIdentityByEmail: jest.Mock;
-  let rows: Map<string, CreateRefreshTokenData & { revoked: boolean }>;
+  let rows: Map<string, CreateRefreshTokenData & { revoked: boolean; revocationReason?: string }>;
   let passwordHash: string;
   const membership = jest.fn();
   const browserOrigin = 'http://admin.test';
@@ -89,31 +89,39 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       rotateRefreshToken: jest
         .fn()
         .mockImplementation(
-          (tokenHash: string, replacement: Omit<CreateRefreshTokenData, 'userId' | 'memberId'>) => {
+          (
+            tokenHash: string,
+            replacement: Omit<CreateRefreshTokenData, 'userId' | 'memberId' | 'familyId'>,
+          ) => {
             const current = rows.get(tokenHash);
+            if (current?.revoked) return Promise.resolve({ outcome: 'REJECTED' } as const);
             if (
               !current ||
-              current.revoked ||
               current.expiresAt.getTime() <= Date.now() ||
               identity.userStatus !== 'ACTIVE' ||
               identity.memberStatus !== 'ACTIVE'
             )
-              return Promise.resolve(null);
+              return Promise.resolve({ outcome: 'REJECTED' } as const);
             current.revoked = true;
+            current.revocationReason = 'ROTATED';
             rows.set(replacement.tokenHash, {
               ...replacement,
               userId: current.userId,
               memberId: current.memberId,
+              familyId: current.familyId,
               revoked: false,
             });
-            return Promise.resolve(identity);
+            return Promise.resolve({ outcome: 'ROTATED', identity } as const);
           },
         ),
       revokeRefreshToken: jest
         .fn()
         .mockImplementation((tokenHash: string, userId: string, memberId: string) => {
           const row = rows.get(tokenHash);
-          if (row?.userId === userId && row.memberId === memberId) row.revoked = true;
+          if (row?.userId === userId && row.memberId === memberId) {
+            row.revoked = true;
+            row.revocationReason = 'LOGOUT';
+          }
           return Promise.resolve();
         }),
       findPasswordHash: jest.fn().mockResolvedValue(passwordHash),

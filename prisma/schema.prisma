@@ -9,16 +9,17 @@ datasource db {
 
 // Storefront identity is separate from staff membership and tenant CRM records.
 model WebAccount {
-  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  phone                 String            @unique @db.VarChar(30)
-  passwordHash          String            @map("password_hash") @db.Text
-  pendingPasswordHash   String?           @map("pending_password_hash") @db.Text
-  registrationAttemptId String?           @map("registration_attempt_id") @db.Uuid
-  phoneVerifiedAt       DateTime?         @map("phone_verified_at") @db.Timestamptz(6)
-  disabledAt            DateTime?         @map("disabled_at") @db.Timestamptz(6)
-  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone                 String                  @unique @db.VarChar(30)
+  passwordHash          String                  @map("password_hash") @db.Text
+  pendingPasswordHash   String?                 @map("pending_password_hash") @db.Text
+  registrationAttemptId String?                 @map("registration_attempt_id") @db.Uuid
+  phoneVerifiedAt       DateTime?               @map("phone_verified_at") @db.Timestamptz(6)
+  disabledAt            DateTime?               @map("disabled_at") @db.Timestamptz(6)
+  createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   challenges            WebOtpChallenge[]
   refreshTokens         WebRefreshToken[]
+  refreshTokenFamilies  WebRefreshTokenFamily[]
   carts                 Cart[]
   favorites             Favorite[]
 
@@ -43,19 +44,41 @@ model WebOtpChallenge {
 }
 
 model WebRefreshToken {
-  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountId String     @map("account_id") @db.Uuid
-  tokenHash String     @unique @map("token_hash") @db.Char(64)
-  expiresAt DateTime   @map("expires_at") @db.Timestamptz(6)
-  revokedAt DateTime?  @map("revoked_at") @db.Timestamptz(6)
-  userAgent String?    @map("user_agent") @db.Text
-  ipAddress String?    @map("ip_address") @db.Inet
-  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  account   WebAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id               String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId        String                @map("account_id") @db.Uuid
+  familyId         String                @map("family_id") @db.Uuid
+  parentTokenId    String?               @unique @map("parent_token_id") @db.Uuid
+  tokenHash        String                @unique @map("token_hash") @db.Char(64)
+  expiresAt        DateTime              @map("expires_at") @db.Timestamptz(6)
+  revokedAt        DateTime?             @map("revoked_at") @db.Timestamptz(6)
+  consumedAt       DateTime?             @map("consumed_at") @db.Timestamptz(6)
+  revocationReason String?               @map("revocation_reason") @db.VarChar(50)
+  userAgent        String?               @map("user_agent") @db.Text
+  ipAddress        String?               @map("ip_address") @db.Inet
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  account          WebAccount            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  family           WebRefreshTokenFamily @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  parentToken      WebRefreshToken?      @relation("WebRefreshTokenLineage", fields: [parentTokenId], references: [id], onDelete: SetNull)
+  replacementToken WebRefreshToken?      @relation("WebRefreshTokenLineage")
 
   @@index([accountId])
+  @@index([familyId, revokedAt])
   @@index([expiresAt])
   @@map("web_refresh_tokens")
+}
+
+model WebRefreshTokenFamily {
+  id               String            @id @db.Uuid
+  accountId        String            @map("account_id") @db.Uuid
+  revokedAt        DateTime?         @map("revoked_at") @db.Timestamptz(6)
+  revocationReason String?           @map("revocation_reason") @db.VarChar(50)
+  reuseDetectedAt  DateTime?         @map("reuse_detected_at") @db.Timestamptz(6)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  account          WebAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tokens           WebRefreshToken[]
+
+  @@index([accountId, revokedAt])
+  @@map("web_refresh_token_families")
 }
 
 /// A storefront cart is a non-authoritative, account-owned selection draft.
@@ -193,8 +216,9 @@ model User {
   createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  memberships   ShopMember[]
-  refreshTokens RefreshToken[]
+  memberships          ShopMember[]
+  refreshTokens        RefreshToken[]
+  refreshTokenFamilies RefreshTokenFamily[]
 
   @@index([phone])
   @@map("users")
@@ -214,10 +238,11 @@ model ShopMember {
   createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  memberRoles   MemberRole[]
-  refreshTokens RefreshToken[]
+  shop                 Shop                 @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memberRoles          MemberRole[]
+  refreshTokens        RefreshToken[]
+  refreshTokenFamilies RefreshTokenFamily[]
 
   @@unique([shopId, userId])
   @@unique([shopId, employeeCode])
@@ -278,21 +303,46 @@ model RolePermission {
 }
 
 model RefreshToken {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  memberId  String    @map("member_id") @db.Uuid
-  tokenHash String    @unique @map("token_hash") @db.VarChar(128)
-  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
-  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
-  userAgent String?   @map("user_agent") @db.Text
-  ipAddress String?   @map("ip_address") @db.Inet
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  memberId         String    @map("member_id") @db.Uuid
+  familyId         String    @map("family_id") @db.Uuid
+  parentTokenId    String?   @unique @map("parent_token_id") @db.Uuid
+  tokenHash        String    @unique @map("token_hash") @db.VarChar(128)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  consumedAt       DateTime? @map("consumed_at") @db.Timestamptz(6)
+  revocationReason String?   @map("revocation_reason") @db.VarChar(50)
+  userAgent        String?   @map("user_agent") @db.Text
+  ipAddress        String?   @map("ip_address") @db.Inet
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  member ShopMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  member           ShopMember         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  family           RefreshTokenFamily @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  parentToken      RefreshToken?      @relation("RefreshTokenLineage", fields: [parentTokenId], references: [id], onDelete: SetNull)
+  replacementToken RefreshToken?      @relation("RefreshTokenLineage")
 
   @@index([userId, expiresAt])
+  @@index([familyId, revokedAt])
   @@map("refresh_tokens")
+}
+
+model RefreshTokenFamily {
+  id               String         @id @db.Uuid
+  userId           String         @map("user_id") @db.Uuid
+  memberId         String         @map("member_id") @db.Uuid
+  revokedAt        DateTime?      @map("revoked_at") @db.Timestamptz(6)
+  revocationReason String?        @map("revocation_reason") @db.VarChar(50)
+  reuseDetectedAt  DateTime?      @map("reuse_detected_at") @db.Timestamptz(6)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  member           ShopMember     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  tokens           RefreshToken[]
+
+  @@index([userId, revokedAt])
+  @@index([memberId, revokedAt])
+  @@map("refresh_token_families")
 }
 
 model Customer {

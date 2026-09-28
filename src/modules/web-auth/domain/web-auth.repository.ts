@@ -51,6 +51,9 @@ export interface WebRefreshTokenData {
   userAgent?: string;
   ipAddress?: string;
 }
+export type WebRefreshRotationResult =
+  | { outcome: 'ROTATED'; account: WebAccount }
+  | { outcome: 'REUSED' | 'REJECTED' | 'CONCURRENT' };
 export interface WebAuthRepository {
   register(
     phone: string,
@@ -63,11 +66,13 @@ export interface WebAuthRepository {
   verify(id: string, otpHash: string, now: Date, maxAttempts: number): Promise<VerifyResult>;
   resend(phone: string, challenge: NewChallenge, now: Date): Promise<ResendResult>;
   findAccountById(id: string): Promise<WebAccount | null>;
-  createRefreshToken(input: WebRefreshTokenData & { accountId: string }): Promise<boolean>;
+  createRefreshToken(
+    input: WebRefreshTokenData & { accountId: string; familyId: string },
+  ): Promise<boolean>;
   rotateRefreshToken(
     tokenHash: string,
     replacement: WebRefreshTokenData,
     now: Date,
-  ): Promise<WebAccount | null>;
+  ): Promise<WebRefreshRotationResult>;
   revokeRefreshToken(tokenHash: string, now: Date): Promise<void>;
 }

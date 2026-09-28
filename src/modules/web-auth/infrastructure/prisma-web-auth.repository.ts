@@ -130,42 +130,90 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
       };
     });
   }
-  async createRefreshToken(input: WebRefreshTokenData & { accountId: string }): Promise<boolean> {
+  async createRefreshToken(
+    input: WebRefreshTokenData & { accountId: string; familyId: string },
+  ): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM web_accounts WHERE id = ${input.accountId}::uuid FOR UPDATE`;
       const account = await tx.webAccount.findUnique({ where: { id: input.accountId } });
       if (!account?.phoneVerifiedAt || account.disabledAt) return false;
+      await tx.webRefreshTokenFamily.create({
+        data: { id: input.familyId, accountId: input.accountId },
+      });
       await tx.webRefreshToken.create({ data: input });
       return true;
     });
   }
   async rotateRefreshToken(tokenHash: string, replacement: WebRefreshTokenData, now: Date) {
-    return this.prisma.$transaction(async (tx) => {
-      const token = await tx.webRefreshToken.findUnique({
-        where: { tokenHash },
-        include: { account: true },
-      });
-      if (
-        !token ||
-        token.revokedAt ||
-        token.expiresAt <= now ||
-        !token.account.phoneVerifiedAt ||
-        token.account.disabledAt
-      )
-        return null;
-      const consumed = await tx.webRefreshToken.updateMany({
-        where: { id: token.id, revokedAt: null, expiresAt: { gt: now } },
-        data: { revokedAt: now },
-      });
-      if (consumed.count !== 1) return null;
-      await tx.webRefreshToken.create({ data: { ...replacement, accountId: token.accountId } });
-      return token.account;
-    });
+    try {
+      return await this.prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const locked = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM web_refresh_tokens WHERE token_hash = ${tokenHash} FOR UPDATE
+        `;
+          const tokenId = locked[0]?.id;
+          if (!tokenId) return { outcome: 'REJECTED' } as const;
+          const token = await tx.webRefreshToken.findUnique({
+            where: { id: tokenId },
+            include: { account: true, family: true },
+          });
+          if (!token || token.expiresAt <= now) return { outcome: 'REJECTED' } as const;
+          if (token.revokedAt) {
+            if (token.revocationReason !== 'ROTATED' || !token.consumedAt || token.family.revokedAt)
+              return { outcome: 'REJECTED' } as const;
+            const compromised = await tx.webRefreshTokenFamily.updateMany({
+              where: { id: token.familyId, revokedAt: null },
+              data: { revokedAt: now, revocationReason: 'REUSE_DETECTED', reuseDetectedAt: now },
+            });
+            if (compromised.count === 1) {
+              await tx.webRefreshToken.updateMany({
+                where: { familyId: token.familyId, revokedAt: null },
+                data: { revokedAt: now, revocationReason: 'FAMILY_COMPROMISED' },
+              });
+            }
+            return { outcome: 'REUSED' } as const;
+          }
+          if (
+            token.family.revokedAt ||
+            token.family.accountId !== token.accountId ||
+            !token.account.phoneVerifiedAt ||
+            token.account.disabledAt
+          )
+            return { outcome: 'REJECTED' } as const;
+          const consumed = await tx.webRefreshToken.updateMany({
+            where: { id: token.id, revokedAt: null, expiresAt: { gt: now } },
+            data: { revokedAt: now, consumedAt: now, revocationReason: 'ROTATED' },
+          });
+          if (consumed.count !== 1) return { outcome: 'CONCURRENT' } as const;
+          await tx.webRefreshToken.create({
+            data: {
+              ...replacement,
+              accountId: token.accountId,
+              familyId: token.familyId,
+              parentTokenId: token.id,
+            },
+          });
+          return { outcome: 'ROTATED', account: token.account } as const;
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (isConcurrentRefreshTransaction(error)) return { outcome: 'CONCURRENT' } as const;
+      throw error;
+    }
   }
   async revokeRefreshToken(tokenHash: string, now: Date) {
     await this.prisma.webRefreshToken.updateMany({
       where: { tokenHash, revokedAt: null },
-      data: { revokedAt: now },
+      data: { revokedAt: now, revocationReason: 'LOGOUT' },
     });
   }
+}
+
+function isConcurrentRefreshTransaction(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code === 'P2034') return true;
+  if (error.code !== 'P2010') return false;
+
+  return error.meta?.code === '40001';
 }

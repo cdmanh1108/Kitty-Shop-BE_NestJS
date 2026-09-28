@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import { compare, hash } from 'bcryptjs';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { AUTH_REPOSITORY, type AuthIdentity, type AuthRepository } from '../domain/auth.repository';
 import type { ChangePasswordInput, LoginInput, LoginResult } from './auth.contracts';
 
@@ -40,6 +40,7 @@ export class AuthService {
       ...refresh.data,
       userId: identity.userId,
       memberId: identity.memberId,
+      familyId: randomUUID(),
     });
     return result;
   }
@@ -55,17 +56,18 @@ export class AuthService {
     }
     const shopId = await this.shopResolver.resolveShopId();
     const refresh = this.prepareRefreshToken(context);
-    const identity = await this.repository.rotateRefreshToken(
+    const rotation = await this.repository.rotateRefreshToken(
       this.hashToken(rawToken),
       refresh.data,
       shopId,
+      new Date(),
     );
-    if (!identity) {
+    if (rotation.outcome !== 'ROTATED') {
       throw new UnauthorizedException(
         'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
       );
     }
-    return this.issueSession(identity, refresh.rawToken, refresh.data.expiresAt);
+    return this.issueSession(rotation.identity, refresh.rawToken, refresh.data.expiresAt);
   }
 
   async logout(user: CurrentUser, rawToken: string | undefined): Promise<void> {

@@ -20,7 +20,12 @@ export interface RefreshTokenData {
 export interface CreateRefreshTokenData extends RefreshTokenData {
   userId: string;
   memberId: string;
+  familyId: string;
 }
+
+export type RefreshRotationResult =
+  | { outcome: 'ROTATED'; identity: AuthIdentity }
+  | { outcome: 'REUSED' | 'REJECTED' | 'CONCURRENT' };
 
 export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
 
@@ -30,7 +35,8 @@ export interface AuthRepository {
     tokenHash: string,
     replacement: RefreshTokenData,
     shopId: string,
-  ): Promise<AuthIdentity | null>;
+    now: Date,
+  ): Promise<RefreshRotationResult>;
   createRefreshToken(input: CreateRefreshTokenData): Promise<void>;
   revokeRefreshToken(tokenHash: string, userId: string, memberId: string): Promise<void>;
   updateLastLogin(userId: string): Promise<void>;

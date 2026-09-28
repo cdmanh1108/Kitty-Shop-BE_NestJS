@@ -31,17 +31,31 @@ function tokenFixture() {
     id: 'token',
     userId: user.id,
     memberId: member.id,
+    familyId: 'family',
+    parentTokenId: null as string | null,
     tokenHash: 'old-hash',
     expiresAt: new Date(Date.now() + 60_000),
     revokedAt: null as Date | null,
+    consumedAt: null as Date | null,
+    revocationReason: null as string | null,
     userAgent: null,
     ipAddress: null,
     createdAt: now,
     user,
     member,
+    family: {
+      id: 'family',
+      userId: user.id,
+      memberId: member.id,
+      revokedAt: null as Date | null,
+      revocationReason: null as string | null,
+      reuseDetectedAt: null as Date | null,
+      createdAt: now,
+    },
   };
 }
 const replacement = { tokenHash: 'replacement-hash', expiresAt: new Date(Date.now() + 3600_000) };
+const rotationNow = new Date();
 
 describe('Prisma auth transaction contract (delegate mocks, no database connection)', () => {
   const prisma = new PrismaService();
@@ -54,31 +68,37 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
     const transaction = jest
       .spyOn(prisma, '$transaction')
       .mockImplementation((operation) => operation(tx));
+    jest.spyOn(tx, '$queryRaw').mockResolvedValue([{ id: token.id }]);
     const find = jest.spyOn(tx.refreshToken, 'findUnique').mockResolvedValue(token);
     const consume = jest.spyOn(tx.refreshToken, 'updateMany').mockResolvedValue({ count: 1 });
     const create = jest.spyOn(tx.refreshToken, 'create').mockResolvedValue(token);
-    return { token, transaction, find, consume, create };
+    const revokeFamily = jest
+      .spyOn(tx.refreshTokenFamily, 'updateMany')
+      .mockResolvedValue({ count: 1 });
+    return { token, transaction, find, consume, create, revokeFamily };
   }
 
   it('keeps hash lookup, conditional consume and replacement insert inside one transaction', async () => {
     const { transaction, find, consume, create } = setup();
     await expect(
-      repository.rotateRefreshToken('old-hash', replacement, 'shop'),
+      repository.rotateRefreshToken('old-hash', replacement, 'shop', rotationNow),
     ).resolves.toMatchObject({
-      userId: 'user',
-      memberId: 'member',
+      outcome: 'ROTATED',
+      identity: { userId: 'user', memberId: 'member' },
     });
     expect(transaction.mock.calls).toHaveLength(1);
-    expect(find.mock.calls[0]?.[0]?.where).toEqual({ tokenHash: 'old-hash' });
+    expect(find.mock.calls[0]?.[0]?.where).toEqual({ id: 'token' });
     expect(consume.mock.calls[0]?.[0]?.where).toEqual({
       id: 'token',
       revokedAt: null,
-      expiresAt: { gt: expect.any(Date) as Date },
+      expiresAt: { gt: rotationNow },
     });
     expect(create.mock.calls[0]?.[0]?.data).toEqual({
       ...replacement,
       userId: 'user',
       memberId: 'member',
+      familyId: 'family',
+      parentTokenId: 'token',
     });
     expect(consume.mock.invocationCallOrder[0]).toBeLessThan(
       create.mock.invocationCallOrder[0] ?? 0,
@@ -89,15 +109,16 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
     const { consume, create } = setup();
     consume.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
     const results = await Promise.all([
-      repository.rotateRefreshToken('old-hash', replacement, 'shop'),
+      repository.rotateRefreshToken('old-hash', replacement, 'shop', rotationNow),
       repository.rotateRefreshToken(
         'old-hash',
         { ...replacement, tokenHash: 'second-hash' },
         'shop',
+        rotationNow,
       ),
     ]);
-    expect(results.filter(Boolean)).toHaveLength(1);
-    expect(results.filter((result) => result === null)).toHaveLength(1);
+    expect(results.filter((result) => result.outcome === 'ROTATED')).toHaveLength(1);
+    expect(results.filter((result) => result.outcome === 'CONCURRENT')).toHaveLength(1);
     expect(create.mock.calls).toHaveLength(1);
   });
 
@@ -105,9 +126,9 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
     const { create } = setup();
     const failure = new Error('Persistence unavailable');
     create.mockRejectedValue(failure);
-    await expect(repository.rotateRefreshToken('old-hash', replacement, 'shop')).rejects.toBe(
-      failure,
-    );
+    await expect(
+      repository.rotateRefreshToken('old-hash', replacement, 'shop', rotationNow),
+    ).rejects.toBe(failure);
   });
 
   it.each([
@@ -131,8 +152,9 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
         'old-hash',
         replacement,
         state === 'wrong-shop' ? 'other-shop' : 'shop',
+        rotationNow,
       ),
-    ).resolves.toBeNull();
+    ).resolves.toEqual({ outcome: 'REJECTED' });
     expect(consume.mock.calls).toHaveLength(0);
     expect(create.mock.calls).toHaveLength(0);
   });
@@ -145,6 +167,28 @@ describe('Prisma auth transaction contract (delegate mocks, no database connecti
       userId: 'user',
       memberId: 'member',
       revokedAt: null,
+    });
+  });
+
+  it('marks the family compromised and revokes its active replacement after token reuse', async () => {
+    const { token, consume, revokeFamily } = setup();
+    token.revokedAt = rotationNow;
+    token.consumedAt = rotationNow;
+    token.revocationReason = 'ROTATED';
+    await expect(
+      repository.rotateRefreshToken('old-hash', replacement, 'shop', rotationNow),
+    ).resolves.toEqual({ outcome: 'REUSED' });
+    expect(revokeFamily).toHaveBeenCalledWith({
+      where: { id: 'family', revokedAt: null },
+      data: {
+        revokedAt: rotationNow,
+        revocationReason: 'REUSE_DETECTED',
+        reuseDetectedAt: rotationNow,
+      },
+    });
+    expect(consume).toHaveBeenCalledWith({
+      where: { familyId: 'family', revokedAt: null },
+      data: { revokedAt: rotationNow, revocationReason: 'FAMILY_COMPROMISED' },
     });
   });
 });

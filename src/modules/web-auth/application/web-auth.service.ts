@@ -130,7 +130,13 @@ export class WebAuthService {
     if (account.disabledAt) authError('ACCOUNT_DISABLED', 403);
     if (!account.phoneVerifiedAt) authError('PHONE_NOT_VERIFIED', 403);
     const refresh = this.prepareRefresh(context);
-    if (!(await this.repository.createRefreshToken({ ...refresh.data, accountId: account.id })))
+    if (
+      !(await this.repository.createRefreshToken({
+        ...refresh.data,
+        accountId: account.id,
+        familyId: randomUUID(),
+      }))
+    )
       authError('AUTH_REQUIRED', 401);
     return this.issueTokens(account, refresh.rawToken, refresh.data.expiresAt);
   }
@@ -140,13 +146,13 @@ export class WebAuthService {
   ): Promise<WebTokenResult> {
     if (!rawToken || !/^[A-Za-z0-9_-]{64}$/.test(rawToken)) authError('AUTH_REQUIRED', 401);
     const replacement = this.prepareRefresh(context);
-    const account = await this.repository.rotateRefreshToken(
+    const rotation = await this.repository.rotateRefreshToken(
       this.tokenHash(rawToken),
       replacement.data,
       this.clock.now(),
     );
-    if (!account) authError('AUTH_REQUIRED', 401);
-    return this.issueTokens(account, replacement.rawToken, replacement.data.expiresAt);
+    if (rotation.outcome !== 'ROTATED') authError('AUTH_REQUIRED', 401);
+    return this.issueTokens(rotation.account, replacement.rawToken, replacement.data.expiresAt);
   }
   async logout(token: string | undefined): Promise<void> {
     if (token && /^[A-Za-z0-9_-]{64}$/.test(token))

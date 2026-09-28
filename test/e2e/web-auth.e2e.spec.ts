@@ -133,10 +133,29 @@ describe('Web authentication end-to-end', () => {
         .send({}),
     ]);
     expect([first.status, second.status].sort()).toEqual([200, 401]);
+    const successfulRefresh = [first, second].find((response) => response.status === 200)!;
+    const replacementCookie = setCookieValues(successfulRefresh.headers['set-cookie'])
+      .find((value) => value.startsWith('kitty_web_refresh='))!
+      .split(';')[0]!;
+    const sequentialRefresh = await request(server)
+      .post('/api/v1/web/auth/refresh')
+      .set('Content-Type', 'application/json')
+      .set('Cookie', replacementCookie)
+      .send({})
+      .expect(200);
+    const descendantCookie = setCookieValues(sequentialRefresh.headers['set-cookie'])
+      .find((value) => value.startsWith('kitty_web_refresh='))!
+      .split(';')[0]!;
     await request(server)
       .post('/api/v1/web/auth/refresh')
       .set('Content-Type', 'application/json')
       .set('Cookie', refreshCookie)
+      .send({})
+      .expect(401);
+    await request(server)
+      .post('/api/v1/web/auth/refresh')
+      .set('Content-Type', 'application/json')
+      .set('Cookie', descendantCookie)
       .send({})
       .expect(401);
     const accessJwt = accessCookie.slice('kitty_web_access='.length);
@@ -158,6 +177,49 @@ describe('Web authentication end-to-end', () => {
       .set('Cookie', `kitty_web_access=${adminJwt}`)
       .expect(401);
     await request(server).get('/api/v1/web/auth/me').set('Cookie', accessCookie).expect(200);
+  });
+
+  it('revokes the web refresh family when a consumed token is reused', async () => {
+    const registration = await register(server).expect(201);
+    await request(server)
+      .post('/api/v1/web/auth/verify-otp')
+      .set('Content-Type', 'application/json')
+      .send({ challengeId: responseValue(registration, 'challengeId'), otp: '123456' })
+      .expect(200);
+    const login = await request(server)
+      .post('/api/v1/web/auth/login')
+      .set('Content-Type', 'application/json')
+      .send({ phone: '0912345678', password: 'password dài' })
+      .expect(200);
+    const refreshCookieA = setCookieValues(login.headers['set-cookie'])
+      .find((value) => value.startsWith('kitty_web_refresh='))!
+      .split(';')[0]!;
+    const firstRefresh = await request(server)
+      .post('/api/v1/web/auth/refresh')
+      .set('Content-Type', 'application/json')
+      .set('Cookie', refreshCookieA)
+      .send({})
+      .expect(200);
+    const refreshCookieB = setCookieValues(firstRefresh.headers['set-cookie'])
+      .find((value) => value.startsWith('kitty_web_refresh='))!
+      .split(';')[0]!;
+
+    await request(server)
+      .post('/api/v1/web/auth/refresh')
+      .set('Content-Type', 'application/json')
+      .set('Cookie', refreshCookieA)
+      .send({})
+      .expect(401);
+    const compromisedFamily = await prisma.webRefreshTokenFamily.findFirstOrThrow();
+    expect(compromisedFamily.revocationReason).toBe('REUSE_DETECTED');
+    expect(compromisedFamily.revokedAt).toBeInstanceOf(Date);
+    expect(compromisedFamily.reuseDetectedAt).toBeInstanceOf(Date);
+    await request(server)
+      .post('/api/v1/web/auth/refresh')
+      .set('Content-Type', 'application/json')
+      .set('Cookie', refreshCookieB)
+      .send({})
+      .expect(401);
   });
 
   it('uses a generic login error for unknown phone and wrong password', async () => {

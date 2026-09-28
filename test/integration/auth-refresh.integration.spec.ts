@@ -81,7 +81,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     await disconnectTestDatabase();
   });
 
-  it('rotates refresh token: old token is revoked and replacement token is issued', async () => {
+  it('creates a family and preserves lineage through sequential rotation', async () => {
     const shop = await createTestShop(prisma);
     const { user } = await createTestUserAndMember(prisma, shop.id);
     const email = user.email!;
@@ -105,21 +105,43 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     expect(refreshResult.tokens.refreshToken).not.toBe(tokenA);
     const tokenB = refreshResult.tokens.refreshToken;
 
-    // 3. Attempt to reuse Token A -> MUST fail with UnauthorizedException (consumed/revoked)
-    await expect(
-      authService.refresh(tokenA, { ipAddress: '127.0.0.1', userAgent: 'Jest-Test' }),
-    ).rejects.toThrow(
-      new UnauthorizedException(
-        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
-      ),
+    const tokenC = (
+      await authService.refresh(tokenB, {
+        ipAddress: '127.0.0.1',
+        userAgent: 'Jest-Test',
+      })
+    ).tokens.refreshToken;
+    const rows = await prisma.refreshToken.findMany({ orderBy: { createdAt: 'asc' } });
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows.map((row) => row.familyId)).size).toBe(1);
+    expect(rows[0]).toMatchObject({ parentTokenId: null, revocationReason: 'ROTATED' });
+    expect(rows[1]).toMatchObject({ parentTokenId: rows[0]!.id, revocationReason: 'ROTATED' });
+    expect(rows[2]).toMatchObject({ parentTokenId: rows[1]!.id, revokedAt: null });
+    expect(rows.map((row) => row.tokenHash)).toContain(
+      createHash('sha256').update(tokenC).digest('hex'),
     );
+  });
 
-    // 4. Token B is still valid and can be refreshed
-    const secondRefresh = await authService.refresh(tokenB, {
-      ipAddress: '127.0.0.1',
-      userAgent: 'Jest-Test',
+  it('treats reuse of a rotated token as compromise and revokes its family', async () => {
+    const shop = await createTestShop(prisma);
+    const { user } = await createTestUserAndMember(prisma, shop.id);
+    if (!user.email) throw new Error('Missing fixture email');
+    const tokenA = (await authService.login({ email: user.email, password: TEST_PASSWORD }, {}))
+      .tokens.refreshToken;
+    const tokenB = (await authService.refresh(tokenA, {})).tokens.refreshToken;
+
+    await expect(authService.refresh(tokenA, {})).rejects.toBeInstanceOf(UnauthorizedException);
+    const family = await prisma.refreshTokenFamily.findFirstOrThrow();
+    expect(family).toMatchObject({ revocationReason: 'REUSE_DETECTED' });
+    expect(family.revokedAt).not.toBeNull();
+    expect(family.reuseDetectedAt).not.toBeNull();
+    const rows = await prisma.refreshToken.findMany({ where: { familyId: family.id } });
+    expect(
+      rows.find((row) => row.tokenHash === createHash('sha256').update(tokenB).digest('hex')),
+    ).toMatchObject({
+      revocationReason: 'FAMILY_COMPROMISED',
     });
-    expect(secondRefresh.tokens.refreshToken).not.toBe(tokenB);
+    await expect(authService.refresh(tokenB, {})).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('guarantees at most one successful rotation under concurrent refresh race with same token', async () => {
@@ -164,6 +186,9 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     );
     expect(JSON.stringify(rows)).not.toContain(winnerToken);
     await expect(authService.refresh(winnerToken, {})).resolves.toBeTruthy();
+    await expect(prisma.refreshTokenFamily.findFirstOrThrow()).resolves.toMatchObject({
+      revokedAt: null,
+    });
   });
 
   it('revokes refresh token on logout and rejects subsequent refresh attempts', async () => {
@@ -188,6 +213,12 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
 
     // Logout
     await authService.logout(currentUser, token);
+    await expect(prisma.refreshToken.findFirstOrThrow()).resolves.toMatchObject({
+      revocationReason: 'LOGOUT',
+    });
+    await expect(prisma.refreshTokenFamily.findFirstOrThrow()).resolves.toMatchObject({
+      revokedAt: null,
+    });
 
     // Subsequent refresh must be rejected
     await expect(
@@ -207,7 +238,12 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     const row = await prisma.refreshToken.findUniqueOrThrow({ where: { tokenHash: digest } });
     // Duplicate unique hash fails after conditional consumption, inside the real transaction.
     await expect(
-      authRepo.rotateRefreshToken(digest, { tokenHash: digest, expiresAt: row.expiresAt }, shop.id),
+      authRepo.rotateRefreshToken(
+        digest,
+        { tokenHash: digest, expiresAt: row.expiresAt },
+        shop.id,
+        new Date(),
+      ),
     ).rejects.toThrow();
     expect(
       (await prisma.refreshToken.findUniqueOrThrow({ where: { tokenHash: digest } })).revokedAt,
@@ -225,5 +261,8 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
       UnauthorizedException,
     );
     expect(await prisma.refreshToken.count()).toBe(1);
+    await expect(prisma.refreshTokenFamily.findFirstOrThrow()).resolves.toMatchObject({
+      revokedAt: null,
+    });
   });
 });

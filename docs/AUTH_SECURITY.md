@@ -29,13 +29,13 @@ presented hash. Login/refresh inherited the general throttle. These are now hard
   Invalid/empty/zero/fractional/overflow configuration fails startup rather than
   silently falling back. Existing default lifetimes remain unchanged.
 - Refresh generation uses crypto.randomBytes(48), base64url (64 characters, 384 bits).
-  Only SHA-256 hex is stored in refresh_tokens.token_hash, with its existing unique
-  constraint, user/member IDs, expiry, revokedAt, IP, user agent and creation time.
-- Rotation looks up the presented hash, rejects expired/revoked/inactive or mismatched
-  membership records, conditionally updates revokedAt only while still null and
-  unexpired, and inserts the replacement hash in the SAME Prisma transaction.
-  A losing concurrent consume returns 401 and cannot insert a replacement. Insertion
-  failure escapes the transaction so Prisma rolls back consumption.
+  Only SHA-256 hex is stored in the refresh-token tables. Each login creates a refresh
+  family; token rows retain family ID, parent ID, expiry, consumption/revocation state,
+  IP, user agent and creation time.
+- Rotation locks the presented row in a Serializable transaction, marks it `ROTATED`,
+  and inserts one replacement in the same family. A serialization loser returns 401
+  without inserting a replacement or compromising the family. Insertion failure rolls
+  back consumption.
 - The replacement gets a fresh sliding refresh TTL; no absolute session age was added.
   Login/refresh success responses carry Cache-Control: no-store.
 - The admin refresh cookie is named `__Secure-kitty_admin_refresh` in production and
@@ -48,11 +48,12 @@ presented hash. Login/refresh inherited the general throttle. These are now hard
 
 ## Reuse and logout guarantees
 
-Refresh rows have no session/family/parent/replacedBy identifiers. revokedAt conflates
-rotation, logout and password-change revocation. Reuse is rejected, but cannot be
-reliably classified as malicious or traced to a surviving family. Do not revoke all
-user sessions when two clients race the same token. No family migration, replay grace
-window or reuse-as-compromise telemetry was added. The winning replacement stays usable.
+Reuse of a non-expired token consumed by rotation marks its family `REUSE_DETECTED`,
+records `reuse_detected_at`, and revokes its active replacement/descendants. Logout,
+password change, expiry and legacy invalidation use distinct revocation reasons and do
+not create a reuse event. A genuinely concurrent request can produce a Serializable
+conflict; it is rejected without revoking the winning family. No replay grace period is
+used. See [Refresh-token families](REFRESH_TOKEN_FAMILIES.md).
 
 Logout requires valid access authentication and idempotently revokes the refresh cookie's
 hash only if it belongs to that principal's user AND membership. Other tokens
