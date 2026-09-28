@@ -94,4 +94,41 @@ describe('Account favorites end-to-end', () => {
       .set('Cookie', firstCookie)
       .expect((response) => expect(response.body).toMatchObject({ meta: { total: 1 } }));
   });
+
+  it('returns a count-only summary while status remains deterministic for requested IDs', async () => {
+    const shop = await createTestShop(prisma);
+    const first = await createTestProductWithVariant(prisma, shop.id);
+    const second = await createTestProductWithVariant(prisma, shop.id);
+    const third = await createTestProductWithVariant(prisma, shop.id);
+    const account = await prisma.webAccount.create({
+      data: { phone: '+84912345670', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+    });
+    const cookie = cookieFor(account.id);
+    await prisma.favorite.createMany({
+      data: [
+        { accountId: account.id, productId: first.product.id },
+        { accountId: account.id, productId: second.product.id },
+        { accountId: account.id, productId: third.product.id },
+      ],
+    });
+
+    await request(server).get('/api/v1/web/favorites/summary').expect(401);
+    await request(server)
+      .get('/api/v1/web/favorites/summary')
+      .set('Cookie', cookie)
+      .expect(200)
+      .expect((response) => expect(response.body).toEqual({ total: 3 }));
+    await request(server)
+      .get(
+        `/api/v1/web/favorites/status?productIds=${first.product.id},${second.product.id},${first.product.id}`,
+      )
+      .set('Cookie', cookie)
+      .expect(200)
+      .expect((response) =>
+        expect(response.body).toEqual({
+          productIds: [first.product.id, second.product.id].sort(),
+          total: 3,
+        }),
+      );
+  });
 });

@@ -34,6 +34,7 @@ import { FavoritesService } from '../application/favorites.service';
 import {
   FavoritesListQueryDto,
   FavoriteMutationResDto,
+  FavoriteSummaryResDto,
   FavoritesStatusQueryDto,
   FavoritesStatusResDto,
 } from './dto/favorites.dto';
@@ -45,6 +46,15 @@ import {
 @UseGuards(WebJwtAuthGuard, WebAuthOriginGuard)
 export class FavoritesController {
   constructor(private readonly favorites: FavoritesService) {}
+
+  @Get('summary')
+  @ApiCookieAuth('web-access')
+  @ApiOperation({ operationId: 'getFavoriteSummary', summary: 'Lấy tổng số sản phẩm yêu thích' })
+  @ApiOkResponse({ type: FavoriteSummaryResDto })
+  @ApiUnauthorizedResponse({ type: ErrorResDto })
+  summary(@CurrentWebUser() user: WebProfile): Promise<FavoriteSummaryResDto> {
+    return this.favorites.summary(user.id);
+  }
 
   @Get('status')
   @ApiCookieAuth('web-access')

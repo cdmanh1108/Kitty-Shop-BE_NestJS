@@ -29,6 +29,11 @@ export class FavoritesStatusResDto {
   total!: number;
 }
 
+export class FavoriteSummaryResDto {
+  @ApiProperty({ example: 3 })
+  total!: number;
+}
+
 export class FavoriteMutationResDto {
   @ApiProperty({ format: 'uuid' })
   productId!: string;

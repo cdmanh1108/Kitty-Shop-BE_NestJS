@@ -8,6 +8,7 @@ import type {
   FavoritePage,
   FavoriteRepository,
   FavoriteStatus,
+  FavoriteSummary,
 } from '../domain/favorite.repository';
 
 @Injectable()
@@ -43,10 +44,19 @@ export class PrismaFavoriteRepository implements FavoriteRepository {
           ? { ...where, productId: { in: [...new Set(productIds)] } }
           : where,
         select: { productId: true },
+        orderBy: { productId: 'asc' },
       }),
       this.prisma.favorite.count({ where }),
     ]);
     return { productIds: favorites.map((favorite) => favorite.productId), total };
+  }
+
+  async summary(accountId: string, shopId: string): Promise<FavoriteSummary> {
+    return {
+      total: await this.prisma.favorite.count({
+        where: storefrontFavoriteWhere(accountId, shopId),
+      }),
+    };
   }
 
   async add(accountId: string, shopId: string, productId: string): Promise<FavoriteAddResult> {

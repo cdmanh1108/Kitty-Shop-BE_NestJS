@@ -672,6 +672,44 @@
         "x-api-surface": "web"
       }
     },
+    "/web/favorites/summary": {
+      "get": {
+        "operationId": "getFavoriteSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteSummaryResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lấy tổng số sản phẩm yêu thích",
+        "tags": [
+          "Web - Favorites"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/favorites/status": {
       "get": {
         "operationId": "getFavoriteStatus",
@@ -1707,6 +1745,18 @@
           "pickupDate",
           "returnDate",
           "items"
+        ]
+      },
+      "FavoriteSummaryResDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "total"
         ]
       },
       "FavoritesStatusResDto": {

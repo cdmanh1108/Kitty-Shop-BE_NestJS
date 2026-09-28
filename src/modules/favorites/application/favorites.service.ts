@@ -37,6 +37,10 @@ export class FavoritesService {
     return this.repository.status(accountId, await this.shopResolver.resolveShopId(), productIds);
   }
 
+  async summary(accountId: string) {
+    return this.repository.summary(accountId, await this.shopResolver.resolveShopId());
+  }
+
   async add(accountId: string, productId: string): Promise<FavoriteMutationResult> {
     const shopId = await this.shopResolver.resolveShopId();
     const products = await this.catalog.listStorefrontProductsByIds(shopId, [productId]);

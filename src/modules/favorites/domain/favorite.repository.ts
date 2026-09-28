@@ -10,6 +10,10 @@ export interface FavoriteStatus {
   total: number;
 }
 
+export interface FavoriteSummary {
+  total: number;
+}
+
 export interface FavoriteMutation {
   total: number;
 }
@@ -23,6 +27,7 @@ export interface FavoriteRepository {
     page: number,
     limit: number,
   ): Promise<FavoritePage>;
+  summary(accountId: string, shopId: string): Promise<FavoriteSummary>;
   status(accountId: string, shopId: string, productIds: string[]): Promise<FavoriteStatus>;
   add(accountId: string, shopId: string, productId: string): Promise<FavoriteAddResult>;
   remove(accountId: string, shopId: string, productId: string): Promise<FavoriteMutation>;

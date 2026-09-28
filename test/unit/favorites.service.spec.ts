@@ -22,6 +22,7 @@ const product: StorefrontProductItem = {
 function repository(overrides: Partial<FavoriteRepository> = {}): FavoriteRepository {
   return {
     listProductIds: jest.fn().mockResolvedValue({ productIds: [], total: 0 }),
+    summary: jest.fn().mockResolvedValue({ total: 0 }),
     status: jest.fn().mockResolvedValue({ productIds: [], total: 0 }),
     add: jest.fn().mockResolvedValue({ kind: 'stored', total: 0 }),
     remove: jest.fn().mockResolvedValue({ total: 0 }),
@@ -115,5 +116,20 @@ describe('FavoritesService', () => {
       total: 7,
     });
     expect(status).toHaveBeenCalledWith('account-id', 'shop-id', [product.id]);
+  });
+
+  it('gets only the favorite total for bootstrap without loading product IDs', async () => {
+    const summary = jest.fn().mockResolvedValue({ total: 42 });
+    const status = jest.fn();
+    const listProductIds = jest.fn();
+    const repo = repository({ summary, status, listProductIds });
+    const service = new FavoritesService(repo, catalog(), {
+      resolveShopId: jest.fn().mockResolvedValue('shop-id'),
+    });
+
+    await expect(service.summary('account-id')).resolves.toEqual({ total: 42 });
+    expect(summary).toHaveBeenCalledWith('account-id', 'shop-id');
+    expect(status.mock.calls).toHaveLength(0);
+    expect(listProductIds.mock.calls).toHaveLength(0);
   });
 });
