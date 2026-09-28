@@ -49,6 +49,8 @@ function rentalRepository(): jest.Mocked<RentalRepository> {
     releaseIdempotency: jest.fn(),
     findActiveVariantIdsByProduct: jest.fn(),
     lookupStorefrontOrder: jest.fn(),
+    listWebAccountOrders: jest.fn(),
+    getWebAccountOrder: jest.fn(),
   };
 }
 const audit = (): AuditPort => ({ log: () => Promise.resolve() });

@@ -30,6 +30,18 @@ function checkoutRequest(variantId: string, phone: string) {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function responseStringField(text: string, field: string): string {
+  const value: unknown = JSON.parse(text);
+  if (!isRecord(value) || typeof value[field] !== 'string') {
+    throw new Error(`Expected response field ${field}`);
+  }
+  return value[field];
+}
+
 describe('Web rental checkout ownership', () => {
   let app: INestApplication;
   let server: Server;
@@ -58,7 +70,10 @@ describe('Web rental checkout ownership', () => {
 
     const order = await prisma.rentalOrder.findUniqueOrThrow({
       where: {
-        shopId_orderNumber: { shopId: fixture.shop.id, orderNumber: response.body.orderCode as string },
+        shopId_orderNumber: {
+          shopId: fixture.shop.id,
+          orderNumber: responseStringField(response.text, 'orderCode'),
+        },
       },
     });
     expect(order).toMatchObject({ source: 'ONLINE', webAccountId: null });
@@ -78,7 +93,10 @@ describe('Web rental checkout ownership', () => {
 
     const order = await prisma.rentalOrder.findUniqueOrThrow({
       where: {
-        shopId_orderNumber: { shopId: fixture.shop.id, orderNumber: response.body.orderCode as string },
+        shopId_orderNumber: {
+          shopId: fixture.shop.id,
+          orderNumber: responseStringField(response.text, 'orderCode'),
+        },
       },
     });
     expect(order).toMatchObject({ source: 'ONLINE', webAccountId: account.id });
@@ -99,7 +117,10 @@ describe('Web rental checkout ownership', () => {
       .post('/api/v1/web/rental-orders')
       .set('Cookie', accessCookie(owner.id))
       .set('Idempotency-Key', 'ownership-spoof-checkout')
-      .send({ ...checkoutRequest(fixture.variant.id, fixture.customer.phone), webAccountId: spoofed.id })
+      .send({
+        ...checkoutRequest(fixture.variant.id, fixture.customer.phone),
+        webAccountId: spoofed.id,
+      })
       .expect(400);
 
     await expect(prisma.rentalOrder.count({ where: { shopId: fixture.shop.id } })).resolves.toBe(0);
@@ -166,14 +187,18 @@ describe('Web rental checkout ownership', () => {
       .set('Idempotency-Key', key)
       .send(body)
       .expect(409)
-      .expect((response) => expect(response.body.code).toBe('IDEMPOTENCY_KEY_REUSED'));
+      .expect((response) =>
+        expect(responseStringField(response.text, 'code')).toBe('IDEMPOTENCY_KEY_REUSED'),
+      );
 
     await request(server)
       .post('/api/v1/web/rental-orders')
       .set('Idempotency-Key', key)
       .send(body)
       .expect(409)
-      .expect((response) => expect(response.body.code).toBe('IDEMPOTENCY_KEY_REUSED'));
+      .expect((response) =>
+        expect(responseStringField(response.text, 'code')).toBe('IDEMPOTENCY_KEY_REUSED'),
+      );
 
     await expect(prisma.rentalOrder.count({ where: { shopId: fixture.shop.id } })).resolves.toBe(1);
     await expect(

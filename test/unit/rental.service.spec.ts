@@ -139,6 +139,8 @@ describe('RentalService Unit Tests', () => {
       releaseIdempotency: jest.fn().mockResolvedValue(undefined),
       findActiveVariantIdsByProduct: jest.fn(),
       lookupStorefrontOrder: jest.fn(),
+      listWebAccountOrders: jest.fn(),
+      getWebAccountOrder: jest.fn(),
     };
 
     audit = {

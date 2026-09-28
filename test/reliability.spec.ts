@@ -574,6 +574,8 @@ function repositoryFake(): jest.Mocked<RentalRepository> {
     releaseIdempotency: jest.fn().mockResolvedValue(undefined),
     findActiveVariantIdsByProduct: jest.fn(),
     lookupStorefrontOrder: jest.fn(),
+    listWebAccountOrders: jest.fn(),
+    getWebAccountOrder: jest.fn(),
   };
 }
 const requestInput = (): CreateRentalOrderInput => ({

@@ -1391,6 +1391,161 @@
         "x-api-surface": "web"
       }
     },
+    "/web/account/rental-orders": {
+      "get": {
+        "operationId": "listWebAccountRentalOrders",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DRAFT",
+                "RESERVED",
+                "CONFIRMED",
+                "ACTIVE",
+                "RETURNED",
+                "COMPLETED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebAccountRentalOrdersListResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lấy lịch sử đơn thuê của tài khoản đang đăng nhập",
+        "tags": [
+          "Web - Account Rental Orders"
+        ],
+        "x-api-surface": "web"
+      }
+    },
+    "/web/account/rental-orders/{orderCode}": {
+      "get": {
+        "operationId": "getWebAccountRentalOrder",
+        "parameters": [
+          {
+            "name": "orderCode",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "RT260928-001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebAccountRentalOrderDetailResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lấy chi tiết đơn thuê của tài khoản đang đăng nhập",
+        "tags": [
+          "Web - Account Rental Orders"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/policies": {
       "get": {
         "operationId": "getWebPolicies",
@@ -1436,6 +1591,9 @@
     },
     {
       "name": "Web - Rental Orders"
+    },
+    {
+      "name": "Web - Account Rental Orders"
     },
     {
       "name": "Web - Policies"
@@ -2261,6 +2419,148 @@
           "items"
         ]
       },
+      "WebAccountRentalOrdersListResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebAccountRentalOrderListItemResDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "WebAccountRentalOrderDetailResDto": {
+        "type": "object",
+        "properties": {
+          "orderCode": {
+            "type": "string",
+            "example": "RT260928-001"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rentalStartAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rentalEndAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "example": "RESERVED",
+            "enum": [
+              "DRAFT",
+              "RESERVED",
+              "CONFIRMED",
+              "ACTIVE",
+              "RETURNED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "paymentStatus": {
+            "type": "string",
+            "example": "UNPAID"
+          },
+          "depositStatus": {
+            "type": "string",
+            "example": "PENDING"
+          },
+          "grandTotal": {
+            "type": "number",
+            "example": 480000
+          },
+          "depositRequired": {
+            "type": "number",
+            "example": 500000
+          },
+          "preferredPaymentMethod": {
+            "type": "object",
+            "example": "bank_transfer",
+            "nullable": true
+          },
+          "itemCount": {
+            "type": "number",
+            "example": 2
+          },
+          "itemsPreview": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebAccountRentalOrderItemPreviewResDto"
+            }
+          },
+          "rentalSubtotal": {
+            "type": "number"
+          },
+          "chargesTotal": {
+            "type": "number"
+          },
+          "discountTotal": {
+            "type": "number"
+          },
+          "collateralMethod": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "object",
+            "nullable": true
+          },
+          "actualReturnedAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebAccountRentalOrderLineResDto"
+            }
+          },
+          "deliveries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebAccountRentalOrderDeliveryResDto"
+            }
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebAccountRentalOrderTimelineEntryResDto"
+            }
+          }
+        },
+        "required": [
+          "orderCode",
+          "createdAt",
+          "rentalStartAt",
+          "rentalEndAt",
+          "status",
+          "paymentStatus",
+          "depositStatus",
+          "grandTotal",
+          "depositRequired",
+          "itemCount",
+          "itemsPreview",
+          "rentalSubtotal",
+          "chargesTotal",
+          "discountTotal",
+          "collateralMethod",
+          "items",
+          "deliveries",
+          "timeline"
+        ]
+      },
       "WebRentalPolicyDto": {
         "type": "object",
         "properties": {
@@ -2726,6 +3026,226 @@
           "name",
           "imageUrl",
           "quantity"
+        ]
+      },
+      "WebAccountRentalOrderListItemResDto": {
+        "type": "object",
+        "properties": {
+          "orderCode": {
+            "type": "string",
+            "example": "RT260928-001"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rentalStartAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rentalEndAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "example": "RESERVED",
+            "enum": [
+              "DRAFT",
+              "RESERVED",
+              "CONFIRMED",
+              "ACTIVE",
+              "RETURNED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "paymentStatus": {
+            "type": "string",
+            "example": "UNPAID"
+          },
+          "depositStatus": {
+            "type": "string",
+            "example": "PENDING"
+          },
+          "grandTotal": {
+            "type": "number",
+            "example": 480000
+          },
+          "depositRequired": {
+            "type": "number",
+            "example": 500000
+          },
+          "preferredPaymentMethod": {
+            "type": "object",
+            "example": "bank_transfer",
+            "nullable": true
+          },
+          "itemCount": {
+            "type": "number",
+            "example": 2
+          },
+          "itemsPreview": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebAccountRentalOrderItemPreviewResDto"
+            }
+          }
+        },
+        "required": [
+          "orderCode",
+          "createdAt",
+          "rentalStartAt",
+          "rentalEndAt",
+          "status",
+          "paymentStatus",
+          "depositStatus",
+          "grandTotal",
+          "depositRequired",
+          "itemCount",
+          "itemsPreview"
+        ]
+      },
+      "PaginationMetaResDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "WebAccountRentalOrderItemPreviewResDto": {
+        "type": "object",
+        "properties": {
+          "productName": {
+            "type": "string",
+            "example": "Váy dạ hội"
+          },
+          "variantName": {
+            "type": "string",
+            "example": "M / Trắng"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "productName",
+          "variantName",
+          "quantity"
+        ]
+      },
+      "WebAccountRentalOrderLineResDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "variantName": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unitRentalPrice": {
+            "type": "number"
+          },
+          "lineTotal": {
+            "type": "number"
+          },
+          "depositAmount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "productId",
+          "productName",
+          "variantName",
+          "quantity",
+          "unitRentalPrice",
+          "lineTotal",
+          "depositAmount"
+        ]
+      },
+      "WebAccountRentalOrderDeliveryResDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "scheduledAt": {
+            "type": "object",
+            "format": "date-time",
+            "nullable": true
+          },
+          "recipientName": {
+            "type": "object",
+            "nullable": true
+          },
+          "recipientPhone": {
+            "type": "object",
+            "nullable": true
+          },
+          "addressLine": {
+            "type": "object",
+            "nullable": true
+          },
+          "shippingFee": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "method",
+          "status",
+          "shippingFee"
+        ]
+      },
+      "WebAccountRentalOrderTimelineEntryResDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "RESERVED",
+              "CONFIRMED",
+              "ACTIVE",
+              "RETURNED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "changedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "changedAt"
         ]
       },
       "WebStorefrontSelectionProductDto": {

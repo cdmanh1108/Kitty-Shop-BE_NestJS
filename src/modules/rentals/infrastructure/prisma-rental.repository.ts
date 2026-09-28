@@ -15,6 +15,8 @@ import {
   getSchedule,
   findActiveVariantIdsByProduct,
   lookupStorefrontOrder,
+  listWebAccountOrders,
+  getWebAccountOrder,
 } from './rental-queries';
 import { getBookableVariant } from './rental-availability';
 import { createOrder } from './rental-booking';
@@ -151,5 +153,17 @@ export class PrismaRentalRepository implements RentalRepository {
     orderNumber: string,
   ): ReturnType<RentalRepository['lookupStorefrontOrder']> {
     return lookupStorefrontOrder(this.prisma, shopId, orderNumber);
+  }
+
+  listWebAccountOrders(
+    ...args: Parameters<RentalRepository['listWebAccountOrders']>
+  ): ReturnType<RentalRepository['listWebAccountOrders']> {
+    return listWebAccountOrders(this.prisma, ...args);
+  }
+
+  getWebAccountOrder(
+    ...args: Parameters<RentalRepository['getWebAccountOrder']>
+  ): ReturnType<RentalRepository['getWebAccountOrder']> {
+    return getWebAccountOrder(this.prisma, ...args);
   }
 }
