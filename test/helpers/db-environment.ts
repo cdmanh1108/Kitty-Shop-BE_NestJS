@@ -11,7 +11,7 @@ process.env.REFRESH_TOKEN_TTL_DAYS = '7';
 process.env.API_PREFIX = 'api/v1';
 process.env.PORT = '3000';
 process.env.APP_URL = 'http://localhost:3000';
-process.env.CORS_ORIGINS = '';
+process.env.CORS_ORIGINS = 'http://admin.test';
 // Test HTTP server is the only trusted hop; suites may isolate rate-limit buckets by client IP.
 process.env.TRUST_PROXY = 'true';
 process.env.SWAGGER_ENABLED = 'false';

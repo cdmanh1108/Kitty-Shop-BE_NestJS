@@ -15,6 +15,22 @@ describe('Auth & Security End-to-End Tests', () => {
   let app: INestApplication;
   let server: Server;
   let prisma: PrismaService;
+  const adminOrigin = 'http://admin.test';
+  const refreshCookie = (token: string) => `kitty_admin_refresh=${token}`;
+  const readRefreshCookie = (response: request.Response): string => {
+    const headers = (response as { headers?: unknown }).headers;
+    if (typeof headers !== 'object' || headers === null)
+      throw new Error('Missing response headers');
+    const header = (headers as Record<string, unknown>)['set-cookie'];
+    const cookie = Array.isArray(header)
+      ? header.find((value): value is string => typeof value === 'string')
+      : typeof header === 'string'
+        ? header
+        : undefined;
+    const token = cookie?.match(/kitty_admin_refresh=([^;]+)/)?.[1];
+    if (!token) throw new Error('Missing refresh cookie');
+    return token;
+  };
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
@@ -128,7 +144,7 @@ describe('Auth & Security End-to-End Tests', () => {
 
     it('returns 400 Bad Request with validation details on invalid login payload', async () => {
       const res = await request(server)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/admin/auth/login')
         .send({
           email: 'not-an-email',
           password: '',
@@ -149,7 +165,8 @@ describe('Auth & Security End-to-End Tests', () => {
 
       // 1. POST /auth/login -> 201 Created
       const loginRes = await request(server)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/admin/auth/login')
+        .set('Origin', adminOrigin)
         .send({
           email,
           password: TEST_PASSWORD,
@@ -158,7 +175,6 @@ describe('Auth & Security End-to-End Tests', () => {
 
       interface AuthTokenTokens {
         accessToken: string;
-        refreshToken: string;
       }
       interface AuthTokensEnvelope {
         tokens: AuthTokenTokens;
@@ -172,7 +188,7 @@ describe('Auth & Security End-to-End Tests', () => {
           (body as AuthTokensEnvelope).tokens !== null
         ) {
           const tokens = (body as AuthTokensEnvelope).tokens;
-          if (typeof tokens.accessToken === 'string' && typeof tokens.refreshToken === 'string') {
+          if (typeof tokens.accessToken === 'string') {
             return tokens;
           }
         }
@@ -187,14 +203,15 @@ describe('Auth & Security End-to-End Tests', () => {
       expect(responseText).not.toContain('passwordHash');
       expect(responseText).not.toContain('tokenHash');
       expect(responseText).not.toContain('$2b$');
+      expect(responseText).not.toContain('refreshToken');
 
       const tokensA = parseTokens(loginRes.body);
       const accessTokenA = tokensA.accessToken;
-      const refreshTokenA = tokensA.refreshToken;
+      const refreshTokenA = readRefreshCookie(loginRes);
 
       // 2. GET /auth/me with Bearer token -> 200 OK
       const meRes = await request(server)
-        .get('/api/v1/auth/me')
+        .get('/api/v1/admin/auth/me')
         .set('Authorization', `Bearer ${accessTokenA}`)
         .expect(200);
 
@@ -202,34 +219,38 @@ describe('Auth & Security End-to-End Tests', () => {
       expect(meRes.body).toHaveProperty('email', email);
       expect(meRes.body).toHaveProperty('shopId', shop.id);
 
-      // 3. POST /auth/refresh -> rotates token -> 201 Created
+      // 3. POST /admin/auth/refresh -> rotates token -> 201 Created
       const refreshRes = await request(server)
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken: refreshTokenA })
+        .post('/api/v1/admin/auth/refresh')
+        .set('Origin', adminOrigin)
+        .set('Cookie', refreshCookie(refreshTokenA))
         .expect(201);
 
       const tokensB = parseTokens(refreshRes.body);
-      const refreshTokenB = tokensB.refreshToken;
+      const refreshTokenB = readRefreshCookie(refreshRes);
       expect(refreshTokenB).not.toBe(refreshTokenA);
 
       // 4. Attempting to refresh with old consumed refreshTokenA -> 401 Unauthorized
       await request(server)
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken: refreshTokenA })
+        .post('/api/v1/admin/auth/refresh')
+        .set('Origin', adminOrigin)
+        .set('Cookie', refreshCookie(refreshTokenA))
         .expect(401);
 
-      // 5. POST /auth/logout with refreshTokenB and accessToken -> 201 Created
+      // 5. POST /admin/auth/logout with the cookie and access token -> 201 Created
       const newAccessToken = tokensB.accessToken;
       await request(server)
-        .post('/api/v1/auth/logout')
+        .post('/api/v1/admin/auth/logout')
+        .set('Origin', adminOrigin)
         .set('Authorization', `Bearer ${newAccessToken}`)
-        .send({ refreshToken: refreshTokenB })
+        .set('Cookie', refreshCookie(refreshTokenB))
         .expect(201);
 
       // 6. Attempting to refresh after logout -> 401 Unauthorized
       await request(server)
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken: refreshTokenB })
+        .post('/api/v1/admin/auth/refresh')
+        .set('Origin', adminOrigin)
+        .set('Cookie', refreshCookie(refreshTokenB))
         .expect(401);
     });
   });
@@ -237,7 +258,8 @@ describe('Auth & Security End-to-End Tests', () => {
     const statuses: number[] = [];
     for (let attempt = 0; attempt < 11; attempt++) {
       const response = await request(server)
-        .post('/api/v1/auth/login')
+        .post('/api/v1/admin/auth/login')
+        .set('Origin', adminOrigin)
         .send({ email: 'absent@example.com', password: TEST_PASSWORD });
       statuses.push(response.status);
     }

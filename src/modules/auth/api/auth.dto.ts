@@ -12,13 +12,6 @@ export class LoginReqDto {
   password!: string;
 }
 
-export class RefreshTokenReqDto {
-  @ApiProperty()
-  @IsString({ message: 'Mã làm mới phiên đăng nhập phải là chuỗi ký tự.' })
-  @MinLength(32, { message: 'Mã làm mới phiên đăng nhập phải có ít nhất $constraint1 ký tự.' })
-  refreshToken!: string;
-}
-
 export class AuthUserResDto {
   @ApiProperty() userId!: string;
   @ApiProperty() memberId!: string;
@@ -30,7 +23,6 @@ export class AuthUserResDto {
 
 export class AuthTokensResDto {
   @ApiProperty() accessToken!: string;
-  @ApiProperty() refreshToken!: string;
   @ApiProperty({ example: 900 }) expiresIn!: number;
 }
 

@@ -6,7 +6,6 @@ import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { compare, hash } from 'bcryptjs';
-import type { LoginResult } from '../src/modules/auth/application/auth.contracts';
 import { HealthController } from '../src/modules/health/api/health.controller';
 import { HealthService } from '../src/modules/health/application/health.service';
 import { createHash } from 'node:crypto';
@@ -23,6 +22,7 @@ import type { AppConfiguration } from '../src/config/configuration';
 import { validateEnvironment } from '../src/config/env.validation';
 import { PrismaService } from '../src/database/prisma/prisma.service';
 import { AuthController } from '../src/modules/auth/api/auth.controller';
+import { AdminAuthCookies, AdminAuthOriginGuard } from '../src/modules/auth/api/admin-auth-cookie';
 import { AuthService } from '../src/modules/auth/application/auth.service';
 import {
   AUTH_REPOSITORY,
@@ -60,6 +60,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
   let rows: Map<string, CreateRefreshTokenData & { revoked: boolean }>;
   let passwordHash: string;
   const membership = jest.fn();
+  const browserOrigin = 'http://admin.test';
 
   beforeAll(async () => {
     passwordHash = await hash(password, 12);
@@ -152,10 +153,15 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
         {
           provide: ConfigService,
           useValue: new ConfigService<AppConfiguration, true>({
+            nodeEnv: 'test',
+            apiPrefix: 'api/v1',
+            corsOrigins: [browserOrigin],
             jwtAccessTtlSeconds: 900,
             refreshTokenTtlDays: 30,
           }),
         },
+        AdminAuthCookies,
+        AdminAuthOriginGuard,
         { provide: PrismaService, useValue: { shopMember: { findUnique: membership } } },
         {
           provide: ShopResolver,
@@ -184,15 +190,45 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       { ...ids, surface: 'admin' },
       { expiresIn: 900, algorithm: 'HS256', issuer: 'kitty-api', audience: 'kitty-admin' },
     );
+  const refreshCookie = (token: string) => `kitty_admin_refresh=${token}`;
+  const login = () => request(server).post('/admin/auth/login').set('Origin', browserOrigin);
+  const refresh = (token: string) =>
+    request(server)
+      .post('/admin/auth/refresh')
+      .set('Origin', browserOrigin)
+      .set('Cookie', refreshCookie(token));
+  const logout = (accessToken: string, token: string, origin = browserOrigin) =>
+    request(server)
+      .post('/admin/auth/logout')
+      .set('Origin', origin)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .set('Cookie', refreshCookie(token));
+  const responseRefreshToken = (response: request.Response): string => {
+    const headers = (response as { headers?: unknown }).headers;
+    if (typeof headers !== 'object' || headers === null)
+      throw new Error('Missing response headers');
+    const header = (headers as Record<string, unknown>)['set-cookie'];
+    const cookie = Array.isArray(header)
+      ? header.find((value): value is string => typeof value === 'string')
+      : typeof header === 'string'
+        ? header
+        : undefined;
+    const token = cookie?.match(/kitty_admin_refresh=([^;]+)/)?.[1];
+    if (!token) throw new Error('Missing refresh cookie');
+    return token;
+  };
 
   it('logs in without exposing persisted hashes; uses HS256, 900s and a 384-bit opaque refresh token', async () => {
-    const response = await request(server)
-      .post('/admin/auth/login')
+    const response = await login()
       .send(credentials)
       .expect(201)
       .expect('Cache-Control', 'no-store');
     expect(response.text).not.toContain(passwordHash);
     expect(response.text).not.toContain('tokenHash');
+    expect(response.text).not.toContain('refreshToken');
+    expect(response.headers['set-cookie']?.[0]).toMatch(
+      /kitty_admin_refresh=[A-Za-z0-9_-]{64}; Path=\/api\/v1\/admin\/auth; Expires=.*; HttpOnly; SameSite=Lax/,
+    );
     const session = await service.login(credentials, {});
     expect(session.tokens.refreshToken).toMatch(/^[A-Za-z0-9_-]{64}$/);
     expect(rows.has(digest(session.tokens.refreshToken))).toBe(true);
@@ -210,13 +246,26 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
   });
 
   it('does not allow a legacy x-shop-code header to select a different shop during login', async () => {
-    await request(server)
-      .post('/admin/auth/login')
-      .set('x-shop-code', 'other-shop')
-      .send(credentials)
-      .expect(201);
+    await login().set('x-shop-code', 'other-shop').send(credentials).expect(201);
 
     expect(findIdentityByEmail).toHaveBeenCalledWith(credentials.email, ids.sid);
+  });
+
+  it('uses a production-only Secure cookie while retaining the same scoped SameSite policy', () => {
+    const cookies = new AdminAuthCookies(
+      new ConfigService<AppConfiguration, true>({
+        nodeEnv: 'production',
+        apiPrefix: 'api/v1',
+        corsOrigins: [browserOrigin],
+      } as AppConfiguration),
+    );
+    expect(cookies.refreshName).toBe('__Secure-kitty_admin_refresh');
+    expect(cookies.refreshOptions).toMatchObject({
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/api/v1/admin/auth',
+    });
   });
 
   it.each(['missing', 'wrong', 'inactive-user', 'inactive-member'] as const)(
@@ -225,8 +274,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       if (reason === 'missing') repository.findIdentityByEmail.mockResolvedValue(null);
       if (reason === 'inactive-user') identity.userStatus = 'INACTIVE';
       if (reason === 'inactive-member') identity.memberStatus = 'INACTIVE';
-      const response = await request(server)
-        .post('/admin/auth/login')
+      const response = await login()
         .send({ ...credentials, password: reason === 'wrong' ? 'Wrong-password!' : password })
         .expect(401);
       expect(response.text).toContain('Email hoặc mật khẩu không chính xác.');
@@ -234,15 +282,19 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     },
   );
 
+  it('clears a previous browser refresh cookie when a login attempt fails', async () => {
+    const response = await login()
+      .set('Cookie', refreshCookie('x'.repeat(64)))
+      .send({ ...credentials, password: 'Wrong-password!' })
+      .expect(401);
+    expect(response.headers['set-cookie']?.[0]).toContain('kitty_admin_refresh=;');
+  });
+
   it('limits login to 10 requests/IP/minute, ignoring spoofed forwarded headers; normal APIs retain their bucket', async () => {
     repository.findIdentityByEmail.mockResolvedValue(null);
     for (let i = 0; i < 10; i++)
-      await request(server)
-        .post('/admin/auth/login')
-        .set('X-Forwarded-For', `192.0.2.${i}`)
-        .send(credentials)
-        .expect(401);
-    await request(server).post('/admin/auth/login').send(credentials).expect(429);
+      await login().set('X-Forwarded-For', `192.0.2.${i}`).send(credentials).expect(401);
+    await login().send(credentials).expect(429);
     await request(server)
       .get('/admin/auth/me')
       .set('Authorization', `Bearer ${bearer()}`)
@@ -250,42 +302,29 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
   });
 
   it('limits refresh independently to 60 requests/IP/minute', async () => {
-    for (let i = 0; i < 60; i++)
-      await request(server)
-        .post('/admin/auth/refresh')
-        .send({ refreshToken: 'x'.repeat(64) })
-        .expect(401);
-    await request(server)
+    for (let i = 0; i < 60; i++) await refresh('x'.repeat(64)).expect(401);
+    await refresh('x'.repeat(64)).expect(429);
+    await login().send(credentials).expect(201);
+  });
+
+  it('rejects a refresh request without the HttpOnly cookie and clears any stale browser value', async () => {
+    const response = await request(server)
       .post('/admin/auth/refresh')
-      .send({ refreshToken: 'x'.repeat(64) })
-      .expect(429);
-    await request(server).post('/admin/auth/login').send(credentials).expect(201);
+      .set('Origin', browserOrigin)
+      .expect(401);
+    expect(response.headers['set-cookie']?.[0]).toContain('kitty_admin_refresh=;');
   });
 
   it('only allows one concurrent refresh and leaves its replacement usable after old-token reuse', async () => {
     const session = await service.login(credentials, {});
-    const responses = await Promise.all(
-      [1, 2].map(() =>
-        request(server)
-          .post('/admin/auth/refresh')
-          .send({ refreshToken: session.tokens.refreshToken }),
-      ),
-    );
+    const responses = await Promise.all([1, 2].map(() => refresh(session.tokens.refreshToken)));
     expect(responses.map((r) => r.status).sort()).toEqual([201, 401]);
     expect(rows.size).toBe(2);
-    await request(server)
-      .post('/admin/auth/refresh')
-      .send({ refreshToken: session.tokens.refreshToken })
-      .expect(401);
+    await refresh(session.tokens.refreshToken).expect(401);
     expect([...rows.values()].filter((row) => !row.revoked)).toHaveLength(1);
     const winner = responses.find((response) => response.status === 201);
     if (!winner) throw new Error('Missing successful rotation');
-    const rotated = JSON.parse(winner.text) as LoginResult;
-    await request(server)
-      .post('/admin/auth/refresh')
-      .send({ refreshToken: rotated.tokens.refreshToken })
-      .expect(201)
-      .expect('Cache-Control', 'no-store');
+    await refresh(responseRefreshToken(winner)).expect(201).expect('Cache-Control', 'no-store');
   });
 
   it.each(['expired', 'revoked', 'inactive'] as const)(
@@ -297,10 +336,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       if (state === 'expired') row.expiresAt = new Date(0);
       if (state === 'revoked') row.revoked = true;
       if (state === 'inactive') identity.memberStatus = 'INACTIVE';
-      await request(server)
-        .post('/admin/auth/refresh')
-        .send({ refreshToken: session.tokens.refreshToken })
-        .expect(401);
+      await refresh(session.tokens.refreshToken).expect(401);
       expect(rows.size).toBe(1);
     },
   );
@@ -311,25 +347,40 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     const row = rows.get(digest(other.tokens.refreshToken));
     if (!row) throw new Error('Missing fixture');
     row.memberId = 'another-member';
-    await request(server)
-      .post('/admin/auth/logout')
-      .set('Authorization', `Bearer ${session.tokens.accessToken}`)
-      .send({ refreshToken: other.tokens.refreshToken })
-      .expect(201);
+    await logout(session.tokens.accessToken, other.tokens.refreshToken).expect(201);
     expect(row.revoked).toBe(false);
-    await request(server)
-      .post('/admin/auth/logout')
-      .set('Authorization', `Bearer ${session.tokens.accessToken}`)
-      .send({ refreshToken: session.tokens.refreshToken })
-      .expect(201);
-    await request(server)
-      .post('/admin/auth/refresh')
-      .send({ refreshToken: session.tokens.refreshToken })
-      .expect(401);
+    const logoutResponse = await logout(
+      session.tokens.accessToken,
+      session.tokens.refreshToken,
+    ).expect(201);
+    expect(logoutResponse.headers['set-cookie']?.[0]).toContain('kitty_admin_refresh=;');
+    await refresh(session.tokens.refreshToken).expect(401);
     await request(server)
       .get('/admin/auth/me')
       .set('Authorization', `Bearer ${session.tokens.accessToken}`)
       .expect(200);
+  });
+
+  it('rejects untrusted origins before they can rotate or revoke cookie-authenticated sessions', async () => {
+    const session = await service.login(credentials, {});
+    await refresh(session.tokens.refreshToken)
+      .set('Origin', 'https://attacker.example')
+      .expect(403);
+    await logout(
+      session.tokens.accessToken,
+      session.tokens.refreshToken,
+      'https://attacker.example',
+    ).expect(403);
+    expect(rows.get(digest(session.tokens.refreshToken))?.revoked).toBe(false);
+  });
+
+  it('rejects an untrusted origin before it can establish an admin refresh cookie', async () => {
+    await request(server)
+      .post('/admin/auth/login')
+      .set('Origin', 'https://attacker.example')
+      .send(credentials)
+      .expect(403);
+    expect(repository.createRefreshToken.mock.calls).toHaveLength(0);
   });
 
   it('distinguishes 401 authentication and 403 permission failures and reloads permissions', async () => {
@@ -347,8 +398,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
       .expect(200);
     expect(response.text).toContain(ids.sid);
     expect(response.text).not.toContain(passwordHash);
-    await request(server)
-      .post('/admin/auth/login')
+    await login()
       .send({ ...credentials, shopId: 'other', permissions: ['members.manage'] })
       .expect(400);
     const token = jwt.sign(
@@ -372,11 +422,12 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
   });
 
   it('hashes password changes at cost 12 and asks persistence to revoke user refresh tokens', async () => {
-    await request(server)
+    const response = await request(server)
       .post('/admin/auth/change-password')
       .set('Authorization', 'Bearer ' + bearer())
       .send({ currentPassword: password, newPassword: 'Replacement-password!' })
       .expect(201);
+    expect(response.headers['set-cookie']?.[0]).toContain('kitty_admin_refresh=;');
     const update = repository.updatePasswordAndRevokeSessions.mock.calls[0];
     if (!update) throw new Error('Missing password update');
     expect(update[0]).toBe(ids.sub);
@@ -386,10 +437,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
 
   it('does not accept access tokens as refresh, or opaque refresh tokens as bearer JWTs', async () => {
     const session = await service.login(credentials, {});
-    await request(server)
-      .post('/admin/auth/refresh')
-      .send({ refreshToken: session.tokens.accessToken })
-      .expect(401);
+    await refresh(session.tokens.accessToken).expect(401);
     await request(server)
       .get('/admin/auth/me')
       .set('Authorization', `Bearer ${session.tokens.refreshToken}`)

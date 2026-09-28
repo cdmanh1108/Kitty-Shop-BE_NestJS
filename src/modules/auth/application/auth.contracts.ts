@@ -17,5 +17,6 @@ export interface LoginResult {
 export interface AuthTokensResult {
   accessToken: string;
   refreshToken: string;
+  refreshExpiresAt: Date;
   expiresIn: number;
 }

@@ -273,8 +273,8 @@ describe('application logging', () => {
     const request = {
       header: () => incoming,
       method: 'POST',
-      route: { path: '/api/v1/auth/login' },
-      url: '/api/v1/auth/login?password=sensitive',
+      route: { path: '/api/v1/admin/auth/login' },
+      url: '/api/v1/admin/auth/login?password=sensitive',
       body: { password: 'sensitive' },
     } as unknown as Request;
     const next = jest.fn();
@@ -301,7 +301,7 @@ describe('application logging', () => {
     const request = {
       header: () => undefined,
       method: 'POST',
-      route: { path: '/api/v1/auth/refresh' },
+      route: { path: '/api/v1/admin/auth/refresh' },
     } as unknown as Request;
     const response = Object.assign(new EventEmitter(), {
       statusCode: 401,

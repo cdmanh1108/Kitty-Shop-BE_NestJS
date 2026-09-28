@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { AppConfiguration } from '@config/configuration';
 import { AuthController } from './api/auth.controller';
+import { AdminAuthCookies, AdminAuthOriginGuard } from './api/admin-auth-cookie';
 import { AuthService } from './application/auth.service';
 import { AUTH_REPOSITORY } from './domain/auth.repository';
 import { PrismaAuthRepository } from './infrastructure/prisma-auth.repository';
@@ -19,9 +20,11 @@ import { PrismaAuthRepository } from './infrastructure/prisma-auth.repository';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AdminAuthCookies,
+    AdminAuthOriginGuard,
     PrismaAuthRepository,
     { provide: AUTH_REPOSITORY, useExisting: PrismaAuthRepository },
   ],
-  exports: [JwtModule, AuthService],
+  exports: [JwtModule, AuthService, AdminAuthCookies, AdminAuthOriginGuard],
 })
 export class AuthModule {}

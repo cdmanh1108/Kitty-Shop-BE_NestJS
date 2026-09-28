@@ -84,7 +84,7 @@
           }
         },
         "responses": {
-          "200": {
+          "201": {
             "description": "",
             "content": {
               "application/json": {
@@ -115,18 +115,8 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenReqDto"
-              }
-            }
-          }
-        },
         "responses": {
-          "200": {
+          "201": {
             "description": "",
             "content": {
               "application/json": {
@@ -137,6 +127,11 @@
             }
           }
         },
+        "security": [
+          {
+            "admin-refresh": []
+          }
+        ],
         "summary": "Rotate refresh token and issue a new access token",
         "tags": [
           "Auth"
@@ -148,22 +143,15 @@
       "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenReqDto"
-              }
-            }
-          }
-        },
         "responses": {
           "201": {
             "description": ""
           }
         },
         "security": [
+          {
+            "admin-refresh": []
+          },
           {
             "access-token": []
           }
@@ -4021,17 +4009,6 @@
           "tokens"
         ]
       },
-      "RefreshTokenReqDto": {
-        "type": "object",
-        "properties": {
-          "refreshToken": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "refreshToken"
-        ]
-      },
       "AuthUserResDto": {
         "type": "object",
         "properties": {
@@ -6849,9 +6826,6 @@
           "accessToken": {
             "type": "string"
           },
-          "refreshToken": {
-            "type": "string"
-          },
           "expiresIn": {
             "type": "number",
             "example": 900
@@ -6859,7 +6833,6 @@
         },
         "required": [
           "accessToken",
-          "refreshToken",
           "expiresIn"
         ]
       },

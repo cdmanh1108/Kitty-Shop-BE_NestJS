@@ -35,7 +35,7 @@ export class AuthService {
 
     await this.repository.updateLastLogin(identity.userId);
     const refresh = this.prepareRefreshToken(context);
-    const result = await this.issueSession(identity, refresh.rawToken);
+    const result = await this.issueSession(identity, refresh.rawToken, refresh.data.expiresAt);
     await this.repository.createRefreshToken({
       ...refresh.data,
       userId: identity.userId,
@@ -45,9 +45,14 @@ export class AuthService {
   }
 
   async refresh(
-    rawToken: string,
+    rawToken: string | undefined,
     context: { ipAddress?: string; userAgent?: string },
   ): Promise<LoginResult> {
+    if (!rawToken) {
+      throw new UnauthorizedException(
+        'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+      );
+    }
     const shopId = await this.shopResolver.resolveShopId();
     const refresh = this.prepareRefreshToken(context);
     const identity = await this.repository.rotateRefreshToken(
@@ -60,10 +65,11 @@ export class AuthService {
         'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
       );
     }
-    return this.issueSession(identity, refresh.rawToken);
+    return this.issueSession(identity, refresh.rawToken, refresh.data.expiresAt);
   }
 
-  async logout(user: CurrentUser, rawToken: string): Promise<void> {
+  async logout(user: CurrentUser, rawToken: string | undefined): Promise<void> {
+    if (!rawToken) return;
     await this.repository.revokeRefreshToken(this.hashToken(rawToken), user.userId, user.memberId);
   }
 
@@ -90,7 +96,11 @@ export class AuthService {
     return { success: true };
   }
 
-  private async issueSession(identity: AuthIdentity, refreshToken: string): Promise<LoginResult> {
+  private async issueSession(
+    identity: AuthIdentity,
+    refreshToken: string,
+    refreshExpiresAt: Date,
+  ): Promise<LoginResult> {
     const ttlSeconds = this.config.get('jwtAccessTtlSeconds', { infer: true });
     const payload: JwtAccessPayload = {
       sub: identity.userId,
@@ -114,7 +124,7 @@ export class AuthService {
         fullName: identity.fullName,
         permissions: identity.permissions,
       },
-      tokens: { accessToken, refreshToken, expiresIn: ttlSeconds },
+      tokens: { accessToken, refreshToken, refreshExpiresAt, expiresIn: ttlSeconds },
     };
   }
 

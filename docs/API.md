@@ -4,12 +4,12 @@ Base prefix: `/api/v1`. Swagger UI is served at `/docs` and `npm run openapi:exp
 
 ## Authentication
 
-1. `POST /auth/login`
+1. `POST /admin/auth/login`
 2. Store the returned access token in memory/secure application state and send `Authorization: Bearer <token>`.
-3. Use `POST /auth/refresh` to rotate the opaque refresh token.
-4. `POST /auth/logout` revokes a refresh token.
+3. `POST /admin/auth/refresh` rotates the opaque refresh token from its HttpOnly cookie and returns only a new access token.
+4. `POST /admin/auth/logout` uses the HttpOnly refresh cookie plus bearer identity to revoke the session and clear the cookie.
 
-For a browser app, a future BFF/httpOnly-cookie layer is preferred over localStorage refresh-token storage.
+Browser refresh/logout calls must include credentials. They are protected by the configured trusted Origin check as well as normal CORS policy.
 
 ## Main endpoint groups
 
