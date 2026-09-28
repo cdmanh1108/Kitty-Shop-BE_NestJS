@@ -64,6 +64,7 @@ model WebRefreshToken {
   @@index([accountId])
   @@index([familyId, revokedAt])
   @@index([expiresAt])
+  // PostgreSQL expression index for cleanup is declared in migration SQL.
   @@map("web_refresh_tokens")
 }
 
@@ -78,6 +79,7 @@ model WebRefreshTokenFamily {
   tokens           WebRefreshToken[]
 
   @@index([accountId, revokedAt])
+  // PostgreSQL expression index for cleanup is declared in migration SQL.
   @@map("web_refresh_token_families")
 }
 
@@ -325,6 +327,7 @@ model RefreshToken {
 
   @@index([userId, expiresAt])
   @@index([familyId, revokedAt])
+  // PostgreSQL expression index for cleanup is declared in migration SQL.
   @@map("refresh_tokens")
 }
 
@@ -342,6 +345,7 @@ model RefreshTokenFamily {
 
   @@index([userId, revokedAt])
   @@index([memberId, revokedAt])
+  // PostgreSQL expression index for cleanup is declared in migration SQL.
   @@map("refresh_token_families")
 }
 

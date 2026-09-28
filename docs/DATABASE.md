@@ -117,6 +117,8 @@ its partial index permits one pending challenge per account. `web_refresh_tokens
 SHA-256 token hashes with expiry, consumption and revocation state. Refresh-family tables retain
 lineage and compromise state for both admin and storefront sessions. Registration and its first challenge are atomic. OTP
 verification and resend lock the account and update their related rows transactionally.
+`AUTH_CLEANUP_*` retention keeps OTP terminal records for 24 hours and complete refresh
+families for 30 days by default; see [Auth ephemeral-data cleanup](AUTH_CLEANUP.md).
 
 ## Migration rules
 

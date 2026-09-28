@@ -11,6 +11,7 @@ import { PermissionsGuard } from '@common/guards/permissions.guard';
 import { RequestContextMiddleware } from '@common/middleware/request-context.middleware';
 import { AuditModule } from '@modules/audit/audit.module';
 import { AuthModule } from '@modules/auth/auth.module';
+import { AuthCleanupModule } from '@modules/auth-cleanup/auth-cleanup.module';
 import { WebAuthModule } from '@modules/web-auth/web-auth.module';
 import { CartModule } from '@modules/cart/cart.module';
 import { FavoritesModule } from '@modules/favorites/favorites.module';
@@ -56,6 +57,7 @@ import { TenantModule } from '@common/tenant/tenant.module';
     StorageModule,
     AuditModule,
     AuthModule,
+    AuthCleanupModule,
     WebAuthModule,
     CartModule,
     FavoritesModule,

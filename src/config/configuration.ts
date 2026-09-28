@@ -1,10 +1,15 @@
 import { parseWebAuthConfiguration, type WebAuthConfiguration } from './web-auth.configuration';
 import {
+  parseAuthCleanupConfiguration,
+  type AuthCleanupConfiguration,
+} from './auth-cleanup.configuration';
+import {
   parseObjectStorageConfiguration,
   type ObjectStorageConfiguration,
 } from './object-storage.configuration';
 export interface AppConfiguration {
   webAuth: WebAuthConfiguration;
+  authCleanup: AuthCleanupConfiguration;
   nodeEnv: string;
   port: number;
   apiPrefix: string;
@@ -38,6 +43,7 @@ export default (): AppConfiguration => {
 
   return {
     webAuth: parseWebAuthConfiguration(process.env),
+    authCleanup: parseAuthCleanupConfiguration(process.env),
     nodeEnv,
     port: asNumber(process.env.PORT, 3007),
     apiPrefix: process.env.API_PREFIX ?? 'api/v1',

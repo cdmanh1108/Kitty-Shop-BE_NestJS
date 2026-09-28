@@ -1,5 +1,6 @@
 import { validateEnvironment } from '../src/config/env.validation';
 import configuration from '../src/config/configuration';
+import { parseAuthCleanupConfiguration } from '../src/config/auth-cleanup.configuration';
 
 describe('environment validation and configuration', () => {
   const originalEnv = process.env;
@@ -160,6 +161,21 @@ describe('environment validation and configuration', () => {
   });
 
   describe('configuration factory', () => {
+    it('uses bounded defaults and rejects invalid auth cleanup settings', () => {
+      expect(parseAuthCleanupConfiguration({})).toEqual({
+        enabled: true,
+        refreshTokenRetentionDays: 30,
+        otpRetentionHours: 24,
+        batchSize: 500,
+      });
+      expect(() => parseAuthCleanupConfiguration({ AUTH_CLEANUP_ENABLED: 'yes' })).toThrow();
+      expect(() =>
+        parseAuthCleanupConfiguration({ AUTH_REFRESH_TOKEN_RETENTION_DAYS: '0' }),
+      ).toThrow();
+      expect(() => parseAuthCleanupConfiguration({ AUTH_OTP_RETENTION_HOURS: '24.5' })).toThrow();
+      expect(() => parseAuthCleanupConfiguration({ AUTH_CLEANUP_BATCH_SIZE: '5001' })).toThrow();
+    });
+
     it('defaults swaggerEnabled to true in development/test and false in production', () => {
       delete process.env.SWAGGER_ENABLED;
       process.env.NODE_ENV = 'development';

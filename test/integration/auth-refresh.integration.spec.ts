@@ -30,6 +30,12 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     });
 
     const testConfig: AppConfiguration = {
+      authCleanup: {
+        enabled: true,
+        refreshTokenRetentionDays: 30,
+        otpRetentionHours: 24,
+        batchSize: 500,
+      },
       webAuth: {
         bypassEnabled: false,
         bypassCode: '',

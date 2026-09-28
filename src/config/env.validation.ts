@@ -1,5 +1,6 @@
 import { parseObjectStorageConfiguration } from './object-storage.configuration';
 import { parseWebAuthConfiguration } from './web-auth.configuration';
+import { parseAuthCleanupConfiguration } from './auth-cleanup.configuration';
 const required = (config: Record<string, unknown>, key: string): string => {
   const value = config[key];
   if (typeof value !== 'string' || value.trim() === '') {
@@ -10,6 +11,7 @@ const required = (config: Record<string, unknown>, key: string): string => {
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {
   parseWebAuthConfiguration(config);
+  parseAuthCleanupConfiguration(config);
   if (config.DEFAULT_SHOP_CODE !== undefined || config.SHOP_CODE !== undefined) {
     throw new Error(
       'DEFAULT_SHOP_CODE và SHOP_CODE không còn được hỗ trợ. Mỗi deployment tự resolve cửa hàng duy nhất.',
