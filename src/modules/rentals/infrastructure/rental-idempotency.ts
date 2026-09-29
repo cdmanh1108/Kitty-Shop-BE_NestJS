@@ -6,7 +6,7 @@ import { Prisma, type IdempotencyRecord } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { RentalClaimLostError } from '../domain/rental-errors';
 import type { RentalOrderDetails } from '../domain/rental.models';
-import type { CreateRentalOrderData, RentalRepository } from '../domain/rental.repository';
+import type { CreateRentalOrderData, RentalCreationRepository } from '../domain/rental.repository';
 import { toWebRentalCreateResult } from '../domain/web-rental-create-result';
 
 // Processing lease is independent of the caller's existing 24-hour replay retention.
@@ -32,8 +32,8 @@ type RentalClaim = NonNullable<CreateRentalOrderData['idempotency']>;
 export async function claimIdempotency(
   prisma: RentalIdempotencyClient,
   clock: Clock,
-  input: Parameters<RentalRepository['claimIdempotency']>[0],
-): ReturnType<RentalRepository['claimIdempotency']> {
+  input: Parameters<RentalCreationRepository['claimIdempotency']>[0],
+): ReturnType<RentalCreationRepository['claimIdempotency']> {
   // Bounded contention retry; never recurse indefinitely when another claimant changes a row.
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const now = clock.now();

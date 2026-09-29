@@ -24,10 +24,18 @@ import {
   RENTAL_TRANSITION_FROM,
 } from '../domain/rental-policy';
 import {
-  RENTAL_REPOSITORY,
+  RENTAL_AVAILABILITY_READER,
+  RENTAL_CREATION_VALIDATOR,
+  RENTAL_CREATION_REPOSITORY,
+  RENTAL_LIFECYCLE_REPOSITORY,
+  RENTAL_ORDER_READER,
   RentalOverlapError,
   type CreateRentalOrderData,
-  type RentalRepository,
+  type RentalAvailabilityReader,
+  type RentalCreationValidator,
+  type RentalCreationRepository,
+  type RentalLifecycleRepository,
+  type RentalOrderReader,
 } from '../domain/rental.repository';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type {
@@ -54,7 +62,15 @@ const RENTAL_STATUS_LABELS: Readonly<Record<string, string>> = {
 export class RentalService {
   private readonly logger = new Logger(RentalService.name);
   constructor(
-    @Inject(RENTAL_REPOSITORY) private readonly repository: RentalRepository,
+    @Inject(RENTAL_CREATION_REPOSITORY)
+    private readonly creation: RentalCreationRepository,
+    @Inject(RENTAL_CREATION_VALIDATOR)
+    private readonly creationValidator: RentalCreationValidator,
+    @Inject(RENTAL_AVAILABILITY_READER)
+    private readonly availability: RentalAvailabilityReader,
+    @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
+    @Inject(RENTAL_LIFECYCLE_REPOSITORY)
+    private readonly lifecycle: RentalLifecycleRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
@@ -63,7 +79,7 @@ export class RentalService {
     if (query.from && query.until) {
       calculateRentalDurationDays(new Date(query.from), new Date(query.until));
     }
-    return this.repository.list({
+    return this.orderReader.list({
       shopId: user.shopId,
       page: query.page,
       customerId: query.customerId,
@@ -77,7 +93,7 @@ export class RentalService {
   }
 
   async get(user: CurrentUser, id: string) {
-    const order = await this.repository.get(user.shopId, id);
+    const order = await this.orderReader.get(user.shopId, id);
     if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
     return order;
   }
@@ -87,12 +103,12 @@ export class RentalService {
     const end = new Date(input.rentalEndAt);
     if (start >= end)
       throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.');
-    if (!(await this.repository.customerExists(user.shopId, input.customerId))) {
+    if (!(await this.creationValidator.customerExists(user.shopId, input.customerId))) {
       throw new NotFoundException('Khách hàng không tồn tại hoặc đã ngừng hoạt động.');
     }
     if (
       input.locationId &&
-      !(await this.repository.locationExists(user.shopId, input.locationId))
+      !(await this.creationValidator.locationExists(user.shopId, input.locationId))
     ) {
       throw new NotFoundException('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.');
     }
@@ -118,7 +134,7 @@ export class RentalService {
     if (idempotencyKey) {
       if (idempotencyKey.length > 255)
         throw new BadRequestException('Mã chống trùng yêu cầu không được dài quá 255 ký tự.');
-      const claim = await this.repository.claimIdempotency({
+      const claim = await this.creation.claimIdempotency({
         shopId: user.shopId,
         scope,
         key: idempotencyKey,
@@ -141,7 +157,7 @@ export class RentalService {
     try {
       const lines: CreateRentalOrderData['lines'] = [];
       for (const item of input.items) {
-        const variant = await this.repository.getBookableVariant({
+        const variant = await this.availability.getBookableVariant({
           shopId: user.shopId,
           variantId: item.variantId,
           durationDays,
@@ -208,7 +224,7 @@ export class RentalService {
         });
       }
 
-      const order = await this.repository.createOrder({
+      const order = await this.creation.createOrder({
         orderNumber: generateDatedReference('RT'),
         shopId: user.shopId,
         customerId: input.customerId,
@@ -254,7 +270,7 @@ export class RentalService {
     } catch (error) {
       if (idempotencyKey && claimId) {
         try {
-          await this.repository.releaseIdempotency(user.shopId, scope, idempotencyKey, claimId);
+          await this.creation.releaseIdempotency(user.shopId, scope, idempotencyKey, claimId);
         } catch (releaseError) {
           this.logger.error({
             event: 'rental.idempotency.release.failed',
@@ -290,7 +306,7 @@ export class RentalService {
   }
 
   async returnCollateral(user: CurrentUser, id: string) {
-    const order = await this.repository.returnCollateral(user.shopId, id, user.memberId);
+    const order = await this.lifecycle.returnCollateral(user.shopId, id, user.memberId);
     if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
     await this.audit.log({
       shopId: user.shopId,
@@ -304,7 +320,7 @@ export class RentalService {
   }
 
   async reschedule(user: CurrentUser, id: string, input: RescheduleRentalInput) {
-    const current = await this.repository.getSchedule(user.shopId, id);
+    const current = await this.orderReader.getSchedule(user.shopId, id);
     if (!current) throw new NotFoundException('Không tìm thấy đơn thuê.');
     if (!canRescheduleRental(current.status)) {
       throw new BadRequestException('Chỉ có thể đổi lịch đơn đã đặt trước hoặc đã xác nhận.');
@@ -322,7 +338,7 @@ export class RentalService {
       );
     }
     try {
-      const order = await this.repository.reschedule({
+      const order = await this.lifecycle.reschedule({
         shopId: user.shopId,
         orderId: id,
         from: start,
@@ -350,7 +366,7 @@ export class RentalService {
   async addCharge(user: CurrentUser, id: string, input: AddRentalChargeInput) {
     if (!CHARGE_TYPES.has(input.chargeType))
       throw new BadRequestException('Loại phụ phí không hợp lệ.');
-    const current = await this.repository.get(user.shopId, id);
+    const current = await this.orderReader.get(user.shopId, id);
     if (!current) throw new NotFoundException('Không tìm thấy đơn thuê.');
     if (current.status === RENTAL_STATUS.COMPLETED || current.status === RENTAL_STATUS.CANCELLED) {
       throw new BadRequestException('Không thể thêm phụ phí cho đơn thuê đã đóng hoặc đã hủy.');
@@ -358,7 +374,7 @@ export class RentalService {
     if (current.settlement) {
       throw new BadRequestException('Không thể thêm phụ phí sau khi đã kết toán đơn thuê.');
     }
-    const order = await this.repository.addCharge({
+    const order = await this.lifecycle.addCharge({
       shopId: user.shopId,
       orderId: id,
       chargeType: input.chargeType,
@@ -382,9 +398,9 @@ export class RentalService {
 
   async getReturnPreview(user: CurrentUser, id: string, returnedAt?: Date) {
     this.authorizeReturn(user);
-    const order = await this.repository.get(user.shopId, id);
+    const order = await this.orderReader.get(user.shopId, id);
     if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
-    const preview = await this.repository.getReturnPreview(user.shopId, id, returnedAt);
+    const preview = await this.orderReader.getReturnPreview(user.shopId, id, returnedAt);
     const items = order.items.flatMap((item) =>
       item.allocations.map((alloc) => ({
         inventoryItemId: alloc.inventoryItemId,
@@ -406,12 +422,12 @@ export class RentalService {
 
   async receiveReturn(user: CurrentUser, id: string, input: ReturnRentalOrderInput) {
     this.authorizeReturn(user);
-    const order = await this.repository.get(user.shopId, id);
+    const order = await this.orderReader.get(user.shopId, id);
     if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
     if (order.status !== RENTAL_STATUS.ACTIVE) {
       throw new BadRequestException('Chỉ có thể nhận trả cho đơn thuê đang hoạt động (ACTIVE).');
     }
-    const result = await this.repository.receiveReturn({
+    const result = await this.lifecycle.receiveReturn({
       shopId: user.shopId,
       orderId: id,
       actualReturnedAt: input.actualReturnedAt,
@@ -455,7 +471,7 @@ export class RentalService {
     toStatus: RentalStatus,
     reason?: string,
   ) {
-    const currentStatus = await this.repository.getStatus(user.shopId, id);
+    const currentStatus = await this.orderReader.getStatus(user.shopId, id);
     if (!currentStatus) throw new NotFoundException('Không tìm thấy đơn thuê.');
     if (!allowedFrom.some((status) => status === currentStatus)) {
       throw new BadRequestException({
@@ -463,7 +479,7 @@ export class RentalService {
         message: `Không thể chuyển đơn thuê từ trạng thái ${RENTAL_STATUS_LABELS[currentStatus] ?? 'không hợp lệ'} sang ${RENTAL_STATUS_LABELS[toStatus] ?? 'không hợp lệ'}.`,
       });
     }
-    const order = await this.repository.transition({
+    const order = await this.lifecycle.transition({
       shopId: user.shopId,
       orderId: id,
       fromStatuses: allowedFrom,

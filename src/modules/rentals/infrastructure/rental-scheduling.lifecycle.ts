@@ -6,16 +6,16 @@ import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { ALLOCATION_STATUS } from '../domain/rental-status';
 import { assertRentalReschedule, canRescheduleRental } from '../domain/rental-policy';
-import { RentalOverlapError, type RentalRepository } from '../domain/rental.repository';
+import { RentalOverlapError, type RentalLifecycleRepository } from '../domain/rental.repository';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { assertChargeMutationAllowed } from '../domain/rental-monetary.policy';
 import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
 
 export async function reschedule(
   prisma: PrismaService,
-  input: Parameters<RentalRepository['reschedule']>[0],
+  input: Parameters<RentalLifecycleRepository['reschedule']>[0],
   policy: RentalPolicy,
-): ReturnType<RentalRepository['reschedule']> {
+): ReturnType<RentalLifecycleRepository['reschedule']> {
   try {
     return await serializableTransaction(prisma, async (tx) => {
       const order = await tx.rentalOrder.findFirst({
@@ -79,8 +79,8 @@ export async function reschedule(
 
 export async function addCharge(
   prisma: PrismaService,
-  input: Parameters<RentalRepository['addCharge']>[0],
-): ReturnType<RentalRepository['addCharge']> {
+  input: Parameters<RentalLifecycleRepository['addCharge']>[0],
+): ReturnType<RentalLifecycleRepository['addCharge']> {
   return serializableTransaction(prisma, async (tx) => {
     if (!(await lockRentalMonetaryOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({

@@ -12,7 +12,14 @@ import { WebAccountRentalOrdersService } from './application/web-account-rental-
 import { RentalConfirmationService } from './application/rental-confirmation.service';
 import { RentalSettlementService } from './application/rental-settlement.service';
 import { RentalReadPresenter } from './application/rental-read.presenter';
-import { RENTAL_REPOSITORY } from './domain/rental.repository';
+import {
+  RENTAL_AVAILABILITY_READER,
+  RENTAL_CREATION_VALIDATOR,
+  RENTAL_CREATION_REPOSITORY,
+  RENTAL_LIFECYCLE_REPOSITORY,
+  RENTAL_ORDER_READER,
+  WEB_ACCOUNT_RENTAL_ORDERS_READER,
+} from './domain/rental.repository';
 import { PrismaRentalRepository } from './infrastructure/prisma-rental.repository';
 
 @Module({
@@ -26,7 +33,12 @@ import { PrismaRentalRepository } from './infrastructure/prisma-rental.repositor
     WebRentalService,
     WebAccountRentalOrdersService,
     PrismaRentalRepository,
-    { provide: RENTAL_REPOSITORY, useExisting: PrismaRentalRepository },
+    { provide: RENTAL_AVAILABILITY_READER, useExisting: PrismaRentalRepository },
+    { provide: RENTAL_CREATION_VALIDATOR, useExisting: PrismaRentalRepository },
+    { provide: RENTAL_CREATION_REPOSITORY, useExisting: PrismaRentalRepository },
+    { provide: RENTAL_ORDER_READER, useExisting: PrismaRentalRepository },
+    { provide: RENTAL_LIFECYCLE_REPOSITORY, useExisting: PrismaRentalRepository },
+    { provide: WEB_ACCOUNT_RENTAL_ORDERS_READER, useExisting: PrismaRentalRepository },
   ],
   exports: [RentalService, WebRentalService, RentalSettlementService],
 })

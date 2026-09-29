@@ -5,6 +5,14 @@ import type { ObjectStoragePort } from '../../src/common/storage/object-storage.
 import { RentalConfirmationService } from '../../src/modules/rentals/application/rental-confirmation.service';
 import { RentalSettlementService } from '../../src/modules/rentals/application/rental-settlement.service';
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
+import {
+  rentalOrderDetailsFixture,
+  rentalSettlementFixture,
+} from '../fixtures/rental-order.fixture';
+import {
+  rentalLifecycleRepositoryMock,
+  rentalOrderReaderMock,
+} from '../fixtures/rental-ports.fixture';
 
 const user: CurrentUser = {
   userId: 'user-1',
@@ -36,19 +44,18 @@ afterEach(() => jest.restoreAllMocks());
 describe('rental evidence storage operation policy', () => {
   it('uses the normal upload budget and cleanup budget when confirmation upload fails before commit', async () => {
     const original = new Error('storage timeout');
-    const repository = {
-      get: jest
-        .fn()
-        .mockResolvedValueOnce({ id: 'order-1', status: 'RESERVED' })
-        .mockResolvedValueOnce({ confirmation: null }),
-      confirm: jest.fn(),
-    };
+    const orderReader = rentalOrderReaderMock();
+    orderReader.get
+      .mockResolvedValueOnce(rentalOrderDetailsFixture({ status: 'RESERVED' }))
+      .mockResolvedValueOnce(rentalOrderDetailsFixture({ confirmation: null }));
+    const lifecycle = rentalLifecycleRepositoryMock();
     const objectStorage = storage();
     objectStorage.putObject.mockRejectedValueOnce(original);
     objectStorage.deleteObject.mockResolvedValueOnce();
     const policies = { getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY) };
     const service = new RentalConfirmationService(
-      repository as never,
+      orderReader,
+      lifecycle,
       policies as never,
       objectStorage,
     );
@@ -62,7 +69,7 @@ describe('rental evidence storage operation policy', () => {
       ),
     ).rejects.toBe(original);
 
-    expect(repository.confirm).not.toHaveBeenCalled();
+    expect(lifecycle.confirm.mock.calls).toHaveLength(0);
     expect(objectStorage.putObject.mock.calls).toEqual([
       [expect.any(Object), { purpose: 'default' }],
     ]);
@@ -73,19 +80,19 @@ describe('rental evidence storage operation policy', () => {
 
   it('retains confirmation evidence when the post-failure DB probe is unknown', async () => {
     const original = new Error('database write failed');
-    const repository = {
-      get: jest
-        .fn()
-        .mockResolvedValueOnce({ id: 'order-1', status: 'RESERVED' })
-        .mockRejectedValueOnce(new Error('database probe failed')),
-      confirm: jest.fn().mockRejectedValueOnce(original),
-    };
+    const orderReader = rentalOrderReaderMock();
+    orderReader.get
+      .mockResolvedValueOnce(rentalOrderDetailsFixture({ status: 'RESERVED' }))
+      .mockRejectedValueOnce(new Error('database probe failed'));
+    const lifecycle = rentalLifecycleRepositoryMock();
+    lifecycle.confirm.mockRejectedValueOnce(original);
     const objectStorage = storage();
     objectStorage.putObject.mockResolvedValueOnce({ storageKey: 'key', publicUrl: '' });
     const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const policies = { getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY) };
     const service = new RentalConfirmationService(
-      repository as never,
+      orderReader,
+      lifecycle,
       policies as never,
       objectStorage,
     );
@@ -108,20 +115,20 @@ describe('rental evidence storage operation policy', () => {
 
   it('keeps the original confirmation failure when cleanup delete times out or fails', async () => {
     const original = new Error('confirmation write failed');
-    const repository = {
-      get: jest
-        .fn()
-        .mockResolvedValueOnce({ id: 'order-1', status: 'RESERVED' })
-        .mockResolvedValueOnce({ confirmation: null }),
-      confirm: jest.fn().mockRejectedValueOnce(original),
-    };
+    const orderReader = rentalOrderReaderMock();
+    orderReader.get
+      .mockResolvedValueOnce(rentalOrderDetailsFixture({ status: 'RESERVED' }))
+      .mockResolvedValueOnce(rentalOrderDetailsFixture({ confirmation: null }));
+    const lifecycle = rentalLifecycleRepositoryMock();
+    lifecycle.confirm.mockRejectedValueOnce(original);
     const objectStorage = storage();
     objectStorage.putObject.mockResolvedValueOnce({ storageKey: 'key', publicUrl: '' });
     objectStorage.deleteObject.mockRejectedValueOnce(new Error('cleanup timeout'));
     const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const policies = { getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY) };
     const service = new RentalConfirmationService(
-      repository as never,
+      orderReader,
+      lifecycle,
       policies as never,
       objectStorage,
     );
@@ -146,17 +153,16 @@ describe('rental evidence storage operation policy', () => {
 
   it('uses the same bounded cleanup policy for settlement evidence', async () => {
     const original = new Error('settlement write failed');
-    const repository = {
-      get: jest
-        .fn()
-        .mockResolvedValueOnce({ id: 'order-1', status: 'RETURNED', settlement: null })
-        .mockResolvedValueOnce({ settlement: null }),
-      settleOrder: jest.fn().mockRejectedValueOnce(original),
-    };
+    const orderReader = rentalOrderReaderMock();
+    orderReader.get
+      .mockResolvedValueOnce(rentalOrderDetailsFixture({ status: 'RETURNED' }))
+      .mockResolvedValueOnce(rentalOrderDetailsFixture());
+    const lifecycle = rentalLifecycleRepositoryMock();
+    lifecycle.settleOrder.mockRejectedValueOnce(original);
     const objectStorage = storage();
     objectStorage.putObject.mockResolvedValueOnce({ storageKey: 'key', publicUrl: '' });
     objectStorage.deleteObject.mockResolvedValueOnce();
-    const service = new RentalSettlementService(repository as never, objectStorage);
+    const service = new RentalSettlementService(orderReader, lifecycle, objectStorage);
 
     await expect(service.settle(user, 'order-1', {}, image)).rejects.toBe(original);
 
@@ -172,23 +178,26 @@ describe('rental evidence storage operation policy', () => {
     const original = new Error('lost settlement response');
     let evidenceKey = '';
     let reads = 0;
-    const repository = {
-      get: jest.fn().mockImplementation(() => {
-        reads += 1;
-        return Promise.resolve(
-          reads === 1
-            ? { id: 'order-1', status: 'RETURNED', settlement: null }
-            : { settlement: { evidenceKey } },
-        );
-      }),
-      settleOrder: jest.fn().mockRejectedValueOnce(original),
-    };
+    const orderReader = rentalOrderReaderMock();
+    orderReader.get.mockImplementation(() => {
+      reads += 1;
+      return Promise.resolve(
+        reads === 1
+          ? rentalOrderDetailsFixture({ status: 'RETURNED' })
+          : rentalOrderDetailsFixture({
+              status: 'RETURNED',
+              settlement: { ...rentalSettlementFixture(), evidenceKey },
+            }),
+      );
+    });
+    const lifecycle = rentalLifecycleRepositoryMock();
+    lifecycle.settleOrder.mockRejectedValueOnce(original);
     const objectStorage = storage();
     objectStorage.putObject.mockImplementation((input) => {
       evidenceKey = input.key;
       return Promise.resolve({ storageKey: input.key, publicUrl: '' });
     });
-    const service = new RentalSettlementService(repository as never, objectStorage);
+    const service = new RentalSettlementService(orderReader, lifecycle, objectStorage);
 
     await expect(service.settle(user, 'order-1', {}, image)).rejects.toBe(original);
 

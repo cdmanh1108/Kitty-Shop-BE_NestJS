@@ -1,4 +1,4 @@
-import type { BookableVariant, RentalRepository } from '../domain/rental.repository';
+import type { BookableVariant, RentalAvailabilityReader } from '../domain/rental.repository';
 import type { WebRentalItemInput } from './web-rental.contracts';
 import { WEB_RENTAL_MAX_TOTAL_QUANTITY } from './web-rental-input-validation';
 
@@ -24,7 +24,7 @@ export type WebRentalSelectionPlan =
  * it must never choose a "first" size or colour on the customer's behalf.
  */
 export async function resolveWebRentalSelection(
-  repository: Pick<RentalRepository, 'findActiveVariantIdsByProduct' | 'getBookableVariant'>,
+  repository: RentalAvailabilityReader,
   input: {
     shopId: string;
     items: WebRentalItemInput[];

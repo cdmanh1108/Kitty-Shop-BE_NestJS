@@ -51,7 +51,7 @@ describe('Atomic manual rental confirmation', () => {
       headObject: () => Promise.resolve(null),
       getPublicUrl: () => '',
     };
-    const service = new RentalConfirmationService(repository, rentalPolicies, storage);
+    const service = new RentalConfirmationService(repository, repository, rentalPolicies, storage);
     return { ...f, order, user, objects, service };
   }
 

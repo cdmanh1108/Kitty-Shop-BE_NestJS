@@ -1,7 +1,8 @@
 import { RentalService } from '../../src/modules/rentals/application/rental.service';
 import type {
-  RentalRepository,
   BookableVariant,
+  RentalCreationRepository,
+  RentalLifecycleRepository,
 } from '../../src/modules/rentals/domain/rental.repository';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { Clock } from '../../src/common/clock/clock';
@@ -10,17 +11,18 @@ import type { RentalOrderDetails } from '../../src/modules/rentals/domain/rental
 import { RENTAL_STATUS } from '../../src/modules/rentals/domain/rental-status';
 import { Prisma } from '@prisma/client';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { rentalServicePorts } from '../fixtures/rental-ports.fixture';
 
 type CompleteRentalOrder = NonNullable<RentalOrderDetails>;
 
 describe('RentalService Unit Tests', () => {
   let service: RentalService;
-  let repo: jest.Mocked<RentalRepository>;
+  let ports: ReturnType<typeof rentalServicePorts>;
   let audit: jest.Mocked<AuditPort>;
   let clock: jest.Mocked<Clock>;
 
-  let createOrderMock: jest.MockedFunction<RentalRepository['createOrder']>;
-  let rescheduleMock: jest.MockedFunction<RentalRepository['reschedule']>;
+  let createOrderMock: jest.MockedFunction<RentalCreationRepository['createOrder']>;
+  let rescheduleMock: jest.MockedFunction<RentalLifecycleRepository['reschedule']>;
   let auditLogMock: jest.MockedFunction<AuditPort['log']>;
 
   const fixedTime = new Date('2026-10-01T12:00:00.000Z');
@@ -106,42 +108,33 @@ describe('RentalService Unit Tests', () => {
     rescheduleMock = jest.fn().mockResolvedValue(createSampleOrder());
     auditLogMock = jest.fn().mockResolvedValue(undefined);
 
-    repo = {
-      confirm: jest.fn(),
-      customerExists: jest.fn().mockResolvedValue(true),
-      locationExists: jest.fn().mockResolvedValue(true),
-      getBookableVariant: jest.fn(),
-      createOrder: createOrderMock,
-      list: jest.fn(),
-      get: jest.fn().mockResolvedValue(createSampleOrder()),
-      getStatus: jest.fn().mockResolvedValue(RENTAL_STATUS.RESERVED),
-      getSchedule: jest.fn().mockResolvedValue({
-        status: RENTAL_STATUS.RESERVED,
-        rentalStartAt: new Date('2026-10-05T00:00:00.000Z'),
-        rentalEndAt: new Date('2026-10-07T00:00:00.000Z'),
-      }),
-      transition: jest.fn().mockResolvedValue(createSampleOrder()),
-      reschedule: rescheduleMock,
-      addCharge: jest.fn().mockResolvedValue(createSampleOrder()),
-      returnCollateral: jest.fn().mockResolvedValue(createSampleOrder()),
-      receiveReturn: jest.fn().mockResolvedValue(createSampleOrder()),
-      settleOrder: jest.fn().mockResolvedValue(createSampleOrder()),
-      getReturnPreview: jest.fn().mockResolvedValue({
-        rentalEndAt: new Date('2026-10-07T00:00:00.000Z'),
-        actualReturnedAt: new Date('2026-10-07T00:00:00.000Z'),
-        lateDays: 0,
-        dailyLateFeePerSet: 10000,
-        lateFee: '0.00',
-        additionalRentalFee: '0.00',
-        items: [],
-      }),
-      claimIdempotency: jest.fn(),
-      releaseIdempotency: jest.fn().mockResolvedValue(undefined),
-      findActiveVariantIdsByProduct: jest.fn(),
-      lookupStorefrontOrder: jest.fn(),
-      listWebAccountOrders: jest.fn(),
-      getWebAccountOrder: jest.fn(),
-    };
+    ports = rentalServicePorts();
+    ports.creation.createOrder = createOrderMock;
+    ports.lifecycle.reschedule = rescheduleMock;
+    ports.orderReader.get.mockResolvedValue(createSampleOrder());
+    ports.orderReader.getStatus.mockResolvedValue(RENTAL_STATUS.RESERVED);
+    ports.orderReader.getSchedule.mockResolvedValue({
+      status: RENTAL_STATUS.RESERVED,
+      rentalStartAt: new Date('2026-10-05T00:00:00.000Z'),
+      rentalEndAt: new Date('2026-10-07T00:00:00.000Z'),
+    });
+    ports.orderReader.getReturnPreview.mockResolvedValue({
+      dueAt: new Date('2026-10-07T00:00:00.000Z'),
+      actualReturnedAt: new Date('2026-10-07T00:00:00.000Z'),
+      lateDays: 0,
+      dailyLateFeePerSet: 10000,
+      lateFee: '0.00',
+      additionalRental: '0.00',
+      itemCount: 0,
+      rentalSubtotal: '0.00',
+      depositHeld: '0.00',
+      collateralMethod: 'CASH',
+      documentType: null,
+    });
+    ports.lifecycle.transition.mockResolvedValue(createSampleOrder());
+    ports.lifecycle.addCharge.mockResolvedValue(createSampleOrder());
+    ports.lifecycle.returnCollateral.mockResolvedValue(createSampleOrder());
+    ports.lifecycle.receiveReturn.mockResolvedValue(createSampleOrder());
 
     audit = {
       log: auditLogMock,
@@ -151,7 +144,15 @@ describe('RentalService Unit Tests', () => {
       now: jest.fn().mockReturnValue(fixedTime),
     };
 
-    service = new RentalService(repo, audit, clock);
+    service = new RentalService(
+      ports.creation,
+      ports.creationValidator,
+      ports.availability,
+      ports.orderReader,
+      ports.lifecycle,
+      audit,
+      clock,
+    );
   });
 
   describe('create', () => {
@@ -169,7 +170,7 @@ describe('RentalService Unit Tests', () => {
     });
 
     it('throws NotFoundException if customer does not exist in shop', async () => {
-      repo.customerExists.mockResolvedValueOnce(false);
+      ports.creationValidator.customerExists.mockResolvedValueOnce(false);
 
       await expect(
         service.create(currentUser, {
@@ -184,7 +185,7 @@ describe('RentalService Unit Tests', () => {
     });
 
     it('throws NotFoundException if location is specified but does not exist in shop', async () => {
-      repo.locationExists.mockResolvedValueOnce(false);
+      ports.creationValidator.locationExists.mockResolvedValueOnce(false);
 
       await expect(
         service.create(currentUser, {
@@ -233,7 +234,7 @@ describe('RentalService Unit Tests', () => {
     });
 
     it('throws NotFoundException if variant is not rentable or not found', async () => {
-      repo.getBookableVariant.mockResolvedValueOnce(null);
+      ports.availability.getBookableVariant.mockResolvedValueOnce(null);
 
       await expect(
         service.create(currentUser, {
@@ -259,7 +260,7 @@ describe('RentalService Unit Tests', () => {
         ratePrice: null,
         availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
       };
-      repo.getBookableVariant.mockResolvedValueOnce(bookableVariant);
+      ports.availability.getBookableVariant.mockResolvedValueOnce(bookableVariant);
 
       await expect(
         service.create(currentUser, {
@@ -285,7 +286,7 @@ describe('RentalService Unit Tests', () => {
         ratePrice: 100000,
         availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }], // only 1 available
       };
-      repo.getBookableVariant.mockResolvedValueOnce(bookableVariant);
+      ports.availability.getBookableVariant.mockResolvedValueOnce(bookableVariant);
 
       await expect(
         service.create(currentUser, {
@@ -314,7 +315,7 @@ describe('RentalService Unit Tests', () => {
           { id: 'inv-2', sku: 'SKU-2' },
         ],
       };
-      repo.getBookableVariant.mockResolvedValueOnce(bookableVariant);
+      ports.availability.getBookableVariant.mockResolvedValueOnce(bookableVariant);
 
       const result = await service.create(currentUser, {
         customerId: 'cust-1',
@@ -350,7 +351,7 @@ describe('RentalService Unit Tests', () => {
         ratePrice: null,
         availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
       };
-      repo.getBookableVariant.mockResolvedValueOnce(bookableVariant);
+      ports.availability.getBookableVariant.mockResolvedValueOnce(bookableVariant);
 
       await service.create(currentUser, {
         customerId: 'cust-1',
@@ -376,8 +377,8 @@ describe('RentalService Unit Tests', () => {
 
   describe('transitions', () => {
     it('throws BadRequestException if transition is rejected by policy or concurrent status change', async () => {
-      repo.getStatus.mockResolvedValueOnce(RENTAL_STATUS.COMPLETED); // Terminal state
-      repo.transition.mockResolvedValueOnce(null);
+      ports.orderReader.getStatus.mockResolvedValueOnce(RENTAL_STATUS.COMPLETED); // Terminal state
+      ports.lifecycle.transition.mockResolvedValueOnce(null);
 
       await expect(
         service.start(currentUser, 'order-1', { reason: 'Ready to start' }),
@@ -385,8 +386,10 @@ describe('RentalService Unit Tests', () => {
     });
 
     it('cancels order when in RESERVED status', async () => {
-      repo.getStatus.mockResolvedValueOnce(RENTAL_STATUS.RESERVED);
-      repo.transition.mockResolvedValueOnce(createSampleOrder({ status: RENTAL_STATUS.CANCELLED }));
+      ports.orderReader.getStatus.mockResolvedValueOnce(RENTAL_STATUS.RESERVED);
+      ports.lifecycle.transition.mockResolvedValueOnce(
+        createSampleOrder({ status: RENTAL_STATUS.CANCELLED }),
+      );
 
       const cancelled = await service.cancel(currentUser, 'order-1', {
         reason: 'Customer changed mind',
@@ -397,7 +400,7 @@ describe('RentalService Unit Tests', () => {
 
   describe('reschedule', () => {
     it('throws NotFoundException if order does not exist', async () => {
-      repo.getSchedule.mockResolvedValueOnce(null);
+      ports.orderReader.getSchedule.mockResolvedValueOnce(null);
 
       await expect(
         service.reschedule(currentUser, 'non-existent', {
@@ -408,7 +411,7 @@ describe('RentalService Unit Tests', () => {
     });
 
     it('throws BadRequestException if order status cannot be rescheduled (e.g. ACTIVE or COMPLETED)', async () => {
-      repo.getSchedule.mockResolvedValueOnce({
+      ports.orderReader.getSchedule.mockResolvedValueOnce({
         status: RENTAL_STATUS.COMPLETED,
         rentalStartAt: new Date('2026-10-01T12:00:00.000Z'),
         rentalEndAt: new Date('2026-10-01T12:00:00.000Z'),
@@ -425,7 +428,7 @@ describe('RentalService Unit Tests', () => {
     });
 
     it('throws BadRequestException if new dates are invalid (start >= end)', async () => {
-      repo.getSchedule.mockResolvedValueOnce({
+      ports.orderReader.getSchedule.mockResolvedValueOnce({
         status: RENTAL_STATUS.RESERVED,
         rentalStartAt: new Date('2026-10-05T00:00:00.000Z'),
         rentalEndAt: new Date('2026-10-07T00:00:00.000Z'),
@@ -442,12 +445,12 @@ describe('RentalService Unit Tests', () => {
     });
 
     it('orchestrates valid reschedule and logs audit event', async () => {
-      repo.getSchedule.mockResolvedValueOnce({
+      ports.orderReader.getSchedule.mockResolvedValueOnce({
         status: RENTAL_STATUS.RESERVED,
         rentalStartAt: new Date('2026-10-05T00:00:00.000Z'),
         rentalEndAt: new Date('2026-10-07T00:00:00.000Z'),
       });
-      repo.reschedule.mockResolvedValueOnce(
+      ports.lifecycle.reschedule.mockResolvedValueOnce(
         createSampleOrder({
           rentalStartAt: new Date('2026-10-10T00:00:00.000Z'),
           rentalEndAt: new Date('2026-10-12T00:00:00.000Z'),

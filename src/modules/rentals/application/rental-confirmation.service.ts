@@ -19,7 +19,12 @@ import {
   RENTAL_POLICY_PROVIDER,
   type RentalPolicyProvider,
 } from '@modules/settings/domain/rental-policy';
-import { RENTAL_REPOSITORY, type RentalRepository } from '../domain/rental.repository';
+import {
+  RENTAL_LIFECYCLE_REPOSITORY,
+  RENTAL_ORDER_READER,
+  type RentalLifecycleRepository,
+  type RentalOrderReader,
+} from '../domain/rental.repository';
 import { assertManualConfirmation, type ConfirmRentalInput } from '../domain/rental-confirmation';
 
 export interface ConfirmationImage {
@@ -32,14 +37,16 @@ export interface ConfirmationImage {
 export class RentalConfirmationService {
   private readonly logger = new Logger(RentalConfirmationService.name);
   constructor(
-    @Inject(RENTAL_REPOSITORY) private readonly repository: RentalRepository,
+    @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
+    @Inject(RENTAL_LIFECYCLE_REPOSITORY)
+    private readonly lifecycle: RentalLifecycleRepository,
     @Inject(RENTAL_POLICY_PROVIDER) private readonly policies: RentalPolicyProvider,
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
   ) {}
 
   async options(user: CurrentUser, orderId: string) {
     this.authorize(user);
-    const order = await this.repository.get(user.shopId, orderId);
+    const order = await this.orderReader.get(user.shopId, orderId);
     if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
     const policy = await this.policies.getPolicy(user.shopId);
     return {
@@ -58,7 +65,7 @@ export class RentalConfirmationService {
     file?: ConfirmationImage,
   ) {
     this.authorize(user);
-    const order = await this.repository.get(user.shopId, orderId);
+    const order = await this.orderReader.get(user.shopId, orderId);
     if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
     if (order.status !== 'RESERVED')
       throw new BadRequestException('Chỉ có thể xác nhận đơn đang ở trạng thái đã đặt trước.');
@@ -104,7 +111,7 @@ export class RentalConfirmationService {
           },
           { purpose: 'default' },
         );
-      const result = await this.repository.confirm({
+      const result = await this.lifecycle.confirm({
         ...input,
         orderId,
         shopId: user.shopId,
@@ -120,7 +127,7 @@ export class RentalConfirmationService {
       if (evidence) {
         // A lost commit response must not delete evidence of a committed confirmation.
         try {
-          const saved = await this.repository.get(user.shopId, orderId);
+          const saved = await this.orderReader.get(user.shopId, orderId);
           if (saved?.confirmation?.evidenceKey !== evidence.key)
             await this.storage.deleteObject(evidence.key, { purpose: 'cleanup' });
         } catch {
@@ -133,7 +140,7 @@ export class RentalConfirmationService {
 
   async evidence(user: CurrentUser, orderId: string) {
     this.authorize(user);
-    const order = await this.repository.get(user.shopId, orderId);
+    const order = await this.orderReader.get(user.shopId, orderId);
     const confirmation = order?.confirmation;
     if (!confirmation?.evidenceKey || !confirmation.evidenceMimeType)
       throw new NotFoundException('Không tìm thấy ảnh bằng chứng.');

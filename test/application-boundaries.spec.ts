@@ -13,11 +13,11 @@ import {
   toRentalListQuery,
 } from '../src/modules/rentals/api/rental.mapper';
 import { RentalService } from '../src/modules/rentals/application/rental.service';
-import type { RentalRepository } from '../src/modules/rentals/domain/rental.repository';
 import { ReportService } from '../src/modules/reports/application/report.service';
 import type { ReportRepository } from '../src/modules/reports/domain/report.repository';
 import { toPerformanceQuery } from '../src/modules/reports/api/report.mapper';
 import { PerformanceQueryDto } from '../src/modules/reports/api/report.dto';
+import { rentalServicePorts } from './fixtures/rental-ports.fixture';
 
 const user: CurrentUser = {
   userId: 'user',
@@ -27,31 +27,16 @@ const user: CurrentUser = {
   fullName: 'Admin',
   permissions: [],
 };
-function rentalRepository(): jest.Mocked<RentalRepository> {
-  return {
-    confirm: jest.fn(),
-    customerExists: jest.fn().mockResolvedValue(true),
-    locationExists: jest.fn().mockResolvedValue(true),
-    getBookableVariant: jest.fn(),
-    createOrder: jest.fn(),
-    list: jest.fn(),
-    get: jest.fn(),
-    getStatus: jest.fn(),
-    getSchedule: jest.fn(),
-    transition: jest.fn(),
-    reschedule: jest.fn(),
-    addCharge: jest.fn(),
-    returnCollateral: jest.fn(),
-    receiveReturn: jest.fn(),
-    settleOrder: jest.fn(),
-    getReturnPreview: jest.fn(),
-    claimIdempotency: jest.fn(),
-    releaseIdempotency: jest.fn(),
-    findActiveVariantIdsByProduct: jest.fn(),
-    lookupStorefrontOrder: jest.fn(),
-    listWebAccountOrders: jest.fn(),
-    getWebAccountOrder: jest.fn(),
-  };
+function rentalService(ports: ReturnType<typeof rentalServicePorts>) {
+  return new RentalService(
+    ports.creation,
+    ports.creationValidator,
+    ports.availability,
+    ports.orderReader,
+    ports.lifecycle,
+    audit(),
+    fixedClock,
+  );
 }
 const audit = (): AuditPort => ({ log: () => Promise.resolve() });
 
@@ -80,16 +65,16 @@ describe('transport to application contracts', () => {
   });
 
   it('preserves validated query defaults, offset timestamps and tenant scope', async () => {
-    const repository = rentalRepository();
+    const ports = rentalServicePorts();
     const result = { items: [], meta: paginateMeta(2, 20, 0) };
-    repository.list.mockResolvedValue(result);
+    ports.orderReader.list.mockResolvedValue(result);
     const query = plainToInstance(RentalListQueryDto, {
       page: '2',
       from: '2026-09-12T10:00:00+07:00',
     });
-    const service = new RentalService(repository, audit(), fixedClock);
+    const service = rentalService(ports);
     expect(await service.list(user, toRentalListQuery(query))).toBe(result);
-    expect(repository.list.mock.calls[0]?.[0]).toEqual(
+    expect(ports.orderReader.list.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         shopId: 'shop',
         page: 2,
@@ -101,12 +86,12 @@ describe('transport to application contracts', () => {
   });
 
   it('replays the stored response with the same hash and performs no order write', async () => {
-    const repository = rentalRepository();
-    repository.claimIdempotency.mockResolvedValue({ state: 'COMPLETED', responseBody: null });
+    const ports = rentalServicePorts();
+    ports.creation.claimIdempotency.mockResolvedValue({ state: 'COMPLETED', responseBody: null });
     const dto = request();
-    const service = new RentalService(repository, audit(), fixedClock);
+    const service = rentalService(ports);
     await expect(service.create(user, toCreateRentalOrderInput(dto), 'retry')).resolves.toBeNull();
-    expect(repository.claimIdempotency.mock.calls[0]?.[0]).toEqual(
+    expect(ports.creation.claimIdempotency.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         shopId: user.shopId,
         scope: 'rental-order.create',
@@ -114,20 +99,20 @@ describe('transport to application contracts', () => {
         requestHash: createHash('sha256').update(JSON.stringify(dto)).digest('hex'),
       }),
     );
-    expect(repository.createOrder.mock.calls).toHaveLength(0);
+    expect(ports.creation.createOrder.mock.calls).toHaveLength(0);
   });
 
   it('keeps the existing missing-order and invalid schedule errors', async () => {
-    const repository = rentalRepository();
-    repository.get.mockResolvedValue(null);
-    const service = new RentalService(repository, audit(), fixedClock);
+    const ports = rentalServicePorts();
+    ports.orderReader.get.mockResolvedValue(null);
+    const service = rentalService(ports);
     await expect(service.get(user, 'missing')).rejects.toThrow('Không tìm thấy đơn thuê.');
     const input = toCreateRentalOrderInput(request());
     input.rentalEndAt = input.rentalStartAt;
     await expect(service.create(user, input)).rejects.toThrow(
       'Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.',
     );
-    expect(repository.createOrder.mock.calls).toHaveLength(0);
+    expect(ports.creation.createOrder.mock.calls).toHaveLength(0);
   });
 
   it('retains report money strings and date conversion without remapping output', async () => {

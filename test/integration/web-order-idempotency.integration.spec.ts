@@ -21,8 +21,11 @@ describe('Web order idempotency', () => {
     const settings = new SettingsService(new PrismaSettingsRepository(prisma), {
       log: () => Promise.resolve(),
     });
+    const rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
     web = new WebRentalService(
-      new PrismaRentalRepository(prisma, fixedClock, settings),
+      rentals,
+      rentals,
+      rentals,
       settings,
       new PrismaCustomerRepository(prisma),
       fixedClock,

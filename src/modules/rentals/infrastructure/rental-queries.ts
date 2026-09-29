@@ -6,7 +6,8 @@ import { type Prisma, type PrismaClient } from '@prisma/client';
 import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
 
 import {
-  type RentalRepository,
+  type RentalCreationValidator,
+  type RentalOrderReader,
   type StorefrontOrderLookupRecord,
   type WebAccountRentalOrderDetail,
   type WebAccountRentalOrderListCriteria,
@@ -19,7 +20,7 @@ export async function customerExists(
   prisma: PrismaService,
   shopId: string,
   customerId: string,
-): ReturnType<RentalRepository['customerExists']> {
+): ReturnType<RentalCreationValidator['customerExists']> {
   return (
     (await prisma.customer.count({
       where: { id: customerId, shopId, status: 'ACTIVE', archivedAt: null },
@@ -30,7 +31,7 @@ export async function locationExists(
   prisma: PrismaService,
   shopId: string,
   locationId: string,
-): ReturnType<RentalRepository['locationExists']> {
+): ReturnType<RentalCreationValidator['locationExists']> {
   return (
     (await prisma.shopLocation.count({
       where: { id: locationId, shopId, isActive: true },
@@ -39,8 +40,8 @@ export async function locationExists(
 }
 export async function list(
   prisma: PrismaService,
-  input: Parameters<RentalRepository['list']>[0],
-): ReturnType<RentalRepository['list']> {
+  input: Parameters<RentalOrderReader['list']>[0],
+): ReturnType<RentalOrderReader['list']> {
   const phoneSearch = input.search?.replace(/\D/g, '');
   const where = {
     shopId: input.shopId,
@@ -112,14 +113,14 @@ export function get(
   prisma: PrismaService,
   shopId: string,
   id: string,
-): ReturnType<RentalRepository['get']> {
+): ReturnType<RentalOrderReader['get']> {
   return getWithTx(prisma, shopId, id);
 }
 export async function getStatus(
   prisma: PrismaService,
   shopId: string,
   id: string,
-): ReturnType<RentalRepository['getStatus']> {
+): ReturnType<RentalOrderReader['getStatus']> {
   const order = await prisma.rentalOrder.findFirst({
     where: { id, shopId },
     select: { status: true },
@@ -130,7 +131,7 @@ export function getSchedule(
   prisma: PrismaService,
   shopId: string,
   id: string,
-): ReturnType<RentalRepository['getSchedule']> {
+): ReturnType<RentalOrderReader['getSchedule']> {
   return prisma.rentalOrder.findFirst({
     where: { id, shopId },
     select: { status: true, rentalStartAt: true, rentalEndAt: true },
@@ -140,7 +141,7 @@ export function getWithTx(
   tx: Prisma.TransactionClient | PrismaClient,
   shopId: string,
   id: string,
-): ReturnType<RentalRepository['get']> {
+): ReturnType<RentalOrderReader['get']> {
   return tx.rentalOrder.findFirst({
     where: { id, shopId },
     include: {

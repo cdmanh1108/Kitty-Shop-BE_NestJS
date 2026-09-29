@@ -1,11 +1,11 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { Prisma } from '@prisma/client';
-import type { BookableVariant, RentalRepository } from '../domain/rental.repository';
+import type { BookableVariant, RentalAvailabilityReader } from '../domain/rental.repository';
 import { resolveRentalPricing } from '../domain/rental-pricing';
 import { availableInventoryWhere } from '@database/prisma/inventory-availability';
 
 export function bookableVariantInclude(
-  input: Parameters<RentalRepository['getBookableVariant']>[0],
+  input: Parameters<RentalAvailabilityReader['getBookableVariant']>[0],
 ) {
   return {
     product: {

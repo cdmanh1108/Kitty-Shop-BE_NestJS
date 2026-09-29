@@ -1,24 +1,23 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
-import type {
-  CreateRentalOrderData,
-  RentalRepository,
-} from '../../src/modules/rentals/domain/rental.repository';
+import type { CreateRentalOrderData } from '../../src/modules/rentals/domain/rental.repository';
 import type { RentalPolicyProvider } from '../../src/modules/settings/domain/rental-policy';
 import type { CustomerRepository } from '../../src/modules/customers/domain/customer.repository';
 import { InvalidCustomerPhoneError } from '../../src/modules/customers/domain/customer-phone';
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
+import {
+  rentalAvailabilityReaderMock,
+  rentalCreationRepositoryMock,
+  rentalOrderReaderMock,
+} from '../fixtures/rental-ports.fixture';
+import { rentalOrderDetailsFixture } from '../fixtures/rental-order.fixture';
 
 describe('WebRentalService', () => {
   let service: WebRentalService;
-  let mockRepository: {
-    getBookableVariant: jest.Mock;
-    createOrder: jest.Mock;
-    claimIdempotency: jest.Mock;
-    releaseIdempotency: jest.Mock;
-    findActiveVariantIdsByProduct: jest.Mock;
-    lookupStorefrontOrder: jest.Mock;
-  };
+  let creation: ReturnType<typeof rentalCreationRepositoryMock>;
+  let availability: ReturnType<typeof rentalAvailabilityReaderMock>;
+  let orderReader: ReturnType<typeof rentalOrderReaderMock>;
   let mockPolicyProvider: {
     getPolicy: jest.Mock;
   };
@@ -27,14 +26,10 @@ describe('WebRentalService', () => {
   };
 
   beforeEach(() => {
-    mockRepository = {
-      getBookableVariant: jest.fn(),
-      createOrder: jest.fn(),
-      claimIdempotency: jest.fn().mockResolvedValue({ state: 'CLAIMED', claimId: 'claim-1' }),
-      releaseIdempotency: jest.fn().mockResolvedValue(undefined),
-      findActiveVariantIdsByProduct: jest.fn(),
-      lookupStorefrontOrder: jest.fn(),
-    };
+    creation = rentalCreationRepositoryMock();
+    creation.claimIdempotency.mockResolvedValue({ state: 'CLAIMED', claimId: 'claim-1' });
+    availability = rentalAvailabilityReaderMock();
+    orderReader = rentalOrderReaderMock();
 
     mockPolicyProvider = {
       getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY),
@@ -45,7 +40,9 @@ describe('WebRentalService', () => {
     };
 
     service = new WebRentalService(
-      mockRepository as unknown as RentalRepository,
+      creation,
+      availability,
+      orderReader,
       mockPolicyProvider as unknown as RentalPolicyProvider,
       mockCustomerRepo as unknown as CustomerRepository,
       { now: () => new Date('2026-09-20T00:00:00.000Z') },
@@ -53,7 +50,7 @@ describe('WebRentalService', () => {
   });
 
   function firstCreateOrderInput(): CreateRentalOrderData {
-    const calls: unknown = mockRepository.createOrder.mock.calls;
+    const calls: unknown = creation.createOrder.mock.calls;
     if (!Array.isArray(calls) || !Array.isArray(calls[0]))
       throw new Error('Expected createOrder call');
     return calls[0][0] as CreateRentalOrderData;
@@ -68,8 +65,8 @@ describe('WebRentalService', () => {
           variantId: 'var-1',
         }),
       ).rejects.toThrow(BadRequestException);
-      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
-      expect(mockRepository.findActiveVariantIdsByProduct).not.toHaveBeenCalled();
+      expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
+      expect(availability.findActiveVariantIdsByProduct.mock.calls).toHaveLength(0);
     });
 
     it('throws BadRequestException if pickupDate is equal to or after returnDate', async () => {
@@ -83,9 +80,15 @@ describe('WebRentalService', () => {
     });
 
     it('returns availability and count for a specific variant', async () => {
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
+        productId: 'prod-1',
         variantCode: 'DR-S',
+        productName: 'Dress',
+        sizeName: null,
+        colorName: null,
+        ratePrice: null,
+        depositPerItem: 0,
         availableInventory: [
           { id: 'inv-1', sku: 'SKU-1' },
           { id: 'inv-2', sku: 'SKU-2' },
@@ -100,7 +103,7 @@ describe('WebRentalService', () => {
 
       expect(result.available).toBe(true);
       expect(result.availableQuantity).toBe(2);
-      expect(mockRepository.getBookableVariant).toHaveBeenCalledWith(
+      expect(availability.getBookableVariant.mock.calls[0]?.[0]).toEqual(
         expect.objectContaining({
           shopId: 'shop-1',
           variantId: 'var-1',
@@ -111,17 +114,7 @@ describe('WebRentalService', () => {
     });
 
     it('does not aggregate availability across ambiguous product variants', async () => {
-      mockRepository.findActiveVariantIdsByProduct.mockResolvedValue(['v-1', 'v-2']);
-      mockRepository.getBookableVariant
-        .mockResolvedValueOnce({
-          id: 'v-1',
-          availableInventory: [{ id: 'inv-1' }],
-        })
-        .mockResolvedValueOnce({
-          id: 'v-2',
-          availableInventory: [{ id: 'inv-2' }, { id: 'inv-3' }],
-        });
-
+      availability.findActiveVariantIdsByProduct.mockResolvedValue(['v-1', 'v-2']);
       const result = await service.checkAvailability('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
@@ -129,19 +122,25 @@ describe('WebRentalService', () => {
       });
 
       expect(result).toEqual({ available: false, availableQuantity: 0 });
-      expect(mockRepository.findActiveVariantIdsByProduct).toHaveBeenCalledWith(
+      expect(availability.findActiveVariantIdsByProduct.mock.calls[0]).toEqual([
         'shop-1',
         'prod-1',
         true,
-      );
-      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+      ]);
+      expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
     });
 
     it('uses productId as a compatibility alias only for one eligible variant', async () => {
-      mockRepository.findActiveVariantIdsByProduct.mockResolvedValue(['var-1']);
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.findActiveVariantIdsByProduct.mockResolvedValue(['var-1']);
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
+        variantCode: 'DR-S',
+        productName: 'Dress',
+        sizeName: null,
+        colorName: null,
+        ratePrice: null,
+        depositPerItem: 0,
         availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
       });
 
@@ -165,7 +164,7 @@ describe('WebRentalService', () => {
         }),
       ).rejects.toThrow(BadRequestException);
       expect(mockPolicyProvider.getPolicy).not.toHaveBeenCalled();
-      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+      expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
     });
 
     it('uses unified shipping fee from RentalPolicy single source of truth', async () => {
@@ -174,13 +173,19 @@ describe('WebRentalService', () => {
         delivery: { standardShippingFee: 45000 },
       });
 
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
+        productId: 'prod-1',
         variantCode: 'DR-S',
         productName: 'Đầm dạ hội',
+        sizeName: null,
+        colorName: null,
         ratePrice: 150000,
         depositPerItem: 500000,
-        availableInventory: [{ id: 'inv-1' }, { id: 'inv-2' }],
+        availableInventory: [
+          { id: 'inv-1', sku: 'SKU-1' },
+          { id: 'inv-2', sku: 'SKU-2' },
+        ],
       });
 
       const result = await service.calculateQuote('shop-1', {
@@ -199,13 +204,16 @@ describe('WebRentalService', () => {
     });
 
     it('sets available to false if requested quantity exceeds available stock', async () => {
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
+        productId: 'prod-1',
         variantCode: 'DR-S',
         productName: 'Đầm dạ hội',
+        sizeName: null,
+        colorName: null,
         ratePrice: 150000,
         depositPerItem: 500000,
-        availableInventory: [{ id: 'inv-1' }], // only 1 available
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }], // only 1 available
       });
 
       const result = await service.calculateQuote('shop-1', {
@@ -240,14 +248,16 @@ describe('WebRentalService', () => {
     });
 
     it('merges duplicate variant demand before checking stock and calculating price', async () => {
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
         variantCode: 'DR-S',
         productName: 'Dress',
+        sizeName: null,
+        colorName: null,
         ratePrice: 150000,
         depositPerItem: 500000,
-        availableInventory: [{ id: 'inv-1' }],
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
       });
 
       const result = await service.calculateQuote('shop-1', {
@@ -284,7 +294,7 @@ describe('WebRentalService', () => {
           'web-invalid-calendar',
         ),
       ).rejects.toThrow(BadRequestException);
-      expect(mockRepository.claimIdempotency).not.toHaveBeenCalled();
+      expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
     });
 
     const webOrderInput = () => ({
@@ -300,20 +310,20 @@ describe('WebRentalService', () => {
       await expect(service.createOrder('shop-1', webOrderInput())).rejects.toThrow(
         BadRequestException,
       );
-      expect(mockRepository.claimIdempotency).not.toHaveBeenCalled();
+      expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
       expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
-      expect(mockRepository.createOrder).not.toHaveBeenCalled();
+      expect(creation.createOrder.mock.calls).toHaveLength(0);
     });
 
     it('rejects ambiguous multi-value keys before claiming', async () => {
       await expect(
         service.createOrder('shop-1', webOrderInput(), ['key-a', 'key-b']),
       ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_KEY_INVALID' } });
-      expect(mockRepository.claimIdempotency).not.toHaveBeenCalled();
+      expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
     });
 
     it('replays the stored Web-safe result before selection or customer resolution', async () => {
-      mockRepository.claimIdempotency.mockResolvedValue({
+      creation.claimIdempotency.mockResolvedValue({
         state: 'COMPLETED',
         responseBody: {
           version: 1,
@@ -337,13 +347,13 @@ describe('WebRentalService', () => {
         status: 'reserved',
         paymentStatus: 'unpaid',
       });
-      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+      expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
       expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
-      expect(mockRepository.createOrder).not.toHaveBeenCalled();
+      expect(creation.createOrder.mock.calls).toHaveLength(0);
     });
 
     it('returns a machine-readable conflict when the retained key has another command hash', async () => {
-      mockRepository.claimIdempotency.mockResolvedValue({ state: 'HASH_MISMATCH' });
+      creation.claimIdempotency.mockResolvedValue({ state: 'HASH_MISMATCH' });
 
       await expect(
         service.createOrder('shop-1', webOrderInput(), 'web-reused-key'),
@@ -352,14 +362,17 @@ describe('WebRentalService', () => {
           code: 'IDEMPOTENCY_KEY_REUSED',
         },
       });
-      expect(mockRepository.getBookableVariant).not.toHaveBeenCalled();
+      expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
     });
 
     it('validates phone and rejects if available stock is insufficient', async () => {
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
+        productId: 'prod-1',
         variantCode: 'DR-S',
         productName: 'Đầm dạ hội',
+        sizeName: null,
+        colorName: null,
         ratePrice: 200000,
         depositPerItem: 500000,
         availableInventory: [], // none available!
@@ -385,23 +398,25 @@ describe('WebRentalService', () => {
     it('creates order with paymentStatus: unpaid and does not fake payment success', async () => {
       mockCustomerRepo.resolveForBooking.mockResolvedValue({ id: 'cust-new' });
 
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
         variantCode: 'DR-M',
         productName: 'Váy công chúa',
+        sizeName: null,
+        colorName: null,
         ratePrice: 250000,
         depositPerItem: 600000,
         availableInventory: [{ id: 'inv-1', sku: 'SKU-001' }],
       });
 
-      mockRepository.createOrder.mockResolvedValue({
-        orderNumber: 'RT-20260920-001',
-        grandTotal: 250000,
-        depositRequired: 600000,
-        status: 'RESERVED',
-        paymentStatus: 'UNPAID',
-      });
+      creation.createOrder.mockResolvedValue(
+        rentalOrderDetailsFixture({
+          orderNumber: 'RT-20260920-001',
+          grandTotal: new Prisma.Decimal(250000),
+          depositRequired: new Prisma.Decimal(600000),
+        }),
+      );
 
       const res = await service.createOrder(
         'shop-1',
@@ -435,11 +450,13 @@ describe('WebRentalService', () => {
 
     it('maps only the typed invalid-phone error from the resolver to a client error', async () => {
       mockCustomerRepo.resolveForBooking.mockRejectedValue(new InvalidCustomerPhoneError());
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
         variantCode: 'DR-M',
         productName: 'Váy công chúa',
+        sizeName: null,
+        colorName: null,
         ratePrice: 250000,
         depositPerItem: 600000,
         availableInventory: [{ id: 'inv-1', sku: 'SKU-001' }],
@@ -459,7 +476,7 @@ describe('WebRentalService', () => {
           'web-test-invalid-phone',
         ),
       ).rejects.toThrow(BadRequestException);
-      expect(mockRepository.createOrder).not.toHaveBeenCalled();
+      expect(creation.createOrder.mock.calls).toHaveLength(0);
     });
 
     it('passes delivery shipping once and never mirrors it as an explicit charge', async () => {
@@ -467,22 +484,24 @@ describe('WebRentalService', () => {
         ...DEFAULT_RENTAL_POLICY,
         delivery: { standardShippingFee: 45000 },
       });
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
         variantCode: 'DR-M',
         productName: 'Váy công chúa',
+        sizeName: null,
+        colorName: null,
         ratePrice: 450000,
         depositPerItem: 600000,
         availableInventory: [{ id: 'inv-1', sku: 'SKU-001' }],
       });
-      mockRepository.createOrder.mockResolvedValue({
-        orderNumber: 'RT-20260920-DELIVERY',
-        grandTotal: 495000,
-        depositRequired: 600000,
-        status: 'RESERVED',
-        paymentStatus: 'UNPAID',
-      });
+      creation.createOrder.mockResolvedValue(
+        rentalOrderDetailsFixture({
+          orderNumber: 'RT-20260920-DELIVERY',
+          grandTotal: new Prisma.Decimal(495000),
+          depositRequired: new Prisma.Decimal(600000),
+        }),
+      );
 
       const quote = await service.calculateQuote('shop-1', {
         pickupDate: '2026-09-20',
@@ -521,11 +540,13 @@ describe('WebRentalService', () => {
     });
 
     it('merges duplicate Web lines into one allocation plan', async () => {
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
         variantCode: 'DR-M',
         productName: 'Dress',
+        sizeName: null,
+        colorName: null,
         ratePrice: 250000,
         depositPerItem: 600000,
         availableInventory: [
@@ -533,13 +554,13 @@ describe('WebRentalService', () => {
           { id: 'inv-2', sku: 'SKU-002' },
         ],
       });
-      mockRepository.createOrder.mockResolvedValue({
-        orderNumber: 'RT-001',
-        grandTotal: 500000,
-        depositRequired: 1200000,
-        status: 'RESERVED',
-        paymentStatus: 'UNPAID',
-      });
+      creation.createOrder.mockResolvedValue(
+        rentalOrderDetailsFixture({
+          orderNumber: 'RT-001',
+          grandTotal: new Prisma.Decimal(500000),
+          depositRequired: new Prisma.Decimal(1200000),
+        }),
+      );
 
       await service.createOrder(
         'shop-1',
@@ -572,9 +593,15 @@ describe('WebRentalService', () => {
     });
 
     it('rejects an explicit variant whose supplied productId is not its parent', async () => {
-      mockRepository.getBookableVariant.mockResolvedValue({
+      availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
+        variantCode: 'DR-M',
+        productName: 'Dress',
+        sizeName: null,
+        colorName: null,
+        ratePrice: 250000,
+        depositPerItem: 0,
         availableInventory: [{ id: 'inv-1', sku: 'SKU-001' }],
       });
 
@@ -592,7 +619,7 @@ describe('WebRentalService', () => {
           'web-test-parent',
         ),
       ).rejects.toThrow();
-      expect(mockRepository.createOrder).not.toHaveBeenCalled();
+      expect(creation.createOrder.mock.calls).toHaveLength(0);
     });
 
     it('rejects collateral method if not allowed by policy', async () => {
@@ -624,7 +651,7 @@ describe('WebRentalService', () => {
 
   describe('lookupOrder', () => {
     it('returns masked phone and order details when phone matches', async () => {
-      mockRepository.lookupStorefrontOrder.mockResolvedValue({
+      orderReader.lookupStorefrontOrder.mockResolvedValue({
         orderNumber: 'RT-001',
         customerFullName: 'Nguyễn Văn A',
         customerPhone: '0912345678',

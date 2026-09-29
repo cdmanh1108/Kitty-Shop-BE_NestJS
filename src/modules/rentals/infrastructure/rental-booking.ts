@@ -15,7 +15,7 @@ import type { Prisma } from '@prisma/client';
 import {
   RentalOverlapError,
   type CreateRentalOrderData,
-  type RentalRepository,
+  type RentalCreationRepository,
 } from '../domain/rental.repository';
 import { getWithTx } from './rental-queries';
 import { isOverlapError } from './rental-errors';
@@ -27,7 +27,7 @@ export async function createOrder(
   prisma: PrismaService,
   data: CreateRentalOrderData,
   policy: RentalPolicy,
-): ReturnType<RentalRepository['createOrder']> {
+): ReturnType<RentalCreationRepository['createOrder']> {
   const collateral = data.collateral ?? { method: 'CASH' as const };
   if (data.collateral && !policy.deposit.allowedMethods.includes(collateral.method))
     throw new RentalInvariantError(

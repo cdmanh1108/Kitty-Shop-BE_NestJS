@@ -14,10 +14,7 @@ import { RentalService } from '../src/modules/rentals/application/rental.service
 import type { CreateRentalOrderInput } from '../src/modules/rentals/application/rental.contracts';
 import { RentalClaimLostError } from '../src/modules/rentals/domain/rental-errors';
 import type { RentalOrderDetails } from '../src/modules/rentals/domain/rental.models';
-import type {
-  CreateRentalOrderData,
-  RentalRepository,
-} from '../src/modules/rentals/domain/rental.repository';
+import type { CreateRentalOrderData } from '../src/modules/rentals/domain/rental.repository';
 import { createOrder } from '../src/modules/rentals/infrastructure/rental-booking';
 import { DEFAULT_RENTAL_POLICY } from '../src/modules/settings/domain/rental-policy';
 import {
@@ -27,6 +24,7 @@ import {
   releaseIdempotency,
   RENTAL_CLAIM_LEASE_MS,
 } from '../src/modules/rentals/infrastructure/rental-idempotency';
+import { rentalServicePorts } from './fixtures/rental-ports.fixture';
 
 const now = new Date('2026-09-11T03:00:00Z');
 const clock: Clock = { now: () => new Date(now) };
@@ -552,32 +550,6 @@ describe('booking transaction ordering and failure propagation', () => {
   });
 });
 
-function repositoryFake(): jest.Mocked<RentalRepository> {
-  return {
-    confirm: jest.fn(),
-    customerExists: jest.fn().mockResolvedValue(true),
-    locationExists: jest.fn().mockResolvedValue(true),
-    getBookableVariant: jest.fn(),
-    createOrder: jest.fn(),
-    list: jest.fn(),
-    get: jest.fn(),
-    getStatus: jest.fn(),
-    getSchedule: jest.fn(),
-    transition: jest.fn(),
-    reschedule: jest.fn(),
-    addCharge: jest.fn(),
-    returnCollateral: jest.fn(),
-    receiveReturn: jest.fn(),
-    settleOrder: jest.fn(),
-    getReturnPreview: jest.fn(),
-    claimIdempotency: jest.fn(),
-    releaseIdempotency: jest.fn().mockResolvedValue(undefined),
-    findActiveVariantIdsByProduct: jest.fn(),
-    lookupStorefrontOrder: jest.fn(),
-    listWebAccountOrders: jest.fn(),
-    getWebAccountOrder: jest.fn(),
-  };
-}
 const requestInput = (): CreateRentalOrderInput => ({
   customerId: 'customer',
   rentalStartAt: now.toISOString(),
@@ -587,9 +559,25 @@ const requestInput = (): CreateRentalOrderInput => ({
   charges: [],
 });
 
+function rentalServiceWithPorts(
+  ports: ReturnType<typeof rentalServicePorts>,
+  audit: AuditPort,
+): RentalService {
+  return new RentalService(
+    ports.creation,
+    ports.creationValidator,
+    ports.availability,
+    ports.orderReader,
+    ports.lifecycle,
+    audit,
+    clock,
+  );
+}
+
 describe('application idempotent execution and audit', () => {
   it('returns the committed order when the audit storage fails', async () => {
-    const repository = repositoryFake();
+    const ports = rentalServicePorts();
+    const repository = ports.creation;
     repository.createOrder.mockResolvedValue(orderDetails());
     const auditRepository: jest.Mocked<AuditRepository> = {
       create: jest.fn().mockRejectedValue(new Error('audit unavailable')),
@@ -597,10 +585,7 @@ describe('application idempotent execution and audit', () => {
     };
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await expect(
-      new RentalService(repository, new AuditService(auditRepository), clock).create(
-        user,
-        requestInput(),
-      ),
+      rentalServiceWithPorts(ports, new AuditService(auditRepository)).create(user, requestInput()),
     ).resolves.toMatchObject({ id: 'order' });
     expect(repository.createOrder.mock.calls).toHaveLength(1);
     expect(auditRepository.create.mock.calls[0]?.[0]).toMatchObject(entry);
@@ -608,7 +593,8 @@ describe('application idempotent execution and audit', () => {
 
   it('executes once for concurrent requests, replays the serialized response and audits once', async () => {
     const { prisma } = claimStore();
-    const repository = repositoryFake();
+    const ports = rentalServicePorts();
+    const repository = ports.creation;
     repository.claimIdempotency.mockImplementation((data) => claimIdempotency(prisma, clock, data));
     repository.createOrder.mockImplementation(async (data) => {
       if (!data.idempotency) throw new Error('Expected claim');
@@ -617,7 +603,7 @@ describe('application idempotent execution and audit', () => {
       return orderDetails();
     });
     const audit: jest.Mocked<AuditPort> = { log: jest.fn().mockResolvedValue(undefined) };
-    const service = new RentalService(repository, audit, clock);
+    const service = rentalServiceWithPorts(ports, audit);
     const outcomes = await Promise.allSettled([
       service.create(user, requestInput(), 'key'),
       service.create(user, requestInput(), 'key'),
@@ -631,14 +617,15 @@ describe('application idempotent execution and audit', () => {
     expect(audit.log.mock.calls[0]?.[0]).toMatchObject(entry);
   });
   it('passes the owner token to cleanup and keeps the original conflict if cleanup fails', async () => {
-    const repository = repositoryFake();
+    const ports = rentalServicePorts();
+    const repository = ports.creation;
     repository.claimIdempotency.mockResolvedValue({ state: 'CLAIMED', claimId: 'owner' });
     repository.createOrder.mockRejectedValue(new RentalClaimLostError());
     repository.releaseIdempotency.mockRejectedValue(new Error('cleanup unavailable'));
     jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const audit: jest.Mocked<AuditPort> = { log: jest.fn() };
     await expect(
-      new RentalService(repository, audit, clock).create(user, requestInput(), 'key'),
+      rentalServiceWithPorts(ports, audit).create(user, requestInput(), 'key'),
     ).rejects.toMatchObject({ status: 409 });
     expect(repository.releaseIdempotency.mock.calls[0]).toEqual([
       'shop',

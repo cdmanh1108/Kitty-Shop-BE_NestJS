@@ -12,7 +12,7 @@ import type { Clock } from '@common/clock/clock';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import type { Prisma } from '@prisma/client';
-import type { RentalRepository } from '../domain/rental.repository';
+import type { RentalLifecycleRepository } from '../domain/rental.repository';
 import { getWithTx } from './rental-queries';
 import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
 import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
@@ -20,10 +20,10 @@ import { canTransitionDelivery, DELIVERY_STATUS } from '@modules/deliveries/doma
 
 export async function transition(
   prisma: PrismaService,
-  input: Parameters<RentalRepository['transition']>[0],
+  input: Parameters<RentalLifecycleRepository['transition']>[0],
   policy: RentalPolicy,
   clock: Clock,
-): ReturnType<RentalRepository['transition']> {
+): ReturnType<RentalLifecycleRepository['transition']> {
   return serializableTransaction(prisma, async (tx) => {
     if (input.toStatus === RENTAL_STATUS.CANCELLED) {
       if (!(await lockRentalMonetaryOrder(tx, input))) return null;

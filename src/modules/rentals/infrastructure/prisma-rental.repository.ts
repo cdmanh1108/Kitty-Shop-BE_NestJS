@@ -5,7 +5,14 @@ import {
 } from '@modules/settings/domain/rental-policy';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable, Inject } from '@nestjs/common';
-import type { RentalRepository } from '../domain/rental.repository';
+import type {
+  RentalAvailabilityReader,
+  RentalCreationRepository,
+  RentalCreationValidator,
+  RentalLifecycleRepository,
+  RentalOrderReader,
+  WebAccountRentalOrdersReader,
+} from '../domain/rental.repository';
 import {
   customerExists,
   locationExists,
@@ -29,8 +36,16 @@ import { getReturnPreview, returnDocumentCollateral } from './rental-collateral.
 import { confirmOrder } from './rental-confirmation';
 
 @Injectable()
-export class PrismaRentalRepository implements RentalRepository {
-  async confirm(input: Parameters<RentalRepository['confirm']>[0]) {
+export class PrismaRentalRepository
+  implements
+    RentalAvailabilityReader,
+    RentalCreationRepository,
+    RentalCreationValidator,
+    RentalLifecycleRepository,
+    RentalOrderReader,
+    WebAccountRentalOrdersReader
+{
+  async confirm(input: Parameters<RentalLifecycleRepository['confirm']>[0]) {
     return confirmOrder(
       this.prisma,
       input,
@@ -45,76 +60,76 @@ export class PrismaRentalRepository implements RentalRepository {
   ) {}
 
   customerExists(
-    ...args: Parameters<RentalRepository['customerExists']>
-  ): ReturnType<RentalRepository['customerExists']> {
+    ...args: Parameters<RentalCreationValidator['customerExists']>
+  ): ReturnType<RentalCreationValidator['customerExists']> {
     return customerExists(this.prisma, ...args);
   }
 
   locationExists(
-    ...args: Parameters<RentalRepository['locationExists']>
-  ): ReturnType<RentalRepository['locationExists']> {
+    ...args: Parameters<RentalCreationValidator['locationExists']>
+  ): ReturnType<RentalCreationValidator['locationExists']> {
     return locationExists(this.prisma, ...args);
   }
 
   getBookableVariant(
-    ...args: Parameters<RentalRepository['getBookableVariant']>
-  ): ReturnType<RentalRepository['getBookableVariant']> {
+    ...args: Parameters<RentalAvailabilityReader['getBookableVariant']>
+  ): ReturnType<RentalAvailabilityReader['getBookableVariant']> {
     return getBookableVariant(this.prisma, ...args);
   }
 
   async createOrder(
-    ...args: Parameters<RentalRepository['createOrder']>
-  ): ReturnType<RentalRepository['createOrder']> {
+    ...args: Parameters<RentalCreationRepository['createOrder']>
+  ): ReturnType<RentalCreationRepository['createOrder']> {
     const policy = await this.policies.getPolicy(args[0].shopId);
     return createOrder(this.prisma, args[0], policy);
   }
 
-  list(...args: Parameters<RentalRepository['list']>): ReturnType<RentalRepository['list']> {
+  list(...args: Parameters<RentalOrderReader['list']>): ReturnType<RentalOrderReader['list']> {
     return list(this.prisma, ...args);
   }
 
-  get(...args: Parameters<RentalRepository['get']>): ReturnType<RentalRepository['get']> {
+  get(...args: Parameters<RentalOrderReader['get']>): ReturnType<RentalOrderReader['get']> {
     return get(this.prisma, ...args);
   }
 
   getStatus(
-    ...args: Parameters<RentalRepository['getStatus']>
-  ): ReturnType<RentalRepository['getStatus']> {
+    ...args: Parameters<RentalOrderReader['getStatus']>
+  ): ReturnType<RentalOrderReader['getStatus']> {
     return getStatus(this.prisma, ...args);
   }
 
   getSchedule(
-    ...args: Parameters<RentalRepository['getSchedule']>
-  ): ReturnType<RentalRepository['getSchedule']> {
+    ...args: Parameters<RentalOrderReader['getSchedule']>
+  ): ReturnType<RentalOrderReader['getSchedule']> {
     return getSchedule(this.prisma, ...args);
   }
 
   async transition(
-    ...args: Parameters<RentalRepository['transition']>
-  ): ReturnType<RentalRepository['transition']> {
+    ...args: Parameters<RentalLifecycleRepository['transition']>
+  ): ReturnType<RentalLifecycleRepository['transition']> {
     const policy = await this.policies.getPolicy(args[0].shopId);
     return transition(this.prisma, args[0], policy, this.clock);
   }
 
   async reschedule(
-    ...args: Parameters<RentalRepository['reschedule']>
-  ): ReturnType<RentalRepository['reschedule']> {
+    ...args: Parameters<RentalLifecycleRepository['reschedule']>
+  ): ReturnType<RentalLifecycleRepository['reschedule']> {
     const policy = await this.policies.getPolicy(args[0].shopId);
     return reschedule(this.prisma, args[0], policy);
   }
 
   addCharge(
-    ...args: Parameters<RentalRepository['addCharge']>
-  ): ReturnType<RentalRepository['addCharge']> {
+    ...args: Parameters<RentalLifecycleRepository['addCharge']>
+  ): ReturnType<RentalLifecycleRepository['addCharge']> {
     return addCharge(this.prisma, ...args);
   }
 
-  async receiveReturn(input: Parameters<RentalRepository['receiveReturn']>[0]) {
+  async receiveReturn(input: Parameters<RentalLifecycleRepository['receiveReturn']>[0]) {
     const policy = await this.policies.getPolicy(input.shopId);
     return receiveReturn(this.prisma, input, policy, this.clock);
   }
 
-  async settleOrder(input: Parameters<RentalRepository['settleOrder']>[0]) {
+  async settleOrder(input: Parameters<RentalLifecycleRepository['settleOrder']>[0]) {
     const policy = await this.policies.getPolicy(input.shopId);
     return settleOrder(this.prisma, input, policy, this.clock);
   }
@@ -129,14 +144,14 @@ export class PrismaRentalRepository implements RentalRepository {
   }
 
   claimIdempotency(
-    ...args: Parameters<RentalRepository['claimIdempotency']>
-  ): ReturnType<RentalRepository['claimIdempotency']> {
+    ...args: Parameters<RentalCreationRepository['claimIdempotency']>
+  ): ReturnType<RentalCreationRepository['claimIdempotency']> {
     return claimIdempotency(this.prisma, this.clock, ...args);
   }
 
   releaseIdempotency(
-    ...args: Parameters<RentalRepository['releaseIdempotency']>
-  ): ReturnType<RentalRepository['releaseIdempotency']> {
+    ...args: Parameters<RentalCreationRepository['releaseIdempotency']>
+  ): ReturnType<RentalCreationRepository['releaseIdempotency']> {
     return releaseIdempotency(this.prisma, ...args);
   }
 
@@ -144,26 +159,26 @@ export class PrismaRentalRepository implements RentalRepository {
     shopId: string,
     productId: string,
     storefrontEligibility?: boolean,
-  ): ReturnType<RentalRepository['findActiveVariantIdsByProduct']> {
+  ): ReturnType<RentalAvailabilityReader['findActiveVariantIdsByProduct']> {
     return findActiveVariantIdsByProduct(this.prisma, shopId, productId, storefrontEligibility);
   }
 
   lookupStorefrontOrder(
     shopId: string,
     orderNumber: string,
-  ): ReturnType<RentalRepository['lookupStorefrontOrder']> {
+  ): ReturnType<RentalOrderReader['lookupStorefrontOrder']> {
     return lookupStorefrontOrder(this.prisma, shopId, orderNumber);
   }
 
   listWebAccountOrders(
-    ...args: Parameters<RentalRepository['listWebAccountOrders']>
-  ): ReturnType<RentalRepository['listWebAccountOrders']> {
+    ...args: Parameters<WebAccountRentalOrdersReader['listWebAccountOrders']>
+  ): ReturnType<WebAccountRentalOrdersReader['listWebAccountOrders']> {
     return listWebAccountOrders(this.prisma, ...args);
   }
 
   getWebAccountOrder(
-    ...args: Parameters<RentalRepository['getWebAccountOrder']>
-  ): ReturnType<RentalRepository['getWebAccountOrder']> {
+    ...args: Parameters<WebAccountRentalOrdersReader['getWebAccountOrder']>
+  ): ReturnType<WebAccountRentalOrdersReader['getWebAccountOrder']> {
     return getWebAccountOrder(this.prisma, ...args);
   }
 }

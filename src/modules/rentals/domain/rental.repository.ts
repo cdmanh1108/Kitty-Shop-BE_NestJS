@@ -85,14 +85,34 @@ export interface CreateRentalOrderData {
   collateral?: { method: 'CASH' | 'DOCUMENT'; documentType?: 'CCCD' | 'GPLX' };
 }
 
-export const RENTAL_REPOSITORY = Symbol('RENTAL_REPOSITORY');
+export const RENTAL_AVAILABILITY_READER = Symbol('RENTAL_AVAILABILITY_READER');
+export const RENTAL_CREATION_VALIDATOR = Symbol('RENTAL_CREATION_VALIDATOR');
+export const RENTAL_CREATION_REPOSITORY = Symbol('RENTAL_CREATION_REPOSITORY');
+export const RENTAL_ORDER_READER = Symbol('RENTAL_ORDER_READER');
+export const RENTAL_LIFECYCLE_REPOSITORY = Symbol('RENTAL_LIFECYCLE_REPOSITORY');
+export const WEB_ACCOUNT_RENTAL_ORDERS_READER = Symbol('WEB_ACCOUNT_RENTAL_ORDERS_READER');
 
-export interface RentalRepository {
-  confirm(input: ConfirmRentalData): Promise<RentalOrderDetails>;
+export interface RentalAvailabilityReader {
+  getBookableVariant(input: RentalGetBookableVariantData): Promise<BookableVariant | null>;
+  findActiveVariantIdsByProduct(
+    shopId: string,
+    productId: string,
+    storefrontEligibility?: boolean,
+  ): Promise<string[]>;
+}
+
+export interface RentalCreationRepository {
+  createOrder(data: CreateRentalOrderData): Promise<RentalOrderDetails>;
+  claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
+  releaseIdempotency(shopId: string, scope: string, key: string, claimId: string): Promise<void>;
+}
+
+export interface RentalCreationValidator {
   customerExists(shopId: string, customerId: string): Promise<boolean>;
   locationExists(shopId: string, locationId: string): Promise<boolean>;
-  getBookableVariant(input: RentalGetBookableVariantData): Promise<BookableVariant | null>;
-  createOrder(data: CreateRentalOrderData): Promise<RentalOrderDetails>;
+}
+
+export interface RentalOrderReader {
   list(input: RentalListCriteria): Promise<RentalOrderPage>;
   get(shopId: string, id: string): Promise<RentalOrderDetails>;
   getStatus(shopId: string, id: string): Promise<string | null>;
@@ -100,24 +120,24 @@ export interface RentalRepository {
     shopId: string,
     id: string,
   ): Promise<{ status: string; rentalStartAt: Date; rentalEndAt: Date } | null>;
-  transition(input: RentalTransitionData): Promise<RentalOrderDetails>;
-  receiveReturn(input: ReceiveRentalReturnData): Promise<RentalOrderDetails>;
-  settleOrder(input: SettleRentalOrderData): Promise<RentalOrderDetails>;
   getReturnPreview(shopId: string, orderId: string, returnedAt?: Date): Promise<ReturnPreviewData>;
-  reschedule(input: RentalRescheduleData): Promise<RentalOrderDetails>;
-  addCharge(input: RentalAddChargeData): Promise<RentalOrderDetails>;
-  returnCollateral(shopId: string, orderId: string, changedBy: string): Promise<RentalOrderDetails>;
-  claimIdempotency(input: RentalClaimIdempotencyData): Promise<IdempotencyClaim>;
-  releaseIdempotency(shopId: string, scope: string, key: string, claimId: string): Promise<void>;
-  findActiveVariantIdsByProduct(
-    shopId: string,
-    productId: string,
-    storefrontEligibility?: boolean,
-  ): Promise<string[]>;
   lookupStorefrontOrder(
     shopId: string,
     orderNumber: string,
   ): Promise<StorefrontOrderLookupRecord | null>;
+}
+
+export interface RentalLifecycleRepository {
+  confirm(input: ConfirmRentalData): Promise<RentalOrderDetails>;
+  transition(input: RentalTransitionData): Promise<RentalOrderDetails>;
+  receiveReturn(input: ReceiveRentalReturnData): Promise<RentalOrderDetails>;
+  settleOrder(input: SettleRentalOrderData): Promise<RentalOrderDetails>;
+  reschedule(input: RentalRescheduleData): Promise<RentalOrderDetails>;
+  addCharge(input: RentalAddChargeData): Promise<RentalOrderDetails>;
+  returnCollateral(shopId: string, orderId: string, changedBy: string): Promise<RentalOrderDetails>;
+}
+
+export interface WebAccountRentalOrdersReader {
   listWebAccountOrders(
     input: WebAccountRentalOrderListCriteria,
   ): Promise<WebAccountRentalOrderPage>;

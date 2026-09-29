@@ -23,9 +23,13 @@ import {
 } from '@modules/settings/domain/rental-policy';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
-  RENTAL_REPOSITORY,
+  RENTAL_AVAILABILITY_READER,
+  RENTAL_CREATION_REPOSITORY,
+  RENTAL_ORDER_READER,
   type CreateRentalOrderData,
-  type RentalRepository,
+  type RentalAvailabilityReader,
+  type RentalCreationRepository,
+  type RentalOrderReader,
 } from '../domain/rental.repository';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type {
@@ -81,7 +85,11 @@ function stableJson(value: StableJsonValue): string {
 @Injectable()
 export class WebRentalService {
   constructor(
-    @Inject(RENTAL_REPOSITORY) private readonly repository: RentalRepository,
+    @Inject(RENTAL_CREATION_REPOSITORY)
+    private readonly creation: RentalCreationRepository,
+    @Inject(RENTAL_AVAILABILITY_READER)
+    private readonly availability: RentalAvailabilityReader,
+    @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
     @Inject(RENTAL_POLICY_PROVIDER) private readonly policyProvider: RentalPolicyProvider,
     @Inject(CUSTOMER_REPOSITORY) private readonly customerRepository: CustomerRepository,
     @Inject(CLOCK) private readonly clock: Clock,
@@ -96,7 +104,7 @@ export class WebRentalService {
 
     const durationDays = calculateRentalDurationDays(from, until);
 
-    const selection = await resolveWebRentalSelection(this.repository, {
+    const selection = await resolveWebRentalSelection(this.availability, {
       shopId,
       items: [{ productId: query.productId, variantId: query.variantId, quantity: 1 }],
       durationDays,
@@ -120,7 +128,7 @@ export class WebRentalService {
 
     const policy = await this.policyProvider.getPolicy(shopId);
     const durationDays = calculateRentalDurationDays(from, until);
-    const selection = await resolveWebRentalSelection(this.repository, {
+    const selection = await resolveWebRentalSelection(this.availability, {
       shopId,
       items: req.items,
       durationDays,
@@ -172,9 +180,14 @@ export class WebRentalService {
 
     const idempotencyKey = this.requireIdempotencyKey(rawIdempotencyKey);
     const requestHash = createHash('sha256')
-      .update(stableJson({ ownerScope: this.ownerScope(owner.webAccountId), command: this.webCommandIdentity(req) }))
+      .update(
+        stableJson({
+          ownerScope: this.ownerScope(owner.webAccountId),
+          command: this.webCommandIdentity(req),
+        }),
+      )
       .digest('hex');
-    const claim = await this.repository.claimIdempotency({
+    const claim = await this.creation.claimIdempotency({
       shopId,
       scope: WEB_CREATE_IDEMPOTENCY_SCOPE,
       key: idempotencyKey,
@@ -220,7 +233,7 @@ export class WebRentalService {
         }
       }
 
-      const selection = await resolveWebRentalSelection(this.repository, {
+      const selection = await resolveWebRentalSelection(this.availability, {
         shopId,
         items: req.items,
         durationDays,
@@ -292,7 +305,7 @@ export class WebRentalService {
         throw error;
       }
 
-      const order = await this.repository.createOrder({
+      const order = await this.creation.createOrder({
         orderNumber: generateDatedReference('RT'),
         shopId,
         customerId: customer.id,
@@ -337,7 +350,7 @@ export class WebRentalService {
       return toWebRentalCreateResult(order);
     } catch (error) {
       try {
-        await this.repository.releaseIdempotency(
+        await this.creation.releaseIdempotency(
           shopId,
           WEB_CREATE_IDEMPOTENCY_SCOPE,
           idempotencyKey,
@@ -467,7 +480,7 @@ export class WebRentalService {
       throw new NotFoundException('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
     }
 
-    const order = await this.repository.lookupStorefrontOrder(shopId, req.orderCode);
+    const order = await this.orderReader.lookupStorefrontOrder(shopId, req.orderCode);
 
     if (!order || order.customerNormalizedPhone !== normalizedPhone) {
       throw new NotFoundException('Không tìm thấy đơn thuê với thông tin đã cung cấp.');

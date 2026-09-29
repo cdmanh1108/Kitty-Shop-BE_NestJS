@@ -24,7 +24,14 @@ describe('Storefront rental eligibility boundary', () => {
       log: () => Promise.resolve(),
     });
     rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(rentals, settings, new PrismaCustomerRepository(prisma), fixedClock);
+    web = new WebRentalService(
+      rentals,
+      rentals,
+      rentals,
+      settings,
+      new PrismaCustomerRepository(prisma),
+      fixedClock,
+    );
   });
 
   beforeEach(async () => {

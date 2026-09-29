@@ -11,7 +11,12 @@ import { OBJECT_STORAGE_PORT, type ObjectStoragePort } from '@common/storage/obj
 import { validateAndHashImage } from '@common/storage/storage-key.builder';
 import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser } from '@common/types/current-user';
-import { RENTAL_REPOSITORY, type RentalRepository } from '../domain/rental.repository';
+import {
+  RENTAL_LIFECYCLE_REPOSITORY,
+  RENTAL_ORDER_READER,
+  type RentalLifecycleRepository,
+  type RentalOrderReader,
+} from '../domain/rental.repository';
 import type { SettleRentalOrderInput } from './rental.contracts';
 
 export interface SettlementImage {
@@ -25,7 +30,9 @@ export class RentalSettlementService {
   private readonly logger = new Logger(RentalSettlementService.name);
 
   constructor(
-    @Inject(RENTAL_REPOSITORY) private readonly repository: RentalRepository,
+    @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
+    @Inject(RENTAL_LIFECYCLE_REPOSITORY)
+    private readonly lifecycle: RentalLifecycleRepository,
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
   ) {}
 
@@ -36,7 +43,7 @@ export class RentalSettlementService {
     file?: SettlementImage,
   ) {
     this.authorize(user);
-    const order = await this.repository.get(user.shopId, orderId);
+    const order = await this.orderReader.get(user.shopId, orderId);
     if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
     if (order.status !== 'RETURNED') {
       throw new BadRequestException('Chỉ có thể kết toán đơn ở trạng thái đã nhận trả.');
@@ -90,7 +97,7 @@ export class RentalSettlementService {
         );
       }
 
-      const result = await this.repository.settleOrder({
+      const result = await this.lifecycle.settleOrder({
         shopId: user.shopId,
         orderId,
         actorMemberId: user.memberId,
@@ -108,7 +115,7 @@ export class RentalSettlementService {
     } catch (error) {
       if (evidence) {
         try {
-          const saved = await this.repository.get(user.shopId, orderId);
+          const saved = await this.orderReader.get(user.shopId, orderId);
           if (saved?.settlement?.evidenceKey !== evidence.key) {
             await this.storage.deleteObject(evidence.key, { purpose: 'cleanup' });
           }
@@ -122,7 +129,7 @@ export class RentalSettlementService {
 
   async evidence(user: CurrentUser, orderId: string) {
     this.authorize(user);
-    const order = await this.repository.get(user.shopId, orderId);
+    const order = await this.orderReader.get(user.shopId, orderId);
     const settlement = order?.settlement;
     if (!settlement?.evidenceKey || !settlement.evidenceMimeType) {
       throw new NotFoundException('Không tìm thấy ảnh bằng chứng kết toán.');

@@ -25,7 +25,14 @@ describe('Storefront rental selection and allocation', () => {
       log: () => Promise.resolve(),
     });
     rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(rentals, settings, new PrismaCustomerRepository(prisma), fixedClock);
+    web = new WebRentalService(
+      rentals,
+      rentals,
+      rentals,
+      settings,
+      new PrismaCustomerRepository(prisma),
+      fixedClock,
+    );
   });
 
   beforeEach(async () => {

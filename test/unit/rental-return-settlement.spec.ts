@@ -15,10 +15,42 @@ import { RentalSettlementService } from '../../src/modules/rentals/application/r
 import { RentalService } from '../../src/modules/rentals/application/rental.service';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
-import type { RentalRepository } from '../../src/modules/rentals/domain/rental.repository';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { Clock } from '../../src/common/clock/clock';
 import type { ObjectStoragePort } from '../../src/common/storage/object-storage.port';
+import {
+  rentalOrderDetailsFixture,
+  rentalSettlementFixture,
+} from '../fixtures/rental-order.fixture';
+import {
+  rentalOrderReaderMock,
+  rentalServicePorts,
+  rentalLifecycleRepositoryMock,
+} from '../fixtures/rental-ports.fixture';
+
+function storageMock(): jest.Mocked<ObjectStoragePort> {
+  return {
+    putObject: jest.fn(),
+    getObject: jest.fn(),
+    headObject: jest.fn(),
+    deleteObject: jest.fn(),
+    getPublicUrl: jest.fn(),
+  };
+}
+
+function rentalServiceForGuards(ports: ReturnType<typeof rentalServicePorts>): RentalService {
+  const audit: AuditPort = { log: () => Promise.resolve() };
+  const clock: Clock = { now: () => new Date() };
+  return new RentalService(
+    ports.creation,
+    ports.creationValidator,
+    ports.availability,
+    ports.orderReader,
+    ports.lifecycle,
+    audit,
+    clock,
+  );
+}
 
 describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
   const policy = DEFAULT_RENTAL_POLICY;
@@ -313,10 +345,8 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
     };
 
     it('rejects receiveReturn if user lacks rentals.return permission', async () => {
-      const mockRepo = { get: jest.fn() } as unknown as RentalRepository;
-      const mockAudit = { log: jest.fn() } as unknown as AuditPort;
-      const mockClock = { now: () => new Date() } as unknown as Clock;
-      const service = new RentalService(mockRepo, mockAudit, mockClock);
+      const ports = rentalServicePorts();
+      const service = rentalServiceForGuards(ports);
 
       await expect(
         service.receiveReturn(userWithoutPerms, 'order-1', {
@@ -326,15 +356,11 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
     });
 
     it('rejects receiveReturn if order is not ACTIVE', async () => {
-      const mockRepo = {
-        get: jest.fn().mockResolvedValue({
-          id: 'order-1',
-          status: RENTAL_STATUS.RESERVED,
-        }),
-      } as unknown as RentalRepository;
-      const mockAudit = { log: jest.fn() } as unknown as AuditPort;
-      const mockClock = { now: () => new Date() } as unknown as Clock;
-      const service = new RentalService(mockRepo, mockAudit, mockClock);
+      const ports = rentalServicePorts();
+      ports.orderReader.get.mockResolvedValue(
+        rentalOrderDetailsFixture({ status: RENTAL_STATUS.RESERVED }),
+      );
+      const service = rentalServiceForGuards(ports);
 
       await expect(
         service.receiveReturn(userWithReturn, 'order-1', {
@@ -344,16 +370,14 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
     });
 
     it('rejects addCharge if order is already settled', async () => {
-      const mockRepo = {
-        get: jest.fn().mockResolvedValue({
-          id: 'order-1',
+      const ports = rentalServicePorts();
+      ports.orderReader.get.mockResolvedValue(
+        rentalOrderDetailsFixture({
           status: RENTAL_STATUS.RETURNED,
-          settlement: { id: 'settle-1' },
+          settlement: rentalSettlementFixture(),
         }),
-      } as unknown as RentalRepository;
-      const mockAudit = { log: jest.fn() } as unknown as AuditPort;
-      const mockClock = { now: () => new Date() } as unknown as Clock;
-      const service = new RentalService(mockRepo, mockAudit, mockClock);
+      );
+      const service = rentalServiceForGuards(ports);
 
       await expect(
         service.addCharge(userWithReturn, 'order-1', {
@@ -365,9 +389,11 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
     });
 
     it('rejects settle if user lacks rentals.settle permission', async () => {
-      const mockRepo = { get: jest.fn() } as unknown as RentalRepository;
-      const mockStorage = { putObject: jest.fn() } as unknown as ObjectStoragePort;
-      const settlementService = new RentalSettlementService(mockRepo, mockStorage);
+      const settlementService = new RentalSettlementService(
+        rentalOrderReaderMock(),
+        rentalLifecycleRepositoryMock(),
+        storageMock(),
+      );
 
       await expect(
         settlementService.settle(userWithoutPerms, 'order-1', {}),
@@ -375,14 +401,15 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
     });
 
     it('rejects settle if order is not in RETURNED status', async () => {
-      const mockRepo = {
-        get: jest.fn().mockResolvedValue({
-          id: 'order-1',
-          status: RENTAL_STATUS.ACTIVE,
-        }),
-      } as unknown as RentalRepository;
-      const mockStorage = { putObject: jest.fn() } as unknown as ObjectStoragePort;
-      const settlementService = new RentalSettlementService(mockRepo, mockStorage);
+      const orderReader = rentalOrderReaderMock();
+      orderReader.get.mockResolvedValue(
+        rentalOrderDetailsFixture({ status: RENTAL_STATUS.ACTIVE }),
+      );
+      const settlementService = new RentalSettlementService(
+        orderReader,
+        rentalLifecycleRepositoryMock(),
+        storageMock(),
+      );
 
       await expect(settlementService.settle(userWithSettle, 'order-1', {})).rejects.toThrow(
         'Chỉ có thể kết toán đơn ở trạng thái đã nhận trả.',
@@ -390,15 +417,18 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
     });
 
     it('rejects settle if order is already settled', async () => {
-      const mockRepo = {
-        get: jest.fn().mockResolvedValue({
-          id: 'order-1',
+      const orderReader = rentalOrderReaderMock();
+      orderReader.get.mockResolvedValue(
+        rentalOrderDetailsFixture({
           status: RENTAL_STATUS.RETURNED,
-          settlement: { id: 'settlement-1' },
+          settlement: rentalSettlementFixture(),
         }),
-      } as unknown as RentalRepository;
-      const mockStorage = { putObject: jest.fn() } as unknown as ObjectStoragePort;
-      const settlementService = new RentalSettlementService(mockRepo, mockStorage);
+      );
+      const settlementService = new RentalSettlementService(
+        orderReader,
+        rentalLifecycleRepositoryMock(),
+        storageMock(),
+      );
 
       await expect(settlementService.settle(userWithSettle, 'order-1', {})).rejects.toThrow(
         'Đơn thuê này đã được kết toán.',

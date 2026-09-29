@@ -3,8 +3,10 @@ import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
-  RENTAL_REPOSITORY,
-  type RentalRepository,
+  RENTAL_LIFECYCLE_REPOSITORY,
+  WEB_ACCOUNT_RENTAL_ORDERS_READER,
+  type RentalLifecycleRepository,
+  type WebAccountRentalOrdersReader,
   type WebAccountRentalOrderDetail,
   type WebAccountRentalOrderPage,
 } from '../domain/rental.repository';
@@ -25,7 +27,10 @@ const SELF_CANCELLABLE_DEPOSIT_STATUSES = new Set<string>([
 @Injectable()
 export class WebAccountRentalOrdersService {
   constructor(
-    @Inject(RENTAL_REPOSITORY) private readonly rentals: RentalRepository,
+    @Inject(WEB_ACCOUNT_RENTAL_ORDERS_READER)
+    private readonly rentals: WebAccountRentalOrdersReader,
+    @Inject(RENTAL_LIFECYCLE_REPOSITORY)
+    private readonly lifecycle: RentalLifecycleRepository,
     private readonly shops: ShopResolver,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
@@ -67,7 +72,7 @@ export class WebAccountRentalOrdersService {
     }
 
     try {
-      const cancelled = await this.rentals.transition({
+      const cancelled = await this.lifecycle.transition({
         shopId,
         orderId: order.id,
         fromStatuses: [RENTAL_STATUS.RESERVED],
