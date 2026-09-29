@@ -12,6 +12,7 @@ import {
   type WebAccountRentalOrderListCriteria,
 } from '../domain/rental.repository';
 import type { RentalStatus } from '../domain/rental-status';
+import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { calculateRentalPaymentTotals } from '../domain/rental-settlement';
 
 export async function customerExists(
@@ -210,6 +211,7 @@ export async function lookupStorefrontOrder(
     where: {
       shopId,
       orderNumber: orderNumber.trim(),
+      source: RENTAL_ORDER_SOURCE.ONLINE,
     },
     include: {
       customer: true,
