@@ -5,6 +5,13 @@ export interface VerificationCodeSender {
   send(destination: string, code: string, challengeId: string): Promise<void>;
 }
 
+export class VerificationCodeDeliveryError extends Error {
+  constructor(readonly reason: 'provider_rejected' | 'provider_unavailable') {
+    super('Verification code delivery failed');
+    this.name = 'VerificationCodeDeliveryError';
+  }
+}
+
 export interface VerificationCodeGenerator {
   generate(): string;
 }

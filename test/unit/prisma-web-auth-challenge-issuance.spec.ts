@@ -26,6 +26,8 @@ const oldChallenge: OtpChallenge = {
   attemptCount: 0,
   consumedAt: null,
   createdAt: now,
+  deliveryStatus: 'SENT',
+  retryAnchorId: null,
 };
 const newChallenge = {
   id: '00000000-0000-4000-8000-000000000004',
@@ -34,6 +36,8 @@ const newChallenge = {
   expiresAt: new Date(now.getTime() + 300_000),
   resendAvailableAt: new Date(now.getTime() + 60_000),
   createdAt: now,
+  deliveryStatus: 'PENDING' as const,
+  retryAnchorId: null,
 };
 
 function setup() {
@@ -128,14 +132,23 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
       .mockResolvedValueOnce({ accountId: account.id })
       .mockResolvedValueOnce(oldChallenge);
     tx.webOtpChallenge.findFirst
-      .mockResolvedValueOnce({ id: oldChallenge.id })
+      .mockResolvedValueOnce({
+        id: oldChallenge.id,
+        deliveryStatus: 'SENT',
+        retryAnchorId: null,
+        registrationAttemptId: account.registrationAttemptId,
+      })
       .mockResolvedValueOnce({ resendAvailableAt: new Date(now.getTime() - 1) });
     tx.webOtpChallenge.create.mockResolvedValue(created);
 
     const result = await repository.issueVerificationChallenge({
       kind: 'resend',
       challengeId: oldChallenge.id,
-      challenge: { ...newChallenge, registrationAttemptId: undefined },
+      challenge: {
+        ...newChallenge,
+        registrationAttemptId: undefined,
+        retryAnchorId: oldChallenge.id,
+      },
       now,
     });
 
@@ -152,6 +165,12 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
     tx.webOtpChallenge.findUnique
       .mockResolvedValueOnce({ accountId: account.id })
       .mockResolvedValueOnce({ ...oldChallenge, consumedAt: now });
+    tx.webOtpChallenge.findFirst.mockResolvedValue({
+      id: newChallenge.id,
+      deliveryStatus: 'SENT',
+      retryAnchorId: null,
+      registrationAttemptId: account.registrationAttemptId,
+    });
 
     const result = await repository.issueVerificationChallenge({
       kind: 'resend',
@@ -162,6 +181,47 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
 
     expect(result).toEqual({ error: 'OTP_CONSUMED' });
     expect(tx.webOtpChallenge.create).not.toHaveBeenCalled();
+  });
+
+  it('retries a failed resend from its consumed source challenge after the short deadline', async () => {
+    const { tx, repository } = setup();
+    const failedChallengeId = newChallenge.id;
+    const replacement = {
+      ...newChallenge,
+      id: '00000000-0000-4000-8000-000000000006',
+      accountId: account.id,
+      registrationAttemptId: account.registrationAttemptId,
+      retryAnchorId: oldChallenge.id,
+    };
+    tx.webOtpChallenge.findUnique
+      .mockResolvedValueOnce({ accountId: account.id })
+      .mockResolvedValueOnce({ ...oldChallenge, consumedAt: now });
+    tx.webOtpChallenge.findFirst
+      .mockResolvedValueOnce({
+        id: failedChallengeId,
+        deliveryStatus: 'FAILED',
+        retryAnchorId: oldChallenge.id,
+        registrationAttemptId: account.registrationAttemptId,
+      })
+      .mockResolvedValueOnce({ resendAvailableAt: new Date(now.getTime() - 1) });
+    tx.webOtpChallenge.create.mockResolvedValue(replacement);
+
+    const result = await repository.issueVerificationChallenge({
+      kind: 'resend',
+      challengeId: oldChallenge.id,
+      challenge: {
+        ...newChallenge,
+        id: replacement.id,
+        retryAnchorId: oldChallenge.id,
+      },
+      now,
+    });
+
+    expect(result).toEqual({ email: account.email, challenge: replacement });
+    expect(tx.webOtpChallenge.updateMany).toHaveBeenCalledWith({
+      where: { accountId: account.id, consumedAt: null },
+      data: { consumedAt: now },
+    });
   });
 
   it('does not resend to a legacy account without an email destination', async () => {

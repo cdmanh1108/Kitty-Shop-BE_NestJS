@@ -3,6 +3,11 @@ import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { compare } from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
+import {
+  VerificationCodeDeliveryError,
+  VERIFICATION_CODE_SENDER,
+  type VerificationCodeSender,
+} from '../../src/modules/web-auth/domain/verification-code';
 import { createTestApp } from '../helpers/test-app';
 import {
   connectTestDatabase,
@@ -54,15 +59,33 @@ const expectCode =
   };
 
 describe('Web authentication end-to-end', () => {
+  let failNextDelivery = false;
+  const sendVerificationCode = jest.fn<
+    ReturnType<VerificationCodeSender['send']>,
+    Parameters<VerificationCodeSender['send']>
+  >();
   let app: INestApplication;
   let server: Server;
   let prisma: PrismaService;
   beforeAll(async () => {
     prisma = await connectTestDatabase();
-    app = await createTestApp();
+    sendVerificationCode.mockImplementation(() => {
+      if (failNextDelivery) {
+        failNextDelivery = false;
+        return Promise.reject(new VerificationCodeDeliveryError('provider_rejected'));
+      }
+      return Promise.resolve();
+    });
+    app = await createTestApp((builder) =>
+      builder.overrideProvider(VERIFICATION_CODE_SENDER).useValue({ send: sendVerificationCode }),
+    );
     server = app.getHttpServer() as Server;
   });
-  beforeEach(async () => resetTestDatabase(prisma));
+  beforeEach(async () => {
+    failNextDelivery = false;
+    sendVerificationCode.mockClear();
+    await resetTestDatabase(prisma);
+  });
   afterAll(async () => {
     await app.close();
     await disconnectTestDatabase();
@@ -309,6 +332,99 @@ describe('Web authentication end-to-end', () => {
       .send({ challengeId: responseValue(resent, 'challengeId'), otp: '123456' })
       .expect(400)
       .expect(expectCode('OTP_CONSUMED'));
+  });
+
+  it('fails registration on provider error and allows one replacement after the short persisted retry delay', async () => {
+    failNextDelivery = true;
+    const failedResponse = await register(server)
+      .expect(503)
+      .expect(expectCode('VERIFICATION_DELIVERY_FAILED'));
+    expect(bodyRecord(failedResponse.body).message).toBe(
+      'Không thể gửi mã xác thực lúc này. Vui lòng thử lại sau.',
+    );
+    expect(JSON.stringify(failedResponse.body)).not.toContain('Domain not verified');
+    expect(JSON.stringify(failedResponse.body)).not.toContain('resend_api_key');
+
+    const account = await prisma.webAccount.findUniqueOrThrow({
+      where: { email: 'user@example.test' },
+    });
+    const failedChallenge = await prisma.webOtpChallenge.findFirstOrThrow({
+      where: { accountId: account.id },
+    });
+    expect(failedChallenge.deliveryStatus).toBe('FAILED');
+    expect(failedChallenge.retryAnchorId).toBeNull();
+    expect(failedChallenge.resendAvailableAt.getTime()).toBeGreaterThan(Date.now());
+    expect(failedChallenge.resendAvailableAt.getTime()).toBeLessThanOrEqual(Date.now() + 10_000);
+    await request(server)
+      .post('/api/v1/web/auth/verify-otp')
+      .send({ challengeId: failedChallenge.id, otp: '123456' })
+      .expect(400)
+      .expect(expectCode('OTP_CONSUMED'));
+    await register(server, 'user@example.test')
+      .expect(429)
+      .expect(expectCode('OTP_RESEND_TOO_SOON'));
+
+    await prisma.webOtpChallenge.update({
+      where: { id: failedChallenge.id },
+      data: { resendAvailableAt: new Date(Date.now() - 1000) },
+    });
+    const retry = await register(server, 'user@example.test').expect(201);
+    const retryId = responseValue(retry, 'challengeId');
+    const sentChallenge = await prisma.webOtpChallenge.findUniqueOrThrow({
+      where: { id: retryId },
+    });
+    expect(sentChallenge.deliveryStatus).toBe('SENT');
+    expect(
+      (await prisma.webOtpChallenge.findUniqueOrThrow({ where: { id: failedChallenge.id } }))
+        .consumedAt,
+    ).toBeInstanceOf(Date);
+    await request(server)
+      .post('/api/v1/web/auth/verify-otp')
+      .send({ challengeId: retryId, otp: '123456' })
+      .expect(200);
+    expect(sendVerificationCode).toHaveBeenCalledTimes(2);
+  });
+
+  it('allows resend retry from its consumed source ID after delivery failure without reviving prior codes', async () => {
+    const registration = await register(server).expect(201);
+    const originalId = responseValue(registration, 'challengeId');
+    await prisma.webOtpChallenge.update({
+      where: { id: originalId },
+      data: { resendAvailableAt: new Date(Date.now() - 1000) },
+    });
+
+    failNextDelivery = true;
+    await resend(server, originalId).expect(503).expect(expectCode('VERIFICATION_DELIVERY_FAILED'));
+    const failedRetry = await prisma.webOtpChallenge.findFirstOrThrow({
+      where: { consumedAt: null },
+    });
+    expect(failedRetry.deliveryStatus).toBe('FAILED');
+    expect(failedRetry.retryAnchorId).toBe(originalId);
+    await prisma.webOtpChallenge.update({
+      where: { id: failedRetry.id },
+      data: { resendAvailableAt: new Date(Date.now() - 1000) },
+    });
+
+    const retried = await resend(server, originalId).expect(200);
+    const currentId = responseValue(retried, 'challengeId');
+    const current = await prisma.webOtpChallenge.findUniqueOrThrow({ where: { id: currentId } });
+    expect(current.deliveryStatus).toBe('SENT');
+    expect(current.id).not.toBe(failedRetry.id);
+    await request(server)
+      .post('/api/v1/web/auth/verify-otp')
+      .send({ challengeId: originalId, otp: '123456' })
+      .expect(400)
+      .expect(expectCode('OTP_CONSUMED'));
+    await request(server)
+      .post('/api/v1/web/auth/verify-otp')
+      .send({ challengeId: failedRetry.id, otp: '123456' })
+      .expect(400)
+      .expect(expectCode('OTP_CONSUMED'));
+    await request(server)
+      .post('/api/v1/web/auth/verify-otp')
+      .send({ challengeId: currentId, otp: '123456' })
+      .expect(200);
+    expect(sendVerificationCode).toHaveBeenCalledTimes(3);
   });
 
   it('applies the same cooldown to registration retries and invalidates the old OTP', async () => {

@@ -12,6 +12,14 @@ enum RentalOrderSource {
   OFFLINE
 }
 
+enum WebOtpDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+
+  @@map("web_otp_delivery_status")
+}
+
 // Storefront identity is separate from staff membership and tenant CRM records.
 model WebAccount {
   id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -39,16 +47,18 @@ model WebAccount {
 }
 
 model WebOtpChallenge {
-  id                    String     @id @db.Uuid
-  accountId             String     @map("account_id") @db.Uuid
-  otpHash               String     @map("otp_hash") @db.Char(64)
-  registrationAttemptId String?    @map("registration_attempt_id") @db.Uuid
-  expiresAt             DateTime   @map("expires_at") @db.Timestamptz(6)
-  resendAvailableAt     DateTime   @map("resend_available_at") @db.Timestamptz(6)
-  attemptCount          Int        @default(0) @map("attempt_count")
-  consumedAt            DateTime?  @map("consumed_at") @db.Timestamptz(6)
-  createdAt             DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  account               WebAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id                    String               @id @db.Uuid
+  accountId             String               @map("account_id") @db.Uuid
+  otpHash               String               @map("otp_hash") @db.Char(64)
+  registrationAttemptId String?              @map("registration_attempt_id") @db.Uuid
+  deliveryStatus        WebOtpDeliveryStatus @default(SENT) @map("delivery_status")
+  retryAnchorId         String?              @map("retry_anchor_id") @db.Uuid
+  expiresAt             DateTime             @map("expires_at") @db.Timestamptz(6)
+  resendAvailableAt     DateTime             @map("resend_available_at") @db.Timestamptz(6)
+  attemptCount          Int                  @default(0) @map("attempt_count")
+  consumedAt            DateTime?            @map("consumed_at") @db.Timestamptz(6)
+  createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  account               WebAccount           @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId, createdAt])
   @@index([expiresAt])

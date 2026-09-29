@@ -19,12 +19,12 @@ import { FinanceInvariantError } from '@modules/finance/domain/finance.repositor
 import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
 import { mapCatalogErrorToHttpStatus } from '@modules/catalog/application/catalog-error-http.mapper';
 import { BookingCustomerUnavailableError } from '@modules/customers/domain/customer-errors';
-import {
-  CartInputError,
-  CartVersionConflictError,
-} from '@modules/cart/application/cart.service';
+import { CartInputError, CartVersionConflictError } from '@modules/cart/application/cart.service';
 
-const publicOperationalServerErrors = new Set(['OTP_DELIVERY_UNAVAILABLE']);
+const publicOperationalServerErrors = new Set([
+  'OTP_DELIVERY_UNAVAILABLE',
+  'VERIFICATION_DELIVERY_FAILED',
+]);
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {

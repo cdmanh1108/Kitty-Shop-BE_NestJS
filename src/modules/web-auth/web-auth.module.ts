@@ -15,10 +15,13 @@ import {
 import { WEB_AUTH_REPOSITORY } from './domain/web-auth.repository';
 import { VERIFICATION_CODE_GENERATOR, VERIFICATION_CODE_SENDER } from './domain/verification-code';
 import { PrismaWebAuthRepository } from './infrastructure/prisma-web-auth.repository';
+import { ConfiguredVerificationCodeGenerator } from './infrastructure/configured-verification-code.adapter';
 import {
-  ConfiguredVerificationCodeGenerator,
-  ConfiguredVerificationCodeSender,
-} from './infrastructure/configured-verification-code.adapter';
+  createResendEmailClient,
+  RESEND_EMAIL_CLIENT,
+  ResendVerificationCodeSender,
+  type ResendEmailClient,
+} from './infrastructure/resend-verification-code.sender';
 
 @Module({
   imports: [
@@ -40,7 +43,20 @@ import {
     WebAuthOriginGuard,
     { provide: WEB_AUTH_REPOSITORY, useClass: PrismaWebAuthRepository },
     { provide: VERIFICATION_CODE_GENERATOR, useClass: ConfiguredVerificationCodeGenerator },
-    { provide: VERIFICATION_CODE_SENDER, useClass: ConfiguredVerificationCodeSender },
+    {
+      provide: RESEND_EMAIL_CLIENT,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<AppConfiguration, true>): ResendEmailClient =>
+        createResendEmailClient(config.get('email', { infer: true }).resendApiKey),
+    },
+    {
+      provide: VERIFICATION_CODE_SENDER,
+      inject: [RESEND_EMAIL_CLIENT, ConfigService],
+      useFactory: (
+        client: ResendEmailClient,
+        config: ConfigService<AppConfiguration, true>,
+      ): ResendVerificationCodeSender => new ResendVerificationCodeSender(client, config),
+    },
   ],
   exports: [
     WebAuthCookies,

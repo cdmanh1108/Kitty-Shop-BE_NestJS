@@ -480,6 +480,9 @@ describe('authentication TTL configuration', () => {
     JWT_ACCESS_SECRET: secret,
     WEB_JWT_ACCESS_SECRET: 'W9qL2mN7vR4xK8pT6cF3hJ5sD1zB0yUa',
     AUTH_OTP_HASH_SECRET: 'Q4wE8rT2yU6iO0pA3sD7fG1hJ5kL9zXc',
+    RESEND_API_KEY: 're_test_only_not_a_real_key',
+    EMAIL_FROM_ADDRESS: 'no-reply@example.test',
+    EMAIL_FROM_NAME: 'Kitty Test',
   };
   it.each(['0', '-1', 'NaN', '', '0.5', 'Infinity', '9007199254740992'])(
     'rejects invalid lifetime %s',

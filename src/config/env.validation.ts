@@ -1,6 +1,7 @@
 import { parseObjectStorageConfiguration } from './object-storage.configuration';
 import { parseWebAuthConfiguration } from './web-auth.configuration';
 import { parseAuthCleanupConfiguration } from './auth-cleanup.configuration';
+import { parseEmailConfiguration } from './email.configuration';
 const required = (config: Record<string, unknown>, key: string): string => {
   const value = config[key];
   if (typeof value !== 'string' || value.trim() === '') {
@@ -25,6 +26,18 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     throw new Error('NODE_ENV phải là development, test hoặc production.');
   }
   const isProduction = config.NODE_ENV === 'production';
+  if (config.NODE_ENV !== 'test') {
+    const email = parseEmailConfiguration(config);
+    const resendApiKey = required(config, 'RESEND_API_KEY');
+    if (!resendApiKey.startsWith('re_'))
+      throw new Error('RESEND_API_KEY must be a valid Resend API key.');
+    const fromAddress = required(config, 'EMAIL_FROM_ADDRESS');
+    if (!/^[^\s<>@]+@[^\s<>.@]+(?:\.[^\s<>.@]+)+$/.test(fromAddress))
+      throw new Error('EMAIL_FROM_ADDRESS must be a valid email address.');
+    const fromName = email.fromName;
+    if (!fromName || fromName.length > 80 || /[\r\n<>]/.test(fromName))
+      throw new Error('EMAIL_FROM_NAME must be a non-empty display name of at most 80 characters.');
+  }
 
   if (
     config.LOG_LEVEL !== undefined &&

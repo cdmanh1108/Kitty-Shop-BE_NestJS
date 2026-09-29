@@ -39,6 +39,56 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
       throw error;
     }
   }
+
+  markVerificationDeliverySent(challengeId: string, now: Date): Promise<boolean> {
+    return this.updateDeliveryState(challengeId, {
+      deliveryStatus: 'SENT',
+      resendAvailableAt: undefined,
+      now,
+    });
+  }
+
+  markVerificationDeliveryFailed(challengeId: string, retryAvailableAt: Date): Promise<boolean> {
+    return this.updateDeliveryState(challengeId, {
+      deliveryStatus: 'FAILED',
+      resendAvailableAt: retryAvailableAt,
+      now: undefined,
+    });
+  }
+
+  private async updateDeliveryState(
+    challengeId: string,
+    update: {
+      deliveryStatus: 'SENT' | 'FAILED';
+      resendAvailableAt: Date | undefined;
+      now: Date | undefined;
+    },
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const challenge = await tx.webOtpChallenge.findUnique({
+        where: { id: challengeId },
+        select: { accountId: true },
+      });
+      if (!challenge) return false;
+      await tx.$queryRaw`SELECT id FROM web_accounts WHERE id = ${challenge.accountId}::uuid FOR UPDATE`;
+      const updated = await tx.webOtpChallenge.updateMany({
+        where: {
+          id: challengeId,
+          accountId: challenge.accountId,
+          consumedAt: null,
+          deliveryStatus: 'PENDING',
+          ...(update.deliveryStatus === 'SENT' && update.now
+            ? { expiresAt: { gt: update.now } }
+            : {}),
+        },
+        data: {
+          deliveryStatus: update.deliveryStatus,
+          ...(update.resendAvailableAt ? { resendAvailableAt: update.resendAvailableAt } : {}),
+        },
+      });
+      return updated.count === 1;
+    });
+  }
   private async issueFromRegistration(
     tx: Prisma.TransactionClient,
     request: Extract<ChallengeIssueRequest, { kind: 'register' }>,
@@ -105,14 +155,25 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
 
     const requested = await tx.webOtpChallenge.findUnique({ where: { id: request.challengeId } });
     if (!requested) return { error: 'OTP_CHALLENGE_NOT_FOUND' };
-    if (requested.consumedAt || requested.registrationAttemptId !== account.registrationAttemptId)
+    if (requested.registrationAttemptId !== account.registrationAttemptId)
       return { error: 'OTP_CONSUMED' };
     const active = await tx.webOtpChallenge.findFirst({
       where: { accountId: account.id, consumedAt: null },
-      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        deliveryStatus: true,
+        retryAnchorId: true,
+        registrationAttemptId: true,
+      },
     });
     if (!active) return { error: 'OTP_CHALLENGE_NOT_FOUND' };
-    if (active.id !== request.challengeId) return { error: 'OTP_CONSUMED' };
+    const retryAfterFailedDelivery =
+      active.deliveryStatus === 'FAILED' &&
+      active.retryAnchorId === request.challengeId &&
+      active.registrationAttemptId === account.registrationAttemptId;
+    const currentChallenge = active.id === request.challengeId && !requested.consumedAt;
+    if (!currentChallenge && !retryAfterFailedDelivery) return { error: 'OTP_CONSUMED' };
 
     const issued = await this.issueNextChallenge(
       tx,
@@ -133,6 +194,7 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
     // This stored deadline is the shared cooldown source for register retries and resends.
     const active = await tx.webOtpChallenge.findFirst({
       where: { accountId, consumedAt: null },
+      orderBy: { createdAt: 'desc' },
       select: { resendAvailableAt: true },
     });
     if (active && active.resendAvailableAt > now) return { error: 'OTP_RESEND_TOO_SOON' };
@@ -178,6 +240,7 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
       )
         return { error: 'OTP_CONSUMED' };
       if (challenge.consumedAt) return { error: 'OTP_CONSUMED' };
+      if (challenge.deliveryStatus !== 'SENT') return { error: 'OTP_CONSUMED' };
       if (challenge.expiresAt <= now) return { error: 'OTP_EXPIRED' };
       if (challenge.attemptCount >= maxAttempts) return { error: 'OTP_ATTEMPTS_EXCEEDED' };
       await tx.webOtpChallenge.update({ where: { id }, data: { attemptCount: { increment: 1 } } });

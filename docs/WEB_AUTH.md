@@ -16,11 +16,18 @@ At the application layer, `WebRegistrationService` owns registration, verificati
 including challenge generation and delivery. `WebSessionService` owns login, refresh, logout, and
 access-token account resolution. Both services share the `WebAuthRepository` persistence port.
 
-`VerificationCodeSender` is the delivery port. The configured test/development adapter is a no-op
-when `AUTH_OTP_BYPASS_ENABLED=true`; otherwise it reports that delivery is unavailable and leaves
-the account pending so it can be retried. `VerificationCodeGenerator` uses the configured test
-code only in bypass mode and cryptographic randomness otherwise. Production startup rejects the
-bypass setting. No production email vendor is configured yet.
+`VerificationCodeSender` is the delivery port and `ResendVerificationCodeSender` is the
+infrastructure adapter used in development and production. `RESEND_API_KEY`,
+`EMAIL_FROM_ADDRESS`, and `EMAIL_FROM_NAME` are required at startup outside automated tests.
+Verify the sender domain in Resend and publish its required DNS records before enabling real
+delivery.
+The Resend request runs after challenge persistence commits; a challenge becomes verifiable only
+after provider acceptance is persisted. Provider failure returns `VERIFICATION_DELIVERY_FAILED`
+and marks the active challenge failed with a short retry deadline. Its code cannot verify, the
+previous code remains consumed, and registration retry or a resend using the previous challenge ID
+can issue one replacement after that deadline. Normal successful deliveries keep the configured
+resend cooldown. `VerificationCodeGenerator` uses the configured test code only in bypass mode and
+cryptographic randomness otherwise. Production startup rejects the bypass setting.
 
 The email migration retains existing account IDs and their order, cart, favorite, audit, and
 refresh-token relations. Existing phone-only accounts have no safe email source, so their legacy

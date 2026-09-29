@@ -7,8 +7,10 @@ import {
   parseObjectStorageConfiguration,
   type ObjectStorageConfiguration,
 } from './object-storage.configuration';
+import { parseEmailConfiguration, type EmailConfiguration } from './email.configuration';
 export interface AppConfiguration {
   webAuth: WebAuthConfiguration;
+  email: EmailConfiguration;
   authCleanup: AuthCleanupConfiguration;
   nodeEnv: string;
   port: number;
@@ -43,6 +45,7 @@ export default (): AppConfiguration => {
 
   return {
     webAuth: parseWebAuthConfiguration(process.env),
+    email: parseEmailConfiguration(process.env),
     authCleanup: parseAuthCleanupConfiguration(process.env),
     nodeEnv,
     port: asNumber(process.env.PORT, 3007),

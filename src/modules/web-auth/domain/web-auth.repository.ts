@@ -29,7 +29,10 @@ export interface OtpChallenge {
   attemptCount: number;
   consumedAt: Date | null;
   createdAt: Date;
+  deliveryStatus: VerificationDeliveryStatus;
+  retryAnchorId: string | null;
 }
+export type VerificationDeliveryStatus = 'PENDING' | 'SENT' | 'FAILED';
 export type NewChallenge = Omit<OtpChallenge, 'accountId' | 'attemptCount' | 'consumedAt'>;
 export type OtpFailure =
   | 'OTP_CHALLENGE_NOT_FOUND'
@@ -76,6 +79,8 @@ export type WebRefreshRotationResult =
   | { outcome: 'REUSED' | 'REJECTED' | 'CONCURRENT' };
 export interface WebAuthRepository {
   issueVerificationChallenge(request: ChallengeIssueRequest): Promise<ChallengeIssueResult>;
+  markVerificationDeliverySent(challengeId: string, now: Date): Promise<boolean>;
+  markVerificationDeliveryFailed(challengeId: string, retryAvailableAt: Date): Promise<boolean>;
   findAccountByEmail(email: string): Promise<WebAccount | null>;
   findChallenge(id: string): Promise<OtpChallenge | null>;
   verify(id: string, otpHash: string, now: Date, maxAttempts: number): Promise<VerifyResult>;

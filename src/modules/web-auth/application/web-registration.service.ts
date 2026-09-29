@@ -1,12 +1,13 @@
 import { CLOCK, type Clock } from '@common/clock/clock';
 import type { AppConfiguration } from '@config/configuration';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { hash } from 'bcryptjs';
 import { createHmac, randomUUID } from 'node:crypto';
 import {
   VERIFICATION_CODE_GENERATOR,
   VERIFICATION_CODE_SENDER,
+  VerificationCodeDeliveryError,
   type VerificationCodeGenerator,
   type VerificationCodeSender,
 } from '../domain/verification-code';
@@ -23,6 +24,8 @@ import { authError } from './web-auth.errors';
 
 @Injectable()
 export class WebRegistrationService {
+  private readonly logger = new Logger(WebRegistrationService.name);
+
   constructor(
     @Inject(WEB_AUTH_REPOSITORY) private readonly repository: WebAuthRepository,
     @Inject(VERIFICATION_CODE_GENERATOR)
@@ -69,7 +72,7 @@ export class WebRegistrationService {
     const now = this.clock.now();
     const code = this.codeGenerator.generate();
     const registrationAttemptId = request.kind === 'register' ? request.attemptId : undefined;
-    const challenge = this.challenge(code, registrationAttemptId, now);
+    const challenge = this.challenge(code, registrationAttemptId, now, request);
     const issueRequest: ChallengeIssueRequest = { ...request, challenge, now };
     const result = await this.repository.issueVerificationChallenge(issueRequest);
     if ('error' in result) {
@@ -81,11 +84,49 @@ export class WebRegistrationService {
             : 400;
       authError(result.error, status);
     }
-    await this.codeSender.send(result.email, code, result.challenge.id);
+    const operation = request.kind;
+    let fallbackFailureReason = 'provider_unavailable';
+    try {
+      await this.codeSender.send(result.email, code, result.challenge.id);
+      fallbackFailureReason = 'delivery_state_update_failed';
+      const accepted = await this.repository.markVerificationDeliverySent(
+        result.challenge.id,
+        this.clock.now(),
+      );
+      if (!accepted) throw new Error('Verification delivery state was not updated');
+      this.logger.log(`Verification email accepted; operation=${operation}`);
+    } catch (error) {
+      const settings = this.config.get('webAuth', { infer: true });
+      const retrySeconds = Math.min(
+        settings.deliveryFailureRetrySeconds,
+        settings.resendCooldownSeconds,
+      );
+      try {
+        await this.repository.markVerificationDeliveryFailed(
+          result.challenge.id,
+          new Date(this.clock.now().getTime() + retrySeconds * 1000),
+        );
+      } catch {
+        this.logger.error(
+          `Could not persist verification delivery failure; operation=${operation}`,
+        );
+      }
+      const reason =
+        error instanceof VerificationCodeDeliveryError ? error.reason : fallbackFailureReason;
+      this.logger.error(
+        `Verification email delivery failed; operation=${operation}; reason=${reason}`,
+      );
+      authError('VERIFICATION_DELIVERY_FAILED', 503);
+    }
     return this.challengeResult(result.email, result.challenge);
   }
 
-  private challenge(code: string, registrationAttemptId: string | undefined, now: Date) {
+  private challenge(
+    code: string,
+    registrationAttemptId: string | undefined,
+    now: Date,
+    request: ChallengeIssueIntent,
+  ) {
     const settings = this.config.get('webAuth', { infer: true });
     const id = randomUUID();
     return {
@@ -95,6 +136,8 @@ export class WebRegistrationService {
       createdAt: now,
       expiresAt: new Date(now.getTime() + settings.otpTtlSeconds * 1000),
       resendAvailableAt: new Date(now.getTime() + settings.resendCooldownSeconds * 1000),
+      deliveryStatus: 'PENDING' as const,
+      retryAnchorId: request.kind === 'resend' ? request.challengeId : null,
     };
   }
 

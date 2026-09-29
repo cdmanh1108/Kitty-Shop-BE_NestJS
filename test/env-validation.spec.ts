@@ -10,6 +10,9 @@ describe('environment validation and configuration', () => {
     JWT_ACCESS_SECRET: validSecret,
     WEB_JWT_ACCESS_SECRET: 'W9qL2mN7vR4xK8pT6cF3hJ5sD1zB0yUa',
     AUTH_OTP_HASH_SECRET: 'Q4wE8rT2yU6iO0pA3sD7fG1hJ5kL9zXc',
+    RESEND_API_KEY: 're_test_only_not_a_real_key',
+    EMAIL_FROM_ADDRESS: 'no-reply@example.test',
+    EMAIL_FROM_NAME: 'Kitty Test',
   };
 
   beforeEach(() => {
@@ -40,10 +43,27 @@ describe('environment validation and configuration', () => {
       ).toThrow('ba secret khác nhau');
     });
 
-    it('throws when required DATABASE_URL is missing', () => {
-      expect(() => validateEnvironment({ JWT_ACCESS_SECRET: validSecret })).toThrow(
-        'Thiếu biến môi trường bắt buộc: DATABASE_URL.',
+    it('requires a Resend key and valid sender configuration outside automated tests', () => {
+      expect(() => validateEnvironment({ ...baseConfig, RESEND_API_KEY: '' })).toThrow(
+        'RESEND_API_KEY',
       );
+      expect(() =>
+        validateEnvironment({ ...baseConfig, EMAIL_FROM_ADDRESS: 'not-an-address' }),
+      ).toThrow('EMAIL_FROM_ADDRESS');
+      expect(() => validateEnvironment({ ...baseConfig, EMAIL_FROM_NAME: '' })).toThrow(
+        'EMAIL_FROM_NAME',
+      );
+    });
+
+    it('throws when required DATABASE_URL is missing', () => {
+      expect(() =>
+        validateEnvironment({
+          JWT_ACCESS_SECRET: validSecret,
+          RESEND_API_KEY: baseConfig.RESEND_API_KEY,
+          EMAIL_FROM_ADDRESS: baseConfig.EMAIL_FROM_ADDRESS,
+          EMAIL_FROM_NAME: baseConfig.EMAIL_FROM_NAME,
+        }),
+      ).toThrow('Thiếu biến môi trường bắt buộc: DATABASE_URL.');
     });
 
     it('allows omitting DATABASE_URL when SKIP_DATABASE_CONNECT is true', () => {
@@ -53,14 +73,22 @@ describe('environment validation and configuration', () => {
           JWT_ACCESS_SECRET: validSecret,
           WEB_JWT_ACCESS_SECRET: baseConfig.WEB_JWT_ACCESS_SECRET,
           AUTH_OTP_HASH_SECRET: baseConfig.AUTH_OTP_HASH_SECRET,
+          RESEND_API_KEY: baseConfig.RESEND_API_KEY,
+          EMAIL_FROM_ADDRESS: baseConfig.EMAIL_FROM_ADDRESS,
+          EMAIL_FROM_NAME: baseConfig.EMAIL_FROM_NAME,
         }),
       ).not.toThrow();
     });
 
     it('throws when JWT_ACCESS_SECRET is missing or too short', () => {
-      expect(() => validateEnvironment({ DATABASE_URL: baseConfig.DATABASE_URL })).toThrow(
-        'Thiếu biến môi trường bắt buộc: JWT_ACCESS_SECRET.',
-      );
+      expect(() =>
+        validateEnvironment({
+          DATABASE_URL: baseConfig.DATABASE_URL,
+          RESEND_API_KEY: baseConfig.RESEND_API_KEY,
+          EMAIL_FROM_ADDRESS: baseConfig.EMAIL_FROM_ADDRESS,
+          EMAIL_FROM_NAME: baseConfig.EMAIL_FROM_NAME,
+        }),
+      ).toThrow('Thiếu biến môi trường bắt buộc: JWT_ACCESS_SECRET.');
 
       expect(() => validateEnvironment({ ...baseConfig, JWT_ACCESS_SECRET: 'too-short' })).toThrow(
         'JWT_ACCESS_SECRET phải là khóa bí mật thực tế có ít nhất 32 ký tự.',

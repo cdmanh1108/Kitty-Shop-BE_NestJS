@@ -14,6 +14,7 @@ const messages: Record<string, string> = {
   OTP_CONSUMED: 'Verification code was already used. Please request a new code.',
   OTP_INVALID: 'Verification code is incorrect.',
   OTP_RESEND_TOO_SOON: 'Please wait before requesting another verification code.',
+  VERIFICATION_DELIVERY_FAILED: 'Không thể gửi mã xác thực lúc này. Vui lòng thử lại sau.',
   EMAIL_ALREADY_VERIFIED: 'This email is already verified. Please sign in.',
 };
 

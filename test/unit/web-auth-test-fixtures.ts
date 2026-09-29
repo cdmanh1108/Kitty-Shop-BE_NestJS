@@ -17,12 +17,18 @@ export const now = new Date('2026-09-16T00:00:00Z');
 
 export const testConfig = new ConfigService<AppConfiguration, true>({
   jwtAccessSecret: 'test-secret-at-least-thirty-two-characters',
+  email: {
+    resendApiKey: 're_test_only_not_a_real_key',
+    fromAddress: 'no-reply@example.test',
+    fromName: 'Kitty Test',
+  },
   webAuth: {
     bypassEnabled: true,
     bypassCode: '123456',
     otpTtlSeconds: 300,
     otpMaxAttempts: 5,
     resendCooldownSeconds: 60,
+    deliveryFailureRetrySeconds: 10,
     accessSecret: 'web-test-secret-at-least-thirty-two-characters',
     accessTtlSeconds: 900,
     refreshTokenTtlDays: 7,
@@ -48,6 +54,8 @@ export function webAuthRepository(overrides: Partial<WebAuthRepository> = {}): W
   return {
     issueVerificationChallenge: () =>
       Promise.reject(new Error('Unconfigured issueVerificationChallenge fixture')),
+    markVerificationDeliverySent: () => Promise.resolve(true),
+    markVerificationDeliveryFailed: () => Promise.resolve(true),
     findAccountByEmail: () => Promise.reject(new Error('Unconfigured findAccountByEmail fixture')),
     findChallenge: () => Promise.reject(new Error('Unconfigured findChallenge fixture')),
     verify: () => Promise.reject(new Error('Unconfigured verify fixture')),

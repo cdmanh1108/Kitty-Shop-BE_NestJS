@@ -15,6 +15,8 @@ const activeChallenge = (id: string, accountId = 'account'): OtpChallenge => ({
   attemptCount: 0,
   consumedAt: null,
   createdAt: now,
+  deliveryStatus: 'SENT',
+  retryAnchorId: null,
 });
 
 describe('WebRegistrationService', () => {
@@ -45,6 +47,40 @@ describe('WebRegistrationService', () => {
     expect(issueRequest.attemptId).toMatch(/^[0-9a-f-]{36}$/);
     expect(issueRequest.challenge.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(send).toHaveBeenCalledWith('user@example.test', '123456', challenge.id);
+  });
+
+  it('fails registration safely and stores a short retry deadline when delivery fails', async () => {
+    const challenge = activeChallenge('00000000-0000-4000-8000-000000000006');
+    const send = jest.fn().mockRejectedValue(new Error('Domain not verified: resend_api_key'));
+    const markVerificationDeliverySent = jest.fn().mockResolvedValue(true);
+    const markVerificationDeliveryFailed = jest.fn().mockResolvedValue(true);
+    const repo = webAuthRepository({
+      findAccountByEmail: jest.fn().mockResolvedValue(null),
+      issueVerificationChallenge: jest.fn().mockResolvedValue({
+        challenge: { ...challenge, deliveryStatus: 'PENDING' },
+        email: 'user@example.test',
+      }),
+      markVerificationDeliverySent,
+      markVerificationDeliveryFailed,
+    });
+
+    await expect(
+      registrationService(repo, { send }).register({
+        email: 'user@example.test',
+        password: 'password1',
+      }),
+    ).rejects.toMatchObject({
+      status: 503,
+      response: {
+        code: 'VERIFICATION_DELIVERY_FAILED',
+        message: 'Không thể gửi mã xác thực lúc này. Vui lòng thử lại sau.',
+      },
+    });
+    expect(markVerificationDeliverySent).not.toHaveBeenCalled();
+    expect(markVerificationDeliveryFailed).toHaveBeenCalledWith(
+      challenge.id,
+      new Date(now.getTime() + 10_000),
+    );
   });
 
   it('rejects invalid email before repository lookup', async () => {
