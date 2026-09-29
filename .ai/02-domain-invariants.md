@@ -7,6 +7,7 @@
 - An order stores historical name/price snapshots.
 - Rental order source is immutable creation provenance: storefront checkout is ONLINE (including guests), while Admin/manual entry is OFFLINE. It is independent from CRM customer identity and WebAccount ownership.
 - RentalOrder.webAccountId is nullable storefront ownership and never replaces customerId; account deletion preserves order history by setting only webAccountId to NULL.
+- A WebAccount may self-cancel only its own ONLINE, RESERVED, unpaid order with no held deposit; cancellation uses the canonical transactional lifecycle and WebAccount audit actor, never staff actor IDs.
 - Only RESERVED orders can be cancelled; transaction adapters revalidate the canonical state machine independently of supplied source statuses.
 - Rescheduling keeps the priced duration and places the new start between original createdAt and createdAt + rental policy maxDaysFromBooking (inclusive, elapsed 24-hour days). The booking anchor never changes.
 - `OVERDUE` is derived, not a persisted independent lifecycle state.

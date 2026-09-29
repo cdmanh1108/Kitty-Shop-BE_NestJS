@@ -10,7 +10,13 @@ import { prepareAuditLogData } from './audit-entry-preparer';
 
 export type AuditContext = Pick<
   CreateAuditLogData,
-  'shopId' | 'actorUserId' | 'actorMemberId' | 'requestId' | 'ipAddress' | 'userAgent'
+  | 'shopId'
+  | 'actorUserId'
+  | 'actorMemberId'
+  | 'actorWebAccountId'
+  | 'requestId'
+  | 'ipAddress'
+  | 'userAgent'
 >;
 
 @Injectable()

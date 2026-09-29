@@ -35,6 +35,23 @@ internal-note data.
 
 Historical guest-order claiming remains a separate feature.
 
+## Account self-cancellation
+
+`POST /web/account/rental-orders/:orderCode/cancel` uses the same transactional
+rental lifecycle as the Admin cancellation command. It is available only to the
+verified owner of an `ONLINE` order that is still `RESERVED`, has no completed
+payment-ledger entries, and has no held deposit. Guest, OFFLINE, foreign, and
+unknown orders return the same 404 response.
+
+The transition locks the rental monetary boundary before checking payment state,
+then cancels unreleased allocations and items, records status history with reason
+`WEB_USER_CANCELLED`, cancels only delivery jobs that can safely transition from
+`PENDING` or `READY`, and emits the normal cancellation outbox event in one
+serializable transaction. A stale concurrent confirmation, payment, delivery, or
+second cancellation therefore cannot produce a cancelled order with an active
+payment or duplicate lifecycle history. The separate best-effort audit record
+uses `audit_logs.actor_web_account_id`; it never overloads staff actor fields.
+
 ## Legacy migration
 
 Migration `202609280003_rental_order_source_web_account` adds a nullable enum source,

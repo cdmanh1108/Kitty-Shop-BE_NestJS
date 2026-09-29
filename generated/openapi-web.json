@@ -1546,6 +1546,94 @@
         "x-api-surface": "web"
       }
     },
+    "/web/account/rental-orders/{orderCode}/cancel": {
+      "post": {
+        "operationId": "cancelWebAccountRentalOrder",
+        "parameters": [
+          {
+            "name": "orderCode",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "RT260928-001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebAccountRentalOrderCancellationResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rejected Web origin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Hủy đơn thuê chưa thanh toán của tài khoản đang đăng nhập",
+        "tags": [
+          "Web - Account Rental Orders"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/policies": {
       "get": {
         "operationId": "getWebPolicies",
@@ -2559,6 +2647,31 @@
           "items",
           "deliveries",
           "timeline"
+        ]
+      },
+      "WebAccountRentalOrderCancellationResDto": {
+        "type": "object",
+        "properties": {
+          "orderCode": {
+            "type": "string",
+            "example": "RT260928-001"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CANCELLED"
+            ],
+            "example": "CANCELLED"
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "orderCode",
+          "status",
+          "cancelledAt"
         ]
       },
       "WebRentalPolicyDto": {

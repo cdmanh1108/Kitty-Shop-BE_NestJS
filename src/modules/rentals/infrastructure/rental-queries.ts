@@ -274,7 +274,8 @@ export async function lookupStorefrontOrder(
   };
 }
 
-const accountOrderWhere = (webAccountId: string, status?: RentalStatus) => ({
+const accountOrderWhere = (shopId: string, webAccountId: string, status?: RentalStatus) => ({
+  shopId,
   webAccountId,
   source: 'ONLINE' as const,
   ...(status ? { status } : {}),
@@ -284,7 +285,7 @@ export async function listWebAccountOrders(
   prisma: PrismaService,
   input: WebAccountRentalOrderListCriteria,
 ) {
-  const where = accountOrderWhere(input.webAccountId, input.status);
+  const where = accountOrderWhere(input.shopId, input.webAccountId, input.status);
   const [orders, total] = await prisma.$transaction([
     prisma.rentalOrder.findMany({
       where,
@@ -347,12 +348,14 @@ export async function listWebAccountOrders(
 
 export async function getWebAccountOrder(
   prisma: PrismaService,
+  shopId: string,
   webAccountId: string,
   orderNumber: string,
 ): Promise<WebAccountRentalOrderDetail | null> {
   const order = await prisma.rentalOrder.findFirst({
-    where: { ...accountOrderWhere(webAccountId), orderNumber: orderNumber.trim() },
+    where: { ...accountOrderWhere(shopId, webAccountId), orderNumber: orderNumber.trim() },
     select: {
+      id: true,
       orderNumber: true,
       createdAt: true,
       rentalStartAt: true,
@@ -402,6 +405,7 @@ export async function getWebAccountOrder(
   if (!order) return null;
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   return {
+    id: order.id,
     orderCode: order.orderNumber,
     createdAt: order.createdAt,
     rentalStartAt: order.rentalStartAt,

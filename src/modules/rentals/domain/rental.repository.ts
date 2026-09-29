@@ -122,12 +122,14 @@ export interface RentalRepository {
     input: WebAccountRentalOrderListCriteria,
   ): Promise<WebAccountRentalOrderPage>;
   getWebAccountOrder(
+    shopId: string,
     webAccountId: string,
     orderNumber: string,
   ): Promise<WebAccountRentalOrderDetail | null>;
 }
 
 export interface WebAccountRentalOrderListCriteria {
+  shopId: string;
   webAccountId: string;
   page: number;
   limit: number;
@@ -152,6 +154,8 @@ export interface WebAccountRentalOrderPage {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 export interface WebAccountRentalOrderDetail extends WebAccountRentalOrderListItem {
+  /** Internal-only aggregate identity; Web response mappers never expose it. */
+  id: string;
   rentalSubtotal: number;
   chargesTotal: number;
   discountTotal: number;
@@ -281,8 +285,15 @@ export interface RentalTransitionData {
   orderId: string;
   fromStatuses: RentalStatus[];
   toStatus: RentalStatus;
-  changedBy: string;
+  /** Staff actor when the transition originates from an Admin command. */
+  changedBy?: string;
   reason?: string;
+  /** Optional server-owned scope guards for account-owned transitions. */
+  expectedWebAccountId?: string;
+  expectedSource?: RentalOrderSource;
+  expectedPaymentStatus?: string;
+  /** Reject cancellation if any completed, non-voided ledger movement exists. */
+  requireNoCompletedPayments?: boolean;
 }
 
 export interface RentalRescheduleData {

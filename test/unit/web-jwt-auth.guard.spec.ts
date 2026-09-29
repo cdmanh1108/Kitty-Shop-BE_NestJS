@@ -1,14 +1,17 @@
-import type { ExecutionContext } from '@nestjs/common';
+import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
 import type { JwtService } from '@nestjs/jwt';
 import { authError } from '../../src/modules/web-auth/application/web-auth.service';
 import type { WebAuthService } from '../../src/modules/web-auth/application/web-auth.service';
 import {
   OptionalWebJwtAuthGuard,
+  WebAuthOriginGuard,
   WebJwtAuthGuard,
   type WebRequest,
 } from '../../src/modules/web-auth/api/web-jwt-auth';
 import type { WebAuthCookies } from '../../src/modules/web-auth/api/web-jwt-auth';
 import type { WebProfile } from '../../src/modules/web-auth/domain/web-auth.repository';
+import type { AppConfiguration } from '../../src/config/configuration';
 
 const accountId = '00000000-0000-4000-8000-000000000001';
 const profile: WebProfile = {
@@ -19,6 +22,15 @@ const profile: WebProfile = {
 };
 
 function contextFor(request: WebRequest): ExecutionContext {
+  return {
+    switchToHttp: () => ({ getRequest: () => request }),
+  } as ExecutionContext;
+}
+
+function requestContextFor(request: {
+  method: string;
+  headers: Record<string, string | undefined>;
+}) {
   return {
     switchToHttp: () => ({ getRequest: () => request }),
   } as ExecutionContext;
@@ -158,5 +170,53 @@ describe('OptionalWebJwtAuthGuard', () => {
     });
     expect(request.webUser).toBeUndefined();
     expect(accountForAccessToken).not.toHaveBeenCalled();
+  });
+});
+
+describe('WebAuthOriginGuard', () => {
+  function guard(): WebAuthOriginGuard {
+    const config = {
+      get: (key: keyof AppConfiguration) => {
+        if (key === 'corsOrigins') return ['https://store.example'];
+        if (key === 'appUrl') return 'https://store.example';
+        throw new Error(`Unexpected configuration key: ${key}`);
+      },
+    };
+    return new WebAuthOriginGuard(config as unknown as ConfigService<AppConfiguration, true>);
+  }
+
+  function expectOriginRejected(operation: () => void): void {
+    try {
+      operation();
+      throw new Error('Expected the origin guard to reject the request');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ForbiddenException);
+      if (!(error instanceof ForbiddenException)) return;
+      expect(error.getResponse()).toMatchObject({ code: 'AUTH_ORIGIN_REJECTED' });
+    }
+  }
+
+  it('allows a same-site, bodyless cancellation command without weakening body validation', () => {
+    expect(
+      guard().canActivate(
+        requestContextFor({ method: 'POST', headers: { origin: 'https://store.example' } }),
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects untrusted origins and non-JSON state-changing bodies', () => {
+    expectOriginRejected(() =>
+      guard().canActivate(
+        requestContextFor({ method: 'POST', headers: { origin: 'https://evil.example' } }),
+      ),
+    );
+    expectOriginRejected(() =>
+      guard().canActivate(
+        requestContextFor({
+          method: 'POST',
+          headers: { origin: 'https://store.example', 'content-length': '1' },
+        }),
+      ),
+    );
   });
 });

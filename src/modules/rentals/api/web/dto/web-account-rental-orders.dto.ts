@@ -160,3 +160,14 @@ export class WebAccountRentalOrderDetailResDto extends WebAccountRentalOrderList
   @ApiProperty({ type: [WebAccountRentalOrderTimelineEntryResDto] })
   timeline!: WebAccountRentalOrderTimelineEntryResDto[];
 }
+
+export class WebAccountRentalOrderCancellationResDto {
+  @ApiProperty({ example: 'RT260928-001' })
+  orderCode!: string;
+
+  @ApiProperty({ enum: ['CANCELLED'], example: 'CANCELLED' })
+  status!: 'CANCELLED';
+
+  @ApiProperty({ format: 'date-time' })
+  cancelledAt!: string;
+}

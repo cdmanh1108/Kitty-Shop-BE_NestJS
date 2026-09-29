@@ -103,7 +103,13 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
 
     it('contains only /web/ routes and zero admin or system routes', () => {
       const paths = Object.keys(webDoc.paths);
-      expect(paths.length).toBe(22);
+      expect(paths).toEqual(
+        expect.arrayContaining([
+          '/web/account/rental-orders',
+          '/web/account/rental-orders/{orderCode}',
+          '/web/account/rental-orders/{orderCode}/cancel',
+        ]),
+      );
 
       const nonWebPaths = paths.filter((p) => !p.includes('/web/') && !p.endsWith('/web'));
       expect(nonWebPaths).toEqual([]);

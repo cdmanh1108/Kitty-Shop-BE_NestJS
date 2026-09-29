@@ -5,6 +5,7 @@ export interface AuditLogRecord {
   shopId: string;
   actorUserId: string | null;
   actorMemberId: string | null;
+  actorWebAccountId: string | null;
   action: string;
   entityType: string;
   entityId: string | null;

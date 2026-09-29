@@ -6,6 +6,8 @@ export interface CreateAuditLogData {
   shopId: string;
   actorUserId?: string;
   actorMemberId?: string;
+  /** Storefront actor, deliberately separate from staff User/ShopMember identities. */
+  actorWebAccountId?: string;
   requestId?: string;
   ipAddress?: string;
   userAgent?: string;

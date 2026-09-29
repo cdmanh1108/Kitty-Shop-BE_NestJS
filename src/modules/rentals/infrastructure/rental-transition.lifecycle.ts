@@ -14,6 +14,9 @@ import { serializableTransaction } from '@database/prisma/transaction';
 import type { Prisma } from '@prisma/client';
 import type { RentalRepository } from '../domain/rental.repository';
 import { getWithTx } from './rental-queries';
+import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
+import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
+import { canTransitionDelivery, DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 
 export async function transition(
   prisma: PrismaService,
@@ -22,10 +25,35 @@ export async function transition(
   clock: Clock,
 ): ReturnType<RentalRepository['transition']> {
   return serializableTransaction(prisma, async (tx) => {
+    if (input.toStatus === RENTAL_STATUS.CANCELLED) {
+      if (!(await lockRentalMonetaryOrder(tx, input))) return null;
+    }
+    const orderWhere = {
+      id: input.orderId,
+      shopId: input.shopId,
+      ...(input.expectedWebAccountId ? { webAccountId: input.expectedWebAccountId } : {}),
+      ...(input.expectedSource ? { source: input.expectedSource } : {}),
+      ...(input.expectedPaymentStatus ? { paymentStatus: input.expectedPaymentStatus } : {}),
+    };
     const order = await tx.rentalOrder.findFirst({
-      where: { id: input.orderId, shopId: input.shopId },
+      where: orderWhere,
     });
     if (!order || !input.fromStatuses.some((status) => status === order.status)) return null;
+    if (input.requireNoCompletedPayments) {
+      const paymentCount = await tx.paymentTransaction.count({
+        where: {
+          orderId: order.id,
+          status: TRANSACTION_STATUS.COMPLETED,
+          voidedAt: null,
+        },
+      });
+      if (paymentCount > 0) {
+        throw new RentalInvariantError(
+          'WEB_ORDER_PAYMENT_PREVENTS_CANCELLATION',
+          'Đơn thuê đã có giao dịch thanh toán hoặc đặt cọc.',
+        );
+      }
+    }
     if (input.toStatus === RENTAL_STATUS.CONFIRMED) {
       throw new RentalInvariantError(
         'CONFIRMATION_REQUIRED',
@@ -39,6 +67,22 @@ export async function transition(
       );
     }
     if (!canTransitionRental(order.status, input.toStatus)) return null;
+
+    if (input.toStatus === RENTAL_STATUS.CANCELLED) {
+      const deliveries = await tx.deliveryJob.findMany({
+        where: { orderId: order.id, shopId: input.shopId },
+        select: { status: true },
+      });
+      if (
+        deliveries.some(
+          (delivery) =>
+            delivery.status !== DELIVERY_STATUS.CANCELLED &&
+            !canTransitionDelivery(delivery.status, DELIVERY_STATUS.CANCELLED),
+        )
+      ) {
+        return null;
+      }
+    }
 
     if (input.toStatus === RENTAL_STATUS.ACTIVE) {
       const allocations = await tx.rentalItemAllocation.findMany({
@@ -55,13 +99,13 @@ export async function transition(
     const now = clock.now();
     const updateData: Prisma.RentalOrderUpdateManyMutationInput = {
       status: input.toStatus,
-      updatedBy: input.changedBy,
+      ...(input.changedBy ? { updatedBy: input.changedBy } : {}),
     };
     if (input.toStatus === RENTAL_STATUS.ACTIVE) updateData.actualStartedAt = now;
     if (input.toStatus === RENTAL_STATUS.CANCELLED) updateData.cancelledAt = now;
 
     const updated = await tx.rentalOrder.updateMany({
-      where: { id: order.id, shopId: input.shopId, status: order.status },
+      where: { ...orderWhere, status: order.status },
       data: updateData,
     });
     if (updated.count !== 1) return null;
@@ -110,6 +154,14 @@ export async function transition(
       await tx.rentalOrderItem.updateMany({
         where: { orderId: order.id },
         data: { status: RENTAL_ITEM_STATUS.CANCELLED },
+      });
+      await tx.deliveryJob.updateMany({
+        where: {
+          orderId: order.id,
+          shopId: input.shopId,
+          status: { in: [DELIVERY_STATUS.PENDING, DELIVERY_STATUS.READY] },
+        },
+        data: { status: DELIVERY_STATUS.CANCELLED },
       });
     }
 

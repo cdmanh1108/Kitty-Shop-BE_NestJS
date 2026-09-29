@@ -6,3 +6,9 @@ export interface WebAccountRentalOrdersQuery {
   limit: number;
   status?: RentalStatus;
 }
+
+export interface WebAccountRentalOrderCancellationResult {
+  orderCode: string;
+  status: 'CANCELLED';
+  cancelledAt: Date;
+}

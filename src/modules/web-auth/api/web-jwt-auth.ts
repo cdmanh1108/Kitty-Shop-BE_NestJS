@@ -156,8 +156,12 @@ export class WebAuthOriginGuard implements CanActivate {
     ];
     const contentType = request.headers['content-type'];
     const isJson = typeof contentType === 'string' && contentType.includes('application/json');
+    const contentLength = request.headers['content-length'];
+    const hasBody =
+      (typeof contentLength === 'string' && Number.parseInt(contentLength, 10) > 0) ||
+      request.headers['transfer-encoding'] !== undefined;
     if (
-      !isJson ||
+      (hasBody && !isJson) ||
       (origin && !allowed.includes(origin)) ||
       request.headers['sec-fetch-site'] === 'cross-site'
     ) {

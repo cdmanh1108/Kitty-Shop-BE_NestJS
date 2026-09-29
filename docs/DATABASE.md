@@ -128,6 +128,14 @@ not replace `customer_id`. A checkout with a verified WebAccount stores that acc
 guest checkout and Admin/manual orders store NULL. Existing orders are never inferred or
 claimed from customer contact fields; see [Rental order origin](RENTAL_ORDER_ORIGIN.md).
 
+Storefront actions retain their actor separately from staff identities. Migration
+`202609280004_audit_web_account_actor` adds nullable
+`audit_logs.actor_web_account_id` with `ON DELETE SET NULL` and an actor/timeline index;
+it does not rewrite historical audit rows. Storefront order self-cancellation is allowed
+only for the verified account's unpaid `ONLINE` `RESERVED` order and uses the same
+transactional cancellation lifecycle as Admin commands; see
+[Rental order origin](RENTAL_ORDER_ORIGIN.md).
+
 ## Migration rules
 
 1. Edit `prisma/schema.prisma`.

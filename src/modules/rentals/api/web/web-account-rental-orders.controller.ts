@@ -1,26 +1,44 @@
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
-import { Controller, Get, Header, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiCookieAuth,
+  ApiConflictResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { CurrentWebUser, WebJwtAuthGuard } from '@modules/web-auth/api/web-jwt-auth';
+import {
+  CurrentWebUser,
+  WebAuthOriginGuard,
+  WebJwtAuthGuard,
+} from '@modules/web-auth/api/web-jwt-auth';
 import type { WebProfile } from '@modules/web-auth/domain/web-auth.repository';
 import { WebAccountRentalOrdersService } from '../../application/web-account-rental-orders.service';
 import {
   WebAccountRentalOrderDetailResDto,
+  WebAccountRentalOrderCancellationResDto,
   WebAccountRentalOrderParamsDto,
   WebAccountRentalOrdersListResDto,
   WebAccountRentalOrdersQueryDto,
 } from './dto/web-account-rental-orders.dto';
 import {
+  toWebAccountRentalOrderCancellationResponse,
   toWebAccountRentalOrderDetailResponse,
   toWebAccountRentalOrdersListResponse,
 } from './web-account-rental-orders.response';
@@ -29,7 +47,7 @@ import {
 @ApiTags('Web - Account Rental Orders')
 @ApiSurface('web')
 @Controller('web/account/rental-orders')
-@UseGuards(WebJwtAuthGuard)
+@UseGuards(WebJwtAuthGuard, WebAuthOriginGuard)
 export class WebAccountRentalOrdersController {
   constructor(private readonly orders: WebAccountRentalOrdersService) {}
 
@@ -72,5 +90,28 @@ export class WebAccountRentalOrdersController {
     @Param() params: WebAccountRentalOrderParamsDto,
   ): Promise<WebAccountRentalOrderDetailResDto> {
     return toWebAccountRentalOrderDetailResponse(await this.orders.get(user.id, params.orderCode));
+  }
+
+  @Post(':orderCode/cancel')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiCookieAuth('web-access')
+  @ApiOperation({
+    operationId: 'cancelWebAccountRentalOrder',
+    summary: 'Hủy đơn thuê chưa thanh toán của tài khoản đang đăng nhập',
+  })
+  @ApiOkResponse({ type: WebAccountRentalOrderCancellationResDto })
+  @ApiBadRequestResponse({ type: ErrorResDto })
+  @ApiConflictResponse({ type: ErrorResDto })
+  @ApiForbiddenResponse({ type: ErrorResDto, description: 'Rejected Web origin.' })
+  @ApiNotFoundResponse({ type: ErrorResDto })
+  @ApiUnauthorizedResponse({ type: ErrorResDto })
+  async cancel(
+    @CurrentWebUser() user: WebProfile,
+    @Param() params: WebAccountRentalOrderParamsDto,
+  ): Promise<WebAccountRentalOrderCancellationResDto> {
+    return toWebAccountRentalOrderCancellationResponse(
+      await this.orders.cancel(user.id, params.orderCode),
+    );
   }
 }

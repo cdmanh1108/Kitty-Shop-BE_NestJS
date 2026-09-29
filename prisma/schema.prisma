@@ -28,6 +28,7 @@ model WebAccount {
   carts                 Cart[]
   favorites             Favorite[]
   rentalOrders          RentalOrder[]
+  auditLogs             AuditLog[]
 
   @@map("web_accounts")
 }
@@ -1195,24 +1196,27 @@ model AppSetting {
 }
 
 model AuditLog {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shopId        String   @map("shop_id") @db.Uuid
-  actorUserId   String?  @map("actor_user_id") @db.Uuid
-  actorMemberId String?  @map("actor_member_id") @db.Uuid
-  action        String   @db.VarChar(50)
-  entityType    String   @map("entity_type") @db.VarChar(100)
-  entityId      String?  @map("entity_id") @db.Uuid
-  oldValues     Json?    @map("old_values")
-  newValues     Json?    @map("new_values")
-  ipAddress     String?  @map("ip_address") @db.Inet
-  userAgent     String?  @map("user_agent") @db.Text
-  requestId     String?  @map("request_id") @db.VarChar(100)
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId            String   @map("shop_id") @db.Uuid
+  actorUserId       String?  @map("actor_user_id") @db.Uuid
+  actorMemberId     String?  @map("actor_member_id") @db.Uuid
+  actorWebAccountId String?  @map("actor_web_account_id") @db.Uuid
+  action            String   @db.VarChar(50)
+  entityType        String   @map("entity_type") @db.VarChar(100)
+  entityId          String?  @map("entity_id") @db.Uuid
+  oldValues         Json?    @map("old_values")
+  newValues         Json?    @map("new_values")
+  ipAddress         String?  @map("ip_address") @db.Inet
+  userAgent         String?  @map("user_agent") @db.Text
+  requestId         String?  @map("request_id") @db.VarChar(100)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop            Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  actorWebAccount WebAccount? @relation(fields: [actorWebAccountId], references: [id], onDelete: SetNull)
 
   @@index([shopId, entityType, entityId, createdAt])
   @@index([actorUserId, createdAt])
+  @@index([actorWebAccountId, createdAt])
   @@map("audit_logs")
 }
 

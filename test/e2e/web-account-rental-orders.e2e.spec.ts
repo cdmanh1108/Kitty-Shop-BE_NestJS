@@ -4,6 +4,7 @@ import type { RentalOrderSource } from '@prisma/client';
 import type { Server } from 'node:http';
 import * as request from 'supertest';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
+import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';
 import { rentalScenario } from '../fixtures/rental.fixture';
 import { uniqueCode } from '../fixtures/test-factories';
 import {
@@ -40,6 +41,14 @@ function rentalOrderListResponse(text: string): RentalOrderListResponse {
     throw new Error('Expected a paginated Web account rental-order response');
   }
   return value as RentalOrderListResponse;
+}
+
+function responseRecord(text: string): Record<string, unknown> {
+  const value: unknown = JSON.parse(text);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Expected an object response body');
+  }
+  return value as Record<string, unknown>;
 }
 
 function accessCookie(accountId: string): string {
@@ -123,6 +132,42 @@ describe('Web account rental orders', () => {
         },
       },
     });
+  }
+
+  async function addCancellableOrderState(
+    fixture: Awaited<ReturnType<typeof rentalScenario>>,
+    orderId: string,
+  ) {
+    const item = await prisma.rentalOrderItem.findFirstOrThrow({
+      where: { orderId },
+      select: { id: true, rentalStartAt: true, rentalEndAt: true },
+    });
+    const [allocation, delivery] = await Promise.all([
+      prisma.rentalItemAllocation.create({
+        data: {
+          shopId: fixture.shop.id,
+          orderId,
+          orderItemId: item.id,
+          inventoryItemId: fixture.inventory.id,
+          reservedFrom: item.rentalStartAt,
+          reservedUntil: item.rentalEndAt,
+          status: 'HELD',
+        },
+      }),
+      prisma.deliveryJob.create({
+        data: {
+          shopId: fixture.shop.id,
+          orderId,
+          direction: 'OUTBOUND',
+          method: 'SHOP_DELIVERY',
+          status: 'PENDING',
+        },
+      }),
+      prisma.rentalOrderStatusHistory.create({
+        data: { shopId: fixture.shop.id, orderId, toStatus: 'RESERVED' },
+      }),
+    ]);
+    return { allocation, delivery };
   }
 
   it('requires a signed-in Web account', async () => {
@@ -265,6 +310,230 @@ describe('Web account rental orders', () => {
           expect(result.body).not.toHaveProperty('orderCode');
           expect(result.body).not.toHaveProperty('items');
         });
+    }
+  });
+
+  it("cancels only the owner's unpaid RESERVED online order atomically and audits the Web account", async () => {
+    const fixture = await rentalScenario(prisma);
+    const owner = await createAccount('+84912345678');
+    const order = await createOrder(fixture, { webAccountId: owner.id });
+    const { allocation, delivery } = await addCancellableOrderState(fixture, order.id);
+
+    const response = await request(server)
+      .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+      .set('Cookie', accessCookie(owner.id))
+      .expect(200);
+
+    expect(response.headers['cache-control']).toBe('private, no-store');
+    const body = responseRecord(response.text);
+    expect(body.orderCode).toBe(order.orderNumber);
+    expect(body.status).toBe('CANCELLED');
+    expect(typeof body.cancelledAt).toBe('string');
+    expect(response.text).not.toContain('webAccountId');
+
+    const [storedOrder, storedItem, storedAllocation, storedDelivery, history, audit] =
+      await Promise.all([
+        prisma.rentalOrder.findUniqueOrThrow({ where: { id: order.id } }),
+        prisma.rentalOrderItem.findFirstOrThrow({ where: { orderId: order.id } }),
+        prisma.rentalItemAllocation.findUniqueOrThrow({ where: { id: allocation.id } }),
+        prisma.deliveryJob.findUniqueOrThrow({ where: { id: delivery.id } }),
+        prisma.rentalOrderStatusHistory.findMany({
+          where: { orderId: order.id },
+          orderBy: { changedAt: 'asc' },
+        }),
+        prisma.auditLog.findFirstOrThrow({
+          where: { shopId: fixture.shop.id, entityId: order.id, action: 'WEB_ORDER_CANCELLED' },
+        }),
+      ]);
+    expect(storedOrder.status).toBe('CANCELLED');
+    expect(storedOrder.cancelledAt).toBeInstanceOf(Date);
+    expect(storedItem.status).toBe('CANCELLED');
+    expect(storedAllocation.status).toBe('CANCELLED');
+    expect(storedAllocation.releasedAt).toBeInstanceOf(Date);
+    expect(storedDelivery.status).toBe('CANCELLED');
+    expect(history).toHaveLength(2);
+    expect(history[1]).toMatchObject({
+      fromStatus: 'RESERVED',
+      toStatus: 'CANCELLED',
+      reason: 'WEB_USER_CANCELLED',
+      changedBy: null,
+    });
+    expect(audit).toMatchObject({
+      actorWebAccountId: owner.id,
+      actorUserId: null,
+      actorMemberId: null,
+      action: 'WEB_ORDER_CANCELLED',
+      entityType: 'rental_order',
+    });
+  });
+
+  it('does not reveal or mutate foreign, guest, or offline orders through cancellation', async () => {
+    const fixture = await rentalScenario(prisma);
+    const owner = await createAccount('+84912345678');
+    const other = await createAccount('+84912345679');
+    const foreign = await createOrder(fixture, { webAccountId: other.id });
+    const guest = await createOrder(fixture, { webAccountId: null });
+    const offline = await createOrder(fixture, { webAccountId: owner.id, source: 'OFFLINE' });
+
+    for (const order of [foreign, guest, offline]) {
+      await request(server)
+        .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+        .set('Cookie', accessCookie(owner.id))
+        .expect(404);
+      await expect(
+        prisma.rentalOrder.findUniqueOrThrow({ where: { id: order.id } }),
+      ).resolves.toMatchObject({
+        status: 'RESERVED',
+        cancelledAt: null,
+      });
+    }
+  });
+
+  it('requires a valid Web session and rejects an untrusted origin before cancellation', async () => {
+    const fixture = await rentalScenario(prisma);
+    const owner = await createAccount('+84912345678');
+    const order = await createOrder(fixture, { webAccountId: owner.id });
+
+    await request(server)
+      .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+      .expect(401);
+    await request(server)
+      .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+      .set('Cookie', `${accessCookie(owner.id)}tampered`)
+      .expect(401);
+    await request(server)
+      .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+      .set('Cookie', accessCookie(owner.id))
+      .set('Origin', 'https://untrusted.example')
+      .expect(403)
+      .expect((result) => expect(responseRecord(result.text).code).toBe('AUTH_ORIGIN_REJECTED'));
+  });
+
+  it.each(['CONFIRMED', 'ACTIVE', 'RETURNED', 'COMPLETED', 'CANCELLED'])(
+    'rejects cancellation when the order is already %s',
+    async (status) => {
+      const fixture = await rentalScenario(prisma);
+      const owner = await createAccount('+84912345678');
+      const order = await createOrder(fixture, { webAccountId: owner.id, status });
+
+      await request(server)
+        .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+        .set('Cookie', accessCookie(owner.id))
+        .expect(409)
+        .expect((result) =>
+          expect(responseRecord(result.text).code).toBe('WEB_ORDER_CANNOT_BE_CANCELLED'),
+        );
+
+      await expect(
+        prisma.rentalOrderStatusHistory.count({ where: { orderId: order.id } }),
+      ).resolves.toBe(0);
+    },
+  );
+
+  it('rejects an otherwise cancellable order after any payment or deposit has been recorded', async () => {
+    const fixture = await rentalScenario(prisma);
+    const owner = await createAccount('+84912345678');
+    const order = await createOrder(fixture, { webAccountId: owner.id });
+    const { allocation } = await addCancellableOrderState(fixture, order.id);
+    await prisma.paymentTransaction.create({
+      data: {
+        shopId: fixture.shop.id,
+        orderId: order.id,
+        customerId: fixture.customer.id,
+        transactionNumber: uniqueCode('WEB_CANCEL_PAYMENT'),
+        direction: 'IN',
+        purpose: 'DEPOSIT',
+        paymentMethod: 'CASH',
+        amount: 500000,
+      },
+    });
+    await prisma.rentalOrder.update({
+      where: { id: order.id },
+      data: { paymentStatus: 'PAID', depositStatus: 'HELD' },
+    });
+
+    await request(server)
+      .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+      .set('Cookie', accessCookie(owner.id))
+      .expect(409)
+      .expect((result) =>
+        expect(responseRecord(result.text).code).toBe('WEB_ORDER_PAYMENT_PREVENTS_CANCELLATION'),
+      );
+
+    await expect(
+      prisma.rentalOrder.findUniqueOrThrow({ where: { id: order.id } }),
+    ).resolves.toMatchObject({
+      status: 'RESERVED',
+      cancelledAt: null,
+    });
+    await expect(
+      prisma.rentalItemAllocation.findUniqueOrThrow({ where: { id: allocation.id } }),
+    ).resolves.toMatchObject({
+      status: 'HELD',
+      releasedAt: null,
+    });
+  });
+
+  it('allows exactly one concurrent cancellation and never duplicates the status transition', async () => {
+    const fixture = await rentalScenario(prisma);
+    const owner = await createAccount('+84912345678');
+    const order = await createOrder(fixture, { webAccountId: owner.id });
+    await addCancellableOrderState(fixture, order.id);
+
+    const responses = await Promise.all([
+      request(server)
+        .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+        .set('Cookie', accessCookie(owner.id)),
+      request(server)
+        .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+        .set('Cookie', accessCookie(owner.id)),
+    ]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    await expect(
+      prisma.rentalOrderStatusHistory.count({
+        where: { orderId: order.id, toStatus: 'CANCELLED', reason: 'WEB_USER_CANCELLED' },
+      }),
+    ).resolves.toBe(1);
+  });
+
+  it('serializes a cancellation and payment into one valid outcome', async () => {
+    const fixture = await rentalScenario(prisma);
+    const owner = await createAccount('+84912345678');
+    const order = await createOrder(fixture, { webAccountId: owner.id });
+    await addCancellableOrderState(fixture, order.id);
+    const finance = new PrismaFinanceRepository(prisma);
+
+    const [cancellation, payment] = await Promise.allSettled([
+      request(server)
+        .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
+        .set('Cookie', accessCookie(owner.id)),
+      finance.createPayment({
+        shopId: fixture.shop.id,
+        orderId: order.id,
+        transactionNumber: uniqueCode('WEB_CANCEL_RACE_PAYMENT'),
+        direction: 'IN',
+        purpose: 'DEPOSIT',
+        paymentMethod: 'CASH',
+        amount: 500000,
+        paidAt: new Date(),
+        createdBy: fixture.member.id,
+      }),
+    ]);
+
+    const storedOrder = await prisma.rentalOrder.findUniqueOrThrow({ where: { id: order.id } });
+    const completedPayments = await prisma.paymentTransaction.count({
+      where: { orderId: order.id, status: 'COMPLETED', voidedAt: null },
+    });
+    expect(storedOrder.status === 'CANCELLED' && completedPayments > 0).toBe(false);
+    expect(['RESERVED', 'CANCELLED']).toContain(storedOrder.status);
+
+    if (storedOrder.status === 'CANCELLED') {
+      expect(cancellation).toMatchObject({ status: 'fulfilled', value: { status: 200 } });
+      expect(payment.status).toBe('rejected');
+    } else {
+      expect(cancellation).toMatchObject({ status: 'fulfilled', value: { status: 409 } });
+      expect(payment).toMatchObject({ status: 'fulfilled' });
+      expect(completedPayments).toBe(1);
     }
   });
 });

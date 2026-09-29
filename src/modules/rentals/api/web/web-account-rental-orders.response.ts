@@ -5,9 +5,11 @@ import type {
 } from '../../domain/rental.repository';
 import type {
   WebAccountRentalOrderDetailResDto,
+  WebAccountRentalOrderCancellationResDto,
   WebAccountRentalOrderListItemResDto,
   WebAccountRentalOrdersListResDto,
 } from './dto/web-account-rental-orders.dto';
+import type { WebAccountRentalOrderCancellationResult } from '../../application/web-account-rental-orders.contracts';
 
 function toListItem(order: WebAccountRentalOrderListItem): WebAccountRentalOrderListItemResDto {
   return {
@@ -52,5 +54,15 @@ export function toWebAccountRentalOrderDetailResponse(
       status: entry.status,
       changedAt: entry.changedAt.toISOString(),
     })),
+  };
+}
+
+export function toWebAccountRentalOrderCancellationResponse(
+  result: WebAccountRentalOrderCancellationResult,
+): WebAccountRentalOrderCancellationResDto {
+  return {
+    orderCode: result.orderCode,
+    status: result.status,
+    cancelledAt: result.cancelledAt.toISOString(),
   };
 }
