@@ -9,7 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { AppConfiguration } from '@config/configuration';
 import type { Request, CookieOptions } from 'express';
-import { WebAuthService, authError } from '../application/web-auth.service';
+import { WebSessionService } from '../application/web-session.service';
+import { authError } from '../application/web-auth.errors';
 import type { WebProfile } from '../domain/web-auth.repository';
 
 export interface WebRequest extends Request {
@@ -83,7 +84,7 @@ export class WebAuthCookies {
 async function resolveWebRequestUser(
   request: WebRequest,
   jwt: JwtService,
-  auth: WebAuthService,
+  session: WebSessionService,
   cookies: WebAuthCookies,
 ): Promise<WebProfile | null> {
   const token = cookies.readAccess(request);
@@ -104,19 +105,19 @@ async function resolveWebRequestUser(
 
   // Account reload is intentionally outside the token-failure boundary: a repository outage
   // must reach the global error filter as infrastructure failure, never become a false 401.
-  return auth.accountForAccessToken(payload.sub);
+  return session.accountForAccessToken(payload.sub);
 }
 
 @Injectable()
 export class WebJwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
-    private readonly auth: WebAuthService,
+    private readonly session: WebSessionService,
     private readonly cookies: WebAuthCookies,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WebRequest>();
-    const user = await resolveWebRequestUser(request, this.jwt, this.auth, this.cookies);
+    const user = await resolveWebRequestUser(request, this.jwt, this.session, this.cookies);
     if (!user) authError('AUTH_REQUIRED', 401);
     request.webUser = user;
     return true;
@@ -132,12 +133,12 @@ export class WebJwtAuthGuard implements CanActivate {
 export class OptionalWebJwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
-    private readonly auth: WebAuthService,
+    private readonly session: WebSessionService,
     private readonly cookies: WebAuthCookies,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WebRequest>();
-    const user = await resolveWebRequestUser(request, this.jwt, this.auth, this.cookies);
+    const user = await resolveWebRequestUser(request, this.jwt, this.session, this.cookies);
     if (user) request.webUser = user;
     return true;
   }

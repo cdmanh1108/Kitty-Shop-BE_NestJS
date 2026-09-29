@@ -4,7 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import type { AppConfiguration } from '@config/configuration';
 import { ClockModule } from '@common/clock/clock.module';
 import { WebAuthController } from './api/web-auth.controller';
-import { WebAuthService } from './application/web-auth.service';
+import { WebRegistrationService } from './application/web-registration.service';
+import { WebSessionService } from './application/web-session.service';
 import {
   OptionalWebJwtAuthGuard,
   WebAuthCookies,
@@ -31,7 +32,8 @@ import {
   ],
   controllers: [WebAuthController],
   providers: [
-    WebAuthService,
+    WebRegistrationService,
+    WebSessionService,
     WebAuthCookies,
     WebJwtAuthGuard,
     OptionalWebJwtAuthGuard,
@@ -41,8 +43,8 @@ import {
     { provide: VERIFICATION_CODE_SENDER, useClass: ConfiguredVerificationCodeSender },
   ],
   exports: [
-    WebAuthService,
     WebAuthCookies,
+    WebSessionService,
     WebJwtAuthGuard,
     OptionalWebJwtAuthGuard,
     WebAuthOriginGuard,

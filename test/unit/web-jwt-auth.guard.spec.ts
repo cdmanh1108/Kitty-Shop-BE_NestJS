@@ -1,8 +1,8 @@
 import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { JwtService } from '@nestjs/jwt';
-import { authError } from '../../src/modules/web-auth/application/web-auth.service';
-import type { WebAuthService } from '../../src/modules/web-auth/application/web-auth.service';
+import { authError } from '../../src/modules/web-auth/application/web-auth.errors';
+import type { WebSessionService } from '../../src/modules/web-auth/application/web-session.service';
 import {
   OptionalWebJwtAuthGuard,
   WebAuthOriginGuard,
@@ -50,14 +50,14 @@ function setup(
   const request = { headers: {} } as WebRequest;
   const verifyAsync = jest.fn().mockResolvedValue(payload);
   const jwt = { verifyAsync } as unknown as JwtService;
-  const auth = { accountForAccessToken } as unknown as WebAuthService;
+  const session = { accountForAccessToken } as unknown as WebSessionService;
   const cookies = { readAccess: jest.fn().mockReturnValue(token) } as unknown as WebAuthCookies;
   return {
     request,
     verifyAsync,
     accountForAccessToken,
     cookies,
-    guard: new WebJwtAuthGuard(jwt, auth, cookies),
+    guard: new WebJwtAuthGuard(jwt, session, cookies),
   };
 }
 
@@ -133,7 +133,7 @@ describe('OptionalWebJwtAuthGuard', () => {
     const { request, verifyAsync, accountForAccessToken, cookies } = setup({ token: undefined });
     const guard = new OptionalWebJwtAuthGuard(
       { verifyAsync } as unknown as JwtService,
-      { accountForAccessToken } as unknown as WebAuthService,
+      { accountForAccessToken } as unknown as WebSessionService,
       cookies,
     );
 
@@ -147,7 +147,7 @@ describe('OptionalWebJwtAuthGuard', () => {
     const { request, verifyAsync, accountForAccessToken, cookies } = setup();
     const guard = new OptionalWebJwtAuthGuard(
       { verifyAsync } as unknown as JwtService,
-      { accountForAccessToken } as unknown as WebAuthService,
+      { accountForAccessToken } as unknown as WebSessionService,
       cookies,
     );
 
@@ -160,7 +160,7 @@ describe('OptionalWebJwtAuthGuard', () => {
     verifyAsync.mockRejectedValueOnce(new Error('tampered'));
     const guard = new OptionalWebJwtAuthGuard(
       { verifyAsync } as unknown as JwtService,
-      { accountForAccessToken } as unknown as WebAuthService,
+      { accountForAccessToken } as unknown as WebSessionService,
       cookies,
     );
 

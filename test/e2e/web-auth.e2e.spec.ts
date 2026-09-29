@@ -11,6 +11,13 @@ import {
 } from '../helpers/test-database';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 
+// Keep unrelated test requests out of each other's in-memory route throttle buckets.
+let testClientSequence = 0;
+const nextTestClientIp = (): string => {
+  testClientSequence = (testClientSequence % 254) + 1;
+  return `198.51.100.${testClientSequence}`;
+};
+
 const register = (
   server: Server,
   email = 'user@example.test',
@@ -20,13 +27,14 @@ const register = (
   const call = request(server)
     .post('/api/v1/web/auth/register')
     .set('Content-Type', 'application/json');
-  if (ip) call.set('X-Forwarded-For', ip);
+  call.set('X-Forwarded-For', ip ?? nextTestClientIp());
   return call.send({ email, password });
 };
 const resend = (server: Server, challengeId: string) =>
   request(server)
     .post('/api/v1/web/auth/resend-otp')
     .set('Content-Type', 'application/json')
+    .set('X-Forwarded-For', nextTestClientIp())
     .send({ challengeId });
 const bodyRecord = (body: unknown): Record<string, unknown> => {
   if (typeof body !== 'object' || body === null) throw new Error('Expected response object');

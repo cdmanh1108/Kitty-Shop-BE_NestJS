@@ -13,13 +13,10 @@ import {
   WebAuthOriginGuard,
   WebJwtAuthGuard,
 } from '../src/modules/web-auth/api/web-jwt-auth';
-import { WebAuthService } from '../src/modules/web-auth/application/web-auth.service';
+import { WebRegistrationService } from '../src/modules/web-auth/application/web-registration.service';
+import { WebSessionService } from '../src/modules/web-auth/application/web-session.service';
 import type { Clock } from '../src/common/clock/clock';
 import type { AppConfiguration } from '../src/config/configuration';
-import type {
-  VerificationCodeGenerator,
-  VerificationCodeSender,
-} from '../src/modules/web-auth/domain/verification-code';
 import type { WebAuthRepository } from '../src/modules/web-auth/domain/web-auth.repository';
 
 const accountId = '00000000-0000-4000-8000-000000000001';
@@ -40,10 +37,8 @@ describe('Web JWT authentication HTTP boundary', () => {
     errorLog = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     jwt = new JwtService({ secret: 'web-test-signing-key-never-for-deployment' });
     repository = { findAccountById: jest.fn() };
-    const auth = new WebAuthService(
+    const session = new WebSessionService(
       repository as WebAuthRepository,
-      {} as VerificationCodeGenerator,
-      {} as VerificationCodeSender,
       {} as Clock,
       new ConfigService<AppConfiguration, true>(),
       jwt,
@@ -60,17 +55,18 @@ describe('Web JWT authentication HTTP boundary', () => {
       controllers: [WebAuthController],
       providers: [
         { provide: ConfigService, useValue: new ConfigService() },
-        { provide: WebAuthService, useValue: auth },
+        { provide: WebRegistrationService, useValue: {} },
+        { provide: WebSessionService, useValue: session },
         { provide: WebAuthCookies, useValue: cookies },
         { provide: JwtService, useValue: jwt },
         {
           provide: WebJwtAuthGuard,
           useFactory: (
             jwtService: JwtService,
-            webAuth: WebAuthService,
+            webSession: WebSessionService,
             webCookies: WebAuthCookies,
-          ) => new WebJwtAuthGuard(jwtService, webAuth, webCookies),
-          inject: [JwtService, WebAuthService, WebAuthCookies],
+          ) => new WebJwtAuthGuard(jwtService, webSession, webCookies),
+          inject: [JwtService, WebSessionService, WebAuthCookies],
         },
         { provide: WebAuthOriginGuard, useValue: { canActivate: () => true } },
       ],

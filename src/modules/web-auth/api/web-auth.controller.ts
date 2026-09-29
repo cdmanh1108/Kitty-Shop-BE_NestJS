@@ -29,7 +29,9 @@ import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
 import type { Request, Response } from 'express';
 import type { WebProfile } from '../domain/web-auth.repository';
-import { WebAuthService } from '../application/web-auth.service';
+import type { WebTokenResult } from '../application/web-auth.contracts';
+import { WebRegistrationService } from '../application/web-registration.service';
+import { WebSessionService } from '../application/web-session.service';
 import {
   WebAuthCookies,
   WebJwtAuthGuard,
@@ -63,7 +65,8 @@ const profile = (user: WebProfile): WebProfileDto => ({
 @ApiTooManyRequestsResponse({ type: ErrorResDto })
 export class WebAuthController {
   constructor(
-    private readonly auth: WebAuthService,
+    private readonly registration: WebRegistrationService,
+    private readonly session: WebSessionService,
     private readonly cookies: WebAuthCookies,
   ) {}
 
@@ -82,7 +85,7 @@ export class WebAuthController {
       'Verification delivery unavailable; account remains pending and resend can recover',
   })
   register(@Body() input: WebCredentialsDto): Promise<WebChallengeDto> {
-    return this.auth.register({ email: input.email, password: input.password });
+    return this.registration.register({ email: input.email, password: input.password });
   }
   @Post('verify-otp')
   @HttpCode(200)
@@ -93,7 +96,7 @@ export class WebAuthController {
   })
   @ApiOkResponse({ type: WebVerifiedDto })
   verify(@Body() input: WebVerifyOtpDto): Promise<WebVerifiedDto> {
-    return this.auth.verify(input.challengeId, input.otp);
+    return this.registration.verify(input.challengeId, input.otp);
   }
 
   @Post('resend-otp')
@@ -106,7 +109,7 @@ export class WebAuthController {
   @ApiOkResponse({ type: WebChallengeDto })
   @ApiResponse({ status: 503, type: ErrorResDto })
   resend(@Body() input: WebResendOtpDto): Promise<WebChallengeDto> {
-    return this.auth.resend(input.challengeId);
+    return this.registration.resend(input.challengeId);
   }
 
   @Post('login')
@@ -124,7 +127,7 @@ export class WebAuthController {
     @Ip() ipAddress: string,
     @Headers('user-agent') userAgent?: string,
   ): Promise<WebProfileDto> {
-    const tokens = await this.auth.login(
+    const tokens = await this.session.login(
       { email: input.email, password: input.password },
       { ipAddress, userAgent },
     );
@@ -146,7 +149,7 @@ export class WebAuthController {
     @Ip() ipAddress: string,
     @Headers('user-agent') userAgent?: string,
   ): Promise<WebProfileDto> {
-    const tokens = await this.auth.refresh(this.cookies.readRefresh(request), {
+    const tokens = await this.session.refresh(this.cookies.readRefresh(request), {
       ipAddress,
       userAgent,
     });
@@ -173,7 +176,7 @@ export class WebAuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<WebLogoutDto> {
-    await this.auth.logout(this.cookies.readRefresh(request));
+    await this.session.logout(this.cookies.readRefresh(request));
     response.clearCookie(this.cookies.accessName, this.cookies.accessOptions);
     response.clearCookie(this.cookies.refreshName, this.cookies.refreshOptions);
     response.setHeader('Cache-Control', 'no-store');
@@ -181,12 +184,10 @@ export class WebAuthController {
   }
   private setTokens(
     response: Response,
-    tokens: {
-      accessToken: string;
-      accessExpiresAt: Date;
-      refreshToken: string;
-      refreshExpiresAt: Date;
-    },
+    tokens: Pick<
+      WebTokenResult,
+      'accessToken' | 'accessExpiresAt' | 'refreshToken' | 'refreshExpiresAt'
+    >,
   ): void {
     response.setHeader('Cache-Control', 'no-store');
     response.cookie(this.cookies.accessName, tokens.accessToken, {

@@ -12,6 +12,10 @@ accepts only the active `challengeId`; the repository resolves the destination f
 account. Codes are hashed before persistence, attempts and cooldowns are enforced from stored
 state, and the code is never returned by HTTP.
 
+At the application layer, `WebRegistrationService` owns registration, verification, and resend,
+including challenge generation and delivery. `WebSessionService` owns login, refresh, logout, and
+access-token account resolution. Both services share the `WebAuthRepository` persistence port.
+
 `VerificationCodeSender` is the delivery port. The configured test/development adapter is a no-op
 when `AUTH_OTP_BYPASS_ENABLED=true`; otherwise it reports that delivery is unavailable and leaves
 the account pending so it can be retried. `VerificationCodeGenerator` uses the configured test
