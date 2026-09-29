@@ -48,8 +48,8 @@ import {
 
 const profile = (user: WebProfile): WebProfileDto => ({
   id: user.id,
-  phone: user.phone,
-  phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? null,
+  email: user.email,
+  emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
   createdAt: user.createdAt.toISOString(),
 });
 
@@ -69,23 +69,27 @@ export class WebAuthController {
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ operationId: 'registerWebUser', summary: 'Đăng ký tài khoản chờ xác thực' })
+  @ApiOperation({
+    operationId: 'registerWebUser',
+    summary: 'Register a storefront account with email and password.',
+  })
   @ApiCreatedResponse({ type: WebChallengeDto })
   @ApiConflictResponse({ type: ErrorResDto })
   @ApiResponse({
     status: 503,
     type: ErrorResDto,
-    description: 'SMS unavailable; account remains pending and resend can recover',
+    description:
+      'Verification delivery unavailable; account remains pending and resend can recover',
   })
   register(@Body() input: WebCredentialsDto): Promise<WebChallengeDto> {
-    return this.auth.register({ phone: input.phone, password: input.password });
+    return this.auth.register({ email: input.email, password: input.password });
   }
   @Post('verify-otp')
   @HttpCode(200)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     operationId: 'verifyWebRegistrationOtp',
-    summary: 'Xác thực số điện thoại; không đăng nhập tự động',
+    summary: 'Verify the registration email; sign-in is separate.',
   })
   @ApiOkResponse({ type: WebVerifiedDto })
   verify(@Body() input: WebVerifyOtpDto): Promise<WebVerifiedDto> {
@@ -97,7 +101,7 @@ export class WebAuthController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({
     operationId: 'resendWebRegistrationOtp',
-    summary: 'Gửi lại OTP cho tài khoản chờ xác thực',
+    summary: 'Resend a verification code using the active challenge ID.',
   })
   @ApiOkResponse({ type: WebChallengeDto })
   @ApiResponse({ status: 503, type: ErrorResDto })
@@ -110,7 +114,7 @@ export class WebAuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     operationId: 'loginWebUser',
-    summary: 'Đăng nhập bằng số điện thoại và mật khẩu',
+    summary: 'Sign in with email and password.',
   })
   @ApiOkResponse({ type: WebProfileDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
@@ -121,7 +125,7 @@ export class WebAuthController {
     @Headers('user-agent') userAgent?: string,
   ): Promise<WebProfileDto> {
     const tokens = await this.auth.login(
-      { phone: input.phone, password: input.password },
+      { email: input.email, password: input.password },
       { ipAddress, userAgent },
     );
     this.setTokens(response, tokens);

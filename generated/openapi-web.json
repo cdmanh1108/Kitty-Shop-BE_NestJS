@@ -67,7 +67,7 @@
             }
           },
           "503": {
-            "description": "SMS unavailable; account remains pending and resend can recover",
+            "description": "Verification delivery unavailable; account remains pending and resend can recover",
             "content": {
               "application/json": {
                 "schema": {
@@ -77,7 +77,7 @@
             }
           }
         },
-        "summary": "Đăng ký tài khoản chờ xác thực",
+        "summary": "Register a storefront account with email and password.",
         "tags": [
           "Web - Auth"
         ],
@@ -140,7 +140,7 @@
             }
           }
         },
-        "summary": "Xác thực số điện thoại; không đăng nhập tự động",
+        "summary": "Verify the registration email; sign-in is separate.",
         "tags": [
           "Web - Auth"
         ],
@@ -213,7 +213,7 @@
             }
           }
         },
-        "summary": "Gửi lại OTP cho tài khoản chờ xác thực",
+        "summary": "Resend a verification code using the active challenge ID.",
         "tags": [
           "Web - Auth"
         ],
@@ -295,7 +295,7 @@
             }
           }
         },
-        "summary": "Đăng nhập bằng số điện thoại và mật khẩu",
+        "summary": "Sign in with email and password.",
         "tags": [
           "Web - Auth"
         ],
@@ -1714,21 +1714,22 @@
       "WebCredentialsDto": {
         "type": "object",
         "properties": {
-          "phone": {
+          "email": {
             "type": "string",
-            "example": "0912345678",
-            "maxLength": 40
+            "format": "email",
+            "example": "user@example.com",
+            "maxLength": 254
           },
           "password": {
             "type": "string",
             "minLength": 8,
             "maxLength": 64,
             "format": "password",
-            "description": "8–64 characters, at most 72 UTF-8 bytes"
+            "description": "8-64 characters, at most 72 UTF-8 bytes"
           }
         },
         "required": [
-          "phone",
+          "email",
           "password"
         ]
       },
@@ -1739,9 +1740,10 @@
             "type": "string",
             "format": "uuid"
           },
-          "phone": {
+          "email": {
             "type": "string",
-            "example": "+84912345678"
+            "format": "email",
+            "example": "user@example.com"
           },
           "expiresAt": {
             "type": "string",
@@ -1754,7 +1756,7 @@
         },
         "required": [
           "challengeId",
-          "phone",
+          "email",
           "expiresAt",
           "resendAvailableAt"
         ]
@@ -1849,14 +1851,17 @@
             "type": "string",
             "format": "uuid"
           },
-          "phone": {
+          "email": {
             "type": "string",
-            "example": "+84912345678"
+            "format": "email",
+            "nullable": true,
+            "description": "Null only for retained accounts created before email identity migration."
           },
-          "phoneVerifiedAt": {
+          "emailVerifiedAt": {
             "type": "string",
             "format": "date-time",
-            "nullable": true
+            "nullable": true,
+            "description": "Null only for unverified or retained pre-migration accounts."
           },
           "createdAt": {
             "type": "string",
@@ -1865,8 +1870,8 @@
         },
         "required": [
           "id",
-          "phone",
-          "phoneVerifiedAt",
+          "email",
+          "emailVerifiedAt",
           "createdAt"
         ]
       },

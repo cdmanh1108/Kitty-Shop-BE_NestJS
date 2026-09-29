@@ -5,8 +5,13 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { compare, hash } from 'bcryptjs';
 import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
-import { OTP_PROVIDER, type OtpProvider } from '../domain/otp-provider';
-import { normalizeWebPhone } from '../domain/phone';
+import { normalizeWebEmail } from '../domain/email';
+import {
+  VERIFICATION_CODE_GENERATOR,
+  VERIFICATION_CODE_SENDER,
+  type VerificationCodeGenerator,
+  type VerificationCodeSender,
+} from '../domain/verification-code';
 import {
   WEB_AUTH_REPOSITORY,
   type WebAuthRepository,
@@ -19,12 +24,12 @@ import {
 } from '../domain/web-auth.repository';
 
 export interface CredentialsInput {
-  phone: string;
+  email: string;
   password: string;
 }
 export interface ChallengeResult {
   challengeId: string;
-  phone: string;
+  email: string;
   expiresAt: string;
   resendAvailableAt: string;
 }
@@ -37,24 +42,25 @@ export interface WebTokenResult {
 }
 
 const messages: Record<string, string> = {
-  INVALID_PHONE_NUMBER: 'Số điện thoại di động Việt Nam không hợp lệ.',
-  INVALID_PASSWORD: 'Mật khẩu cần từ 8 đến 64 ký tự và tối đa 72 byte.',
-  PHONE_ALREADY_REGISTERED: 'Số điện thoại đã được đăng ký. Vui lòng đăng nhập để tiếp tục.',
-  INVALID_CREDENTIALS: 'Số điện thoại hoặc mật khẩu không chính xác.',
-  PHONE_NOT_VERIFIED: 'Tài khoản chưa xác thực số điện thoại.',
-  ACCOUNT_DISABLED: 'Tài khoản đã bị vô hiệu hóa.',
-  AUTH_REQUIRED: 'Vui lòng đăng nhập để tiếp tục.',
-  OTP_CHALLENGE_NOT_FOUND: 'Không tìm thấy yêu cầu xác thực. Vui lòng yêu cầu mã mới.',
-  OTP_EXPIRED: 'Mã xác thực đã hết hạn. Vui lòng gửi lại mã.',
-  OTP_ATTEMPTS_EXCEEDED: 'Đã hết số lần thử. Vui lòng gửi lại mã.',
-  OTP_CONSUMED: 'Mã xác thực đã được sử dụng. Vui lòng yêu cầu mã mới.',
-  OTP_INVALID: 'Mã xác thực không chính xác.',
-  OTP_RESEND_TOO_SOON: 'Vui lòng chờ trước khi gửi lại mã xác thực.',
-  PHONE_ALREADY_VERIFIED: 'Số điện thoại đã được xác thực. Vui lòng đăng nhập.',
+  INVALID_EMAIL: 'Please enter a valid email address.',
+  INVALID_PASSWORD: 'Password must be 8 to 64 characters and at most 72 UTF-8 bytes.',
+  EMAIL_ALREADY_REGISTERED: 'This email is already registered. Please sign in to continue.',
+  INVALID_CREDENTIALS: 'Email or password is incorrect.',
+  EMAIL_NOT_VERIFIED: 'This account email has not been verified.',
+  ACCOUNT_DISABLED: 'This account is disabled.',
+  AUTH_REQUIRED: 'Please sign in to continue.',
+  OTP_CHALLENGE_NOT_FOUND: 'Verification request not found. Please request a new code.',
+  OTP_EXPIRED: 'Verification code expired. Please request a new code.',
+  OTP_ATTEMPTS_EXCEEDED: 'Too many attempts. Please request a new code.',
+  OTP_CONSUMED: 'Verification code was already used. Please request a new code.',
+  OTP_INVALID: 'Verification code is incorrect.',
+  OTP_RESEND_TOO_SOON: 'Please wait before requesting another verification code.',
+  EMAIL_ALREADY_VERIFIED: 'This email is already verified. Please sign in.',
 };
+
 export function authError(code: string, status = 400): never {
   throw new HttpException(
-    { code, message: messages[code] ?? 'Không thể hoàn tất yêu cầu.' },
+    { code, message: messages[code] ?? 'Could not complete the request.' },
     status,
   );
 }
@@ -63,26 +69,29 @@ export function authError(code: string, status = 400): never {
 export class WebAuthService {
   constructor(
     @Inject(WEB_AUTH_REPOSITORY) private readonly repository: WebAuthRepository,
-    @Inject(OTP_PROVIDER) private readonly otp: OtpProvider,
+    @Inject(VERIFICATION_CODE_GENERATOR)
+    private readonly codeGenerator: VerificationCodeGenerator,
+    @Inject(VERIFICATION_CODE_SENDER) private readonly codeSender: VerificationCodeSender,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly config: ConfigService<AppConfiguration, true>,
     private readonly jwt: JwtService,
   ) {}
+
   async register(input: CredentialsInput): Promise<ChallengeResult> {
-    const phone = this.phone(input.phone);
+    const email = this.email(input.email);
     this.validatePassword(input.password);
-    const existing = await this.repository.findAccount(phone);
-    if (existing) {
-      if (existing.phoneVerifiedAt || existing.disabledAt)
-        authError('PHONE_ALREADY_REGISTERED', 409);
-    }
+    const existing = await this.repository.findAccountByEmail(email);
+    if (existing && (existing.emailVerifiedAt || existing.disabledAt))
+      authError('EMAIL_ALREADY_REGISTERED', 409);
+
     return this.issueVerificationChallenge({
       kind: 'register',
-      phone,
+      email,
       passwordHash: await hash(input.password, 12),
       attemptId: randomUUID(),
     });
   }
+
   async verify(challengeId: string, otp: string): Promise<{ verified: true }> {
     const result = await this.repository.verify(
       challengeId,
@@ -93,14 +102,16 @@ export class WebAuthService {
     if ('error' in result) authError(result.error);
     return result;
   }
+
   async resend(challengeId: string): Promise<ChallengeResult> {
     return this.issueVerificationChallenge({ kind: 'resend', challengeId });
   }
+
   private async issueVerificationChallenge(
     request: ChallengeIssueIntent,
   ): Promise<ChallengeResult> {
     const now = this.clock.now();
-    const code = this.otp.generateCode();
+    const code = this.codeGenerator.generate();
     const registrationAttemptId = request.kind === 'register' ? request.attemptId : undefined;
     const challenge = this.challenge(code, registrationAttemptId, now);
     const issueRequest: ChallengeIssueRequest = { ...request, challenge, now };
@@ -109,27 +120,29 @@ export class WebAuthService {
       const status =
         result.error === 'OTP_RESEND_TOO_SOON'
           ? 429
-          : result.error === 'PHONE_ALREADY_REGISTERED'
+          : result.error === 'EMAIL_ALREADY_REGISTERED'
             ? 409
             : 400;
       authError(result.error, status);
     }
-    await this.otp.send(result.phone, code, result.challenge.id);
-    return this.challengeResult(result.phone, result.challenge);
+    await this.codeSender.send(result.email, code, result.challenge.id);
+    return this.challengeResult(result.email, result.challenge);
   }
+
   async login(
     input: CredentialsInput,
     context: { ipAddress?: string; userAgent?: string },
   ): Promise<WebTokenResult> {
-    const phone = this.phone(input.phone);
+    const email = this.email(input.email);
     this.validatePassword(input.password);
-    const account = await this.repository.findAccount(phone);
-    // Same bcrypt work for missing accounts; verification state is revealed only after password proof.
+    const account = await this.repository.findAccountByEmail(email);
+    // Keep the same bcrypt work for missing accounts to avoid an enumeration oracle.
     const dummyHash = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.5bH5XmGYWlkJKMYRnHX4CILJQUPB6eW';
     const valid = await compare(input.password, account?.passwordHash ?? dummyHash);
     if (!account || !valid) authError('INVALID_CREDENTIALS', 401);
     if (account.disabledAt) authError('ACCOUNT_DISABLED', 403);
-    if (!account.phoneVerifiedAt) authError('PHONE_NOT_VERIFIED', 403);
+    if (!account.emailVerifiedAt) authError('EMAIL_NOT_VERIFIED', 403);
+
     const refresh = this.prepareRefresh(context);
     if (
       !(await this.repository.createRefreshToken({
@@ -141,6 +154,7 @@ export class WebAuthService {
       authError('AUTH_REQUIRED', 401);
     return this.issueTokens(account, refresh.rawToken, refresh.data.expiresAt);
   }
+
   async refresh(
     rawToken: string | undefined,
     context: { ipAddress?: string; userAgent?: string },
@@ -155,22 +169,29 @@ export class WebAuthService {
     if (rotation.outcome !== 'ROTATED') authError('AUTH_REQUIRED', 401);
     return this.issueTokens(rotation.account, replacement.rawToken, replacement.data.expiresAt);
   }
+
   async logout(token: string | undefined): Promise<void> {
     if (token && /^[A-Za-z0-9_-]{64}$/.test(token))
       await this.repository.revokeRefreshToken(this.tokenHash(token), this.clock.now());
   }
+
   async accountForAccessToken(accountId: string): Promise<WebProfile> {
     const account = await this.repository.findAccountById(accountId);
-    if (!account?.phoneVerifiedAt || account.disabledAt) authError('AUTH_REQUIRED', 401);
+    // A valid pre-migration JWT remains usable for a legacy row with no email.
+    if (!account || account.disabledAt || (account.email !== null && !account.emailVerifiedAt))
+      authError('AUTH_REQUIRED', 401);
     return this.profile(account);
   }
-  private phone(raw: string): string {
-    return normalizeWebPhone(raw) ?? authError('INVALID_PHONE_NUMBER');
+
+  private email(raw: string): string {
+    return normalizeWebEmail(raw) ?? authError('INVALID_EMAIL');
   }
+
   private validatePassword(password: string): void {
     if (password.length < 8 || password.length > 64 || Buffer.byteLength(password, 'utf8') > 72)
       authError('INVALID_PASSWORD');
   }
+
   private challenge(code: string, registrationAttemptId: string | undefined, now: Date) {
     const settings = this.config.get('webAuth', { infer: true });
     const id = randomUUID();
@@ -183,14 +204,17 @@ export class WebAuthService {
       resendAvailableAt: new Date(now.getTime() + settings.resendCooldownSeconds * 1000),
     };
   }
+
   private otpHash(id: string, code: string): string {
     return createHmac('sha256', this.config.get('webAuth', { infer: true }).otpHashSecret)
       .update(`kitty-web-registration:${id}:${code}`)
       .digest('hex');
   }
+
   private tokenHash(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
+
   private prepareRefresh(context: { ipAddress?: string; userAgent?: string }) {
     const rawToken = randomBytes(48).toString('base64url');
     const data: WebRefreshTokenData = {
@@ -204,6 +228,7 @@ export class WebAuthService {
     };
     return { rawToken, data };
   }
+
   private async issueTokens(
     account: WebAccount,
     refreshToken: string,
@@ -227,19 +252,21 @@ export class WebAuthService {
       refreshExpiresAt,
     };
   }
-  private challengeResult(phone: string, challenge: OtpChallenge): ChallengeResult {
+
+  private challengeResult(email: string, challenge: OtpChallenge): ChallengeResult {
     return {
       challengeId: challenge.id,
-      phone,
+      email,
       expiresAt: challenge.expiresAt.toISOString(),
       resendAvailableAt: challenge.resendAvailableAt.toISOString(),
     };
   }
+
   private profile(account: WebAccount): WebProfile {
     return {
       id: account.id,
-      phone: account.phone,
-      phoneVerifiedAt: account.phoneVerifiedAt,
+      email: account.email,
+      emailVerifiedAt: account.emailVerifiedAt,
       createdAt: account.createdAt,
     };
   }

@@ -1,20 +1,24 @@
 export const WEB_AUTH_REPOSITORY = Symbol('WEB_AUTH_REPOSITORY');
+
+/** Email fields are nullable only for retained phone-era accounts. */
 export interface WebAccount {
   id: string;
-  phone: string;
+  email: string | null;
   passwordHash: string;
   pendingPasswordHash?: string | null;
   registrationAttemptId?: string | null;
-  phoneVerifiedAt: Date | null;
+  emailVerifiedAt: Date | null;
   disabledAt: Date | null;
   createdAt: Date;
 }
+
 export interface WebProfile {
   id: string;
-  phone: string;
-  phoneVerifiedAt: Date | null;
+  email: string | null;
+  emailVerifiedAt: Date | null;
   createdAt: Date;
 }
+
 export interface OtpChallenge {
   id: string;
   accountId: string;
@@ -38,7 +42,7 @@ export type VerifyResult = { verified: true } | { error: OtpFailure };
 export type ChallengeIssueIntent =
   | {
       kind: 'register';
-      phone: string;
+      email: string;
       passwordHash: string;
       attemptId: string;
     }
@@ -48,14 +52,14 @@ export type ChallengeIssueRequest = ChallengeIssueIntent & {
   now: Date;
 };
 export type ChallengeIssueResult =
-  | { challenge: OtpChallenge; phone: string }
+  | { challenge: OtpChallenge; email: string }
   | {
       error:
         | 'OTP_CHALLENGE_NOT_FOUND'
         | 'OTP_CONSUMED'
         | 'OTP_RESEND_TOO_SOON'
-        | 'PHONE_ALREADY_REGISTERED'
-        | 'PHONE_ALREADY_VERIFIED'
+        | 'EMAIL_ALREADY_REGISTERED'
+        | 'EMAIL_ALREADY_VERIFIED'
         | 'ACCOUNT_DISABLED';
     };
 export type ChallengeIssuePersistenceResult =
@@ -72,7 +76,7 @@ export type WebRefreshRotationResult =
   | { outcome: 'REUSED' | 'REJECTED' | 'CONCURRENT' };
 export interface WebAuthRepository {
   issueVerificationChallenge(request: ChallengeIssueRequest): Promise<ChallengeIssueResult>;
-  findAccount(phone: string): Promise<WebAccount | null>;
+  findAccountByEmail(email: string): Promise<WebAccount | null>;
   findChallenge(id: string): Promise<OtpChallenge | null>;
   verify(id: string, otpHash: string, now: Date, maxAttempts: number): Promise<VerifyResult>;
   findAccountById(id: string): Promise<WebAccount | null>;

@@ -15,10 +15,15 @@ enum RentalOrderSource {
 // Storefront identity is separate from staff membership and tenant CRM records.
 model WebAccount {
   id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  phone                 String                  @unique @db.VarChar(30)
+  // Nullable while pre-email accounts are retained without inventing addresses.
+  email                 String?                 @unique @db.VarChar(254)
+  emailVerifiedAt       DateTime?               @map("email_verified_at") @db.Timestamptz(6)
+  // Legacy identity columns remain for existing account rows; Web Auth no longer reads them.
+  phone                 String?                 @unique @db.VarChar(30)
   passwordHash          String                  @map("password_hash") @db.Text
   pendingPasswordHash   String?                 @map("pending_password_hash") @db.Text
   registrationAttemptId String?                 @map("registration_attempt_id") @db.Uuid
+  /// @deprecated Legacy phone verification state. Kept for data retention only.
   phoneVerifiedAt       DateTime?               @map("phone_verified_at") @db.Timestamptz(6)
   disabledAt            DateTime?               @map("disabled_at") @db.Timestamptz(6)
   createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)

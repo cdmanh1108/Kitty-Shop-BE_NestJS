@@ -12,9 +12,12 @@ import {
   WebAuthOriginGuard,
 } from './api/web-jwt-auth';
 import { WEB_AUTH_REPOSITORY } from './domain/web-auth.repository';
-import { OTP_PROVIDER } from './domain/otp-provider';
+import { VERIFICATION_CODE_GENERATOR, VERIFICATION_CODE_SENDER } from './domain/verification-code';
 import { PrismaWebAuthRepository } from './infrastructure/prisma-web-auth.repository';
-import { ConfiguredOtpProvider } from './infrastructure/configured-otp.provider';
+import {
+  ConfiguredVerificationCodeGenerator,
+  ConfiguredVerificationCodeSender,
+} from './infrastructure/configured-verification-code.adapter';
 
 @Module({
   imports: [
@@ -34,7 +37,8 @@ import { ConfiguredOtpProvider } from './infrastructure/configured-otp.provider'
     OptionalWebJwtAuthGuard,
     WebAuthOriginGuard,
     { provide: WEB_AUTH_REPOSITORY, useClass: PrismaWebAuthRepository },
-    { provide: OTP_PROVIDER, useClass: ConfiguredOtpProvider },
+    { provide: VERIFICATION_CODE_GENERATOR, useClass: ConfiguredVerificationCodeGenerator },
+    { provide: VERIFICATION_CODE_SENDER, useClass: ConfiguredVerificationCodeSender },
   ],
   exports: [
     WebAuthService,

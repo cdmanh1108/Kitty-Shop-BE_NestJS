@@ -1,52 +1,73 @@
+import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsUUID, Length, Matches, MaxLength } from 'class-validator';
+import { IsEmail, IsString, IsUUID, Length, Matches, MaxLength } from 'class-validator';
+import { normalizeWebEmail } from '../domain/email';
 
-export class WebPhoneDto {
-  @ApiProperty({ example: '0912345678', maxLength: 40 })
-  @IsString({ message: 'Số điện thoại phải là chuỗi.' })
-  @Length(10, 40, { message: 'Số điện thoại không hợp lệ.' })
-  phone!: string;
+export class WebEmailDto {
+  @ApiProperty({ format: 'email', example: 'user@example.com', maxLength: 254 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? (normalizeWebEmail(value) ?? value) : value,
+  )
+  @IsEmail({ allow_utf8_local_part: false }, { message: 'A valid email address is required.' })
+  @MaxLength(254)
+  email!: string;
 }
-export class WebCredentialsDto extends WebPhoneDto {
+
+export class WebCredentialsDto extends WebEmailDto {
   @ApiProperty({
     minLength: 8,
     maxLength: 64,
     format: 'password',
-    description: '8–64 characters, at most 72 UTF-8 bytes',
+    description: '8-64 characters, at most 72 UTF-8 bytes',
   })
-  @IsString({ message: 'Mật khẩu phải là chuỗi.' })
-  @Length(8, 64, { message: 'Mật khẩu cần từ 8 đến 64 ký tự.' })
+  @IsString({ message: 'Password must be a string.' })
+  @Length(8, 64, { message: 'Password must be 8 to 64 characters long.' })
   password!: string;
 }
+
 export class WebVerifyOtpDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID('4', { message: 'Yêu cầu xác thực không hợp lệ.' })
+  @IsUUID('4', { message: 'Invalid verification request.' })
   challengeId!: string;
   @ApiProperty({ pattern: '^\\d{6}$', minLength: 6, maxLength: 6 })
-  @IsString({ message: 'Mã xác thực phải là chuỗi.' })
-  @MaxLength(6, { message: 'Mã xác thực cần đúng 6 chữ số.' })
-  @Matches(/^\d{6}$/, { message: 'Mã xác thực cần đúng 6 chữ số.' })
+  @IsString({ message: 'Verification code must be a string.' })
+  @MaxLength(6, { message: 'Verification code must contain six digits.' })
+  @Matches(/^\d{6}$/, { message: 'Verification code must contain six digits.' })
   otp!: string;
 }
+
 export class WebResendOtpDto {
   @ApiProperty({ format: 'uuid', description: 'The current registration verification challenge.' })
-  @IsUUID('4', { message: 'Yêu cầu xác thực không hợp lệ.' })
+  @IsUUID('4', { message: 'Invalid verification request.' })
   challengeId!: string;
 }
+
 export class WebChallengeDto {
   @ApiProperty({ format: 'uuid' }) challengeId!: string;
-  @ApiProperty({ example: '+84912345678' }) phone!: string;
+  @ApiProperty({ format: 'email', example: 'user@example.com' }) email!: string;
   @ApiProperty({ format: 'date-time' }) expiresAt!: string;
   @ApiProperty({ format: 'date-time' }) resendAvailableAt!: string;
 }
+
 export class WebProfileDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ example: '+84912345678' }) phone!: string;
-  @ApiProperty({ format: 'date-time', nullable: true, type: String }) phoneVerifiedAt!:
-    | string
-    | null;
+  @ApiProperty({
+    format: 'email',
+    nullable: true,
+    type: String,
+    description: 'Null only for retained accounts created before email identity migration.',
+  })
+  email!: string | null;
+  @ApiProperty({
+    format: 'date-time',
+    nullable: true,
+    type: String,
+    description: 'Null only for unverified or retained pre-migration accounts.',
+  })
+  emailVerifiedAt!: string | null;
   @ApiProperty({ format: 'date-time' }) createdAt!: string;
 }
+
 export class WebVerifiedDto {
   @ApiProperty({ enum: [true] }) verified!: boolean;
 }

@@ -16,8 +16,8 @@ import type { AppConfiguration } from '../../src/config/configuration';
 const accountId = '00000000-0000-4000-8000-000000000001';
 const profile: WebProfile = {
   id: accountId,
-  phone: '+84912345678',
-  phoneVerifiedAt: new Date('2026-09-22T00:00:00Z'),
+  email: 'user@example.test',
+  emailVerifiedAt: new Date('2026-09-22T00:00:00Z'),
   createdAt: new Date('2026-09-20T00:00:00Z'),
 };
 

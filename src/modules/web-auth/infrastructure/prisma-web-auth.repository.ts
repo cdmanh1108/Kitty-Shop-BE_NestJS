@@ -28,11 +28,11 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
         error.code === 'P2002'
       ) {
         const racedAccount = await this.prisma.webAccount.findUnique({
-          where: { phone: request.phone },
+          where: { email: request.email },
         });
         if (racedAccount) {
-          return racedAccount.phoneVerifiedAt || racedAccount.disabledAt
-            ? { error: 'PHONE_ALREADY_REGISTERED' }
+          return racedAccount.emailVerifiedAt || racedAccount.disabledAt
+            ? { error: 'EMAIL_ALREADY_REGISTERED' }
             : { error: 'OTP_RESEND_TOO_SOON' };
         }
       }
@@ -44,13 +44,13 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
     request: Extract<ChallengeIssueRequest, { kind: 'register' }>,
   ): Promise<ChallengeIssueResult> {
     const rows = await tx.$queryRaw<{ id: string }[]>`
-      SELECT id FROM web_accounts WHERE phone = ${request.phone} FOR UPDATE
+      SELECT id FROM web_accounts WHERE email = ${request.email} FOR UPDATE
     `;
     const existingId = rows[0]?.id;
     if (!existingId) {
       const account = await tx.webAccount.create({
         data: {
-          phone: request.phone,
+          email: request.email,
           passwordHash: request.passwordHash,
           pendingPasswordHash: request.passwordHash,
           registrationAttemptId: request.attemptId,
@@ -63,11 +63,11 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
         request.challenge,
         request.now,
       );
-      return 'error' in issued ? issued : { phone: account.phone, challenge: issued.challenge };
+      return 'error' in issued ? issued : { email: request.email, challenge: issued.challenge };
     }
 
     const account = await tx.webAccount.findUniqueOrThrow({ where: { id: existingId } });
-    if (account.phoneVerifiedAt || account.disabledAt) return { error: 'PHONE_ALREADY_REGISTERED' };
+    if (account.emailVerifiedAt || account.disabledAt) return { error: 'EMAIL_ALREADY_REGISTERED' };
     const issued = await this.issueNextChallenge(
       tx,
       account.id,
@@ -80,7 +80,7 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
       where: { id: account.id },
       data: { pendingPasswordHash: request.passwordHash, registrationAttemptId: request.attemptId },
     });
-    return { phone: account.phone, challenge: issued.challenge };
+    return { email: request.email, challenge: issued.challenge };
   }
   private async issueFromChallenge(
     tx: Prisma.TransactionClient,
@@ -98,7 +98,8 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
 
     const account = await tx.webAccount.findUniqueOrThrow({ where: { id: initial.accountId } });
     if (account.disabledAt) return { error: 'ACCOUNT_DISABLED' };
-    if (account.phoneVerifiedAt) return { error: 'PHONE_ALREADY_VERIFIED' };
+    if (!account.email) return { error: 'OTP_CHALLENGE_NOT_FOUND' };
+    if (account.emailVerifiedAt) return { error: 'EMAIL_ALREADY_VERIFIED' };
     if (!account.registrationAttemptId || !account.pendingPasswordHash)
       return { error: 'OTP_CHALLENGE_NOT_FOUND' };
 
@@ -120,7 +121,7 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
       request.challenge,
       request.now,
     );
-    return 'error' in issued ? issued : { phone: account.phone, challenge: issued.challenge };
+    return 'error' in issued ? issued : { email: account.email, challenge: issued.challenge };
   }
   private async issueNextChallenge(
     tx: Prisma.TransactionClient,
@@ -145,8 +146,8 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
       }),
     };
   }
-  findAccount(phone: string) {
-    return this.prisma.webAccount.findUnique({ where: { phone } });
+  findAccountByEmail(email: string) {
+    return this.prisma.webAccount.findUnique({ where: { email } });
   }
   findAccountById(id: string) {
     return this.prisma.webAccount.findUnique({ where: { id } });
@@ -168,6 +169,8 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
         include: { account: true },
       });
       if (challenge.account.disabledAt) return { error: 'ACCOUNT_DISABLED' };
+      if (!challenge.account.email) return { error: 'OTP_CONSUMED' };
+      if (challenge.account.emailVerifiedAt) return { error: 'OTP_CONSUMED' };
       if (
         !challenge.registrationAttemptId ||
         challenge.registrationAttemptId !== challenge.account.registrationAttemptId ||
@@ -187,7 +190,7 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
           passwordHash: challenge.account.pendingPasswordHash,
           pendingPasswordHash: null,
           registrationAttemptId: null,
-          phoneVerifiedAt: now,
+          emailVerifiedAt: now,
         },
       });
       await tx.webOtpChallenge.updateMany({
@@ -203,7 +206,7 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM web_accounts WHERE id = ${input.accountId}::uuid FOR UPDATE`;
       const account = await tx.webAccount.findUnique({ where: { id: input.accountId } });
-      if (!account?.phoneVerifiedAt || account.disabledAt) return false;
+      if (!account?.email || !account.emailVerifiedAt || account.disabledAt) return false;
       await tx.webRefreshTokenFamily.create({
         data: { id: input.familyId, accountId: input.accountId },
       });
@@ -240,10 +243,11 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
             }
             return { outcome: 'REUSED' } as const;
           }
+          // Allow only previously issued sessions to continue for retained rows with no email.
           if (
             token.family.revokedAt ||
             token.family.accountId !== token.accountId ||
-            !token.account.phoneVerifiedAt ||
+            (token.account.email !== null && !token.account.emailVerifiedAt) ||
             token.account.disabledAt
           )
             return { outcome: 'REJECTED' } as const;

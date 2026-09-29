@@ -8,11 +8,11 @@ import type { PrismaService } from '../../src/database/prisma/prisma.service';
 const now = new Date('2026-09-29T00:00:00.000Z');
 const account: WebAccount = {
   id: '00000000-0000-4000-8000-000000000001',
-  phone: '+84912345678',
+  email: 'user@example.test',
   passwordHash: 'old-password-hash',
   pendingPasswordHash: 'pending-password-hash',
   registrationAttemptId: '00000000-0000-4000-8000-000000000002',
-  phoneVerifiedAt: null,
+  emailVerifiedAt: null,
   disabledAt: null,
   createdAt: now,
 };
@@ -47,6 +47,7 @@ function setup() {
     webOtpChallenge: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       create: jest.fn(),
     },
@@ -72,7 +73,7 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
 
     const result = await repository.issueVerificationChallenge({
       kind: 'register',
-      phone: account.phone,
+      email: account.email!,
       passwordHash: 'replacement-password-hash',
       attemptId: newChallenge.registrationAttemptId,
       challenge: newChallenge,
@@ -95,14 +96,14 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
 
     const result = await repository.issueVerificationChallenge({
       kind: 'register',
-      phone: account.phone,
+      email: account.email!,
       passwordHash: 'replacement-password-hash',
       attemptId: newChallenge.registrationAttemptId,
       challenge: newChallenge,
       now,
     });
 
-    expect(result).toEqual({ phone: account.phone, challenge: created });
+    expect(result).toEqual({ email: account.email, challenge: created });
     expect(tx.webOtpChallenge.updateMany).toHaveBeenCalledWith({
       where: { accountId: account.id, consumedAt: null },
       data: { consumedAt: now },
@@ -138,7 +139,7 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
       now,
     });
 
-    expect(result).toEqual({ phone: account.phone, challenge: created });
+    expect(result).toEqual({ email: account.email, challenge: created });
     expect(tx.webAccount.findUniqueOrThrow).toHaveBeenCalledWith({ where: { id: account.id } });
     expect(tx.webOtpChallenge.updateMany).toHaveBeenCalledWith({
       where: { accountId: account.id, consumedAt: null },
@@ -161,5 +162,34 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
 
     expect(result).toEqual({ error: 'OTP_CONSUMED' });
     expect(tx.webOtpChallenge.create).not.toHaveBeenCalled();
+  });
+
+  it('does not resend to a legacy account without an email destination', async () => {
+    const { tx, repository } = setup();
+    tx.webOtpChallenge.findUnique.mockResolvedValueOnce({ accountId: account.id });
+    tx.webAccount.findUniqueOrThrow.mockResolvedValue({ ...account, email: null });
+
+    const result = await repository.issueVerificationChallenge({
+      kind: 'resend',
+      challengeId: oldChallenge.id,
+      challenge: { ...newChallenge, registrationAttemptId: undefined },
+      now,
+    });
+
+    expect(result).toEqual({ error: 'OTP_CHALLENGE_NOT_FOUND' });
+    expect(tx.webOtpChallenge.create).not.toHaveBeenCalled();
+  });
+
+  it('does not let a legacy phone challenge verify an email account', async () => {
+    const { tx, repository } = setup();
+    tx.webOtpChallenge.findUnique.mockResolvedValueOnce({ accountId: account.id });
+    tx.webOtpChallenge.findUniqueOrThrow.mockResolvedValue({
+      ...oldChallenge,
+      account: { ...account, email: null },
+    });
+
+    const result = await repository.verify(oldChallenge.id, 'a'.repeat(64), now, 5);
+
+    expect(result).toEqual({ error: 'OTP_CONSUMED' });
   });
 });

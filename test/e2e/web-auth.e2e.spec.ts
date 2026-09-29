@@ -11,12 +11,17 @@ import {
 } from '../helpers/test-database';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 
-const register = (server: Server, phone = '0912345678', ip?: string, password = 'password dài') => {
+const register = (
+  server: Server,
+  email = 'user@example.test',
+  ip?: string,
+  password = 'password dài',
+) => {
   const call = request(server)
     .post('/api/v1/web/auth/register')
     .set('Content-Type', 'application/json');
   if (ip) call.set('X-Forwarded-For', ip);
-  return call.send({ phone, password });
+  return call.send({ email, password });
 };
 const resend = (server: Server, challengeId: string) =>
   request(server)
@@ -56,27 +61,32 @@ describe('Web authentication end-to-end', () => {
   });
 
   it('runs register -> verify -> normalized login -> me -> logout with JWT and refresh cookies', async () => {
-    const registration = await register(server).expect(201);
-    const pending = await prisma.webAccount.findUniqueOrThrow({ where: { phone: '+84912345678' } });
-    expect(pending.phoneVerifiedAt).toBeNull();
+    const registration = await register(server, ' User@Example.Test ').expect(201);
+    expect(responseValue(registration, 'email')).toBe('user@example.test');
+    const pending = await prisma.webAccount.findUniqueOrThrow({
+      where: { email: 'user@example.test' },
+    });
+    expect(pending.emailVerifiedAt).toBeNull();
     expect(await compare('password dài', pending.passwordHash)).toBe(true);
     expect(pending.passwordHash).not.toContain('password dài');
     await request(server)
       .post('/api/v1/web/auth/login')
       .set('Content-Type', 'application/json')
-      .send({ phone: '+84912345678', password: 'password dài' })
+      .send({ email: 'user@example.test', password: 'password dài' })
       .expect(403)
-      .expect(expectCode('PHONE_NOT_VERIFIED'));
+      .expect(expectCode('EMAIL_NOT_VERIFIED'));
     await request(server)
       .post('/api/v1/web/auth/verify-otp')
       .set('Content-Type', 'application/json')
       .send({ challengeId: responseValue(registration, 'challengeId'), otp: '123456' })
       .expect(200);
+    const verified = await prisma.webAccount.findUniqueOrThrow({ where: { id: pending.id } });
+    expect(verified.emailVerifiedAt).toBeInstanceOf(Date);
     const agent = request.agent(server);
     const login = await agent
       .post('/api/v1/web/auth/login')
       .set('Content-Type', 'application/json')
-      .send({ phone: '84 912 345 678', password: 'password dài' })
+      .send({ email: ' User@Example.Test ', password: 'password dài' })
       .expect(200);
     const loginCookies = setCookieValues(login.headers['set-cookie']);
     expect(loginCookies).toHaveLength(2);
@@ -96,7 +106,7 @@ describe('Web authentication end-to-end', () => {
     await agent
       .get('/api/v1/web/auth/me')
       .expect(200)
-      .expect((response) => expect(responseValue(response, 'phone')).toBe('+84912345678'));
+      .expect((response) => expect(responseValue(response, 'email')).toBe('user@example.test'));
     await agent
       .post('/api/v1/web/auth/logout')
       .set('Content-Type', 'application/json')
@@ -116,7 +126,7 @@ describe('Web authentication end-to-end', () => {
     const login = await request(server)
       .post('/api/v1/web/auth/login')
       .set('Content-Type', 'application/json')
-      .send({ phone: '0912345678', password: 'password dài' })
+      .send({ email: 'user@example.test', password: 'password dài' })
       .expect(200);
     const cookies = setCookieValues(login.headers['set-cookie']);
     const accessCookie = cookies
@@ -194,7 +204,7 @@ describe('Web authentication end-to-end', () => {
     const login = await request(server)
       .post('/api/v1/web/auth/login')
       .set('Content-Type', 'application/json')
-      .send({ phone: '0912345678', password: 'password dài' })
+      .send({ email: 'user@example.test', password: 'password dài' })
       .expect(200);
     const refreshCookieA = setCookieValues(login.headers['set-cookie'])
       .find((value) => value.startsWith('kitty_web_refresh='))!
@@ -227,11 +237,11 @@ describe('Web authentication end-to-end', () => {
       .expect(401);
   });
 
-  it('uses a generic login error for unknown phone and wrong password', async () => {
+  it('uses a generic login error for unknown email and wrong password', async () => {
     await register(server);
     for (const credentials of [
-      { phone: '0987654321', password: 'wrong-pass' },
-      { phone: '0912345678', password: 'wrong-pass' },
+      { email: 'unknown@example.test', password: 'wrong-pass' },
+      { email: 'user@example.test', password: 'wrong-pass' },
     ]) {
       await request(server)
         .post('/api/v1/web/auth/login')
@@ -294,12 +304,14 @@ describe('Web authentication end-to-end', () => {
   });
 
   it('applies the same cooldown to registration retries and invalidates the old OTP', async () => {
-    const first = await register(server).expect(201);
+    const first = await register(server, ' User@Example.Test ').expect(201);
     const firstChallengeId = responseValue(first, 'challengeId');
-    const account = await prisma.webAccount.findUniqueOrThrow({ where: { phone: '+84912345678' } });
+    const account = await prisma.webAccount.findUniqueOrThrow({
+      where: { email: 'user@example.test' },
+    });
     const firstPendingPasswordHash = account.pendingPasswordHash;
 
-    await register(server, '0912345678', undefined, 'replacement-password')
+    await register(server, 'user@example.test', undefined, 'replacement-password')
       .expect(429)
       .expect(expectCode('OTP_RESEND_TOO_SOON'));
     expect(await prisma.webAccount.count()).toBe(1);
@@ -313,7 +325,7 @@ describe('Web authentication end-to-end', () => {
     });
     const restarted = await register(
       server,
-      '0912345678',
+      'user@example.test',
       undefined,
       'replacement-password',
     ).expect(201);
@@ -340,7 +352,7 @@ describe('Web authentication end-to-end', () => {
       .post('/api/v1/web/auth/verify-otp')
       .send({ challengeId: nextChallengeId, otp: '123456' })
       .expect(200);
-    await resend(server, nextChallengeId).expect(400).expect(expectCode('PHONE_ALREADY_VERIFIED'));
+    await resend(server, nextChallengeId).expect(400).expect(expectCode('EMAIL_ALREADY_VERIFIED'));
   });
 
   it('rejects unknown and client-identity resend requests', async () => {
@@ -351,19 +363,21 @@ describe('Web authentication end-to-end', () => {
     await request(server)
       .post('/api/v1/web/auth/resend-otp')
       .set('Content-Type', 'application/json')
-      .send({ challengeId: responseValue(registration, 'challengeId'), phone: '+84999999999' })
+      .send({ challengeId: responseValue(registration, 'challengeId'), email: '+84999999999' })
       .expect(400);
     await request(server)
       .post('/api/v1/web/auth/resend-otp')
       .set('Content-Type', 'application/json')
-      .send({ phone: '0912345678' })
+      .send({ email: 'user@example.test' })
       .expect(400);
   });
 
   it('serializes concurrent register retry and resend into a single next challenge', async () => {
     const registration = await register(server).expect(201);
     const firstChallengeId = responseValue(registration, 'challengeId');
-    const account = await prisma.webAccount.findUniqueOrThrow({ where: { phone: '+84912345678' } });
+    const account = await prisma.webAccount.findUniqueOrThrow({
+      where: { email: 'user@example.test' },
+    });
     await prisma.webOtpChallenge.update({
       where: { id: firstChallengeId },
       data: { resendAvailableAt: new Date(Date.now() - 1000) },
@@ -406,8 +420,8 @@ describe('Web authentication end-to-end', () => {
       .expect(expectCode('OTP_EXPIRED'));
     await resetTestDatabase(prisma);
     const outcomes = await Promise.all([
-      register(server, '0912345678', '203.0.113.88'),
-      register(server, '0912345678', '203.0.113.88'),
+      register(server, 'user@example.test', '203.0.113.88'),
+      register(server, 'user@example.test', '203.0.113.88'),
     ]);
     expect(outcomes.map((result) => result.status).sort()).toEqual([201, 429]);
     expect(bodyRecord(outcomes.find((result) => result.status === 429)?.body).code).toBe(

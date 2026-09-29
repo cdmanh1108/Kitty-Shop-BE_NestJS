@@ -1,29 +1,38 @@
 # Storefront authentication
 
-The storefront account lifecycle is `register -> verify phone -> login`. Registration
-never creates a session. Staff Admin authentication remains the existing JWT/refresh-token
-flow and shares neither identities nor route contracts with Web Auth.
-
-Phones are normalized server-side to Vietnamese E.164 (`+84...`) before every lookup.
-Passwords use bcrypt cost 12 and accept 8–64 characters, bounded to bcrypt's 72-byte input.
-Unknown-phone and wrong-password login failures both return `INVALID_CREDENTIALS`; an
+The storefront account lifecycle is `register by email -> verify email -> sign in`. Registration
+does not create a session. Email identity is trimmed and lowercased before lookup or persistence;
+the API does not apply provider-specific alias rules. Admin authentication remains separate.
+Passwords keep the existing bcrypt cost 12 policy: 8–64 characters, bounded to bcrypt's 72-byte
+input. Unknown-email and wrong-password login failures both return `INVALID_CREDENTIALS`; an
 unverified state is returned only after the submitted password is proven.
 
-OTP code generation and delivery depend on `OtpProvider`. The current configured adapter
-supports a fixed code only when `AUTH_OTP_BYPASS_ENABLED=true`. Production startup rejects
-that setting. With bypass disabled, the placeholder adapter returns
-`OTP_DELIVERY_UNAVAILABLE`; the pending account remains recoverable through resend after a
-real SMS adapter is installed. Codes are never returned by HTTP or stored directly.
+The verification challenge lifecycle is shared by registration retries and `resend-otp`. Resend
+accepts only the active `challengeId`; the repository resolves the destination from the associated
+account. Codes are hashed before persistence, attempts and cooldowns are enforced from stored
+state, and the code is never returned by HTTP.
 
-Web access uses a short-lived HS256 JWT with `iss=kitty-api`, `aud=kitty-web` and
-`surface=web`. Its signing key differs from Admin Auth. A 384-bit opaque refresh token is
-rotated atomically; only its SHA-256 hash is persisted. Both values use HttpOnly,
-SameSite=Lax cookies. `/me` verifies the access JWT then reloads the account so disabling an
-account takes effect immediately. Logout revokes the refresh row and clears both cookies,
-even when access has expired. Production cookie names use `__Secure-` and require HTTPS.
+`VerificationCodeSender` is the delivery port. The configured test/development adapter is a no-op
+when `AUTH_OTP_BYPASS_ENABLED=true`; otherwise it reports that delivery is unavailable and leaves
+the account pending so it can be retried. `VerificationCodeGenerator` uses the configured test
+code only in bypass mode and cryptographic randomness otherwise. Production startup rejects the
+bypass setting. No production email vendor is configured yet.
 
-Public auth handlers retain route-level throttles. OTP state itself is PostgreSQL-backed,
-so expiry, attempts and resend cooldown work across application instances. Throttler storage
-is still process-local as documented for Admin auth. When Next.js proxies Auth, production
-must preserve a trustworthy client address at the NestJS ingress or use shared throttler
-storage to avoid treating all storefront clients as one address.
+The email migration retains existing account IDs and their order, cart, favorite, audit, and
+refresh-token relations. Existing phone-only accounts have no safe email source, so their legacy
+phone columns remain nullable/unique and are not used by new Web Auth flows. Pending old phone
+challenges are invalidated. A legacy account can continue an already-issued session, but cannot
+sign in again until a future account email recovery/claim flow is implemented; its associated
+orders remain tied to the retained account ID.
+
+Web access uses a short-lived HS256 JWT with `iss=kitty-api`, `aud=kitty-web` and `surface=web`.
+Its signing key differs from Admin Auth. A 384-bit opaque refresh token is rotated atomically; only
+its SHA-256 hash is persisted. Both values use HttpOnly, SameSite=Lax cookies. `/me` reloads the
+account so disabling an account takes effect immediately. Logout revokes the refresh row and clears
+both cookies, even when access has expired. Production cookie names use `__Secure-` and require HTTPS.
+
+Public auth handlers retain route-level throttles. OTP state is PostgreSQL-backed, so expiry,
+attempts, and resend cooldown work across application instances. Throttler storage is still
+process-local as documented for Admin auth. When Next.js proxies Auth, production must preserve a
+trustworthy client address at the NestJS ingress or use shared throttler storage to avoid treating
+all storefront clients as one address.

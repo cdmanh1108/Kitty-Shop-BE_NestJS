@@ -16,7 +16,10 @@ import {
 import { WebAuthService } from '../src/modules/web-auth/application/web-auth.service';
 import type { Clock } from '../src/common/clock/clock';
 import type { AppConfiguration } from '../src/config/configuration';
-import type { OtpProvider } from '../src/modules/web-auth/domain/otp-provider';
+import type {
+  VerificationCodeGenerator,
+  VerificationCodeSender,
+} from '../src/modules/web-auth/domain/verification-code';
 import type { WebAuthRepository } from '../src/modules/web-auth/domain/web-auth.repository';
 
 const accountId = '00000000-0000-4000-8000-000000000001';
@@ -39,7 +42,8 @@ describe('Web JWT authentication HTTP boundary', () => {
     repository = { findAccountById: jest.fn() };
     const auth = new WebAuthService(
       repository as WebAuthRepository,
-      {} as OtpProvider,
+      {} as VerificationCodeGenerator,
+      {} as VerificationCodeSender,
       {} as Clock,
       new ConfigService<AppConfiguration, true>(),
       jwt,
