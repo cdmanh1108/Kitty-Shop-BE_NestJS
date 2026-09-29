@@ -60,7 +60,7 @@ export class WebAccountRentalOrderListItemResDto {
   @ApiProperty({ example: 500000 })
   depositRequired!: number;
 
-  @ApiPropertyOptional({ example: 'bank_transfer', nullable: true })
+  @ApiProperty({ type: String, example: 'bank_transfer', nullable: true })
   preferredPaymentMethod!: string | null;
 
   @ApiProperty({ example: 2 })
@@ -108,16 +108,16 @@ export class WebAccountRentalOrderDeliveryResDto {
   @ApiProperty()
   status!: string;
 
-  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
   scheduledAt!: string | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   recipientName!: string | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   recipientPhone!: string | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   addressLine!: string | null;
 
   @ApiProperty()
@@ -145,10 +145,10 @@ export class WebAccountRentalOrderDetailResDto extends WebAccountRentalOrderList
   @ApiProperty()
   collateralMethod!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   documentType!: string | null;
 
-  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
   actualReturnedAt!: string | null;
 
   @ApiProperty({ type: [WebAccountRentalOrderLineResDto] })

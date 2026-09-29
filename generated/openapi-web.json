@@ -2574,7 +2574,7 @@
             "example": 500000
           },
           "preferredPaymentMethod": {
-            "type": "object",
+            "type": "string",
             "example": "bank_transfer",
             "nullable": true
           },
@@ -2601,11 +2601,11 @@
             "type": "string"
           },
           "documentType": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "actualReturnedAt": {
-            "type": "object",
+            "type": "string",
             "format": "date-time",
             "nullable": true
           },
@@ -2638,12 +2638,15 @@
           "depositStatus",
           "grandTotal",
           "depositRequired",
+          "preferredPaymentMethod",
           "itemCount",
           "itemsPreview",
           "rentalSubtotal",
           "chargesTotal",
           "discountTotal",
           "collateralMethod",
+          "documentType",
+          "actualReturnedAt",
           "items",
           "deliveries",
           "timeline"
@@ -3190,7 +3193,7 @@
             "example": 500000
           },
           "preferredPaymentMethod": {
-            "type": "object",
+            "type": "string",
             "example": "bank_transfer",
             "nullable": true
           },
@@ -3215,6 +3218,7 @@
           "depositStatus",
           "grandTotal",
           "depositRequired",
+          "preferredPaymentMethod",
           "itemCount",
           "itemsPreview"
         ]
@@ -3310,20 +3314,20 @@
             "type": "string"
           },
           "scheduledAt": {
-            "type": "object",
+            "type": "string",
             "format": "date-time",
             "nullable": true
           },
           "recipientName": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "recipientPhone": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "addressLine": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "shippingFee": {
@@ -3333,6 +3337,10 @@
         "required": [
           "method",
           "status",
+          "scheduledAt",
+          "recipientName",
+          "recipientPhone",
+          "addressLine",
           "shippingFee"
         ]
       },
