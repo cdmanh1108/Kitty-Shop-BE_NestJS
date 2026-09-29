@@ -38,8 +38,8 @@ import {
 } from './web-jwt-auth';
 import {
   WebCredentialsDto,
-  WebPhoneDto,
   WebVerifyOtpDto,
+  WebResendOtpDto,
   WebChallengeDto,
   WebProfileDto,
   WebVerifiedDto,
@@ -101,8 +101,8 @@ export class WebAuthController {
   })
   @ApiOkResponse({ type: WebChallengeDto })
   @ApiResponse({ status: 503, type: ErrorResDto })
-  resend(@Body() input: WebPhoneDto): Promise<WebChallengeDto> {
-    return this.auth.resend(input.phone);
+  resend(@Body() input: WebResendOtpDto): Promise<WebChallengeDto> {
+    return this.auth.resend(input.challengeId);
   }
 
   @Post('login')

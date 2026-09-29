@@ -9,12 +9,13 @@ import { OTP_PROVIDER, type OtpProvider } from '../domain/otp-provider';
 import { normalizeWebPhone } from '../domain/phone';
 import {
   WEB_AUTH_REPOSITORY,
-  PhoneAlreadyRegisteredError,
   type WebAuthRepository,
   type OtpChallenge,
   type WebAccount,
   type WebProfile,
   type WebRefreshTokenData,
+  type ChallengeIssueIntent,
+  type ChallengeIssueRequest,
 } from '../domain/web-auth.repository';
 
 export interface CredentialsInput {
@@ -75,27 +76,12 @@ export class WebAuthService {
       if (existing.phoneVerifiedAt || existing.disabledAt)
         authError('PHONE_ALREADY_REGISTERED', 409);
     }
-    const code = this.otp.generateCode();
-    const attemptId = randomUUID();
-    let challenge: OtpChallenge;
-    try {
-      challenge = await this.repository.register(
-        phone,
-        await hash(input.password, 12),
-        attemptId,
-        this.challenge(code, attemptId),
-      );
-    } catch (error) {
-      if (error instanceof PhoneAlreadyRegisteredError) {
-        const racedAccount = await this.repository.findAccount(phone);
-        if (racedAccount && !racedAccount.phoneVerifiedAt && !racedAccount.disabledAt)
-          return this.register(input);
-        authError('PHONE_ALREADY_REGISTERED', 409);
-      }
-      throw error;
-    }
-    await this.otp.send(phone, code, challenge.id);
-    return this.challengeResult(phone, challenge);
+    return this.issueVerificationChallenge({
+      kind: 'register',
+      phone,
+      passwordHash: await hash(input.password, 12),
+      attemptId: randomUUID(),
+    });
   }
   async verify(challengeId: string, otp: string): Promise<{ verified: true }> {
     const result = await this.repository.verify(
@@ -107,14 +93,29 @@ export class WebAuthService {
     if ('error' in result) authError(result.error);
     return result;
   }
-  async resend(rawPhone: string): Promise<ChallengeResult> {
-    const phone = this.phone(rawPhone);
+  async resend(challengeId: string): Promise<ChallengeResult> {
+    return this.issueVerificationChallenge({ kind: 'resend', challengeId });
+  }
+  private async issueVerificationChallenge(
+    request: ChallengeIssueIntent,
+  ): Promise<ChallengeResult> {
+    const now = this.clock.now();
     const code = this.otp.generateCode();
-    const result = await this.repository.resend(phone, this.challenge(code), this.clock.now());
-    if ('error' in result)
-      authError(result.error, result.error === 'OTP_RESEND_TOO_SOON' ? 429 : 400);
-    await this.otp.send(phone, code, result.challenge.id);
-    return this.challengeResult(phone, result.challenge);
+    const registrationAttemptId = request.kind === 'register' ? request.attemptId : undefined;
+    const challenge = this.challenge(code, registrationAttemptId, now);
+    const issueRequest: ChallengeIssueRequest = { ...request, challenge, now };
+    const result = await this.repository.issueVerificationChallenge(issueRequest);
+    if ('error' in result) {
+      const status =
+        result.error === 'OTP_RESEND_TOO_SOON'
+          ? 429
+          : result.error === 'PHONE_ALREADY_REGISTERED'
+            ? 409
+            : 400;
+      authError(result.error, status);
+    }
+    await this.otp.send(result.phone, code, result.challenge.id);
+    return this.challengeResult(result.phone, result.challenge);
   }
   async login(
     input: CredentialsInput,
@@ -170,8 +171,7 @@ export class WebAuthService {
     if (password.length < 8 || password.length > 64 || Buffer.byteLength(password, 'utf8') > 72)
       authError('INVALID_PASSWORD');
   }
-  private challenge(code: string, registrationAttemptId?: string) {
-    const now = this.clock.now();
+  private challenge(code: string, registrationAttemptId: string | undefined, now: Date) {
     const settings = this.config.get('webAuth', { infer: true });
     const id = randomUUID();
     return {

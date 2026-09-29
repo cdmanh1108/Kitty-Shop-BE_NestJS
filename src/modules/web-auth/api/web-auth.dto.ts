@@ -28,6 +28,11 @@ export class WebVerifyOtpDto {
   @Matches(/^\d{6}$/, { message: 'Mã xác thực cần đúng 6 chữ số.' })
   otp!: string;
 }
+export class WebResendOtpDto {
+  @ApiProperty({ format: 'uuid', description: 'The current registration verification challenge.' })
+  @IsUUID('4', { message: 'Yêu cầu xác thực không hợp lệ.' })
+  challengeId!: string;
+}
 export class WebChallengeDto {
   @ApiProperty({ format: 'uuid' }) challengeId!: string;
   @ApiProperty({ example: '+84912345678' }) phone!: string;

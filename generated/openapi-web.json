@@ -156,7 +156,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WebPhoneDto"
+                "$ref": "#/components/schemas/WebResendOtpDto"
               }
             }
           }
@@ -1829,17 +1829,17 @@
           "verified"
         ]
       },
-      "WebPhoneDto": {
+      "WebResendOtpDto": {
         "type": "object",
         "properties": {
-          "phone": {
+          "challengeId": {
             "type": "string",
-            "example": "0912345678",
-            "maxLength": 40
+            "format": "uuid",
+            "description": "The current registration verification challenge."
           }
         },
         "required": [
-          "phone"
+          "challengeId"
         ]
       },
       "WebProfileDto": {

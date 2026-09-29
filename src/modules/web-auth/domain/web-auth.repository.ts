@@ -35,16 +35,32 @@ export type OtpFailure =
   | 'OTP_INVALID'
   | 'ACCOUNT_DISABLED';
 export type VerifyResult = { verified: true } | { error: OtpFailure };
-export type ResendResult =
-  | { challenge: OtpChallenge }
+export type ChallengeIssueIntent =
+  | {
+      kind: 'register';
+      phone: string;
+      passwordHash: string;
+      attemptId: string;
+    }
+  | { kind: 'resend'; challengeId: string };
+export type ChallengeIssueRequest = ChallengeIssueIntent & {
+  challenge: NewChallenge;
+  now: Date;
+};
+export type ChallengeIssueResult =
+  | { challenge: OtpChallenge; phone: string }
   | {
       error:
         | 'OTP_CHALLENGE_NOT_FOUND'
+        | 'OTP_CONSUMED'
         | 'OTP_RESEND_TOO_SOON'
+        | 'PHONE_ALREADY_REGISTERED'
         | 'PHONE_ALREADY_VERIFIED'
         | 'ACCOUNT_DISABLED';
     };
-export class PhoneAlreadyRegisteredError extends Error {}
+export type ChallengeIssuePersistenceResult =
+  | { challenge: OtpChallenge }
+  | { error: 'OTP_RESEND_TOO_SOON' };
 export interface WebRefreshTokenData {
   tokenHash: string;
   expiresAt: Date;
@@ -55,16 +71,10 @@ export type WebRefreshRotationResult =
   | { outcome: 'ROTATED'; account: WebAccount }
   | { outcome: 'REUSED' | 'REJECTED' | 'CONCURRENT' };
 export interface WebAuthRepository {
-  register(
-    phone: string,
-    passwordHash: string,
-    attemptId: string,
-    challenge: NewChallenge,
-  ): Promise<OtpChallenge>;
+  issueVerificationChallenge(request: ChallengeIssueRequest): Promise<ChallengeIssueResult>;
   findAccount(phone: string): Promise<WebAccount | null>;
   findChallenge(id: string): Promise<OtpChallenge | null>;
   verify(id: string, otpHash: string, now: Date, maxAttempts: number): Promise<VerifyResult>;
-  resend(phone: string, challenge: NewChallenge, now: Date): Promise<ResendResult>;
   findAccountById(id: string): Promise<WebAccount | null>;
   createRefreshToken(
     input: WebRefreshTokenData & { accountId: string; familyId: string },

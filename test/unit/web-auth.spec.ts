@@ -36,11 +36,10 @@ const config = new ConfigService<AppConfiguration, true>({
 });
 function repository(overrides: Partial<WebAuthRepository> = {}): WebAuthRepository {
   return {
-    register: jest.fn(),
+    issueVerificationChallenge: jest.fn(),
     findAccount: jest.fn(),
     findChallenge: jest.fn(),
     verify: jest.fn(),
-    resend: jest.fn(),
     findAccountById: jest.fn(),
     createRefreshToken: jest.fn(),
     rotateRefreshToken: jest.fn(),
@@ -72,24 +71,24 @@ describe('WebAuthService', () => {
       consumedAt: null,
       createdAt: now,
     } satisfies OtpChallenge;
-    let persistedHash = '';
-    let persistedPhone = '';
-    let persistedChallengeId = '';
-    const register: WebAuthRepository['register'] = jest.fn(
-      (_phone: string, passwordHash: string, _attemptId: string, newChallenge) => {
-        persistedPhone = _phone;
-        persistedHash = passwordHash;
-        persistedChallengeId = newChallenge.id;
-        return Promise.resolve(challenge);
-      },
-    );
-    const repo = repository({ findAccount: jest.fn().mockResolvedValue(null), register });
+    const issueVerificationChallenge: WebAuthRepository['issueVerificationChallenge'] = jest
+      .fn()
+      .mockResolvedValue({ challenge, phone: '+84912345678' });
+    const repo = repository({
+      findAccount: jest.fn().mockResolvedValue(null),
+      issueVerificationChallenge,
+    });
     await service(repo).register({ phone: '84 912 345 678', password: 'password dài' });
-    expect(register).toHaveBeenCalledTimes(1);
-    expect(persistedPhone).toBe('+84912345678');
-    expect(persistedHash).toMatch(/^\$2/);
-    expect(persistedChallengeId).toMatch(/^[0-9a-f-]{36}$/);
-    expect(persistedHash).not.toBe('password dài');
+    expect(issueVerificationChallenge).toHaveBeenCalledTimes(1);
+    const issueMock = jest.mocked(issueVerificationChallenge);
+    const issueRequest = issueMock.mock.calls[0]?.[0];
+    expect(issueRequest).toMatchObject({ kind: 'register', phone: '+84912345678' });
+    if (issueRequest?.kind !== 'register')
+      throw new Error('Expected a registration challenge request');
+    expect(issueRequest.passwordHash).toMatch(/^\$2/);
+    expect(issueRequest.attemptId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(issueRequest.challenge.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(issueRequest.passwordHash).not.toBe('password dài');
   });
   it('returns one generic credential error for unknown phone and wrong password', async () => {
     const passwordHash = await hash('right-password', 4);
@@ -111,7 +110,7 @@ describe('WebAuthService', () => {
   });
   it('starts a new credential-bound attempt when registration is still pending', async () => {
     const pending = { ...account('unused-hash'), phoneVerifiedAt: null };
-    const register: WebAuthRepository['register'] = jest.fn().mockResolvedValue({
+    const challenge: OtpChallenge = {
       id: '00000000-0000-4000-8000-000000000002',
       accountId: pending.id,
       otpHash: 'a'.repeat(64),
@@ -121,16 +120,81 @@ describe('WebAuthService', () => {
       attemptCount: 0,
       consumedAt: null,
       createdAt: now,
-    } satisfies OtpChallenge);
+    };
+    const issue = jest.fn().mockResolvedValue({ challenge, phone: pending.phone });
     const repo = repository();
     repo.findAccount = jest.fn().mockResolvedValue(pending);
-    repo.register = register;
+    repo.issueVerificationChallenge = issue;
     const result = await service(repo).register({
       phone: '0912345678',
       password: 'right-password',
     });
     expect(result.challengeId).toEqual(expect.any(String));
-    expect(register).toHaveBeenCalledTimes(1);
+    expect(issue).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'register', phone: pending.phone }),
+    );
+  });
+
+  it('does not send a verification code when registration is rejected by cooldown', async () => {
+    const pending = { ...account('unused-hash'), phoneVerifiedAt: null };
+    const send = jest.fn();
+    const issue = jest.fn().mockResolvedValue({ error: 'OTP_RESEND_TOO_SOON' });
+    const repo = repository({
+      findAccount: jest.fn().mockResolvedValue(pending),
+      issueVerificationChallenge: issue,
+    });
+
+    await expect(
+      service(repo, { generateCode: () => '123456', send }).register({
+        phone: pending.phone,
+        password: 'right-password',
+      }),
+    ).rejects.toMatchObject({ status: 429, response: { code: 'OTP_RESEND_TOO_SOON' } });
+    expect(issue).toHaveBeenCalledTimes(1);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('resends by challenge id and delivers to the server-resolved account phone', async () => {
+    const challenge: OtpChallenge = {
+      id: '00000000-0000-4000-8000-000000000004',
+      accountId: 'account',
+      registrationAttemptId: '00000000-0000-4000-8000-000000000003',
+      otpHash: 'b'.repeat(64),
+      expiresAt: new Date(now.getTime() + 300000),
+      resendAvailableAt: new Date(now.getTime() + 60000),
+      attemptCount: 0,
+      consumedAt: null,
+      createdAt: now,
+    };
+    const send = jest.fn();
+    const issue = jest.fn().mockResolvedValue({ challenge, phone: '+84912345678' });
+    const repo = repository({
+      issueVerificationChallenge: issue,
+    });
+    const previousChallengeId = '00000000-0000-4000-8000-000000000003';
+
+    const result = await service(repo, { generateCode: () => '654321', send }).resend(
+      previousChallengeId,
+    );
+
+    expect(issue).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'resend', challengeId: previousChallengeId }),
+    );
+    expect(result.challengeId).toBe(challenge.id);
+    expect(send).toHaveBeenCalledWith('+84912345678', '654321', challenge.id);
+  });
+
+  it('does not deliver when a challenge resend is rejected by cooldown', async () => {
+    const send = jest.fn();
+    const issue = jest.fn().mockResolvedValue({ error: 'OTP_RESEND_TOO_SOON' });
+    const repo = repository({
+      issueVerificationChallenge: issue,
+    });
+
+    await expect(
+      service(repo, { generateCode: () => '123456', send }).resend('challenge-id'),
+    ).rejects.toMatchObject({ status: 429, response: { code: 'OTP_RESEND_TOO_SOON' } });
+    expect(send).not.toHaveBeenCalled();
   });
 
   it('keeps verified duplicate registrations directed to login', async () => {

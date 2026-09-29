@@ -11,13 +11,18 @@ import {
 } from '../helpers/test-database';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 
-const register = (server: Server, phone = '0912345678', ip?: string) => {
+const register = (server: Server, phone = '0912345678', ip?: string, password = 'password dài') => {
   const call = request(server)
     .post('/api/v1/web/auth/register')
     .set('Content-Type', 'application/json');
   if (ip) call.set('X-Forwarded-For', ip);
-  return call.send({ phone, password: 'password dài' });
+  return call.send({ phone, password });
 };
+const resend = (server: Server, challengeId: string) =>
+  request(server)
+    .post('/api/v1/web/auth/resend-otp')
+    .set('Content-Type', 'application/json')
+    .send({ challengeId });
 const bodyRecord = (body: unknown): Record<string, unknown> => {
   if (typeof body !== 'object' || body === null) throw new Error('Expected response object');
   return body as Record<string, unknown>;
@@ -255,18 +260,26 @@ describe('Web authentication end-to-end', () => {
     await request(server)
       .post('/api/v1/web/auth/resend-otp')
       .set('Content-Type', 'application/json')
-      .send({ phone: '0912345678' })
+      .send({ challengeId: responseValue(registration, 'challengeId') })
       .expect(429);
     await prisma.webOtpChallenge.update({
       where: { id: responseValue(registration, 'challengeId') },
-      data: { resendAvailableAt: new Date(Date.now() - 1000) },
+      data: {
+        expiresAt: new Date(Date.now() - 1000),
+        resendAvailableAt: new Date(Date.now() - 1000),
+      },
     });
-    const resent = await request(server)
-      .post('/api/v1/web/auth/resend-otp')
-      .set('Content-Type', 'application/json')
-      .send({ phone: '+84912345678' })
-      .expect(200);
+    const originalChallengeId = responseValue(registration, 'challengeId');
+    const resent = await resend(server, originalChallengeId).expect(200);
+    expect(responseValue(resent, 'challengeId')).not.toBe(originalChallengeId);
     expect(await prisma.webAccount.count()).toBe(1);
+    expect(
+      (
+        await prisma.webOtpChallenge.findUniqueOrThrow({
+          where: { id: originalChallengeId },
+        })
+      ).consumedAt,
+    ).toBeInstanceOf(Date);
     await verifyOtp()
       .send({ challengeId: responseValue(registration, 'challengeId'), otp: '123456' })
       .expect(400)
@@ -278,6 +291,104 @@ describe('Web authentication end-to-end', () => {
       .send({ challengeId: responseValue(resent, 'challengeId'), otp: '123456' })
       .expect(400)
       .expect(expectCode('OTP_CONSUMED'));
+  });
+
+  it('applies the same cooldown to registration retries and invalidates the old OTP', async () => {
+    const first = await register(server).expect(201);
+    const firstChallengeId = responseValue(first, 'challengeId');
+    const account = await prisma.webAccount.findUniqueOrThrow({ where: { phone: '+84912345678' } });
+    const firstPendingPasswordHash = account.pendingPasswordHash;
+
+    await register(server, '0912345678', undefined, 'replacement-password')
+      .expect(429)
+      .expect(expectCode('OTP_RESEND_TOO_SOON'));
+    expect(await prisma.webAccount.count()).toBe(1);
+    expect(await prisma.webOtpChallenge.count({ where: { accountId: account.id } })).toBe(1);
+    const unchanged = await prisma.webAccount.findUniqueOrThrow({ where: { id: account.id } });
+    expect(unchanged.pendingPasswordHash).toBe(firstPendingPasswordHash);
+
+    await prisma.webOtpChallenge.update({
+      where: { id: firstChallengeId },
+      data: { resendAvailableAt: new Date(Date.now() - 1000) },
+    });
+    const restarted = await register(
+      server,
+      '0912345678',
+      undefined,
+      'replacement-password',
+    ).expect(201);
+    const nextChallengeId = responseValue(restarted, 'challengeId');
+    expect(nextChallengeId).not.toBe(firstChallengeId);
+    expect(await prisma.webAccount.count()).toBe(1);
+    expect(await prisma.webOtpChallenge.count({ where: { accountId: account.id } })).toBe(2);
+    const oldChallenge = await prisma.webOtpChallenge.findUniqueOrThrow({
+      where: { id: firstChallengeId },
+    });
+    expect(oldChallenge.consumedAt).toBeInstanceOf(Date);
+    const updatedAccount = await prisma.webAccount.findUniqueOrThrow({ where: { id: account.id } });
+    expect(updatedAccount.registrationAttemptId).toBe(
+      (await prisma.webOtpChallenge.findUniqueOrThrow({ where: { id: nextChallengeId } }))
+        .registrationAttemptId,
+    );
+
+    await request(server)
+      .post('/api/v1/web/auth/verify-otp')
+      .send({ challengeId: firstChallengeId, otp: '123456' })
+      .expect(400)
+      .expect(expectCode('OTP_CONSUMED'));
+    await request(server)
+      .post('/api/v1/web/auth/verify-otp')
+      .send({ challengeId: nextChallengeId, otp: '123456' })
+      .expect(200);
+    await resend(server, nextChallengeId).expect(400).expect(expectCode('PHONE_ALREADY_VERIFIED'));
+  });
+
+  it('rejects unknown and client-identity resend requests', async () => {
+    const registration = await register(server).expect(201);
+    await resend(server, '00000000-0000-4000-8000-000000000099')
+      .expect(400)
+      .expect(expectCode('OTP_CHALLENGE_NOT_FOUND'));
+    await request(server)
+      .post('/api/v1/web/auth/resend-otp')
+      .set('Content-Type', 'application/json')
+      .send({ challengeId: responseValue(registration, 'challengeId'), phone: '+84999999999' })
+      .expect(400);
+    await request(server)
+      .post('/api/v1/web/auth/resend-otp')
+      .set('Content-Type', 'application/json')
+      .send({ phone: '0912345678' })
+      .expect(400);
+  });
+
+  it('serializes concurrent register retry and resend into a single next challenge', async () => {
+    const registration = await register(server).expect(201);
+    const firstChallengeId = responseValue(registration, 'challengeId');
+    const account = await prisma.webAccount.findUniqueOrThrow({ where: { phone: '+84912345678' } });
+    await prisma.webOtpChallenge.update({
+      where: { id: firstChallengeId },
+      data: { resendAvailableAt: new Date(Date.now() - 1000) },
+    });
+
+    const [registrationRetry, resendRetry] = await Promise.all([
+      register(server),
+      resend(server, firstChallengeId),
+    ]);
+    const responses = [registrationRetry, resendRetry];
+    expect(
+      responses.filter((response) => response.status === 201 || response.status === 200),
+    ).toHaveLength(1);
+    expect(
+      responses.filter((response) => response.status === 400 || response.status === 429),
+    ).toHaveLength(1);
+    expect(await prisma.webAccount.count()).toBe(1);
+    expect(await prisma.webOtpChallenge.count({ where: { accountId: account.id } })).toBe(2);
+    expect(
+      await prisma.webOtpChallenge.count({ where: { accountId: account.id, consumedAt: null } }),
+    ).toBe(1);
+    expect(
+      (await prisma.webOtpChallenge.findUniqueOrThrow({ where: { id: firstChallengeId } }))
+        .consumedAt,
+    ).toBeInstanceOf(Date);
   });
 
   it('rejects expired OTP and concurrent duplicate registration creates one account', async () => {
@@ -298,9 +409,9 @@ describe('Web authentication end-to-end', () => {
       register(server, '0912345678', '203.0.113.88'),
       register(server, '0912345678', '203.0.113.88'),
     ]);
-    expect(outcomes.map((result) => result.status).sort()).toEqual([201, 409]);
-    expect(bodyRecord(outcomes.find((result) => result.status === 409)?.body).code).toBe(
-      'PHONE_NOT_VERIFIED',
+    expect(outcomes.map((result) => result.status).sort()).toEqual([201, 429]);
+    expect(bodyRecord(outcomes.find((result) => result.status === 429)?.body).code).toBe(
+      'OTP_RESEND_TOO_SOON',
     );
     expect(await prisma.webAccount.count()).toBe(1);
   });
