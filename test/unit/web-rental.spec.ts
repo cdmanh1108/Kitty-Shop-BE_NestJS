@@ -224,7 +224,130 @@ describe('WebRentalService', () => {
       });
 
       expect(result.available).toBe(false);
+      expect(result.canCheckout).toBe(false);
+      expect(result.items).toEqual([
+        {
+          productId: 'prod-1',
+          variantId: 'var-1',
+          requestedQuantity: 2,
+          availableQuantity: 1,
+          available: false,
+          issue: 'INSUFFICIENT_QUANTITY',
+        },
+      ]);
       expect(result.shippingFee).toBe(0);
+    });
+
+    it('returns ordered per-line availability and canonical pricing for multiple variants', async () => {
+      availability.getBookableVariant
+        .mockResolvedValueOnce({
+          id: 'var-2',
+          productId: 'prod-2',
+          variantCode: 'DR-M',
+          productName: 'Dress M',
+          sizeName: 'M',
+          colorName: null,
+          ratePrice: 100000,
+          depositPerItem: 250000,
+          availableInventory: [
+            { id: 'inv-2', sku: 'SKU-2' },
+            { id: 'inv-3', sku: 'SKU-3' },
+          ],
+        })
+        .mockResolvedValueOnce({
+          id: 'var-3',
+          productId: 'prod-3',
+          variantCode: 'DR-L',
+          productName: 'Dress L',
+          sizeName: 'L',
+          colorName: null,
+          ratePrice: 100000,
+          depositPerItem: 100000,
+          availableInventory: [{ id: 'inv-4', sku: 'SKU-4' }],
+        })
+        .mockResolvedValueOnce({
+          id: 'var-1',
+          productId: 'prod-1',
+          variantCode: 'DR-S',
+          productName: 'Dress S',
+          sizeName: 'S',
+          colorName: null,
+          ratePrice: 200000,
+          depositPerItem: 300000,
+          availableInventory: [],
+        });
+
+      const result = await service.calculateQuote('shop-1', {
+        pickupDate: '2026-09-20',
+        returnDate: '2026-09-23',
+        items: [
+          { productId: 'prod-2', variantId: 'var-2', quantity: 2 },
+          { productId: 'prod-3', variantId: 'var-3', quantity: 1 },
+          { productId: 'prod-1', variantId: 'var-1', quantity: 1 },
+        ],
+        deliveryMethod: 'self_pickup',
+      });
+
+      expect(availability.getBookableVariants.mock.calls).toHaveLength(1);
+      expect(availability.getBookableVariants.mock.calls[0]?.[0].variantIds).toEqual([
+        'var-2',
+        'var-3',
+        'var-1',
+      ]);
+      expect(result).toMatchObject({
+        durationDays: 3,
+        rentalSubtotal: 500000,
+        depositAmount: 900000,
+        totalAmount: 500000,
+        available: false,
+        canCheckout: false,
+      });
+      expect(result.items).toEqual([
+        {
+          productId: 'prod-2',
+          variantId: 'var-2',
+          requestedQuantity: 2,
+          availableQuantity: 2,
+          available: true,
+        },
+        {
+          productId: 'prod-3',
+          variantId: 'var-3',
+          requestedQuantity: 1,
+          availableQuantity: 1,
+          available: true,
+        },
+        {
+          productId: 'prod-1',
+          variantId: 'var-1',
+          requestedQuantity: 1,
+          availableQuantity: 0,
+          available: false,
+          issue: 'INSUFFICIENT_QUANTITY',
+        },
+      ]);
+    });
+
+    it('returns a line issue when the selected variant is no longer rentable', async () => {
+      availability.getBookableVariant.mockResolvedValue(null);
+
+      const result = await service.calculateQuote('shop-1', {
+        pickupDate: '2026-09-20',
+        returnDate: '2026-09-23',
+        items: [{ productId: 'prod-1', variantId: 'var-1', quantity: 1 }],
+      });
+
+      expect(result).toMatchObject({ available: false, canCheckout: false, rentalSubtotal: 0 });
+      expect(result.items).toEqual([
+        {
+          productId: 'prod-1',
+          variantId: 'var-1',
+          requestedQuantity: 1,
+          availableQuantity: 0,
+          available: false,
+          issue: 'NOT_RENTABLE',
+        },
+      ]);
     });
 
     it('rejects a non-positive or fractional rental quantity before pricing', async () => {
@@ -274,7 +397,42 @@ describe('WebRentalService', () => {
         available: false,
         rentalSubtotal: 300000,
         depositAmount: 1000000,
+        canCheckout: false,
+        items: [
+          {
+            productId: 'prod-1',
+            variantId: 'var-1',
+            requestedQuantity: 2,
+            availableQuantity: 1,
+            issue: 'INSUFFICIENT_QUANTITY',
+          },
+        ],
       });
+    });
+
+    it('validates every product/variant pair before merging duplicate variants', async () => {
+      availability.getBookableVariant.mockResolvedValue({
+        id: 'var-1',
+        productId: 'prod-1',
+        variantCode: 'DR-S',
+        productName: 'Dress',
+        sizeName: null,
+        colorName: null,
+        ratePrice: 150000,
+        depositPerItem: 500000,
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
+      });
+
+      await expect(
+        service.calculateQuote('shop-1', {
+          pickupDate: '2026-09-20',
+          returnDate: '2026-09-23',
+          items: [
+            { productId: 'prod-1', variantId: 'var-1', quantity: 1 },
+            { productId: 'another-product', variantId: 'var-1', quantity: 1 },
+          ],
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -43,7 +43,11 @@ import type {
   WebRentalQuoteInput,
   WebRentalQuoteResult,
 } from './web-rental.contracts';
-import { resolveWebRentalSelection, type WebRentalSelectionFailure } from './web-rental-selection';
+import {
+  evaluateWebRentalSelection,
+  resolveWebRentalSelection,
+  type WebRentalSelectionFailure,
+} from './web-rental-selection';
 import {
   assertWebRentalItems,
   parseWebRentalDateRange,
@@ -128,21 +132,21 @@ export class WebRentalService {
 
     const policy = await this.policyProvider.getPolicy(shopId);
     const durationDays = calculateRentalDurationDays(from, until);
-    const selection = await resolveWebRentalSelection(this.availability, {
+    const selection = await evaluateWebRentalSelection(this.availability, {
       shopId,
       items: req.items,
       durationDays,
       from,
       until,
     });
-    if (!selection.valid) {
-      this.throwForInvalidSelection(selection.reason);
+    if (selection.failure) {
+      this.throwForInvalidSelection(selection.failure);
     }
     let rentalSubtotal = 0;
     let depositAmount = 0;
-    let allAvailable = selection.valid;
+    let allAvailable = selection.failure === undefined;
 
-    if (selection.valid) {
+    if (selection.failure === undefined) {
       for (const { variant, quantity } of selection.demands) {
         if (variant.ratePrice === null) {
           allAvailable = false;
@@ -166,6 +170,8 @@ export class WebRentalService {
       totalAmount,
       currency: 'VND',
       available: allAvailable,
+      canCheckout: allAvailable,
+      items: selection.items,
     };
   }
 

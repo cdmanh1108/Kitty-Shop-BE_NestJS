@@ -25,6 +25,17 @@ export interface WebRentalQuoteInput {
   deliveryMethod?: 'self_pickup' | 'shop_delivery';
 }
 
+export type WebRentalLineIssue = 'NOT_RENTABLE' | 'INSUFFICIENT_QUANTITY' | 'PRICE_UNAVAILABLE';
+
+export interface WebRentalLineAvailability {
+  productId?: string;
+  variantId?: string;
+  requestedQuantity: number;
+  availableQuantity: number;
+  available: boolean;
+  issue?: WebRentalLineIssue;
+}
+
 export interface WebRentalQuoteResult {
   durationDays: number;
   rentalSubtotal: number;
@@ -33,6 +44,8 @@ export interface WebRentalQuoteResult {
   totalAmount: number;
   currency: string;
   available: boolean;
+  canCheckout: boolean;
+  items: WebRentalLineAvailability[];
 }
 
 export interface WebCreateOrderInput {

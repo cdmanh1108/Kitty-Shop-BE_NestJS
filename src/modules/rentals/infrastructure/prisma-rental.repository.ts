@@ -22,11 +22,12 @@ import {
   getStatus,
   getSchedule,
   findActiveVariantIdsByProduct,
+  findActiveVariantIdsByProducts,
   lookupStorefrontOrder,
   listWebAccountOrders,
   getWebAccountOrder,
 } from './rental-queries';
-import { getBookableVariant } from './rental-availability';
+import { getBookableVariant, getBookableVariants } from './rental-availability';
 import { createOrder } from './rental-booking';
 import { receiveReturn } from './rental-return.lifecycle';
 import { settleOrder } from './rental-settlement.lifecycle';
@@ -75,6 +76,12 @@ export class PrismaRentalRepository
     ...args: Parameters<RentalAvailabilityReader['getBookableVariant']>
   ): ReturnType<RentalAvailabilityReader['getBookableVariant']> {
     return getBookableVariant(this.prisma, ...args);
+  }
+
+  getBookableVariants(
+    ...args: Parameters<RentalAvailabilityReader['getBookableVariants']>
+  ): ReturnType<RentalAvailabilityReader['getBookableVariants']> {
+    return getBookableVariants(this.prisma, ...args);
   }
 
   async createOrder(
@@ -161,6 +168,14 @@ export class PrismaRentalRepository
     storefrontEligibility?: boolean,
   ): ReturnType<RentalAvailabilityReader['findActiveVariantIdsByProduct']> {
     return findActiveVariantIdsByProduct(this.prisma, shopId, productId, storefrontEligibility);
+  }
+
+  findActiveVariantIdsByProducts(
+    shopId: string,
+    productIds: readonly string[],
+    storefrontEligibility?: boolean,
+  ): ReturnType<RentalAvailabilityReader['findActiveVariantIdsByProducts']> {
+    return findActiveVariantIdsByProducts(this.prisma, shopId, productIds, storefrontEligibility);
   }
 
   lookupStorefrontOrder(

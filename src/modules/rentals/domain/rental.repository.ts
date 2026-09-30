@@ -94,11 +94,17 @@ export const WEB_ACCOUNT_RENTAL_ORDERS_READER = Symbol('WEB_ACCOUNT_RENTAL_ORDER
 
 export interface RentalAvailabilityReader {
   getBookableVariant(input: RentalGetBookableVariantData): Promise<BookableVariant | null>;
+  getBookableVariants(input: RentalGetBookableVariantsData): Promise<BookableVariant[]>;
   findActiveVariantIdsByProduct(
     shopId: string,
     productId: string,
     storefrontEligibility?: boolean,
   ): Promise<string[]>;
+  findActiveVariantIdsByProducts(
+    shopId: string,
+    productIds: readonly string[],
+    storefrontEligibility?: boolean,
+  ): Promise<Record<string, string[]>>;
 }
 
 export interface RentalCreationRepository {
@@ -286,6 +292,11 @@ export interface RentalGetBookableVariantData {
   until: Date;
   /** Server-owned context set only by the Web rental application service. */
   storefrontEligibility?: true;
+}
+
+export interface RentalGetBookableVariantsData
+  extends Omit<RentalGetBookableVariantData, 'variantId'> {
+  variantIds: readonly string[];
 }
 
 export interface RentalListCriteria {

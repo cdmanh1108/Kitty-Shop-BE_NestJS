@@ -2335,6 +2335,18 @@
             "type": "boolean",
             "example": true,
             "description": "Tất cả sản phẩm có sẵn trong khoảng ngày đã chọn"
+          },
+          "canCheckout": {
+            "type": "boolean",
+            "example": true,
+            "description": "Có thể tiếp tục checkout khi khoảng thuê hợp lệ và mọi dòng đã có tồn kho, giá thuê"
+          },
+          "items": {
+            "description": "Kết quả theo biến thể, giữ thứ tự yêu cầu; số lượng trùng biến thể được gộp",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebRentalQuoteItemResDto"
+            }
           }
         },
         "required": [
@@ -3050,6 +3062,49 @@
         },
         "required": [
           "quantity"
+        ]
+      },
+      "WebRentalQuoteItemResDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID sản phẩm nếu đã xác định được"
+          },
+          "variantId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID biến thể nếu đã xác định được"
+          },
+          "requestedQuantity": {
+            "type": "number",
+            "example": 2,
+            "description": "Số lượng yêu cầu sau khi gộp các dòng cùng biến thể"
+          },
+          "availableQuantity": {
+            "type": "number",
+            "example": 1,
+            "description": "Số lượng vật lý còn trống cho toàn bộ khoảng thuê"
+          },
+          "available": {
+            "type": "boolean",
+            "example": false,
+            "description": "Dòng có đủ tồn kho và có giá thuê cho thời lượng này"
+          },
+          "issue": {
+            "type": "string",
+            "enum": [
+              "NOT_RENTABLE",
+              "INSUFFICIENT_QUANTITY",
+              "PRICE_UNAVAILABLE"
+            ]
+          }
+        },
+        "required": [
+          "requestedQuantity",
+          "availableQuantity",
+          "available"
         ]
       },
       "WebCreateOrderCustomerDto": {

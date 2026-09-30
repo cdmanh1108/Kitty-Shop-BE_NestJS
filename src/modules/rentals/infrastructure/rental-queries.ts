@@ -190,17 +190,37 @@ export async function findActiveVariantIdsByProduct(
   productId: string,
   storefrontEligibility = false,
 ): Promise<string[]> {
+  const result = await findActiveVariantIdsByProducts(
+    prisma,
+    shopId,
+    [productId],
+    storefrontEligibility,
+  );
+  return result[productId] ?? [];
+}
+
+export async function findActiveVariantIdsByProducts(
+  prisma: PrismaService,
+  shopId: string,
+  productIds: readonly string[],
+  storefrontEligibility = false,
+): Promise<Record<string, string[]>> {
+  const uniqueProductIds = [...new Set(productIds)];
+  if (uniqueProductIds.length === 0) return {};
+
   const variants = await prisma.productVariant.findMany({
     where: {
-      productId,
+      productId: { in: uniqueProductIds },
       shopId,
       status: 'ACTIVE',
       archivedAt: null,
       ...(storefrontEligibility ? { product: storefrontProductEligibility } : {}),
     },
-    select: { id: true },
+    select: { id: true, productId: true },
   });
-  return variants.map((v) => v.id);
+  const idsByProduct = new Map(uniqueProductIds.map((productId) => [productId, [] as string[]]));
+  for (const variant of variants) idsByProduct.get(variant.productId)?.push(variant.id);
+  return Object.fromEntries(idsByProduct);
 }
 
 export async function lookupStorefrontOrder(

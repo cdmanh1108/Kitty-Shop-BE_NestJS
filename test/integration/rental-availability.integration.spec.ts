@@ -79,6 +79,25 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
     expect(baseOrder).not.toBeNull();
     expect(baseOrder?.id).toBeDefined();
 
+    const otherProduct = await createTestProductWithVariant(prisma, shop.id, { inventoryCount: 1 });
+    const batchAvailability = await repo.getBookableVariants({
+      shopId: shop.id,
+      variantIds: [otherProduct.variant.id, variant.id],
+      durationDays: 2,
+      from: baseStart,
+      until: baseEnd,
+    });
+    expect(batchAvailability.map((variant) => variant.id)).toEqual([
+      otherProduct.variant.id,
+      variant.id,
+    ]);
+    expect(batchAvailability[0]?.availableInventory.map((item) => item.id)).toContain(
+      otherProduct.inventoryItems[0]?.id,
+    );
+    expect(batchAvailability[1]?.availableInventory.map((item) => item.id)).not.toContain(
+      inventoryItem.id,
+    );
+
     // 1. New rental Sep 09 -> Sep 10 (immediately preceding, adjacent).
     // In half-open [Sep 09, Sep 10) & [Sep 10, Sep 12), boundary touches but does not overlap!
     const precedingStart = new Date('2026-09-09T00:00:00.000Z');

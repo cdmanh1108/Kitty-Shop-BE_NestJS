@@ -119,6 +119,29 @@ export class WebRentalQuoteReqDto {
   deliveryMethod?: 'self_pickup' | 'shop_delivery';
 }
 
+export class WebRentalQuoteItemResDto {
+  @ApiPropertyOptional({ format: 'uuid', description: 'ID sản phẩm nếu đã xác định được' })
+  productId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'ID biến thể nếu đã xác định được' })
+  variantId?: string;
+
+  @ApiProperty({ example: 2, description: 'Số lượng yêu cầu sau khi gộp các dòng cùng biến thể' })
+  requestedQuantity!: number;
+
+  @ApiProperty({ example: 1, description: 'Số lượng vật lý còn trống cho toàn bộ khoảng thuê' })
+  availableQuantity!: number;
+
+  @ApiProperty({
+    example: false,
+    description: 'Dòng có đủ tồn kho và có giá thuê cho thời lượng này',
+  })
+  available!: boolean;
+
+  @ApiPropertyOptional({ enum: ['NOT_RENTABLE', 'INSUFFICIENT_QUANTITY', 'PRICE_UNAVAILABLE'] })
+  issue?: 'NOT_RENTABLE' | 'INSUFFICIENT_QUANTITY' | 'PRICE_UNAVAILABLE';
+}
+
 export class WebRentalQuoteResDto {
   @ApiProperty({ example: 3, description: 'Số ngày thuê tính theo lịch' })
   durationDays!: number;
@@ -140,6 +163,19 @@ export class WebRentalQuoteResDto {
 
   @ApiProperty({ example: true, description: 'Tất cả sản phẩm có sẵn trong khoảng ngày đã chọn' })
   available!: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Có thể tiếp tục checkout khi khoảng thuê hợp lệ và mọi dòng đã có tồn kho, giá thuê',
+  })
+  canCheckout?: boolean;
+
+  @ApiPropertyOptional({
+    type: [WebRentalQuoteItemResDto],
+    description: 'Kết quả theo biến thể, giữ thứ tự yêu cầu; số lượng trùng biến thể được gộp',
+  })
+  items?: WebRentalQuoteItemResDto[];
 }
 
 export class WebCreateOrderCustomerDto {

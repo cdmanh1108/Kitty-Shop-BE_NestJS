@@ -8,10 +8,42 @@ import type {
 } from '../../src/modules/rentals/domain/rental.repository';
 
 export function rentalAvailabilityReaderMock(): jest.Mocked<RentalAvailabilityReader> {
-  return {
+  const reader: jest.Mocked<RentalAvailabilityReader> = {
     getBookableVariant: jest.fn(),
+    getBookableVariants: jest.fn(),
     findActiveVariantIdsByProduct: jest.fn(),
+    findActiveVariantIdsByProducts: jest.fn(),
   };
+  reader.getBookableVariants.mockImplementation(async (input) => {
+    const variants = await Promise.all(
+      input.variantIds.map(
+        async (variantId) =>
+          (await reader.getBookableVariant({
+            shopId: input.shopId,
+            variantId,
+            durationDays: input.durationDays,
+            from: input.from,
+            until: input.until,
+            ...(input.storefrontEligibility ? { storefrontEligibility: true as const } : {}),
+          })) ?? null,
+      ),
+    );
+    return variants.filter((variant): variant is NonNullable<typeof variant> => variant !== null);
+  });
+  reader.findActiveVariantIdsByProducts.mockImplementation(
+    async (shopId, productIds, storefrontEligibility) => {
+      const entries: Array<[string, string[]]> = await Promise.all(
+        productIds.map(
+          async (productId): Promise<[string, string[]]> => [
+            productId,
+            await reader.findActiveVariantIdsByProduct(shopId, productId, storefrontEligibility),
+          ],
+        ),
+      );
+      return Object.fromEntries(entries);
+    },
+  );
+  return reader;
 }
 
 export function rentalCreationRepositoryMock(): jest.Mocked<RentalCreationRepository> {
