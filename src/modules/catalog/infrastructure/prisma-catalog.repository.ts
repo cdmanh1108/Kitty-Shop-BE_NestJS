@@ -5,9 +5,16 @@ import {
 import { inventorySummary, inventoryHistory } from './inventory-read-queries';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Inject, Injectable } from '@nestjs/common';
-import type { CatalogAdminRepository } from '../domain/catalog-admin.repository';
+import type { CatalogCategoryRepository } from '../domain/catalog-category.repository';
+import type { CatalogInventoryRepository } from '../domain/catalog-inventory.repository';
+import type { CatalogProductRepository } from '../domain/catalog-product.repository';
+import type { CatalogReferenceDataRepository } from '../domain/catalog-reference-data.repository';
 import type { StorefrontCatalogRepository } from '../domain/storefront-catalog.repository';
-type CatalogPersistenceAdapter = CatalogAdminRepository & StorefrontCatalogRepository;
+type CatalogPersistenceAdapter = CatalogCategoryRepository &
+  CatalogReferenceDataRepository &
+  CatalogProductRepository &
+  CatalogInventoryRepository &
+  StorefrontCatalogRepository;
 type CatalogRepository = CatalogPersistenceAdapter;
 import {
   listLookups,
@@ -47,7 +54,12 @@ import {
 
 @Injectable()
 export class PrismaCatalogRepository
-  implements CatalogAdminRepository, StorefrontCatalogRepository
+  implements
+    CatalogCategoryRepository,
+    CatalogReferenceDataRepository,
+    CatalogProductRepository,
+    CatalogInventoryRepository,
+    StorefrontCatalogRepository
 {
   constructor(
     private readonly prisma: PrismaService,

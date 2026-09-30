@@ -12,17 +12,17 @@ import {
   CatalogInvariantError,
   CatalogProductSlugAlreadyExistsError,
 } from '../../src/modules/catalog/domain/catalog.repository';
-import type { CatalogAdminRepository } from '../../src/modules/catalog/domain/catalog-admin.repository';
-import { CatalogService } from '../../src/modules/catalog/application/catalog.service';
+import type { CatalogProductRepository } from '../../src/modules/catalog/domain/catalog-product.repository';
+import { ProductService } from '../../src/modules/catalog/application/product.service';
 
-describe('CatalogService - Product Management', () => {
-  let repository: CatalogAdminRepository;
+describe('ProductService', () => {
+  let repository: CatalogProductRepository;
   let audit: AuditPort;
-  let service: CatalogService;
+  let service: ProductService;
 
-  let createProductMock: jest.MockedFunction<CatalogAdminRepository['createProduct']>;
-  let updateProductMock: jest.MockedFunction<CatalogAdminRepository['updateProduct']>;
-  let archiveProductMock: jest.MockedFunction<CatalogAdminRepository['archiveProduct']>;
+  let createProductMock: jest.MockedFunction<CatalogProductRepository['createProduct']>;
+  let updateProductMock: jest.MockedFunction<CatalogProductRepository['updateProduct']>;
+  let archiveProductMock: jest.MockedFunction<CatalogProductRepository['archiveProduct']>;
   let auditLogMock: jest.MockedFunction<AuditPort['log']>;
 
   const mockUser: CurrentUser = {
@@ -42,16 +42,6 @@ describe('CatalogService - Product Management', () => {
 
     repository = {
       lookupProducts: jest.fn(),
-      inventorySummary: jest.fn(),
-      inventoryHistory: jest.fn(),
-      listLookups: jest.fn(),
-      listCategories: jest.fn(),
-      categoryOptions: jest.fn(),
-      updateCategory: jest.fn(),
-      deleteCategory: jest.fn(),
-      createCategory: jest.fn(),
-      createSize: jest.fn(),
-      createColor: jest.fn(),
       listProducts: jest.fn(),
       findProduct: jest.fn(),
       createProduct: createProductMock,
@@ -61,17 +51,11 @@ describe('CatalogService - Product Management', () => {
       archiveProduct: archiveProductMock,
       addProductMedia: jest.fn(),
       removeProductMedia: jest.fn(),
-      addInventoryItem: jest.fn(),
-      updateInventoryStatus: jest.fn(),
-      archiveInventoryItem: jest.fn(),
-      listInventory: jest.fn(),
-      findInventoryItem: jest.fn(),
-      findAvailableInventory: jest.fn(),
     };
     audit = {
       log: auditLogMock,
     };
-    service = new CatalogService(repository, audit);
+    service = new ProductService(repository, audit);
   });
 
   describe('createProduct', () => {

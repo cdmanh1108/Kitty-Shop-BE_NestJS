@@ -1,18 +1,18 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { CatalogService } from '@modules/catalog/application/catalog.service';
-import type { CatalogAdminRepository } from '@modules/catalog/domain/catalog-admin.repository';
+import { InventoryService } from '@modules/catalog/application/inventory.service';
+import type { CatalogInventoryRepository } from '@modules/catalog/domain/catalog-inventory.repository';
 import {
   CATALOG_ERROR_CODE,
   CatalogInvariantError,
 } from '@modules/catalog/domain/catalog.repository';
-import type { AuditService } from '@modules/audit/application/audit.service';
+import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
 
-describe('CatalogService - Inventory', () => {
-  let service: CatalogService;
-  let repository: CatalogAdminRepository;
-  let audit: { log: jest.Mock };
+describe('InventoryService', () => {
+  let service: InventoryService;
+  let repository: CatalogInventoryRepository;
+  let audit: AuditPort;
 
   let listInventoryMock: jest.Mock;
   let findInventoryItemMock: jest.Mock;
@@ -39,26 +39,8 @@ describe('CatalogService - Inventory', () => {
     auditLogMock = jest.fn().mockResolvedValue(undefined);
 
     repository = {
-      lookupProducts: jest.fn(),
       inventorySummary: jest.fn(),
       inventoryHistory: jest.fn(),
-      listLookups: jest.fn(),
-      listCategories: jest.fn(),
-      categoryOptions: jest.fn(),
-      updateCategory: jest.fn(),
-      deleteCategory: jest.fn(),
-      createCategory: jest.fn(),
-      createSize: jest.fn(),
-      createColor: jest.fn(),
-      listProducts: jest.fn(),
-      findProduct: jest.fn(),
-      createProduct: jest.fn(),
-      addVariant: jest.fn(),
-      upsertRentalRate: jest.fn(),
-      updateProduct: jest.fn(),
-      archiveProduct: jest.fn(),
-      addProductMedia: jest.fn(),
-      removeProductMedia: jest.fn(),
       addInventoryItem: addInventoryItemMock,
       updateInventoryStatus: updateInventoryStatusMock,
       archiveInventoryItem: archiveInventoryItemMock,
@@ -69,7 +51,7 @@ describe('CatalogService - Inventory', () => {
     audit = {
       log: auditLogMock,
     };
-    service = new CatalogService(repository, audit as unknown as AuditService);
+    service = new InventoryService(repository, audit);
   });
 
   describe('listInventory', () => {

@@ -222,34 +222,6 @@
         "x-api-surface": "admin"
       }
     },
-    "/admin/catalog/lookups": {
-      "get": {
-        "operationId": "CatalogController_lookups",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CatalogLookupsResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Categories, sizes, colors and locations for admin forms",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
     "/admin/catalog/categories": {
       "post": {
         "operationId": "CatalogController_createCategory",
@@ -472,6 +444,34 @@
             "access-token": []
           }
         ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/catalog/lookups": {
+      "get": {
+        "operationId": "CatalogController_lookups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogLookupsResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Categories, sizes, colors and locations for admin forms",
         "tags": [
           "Admin - Catalog"
         ],
@@ -936,6 +936,91 @@
         "x-api-surface": "admin"
       }
     },
+    "/admin/products/{id}/media": {
+      "post": {
+        "operationId": "CatalogController_addProductMedia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductMediaReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductMediaResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Add an image to a product; setting primary clears the previous primary image",
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/products/{id}/media/{mediaId}": {
+      "delete": {
+        "operationId": "CatalogController_removeProductMedia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Remove a product image",
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
     "/admin/inventory": {
       "get": {
         "operationId": "CatalogController_listInventory",
@@ -1240,91 +1325,6 @@
           }
         ],
         "summary": "Archive/retire physical inventory item safely",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/products/{id}/media": {
-      "post": {
-        "operationId": "CatalogController_addProductMedia",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ProductMediaReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductMediaResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Add an image to a product; setting primary clears the previous primary image",
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/products/{id}/media/{mediaId}": {
-      "delete": {
-        "operationId": "CatalogController_removeProductMedia",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "mediaId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Remove a product image",
         "tags": [
           "Admin - Catalog"
         ],
@@ -4061,41 +4061,6 @@
           "newPassword"
         ]
       },
-      "CatalogLookupsResDto": {
-        "type": "object",
-        "properties": {
-          "categories": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CategoryLookupResDto"
-            }
-          },
-          "sizes": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SizeSummaryResDto"
-            }
-          },
-          "colors": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ColorSummaryResDto"
-            }
-          },
-          "locations": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ShopLocationSummaryResDto"
-            }
-          }
-        },
-        "required": [
-          "categories",
-          "sizes",
-          "colors",
-          "locations"
-        ]
-      },
       "CreateCategoryReqDto": {
         "type": "object",
         "properties": {
@@ -4266,6 +4231,41 @@
             "minimum": 0
           }
         }
+      },
+      "CatalogLookupsResDto": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CategoryLookupResDto"
+            }
+          },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SizeSummaryResDto"
+            }
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColorSummaryResDto"
+            }
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShopLocationSummaryResDto"
+            }
+          }
+        },
+        "required": [
+          "categories",
+          "sizes",
+          "colors",
+          "locations"
+        ]
       },
       "CreateSizeReqDto": {
         "type": "object",
@@ -4669,6 +4669,59 @@
           "isActive"
         ]
       },
+      "ProductMediaReqDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "altText": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "default": false
+          },
+          "sortOrder": {
+            "type": "number",
+            "default": 0
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "ProductMediaResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "storageKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "altText": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "isPrimary",
+          "sortOrder"
+        ]
+      },
       "InventoryPageResDto": {
         "type": "object",
         "properties": {
@@ -4870,59 +4923,6 @@
             "type": "string"
           }
         }
-      },
-      "ProductMediaReqDto": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string"
-          },
-          "altText": {
-            "type": "string"
-          },
-          "isPrimary": {
-            "type": "boolean",
-            "default": false
-          },
-          "sortOrder": {
-            "type": "number",
-            "default": 0
-          }
-        },
-        "required": [
-          "url"
-        ]
-      },
-      "ProductMediaResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          },
-          "storageKey": {
-            "type": "string",
-            "nullable": true
-          },
-          "altText": {
-            "type": "string",
-            "nullable": true
-          },
-          "isPrimary": {
-            "type": "boolean"
-          },
-          "sortOrder": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "url",
-          "isPrimary",
-          "sortOrder"
-        ]
       },
       "UpdateInventoryStatusReqDto": {
         "type": "object",
@@ -6836,6 +6836,56 @@
           "expiresIn"
         ]
       },
+      "CategorySummaryResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name"
+        ]
+      },
+      "PaginationMetaResDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
       "CategoryLookupResDto": {
         "type": "object",
         "properties": {
@@ -6934,56 +6984,6 @@
           "code",
           "name",
           "isPrimary"
-        ]
-      },
-      "CategorySummaryResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "parentId": {
-            "type": "string",
-            "nullable": true
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "name"
-        ]
-      },
-      "PaginationMetaResDto": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "number"
-          },
-          "limit": {
-            "type": "number"
-          },
-          "total": {
-            "type": "number"
-          },
-          "totalPages": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "totalPages"
         ]
       },
       "ProductListItemResDto": {

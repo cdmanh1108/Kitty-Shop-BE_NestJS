@@ -170,7 +170,10 @@ export function createBaseOpenApiDocument(
     ignoreGlobalPrefix: true,
     operationIdFactory: (controllerKey: string, methodKey: string) => {
       const normalizedController = controllerKey
-        .replace(/^AdminCatalogController$/, 'CatalogController')
+        .replace(/^AdminCategoryController$/, 'CatalogController')
+        .replace(/^AdminCatalogReferenceController$/, 'CatalogController')
+        .replace(/^AdminProductController$/, 'CatalogController')
+        .replace(/^AdminInventoryController$/, 'CatalogController')
         .replace(/^AdminRentalController$/, 'RentalController');
       return `${normalizedController}_${methodKey}`;
     },
