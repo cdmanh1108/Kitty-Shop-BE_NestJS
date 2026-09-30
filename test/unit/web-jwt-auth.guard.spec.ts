@@ -7,21 +7,21 @@ import {
   OptionalWebJwtAuthGuard,
   WebAuthOriginGuard,
   WebJwtAuthGuard,
-  type WebRequest,
-} from '../../src/modules/web-auth/api/web-jwt-auth';
-import type { WebAuthCookies } from '../../src/modules/web-auth/api/web-jwt-auth';
-import type { WebProfile } from '../../src/modules/web-auth/domain/web-auth.repository';
+  type WebAuthPrincipal,
+  type WebAuthRequest,
+} from '../../src/modules/web-auth/public';
+import type { WebAuthCookies } from '../../src/modules/web-auth/api/web-auth-cookies';
 import type { AppConfiguration } from '../../src/config/configuration';
 
 const accountId = '00000000-0000-4000-8000-000000000001';
-const profile: WebProfile = {
+const profile: WebAuthPrincipal = {
   id: accountId,
   email: 'user@example.test',
   emailVerifiedAt: new Date('2026-09-22T00:00:00Z'),
   createdAt: new Date('2026-09-20T00:00:00Z'),
 };
 
-function contextFor(request: WebRequest): ExecutionContext {
+function contextFor(request: WebAuthRequest): ExecutionContext {
   return {
     switchToHttp: () => ({ getRequest: () => request }),
   } as ExecutionContext;
@@ -47,7 +47,7 @@ function setup(
   const payload = options.payload ?? { sub: accountId, surface: 'web' };
   const accountForAccessToken =
     options.accountForAccessToken ?? jest.fn().mockResolvedValue(profile);
-  const request = { headers: {} } as WebRequest;
+  const request = { headers: {} } as WebAuthRequest;
   const verifyAsync = jest.fn().mockResolvedValue(payload);
   const jwt = { verifyAsync } as unknown as JwtService;
   const session = { accountForAccessToken } as unknown as WebSessionService;

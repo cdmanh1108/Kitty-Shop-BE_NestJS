@@ -27,8 +27,8 @@ import {
   CurrentWebUser,
   WebAuthOriginGuard,
   WebJwtAuthGuard,
-} from '@modules/web-auth/api/web-jwt-auth';
-import type { WebProfile } from '@modules/web-auth/domain/web-auth.repository';
+  type WebAuthPrincipal,
+} from '@modules/web-auth/public';
 import { WebAccountRentalOrdersService } from '../../application/web-account-rental-orders.service';
 import {
   WebAccountRentalOrderDetailResDto,
@@ -62,7 +62,7 @@ export class WebAccountRentalOrdersController {
   @ApiBadRequestResponse({ type: ErrorResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async list(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Query() query: WebAccountRentalOrdersQueryDto,
   ): Promise<WebAccountRentalOrdersListResDto> {
     return toWebAccountRentalOrdersListResponse(
@@ -86,7 +86,7 @@ export class WebAccountRentalOrdersController {
   @ApiNotFoundResponse({ type: ErrorResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async get(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Param() params: WebAccountRentalOrderParamsDto,
   ): Promise<WebAccountRentalOrderDetailResDto> {
     return toWebAccountRentalOrderDetailResponse(await this.orders.get(user.id, params.orderCode));
@@ -107,7 +107,7 @@ export class WebAccountRentalOrdersController {
   @ApiNotFoundResponse({ type: ErrorResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async cancel(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Param() params: WebAccountRentalOrderParamsDto,
   ): Promise<WebAccountRentalOrderCancellationResDto> {
     return toWebAccountRentalOrderCancellationResponse(

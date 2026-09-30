@@ -15,15 +15,10 @@ import {
   CurrentWebUser,
   WebAuthOriginGuard,
   WebJwtAuthGuard,
-} from '@modules/web-auth/api/web-jwt-auth';
-import type { WebProfile } from '@modules/web-auth/domain/web-auth.repository';
+  type WebAuthPrincipal,
+} from '@modules/web-auth/public';
 import { CartService } from '../application/cart.service';
-import {
-  CartDraftDto,
-  CartDto,
-  CartGetResDto,
-  CartReplaceReqDto,
-} from './dto/cart.dto';
+import { CartDraftDto, CartDto, CartGetResDto, CartReplaceReqDto } from './dto/cart.dto';
 
 @Public()
 @ApiTags('Web - Cart')
@@ -41,7 +36,7 @@ export class CartController {
   })
   @ApiOkResponse({ type: CartGetResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
-  async get(@CurrentWebUser() user: WebProfile): Promise<CartGetResDto> {
+  async get(@CurrentWebUser() user: WebAuthPrincipal): Promise<CartGetResDto> {
     return { cart: await this.carts.get(user.id) };
   }
 
@@ -57,7 +52,7 @@ export class CartController {
   @ApiConflictResponse({ type: ErrorResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   replace(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Body() body: CartReplaceReqDto,
   ): Promise<CartDto> {
     return this.carts.replace(user.id, body.version, body);
@@ -75,7 +70,7 @@ export class CartController {
   @ApiConflictResponse({ type: ErrorResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   mergeGuest(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Body() body: CartDraftDto,
   ): Promise<CartDto> {
     return this.carts.mergeGuest(user.id, body);

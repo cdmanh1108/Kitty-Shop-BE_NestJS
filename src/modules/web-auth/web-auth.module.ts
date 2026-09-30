@@ -6,12 +6,8 @@ import { ClockModule } from '@common/clock/clock.module';
 import { WebAuthController } from './api/web-auth.controller';
 import { WebRegistrationService } from './application/web-registration.service';
 import { WebSessionService } from './application/web-session.service';
-import {
-  OptionalWebJwtAuthGuard,
-  WebAuthCookies,
-  WebJwtAuthGuard,
-  WebAuthOriginGuard,
-} from './api/web-jwt-auth';
+import { OptionalWebJwtAuthGuard, WebJwtAuthGuard, WebAuthOriginGuard } from './public';
+import { WebAuthCookies } from './api/web-auth-cookies';
 import { WEB_AUTH_REPOSITORY } from './domain/web-auth.repository';
 import { VERIFICATION_CODE_GENERATOR, VERIFICATION_CODE_SENDER } from './domain/verification-code';
 import { PrismaWebAuthRepository } from './infrastructure/prisma-web-auth.repository';

@@ -161,6 +161,13 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(schemas).toContain('CartGetResDto');
       expect(schemas).toContain('ErrorResDto');
 
+      expect(JSON.stringify(webDoc.paths['/web/favorites']?.get?.responses['200'])).toContain(
+        '#/components/schemas/WebProductListResDto',
+      );
+      expect(JSON.stringify(webDoc.components?.schemas?.WebProductListItemDto)).toContain(
+        'rentalPrices',
+      );
+
       // MUST NOT contain internal / admin schemas
       const internalForbiddenKeywords = [
         'User',

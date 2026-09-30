@@ -1,6 +1,6 @@
 import type { ConfigService } from '@nestjs/config';
 import type { AppConfiguration } from '../../src/config/configuration';
-import { WebAuthCookies } from '../../src/modules/web-auth/api/web-jwt-auth';
+import { WebAuthCookies } from '../../src/modules/web-auth/api/web-auth-cookies';
 
 const cookiesFor = (nodeEnv: string): WebAuthCookies => {
   const values = { nodeEnv, apiPrefix: 'api/v1' };

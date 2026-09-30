@@ -27,8 +27,8 @@ import {
 import {
   OptionalWebJwtAuthGuard,
   WebAuthOriginGuard,
-  type WebRequest,
-} from '@modules/web-auth/api/web-jwt-auth';
+  type WebAuthRequest,
+} from '@modules/web-auth/public';
 import { WebRentalService } from '../../application/web-rental.service';
 import {
   WebAvailabilityQueryDto,
@@ -120,7 +120,7 @@ export class WebRentalController {
       'Sản phẩm không đủ tồn kho, thông tin khách hàng không thể dùng để đặt thuê, hoặc Idempotency-Key đang được dùng',
   })
   async createOrder(
-    @Req() request: WebRequest,
+    @Req() request: WebAuthRequest,
     @Body() body: WebCreateOrderReqDto,
   ): Promise<WebCreateOrderResDto> {
     const shopId = await this.shopResolver.resolveShopId();

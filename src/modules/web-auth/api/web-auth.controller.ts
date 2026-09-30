@@ -32,12 +32,8 @@ import type { WebProfile } from '../domain/web-auth.repository';
 import type { WebTokenResult } from '../application/web-auth.contracts';
 import { WebRegistrationService } from '../application/web-registration.service';
 import { WebSessionService } from '../application/web-session.service';
-import {
-  WebAuthCookies,
-  WebJwtAuthGuard,
-  WebAuthOriginGuard,
-  type WebRequest,
-} from './web-jwt-auth';
+import { WebAuthCookies } from './web-auth-cookies';
+import { WebJwtAuthGuard, WebAuthOriginGuard, type WebAuthRequest } from '../public';
 import {
   WebCredentialsDto,
   WebVerifyOtpDto,
@@ -162,7 +158,10 @@ export class WebAuthController {
   @ApiOperation({ operationId: 'getWebCurrentUser', summary: 'Hồ sơ tài khoản đang đăng nhập' })
   @ApiOkResponse({ type: WebProfileDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
-  me(@Req() request: WebRequest, @Res({ passthrough: true }) response: Response): WebProfileDto {
+  me(
+    @Req() request: WebAuthRequest,
+    @Res({ passthrough: true }) response: Response,
+  ): WebProfileDto {
     response.setHeader('Cache-Control', 'no-store');
     // Guard always supplies a validated principal.
     return profile(request.webUser!);

@@ -26,10 +26,10 @@ import {
   CurrentWebUser,
   WebAuthOriginGuard,
   WebJwtAuthGuard,
-} from '@modules/web-auth/api/web-jwt-auth';
-import type { WebProfile } from '@modules/web-auth/domain/web-auth.repository';
-import { WebCatalogMapper } from '@modules/catalog/api/web/web-catalog.mapper';
-import { WebProductListResDto } from '@modules/catalog/api/web/dto/web-catalog.dto';
+  type WebAuthPrincipal,
+} from '@modules/web-auth/public';
+import { FavoritesMapper } from './favorites.mapper';
+import { FavoriteProductListResDto } from './dto/favorite-products.dto';
 import { FavoritesService } from '../application/favorites.service';
 import {
   FavoritesListQueryDto,
@@ -52,7 +52,7 @@ export class FavoritesController {
   @ApiOperation({ operationId: 'getFavoriteSummary', summary: 'Lấy tổng số sản phẩm yêu thích' })
   @ApiOkResponse({ type: FavoriteSummaryResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
-  summary(@CurrentWebUser() user: WebProfile): Promise<FavoriteSummaryResDto> {
+  summary(@CurrentWebUser() user: WebAuthPrincipal): Promise<FavoriteSummaryResDto> {
     return this.favorites.summary(user.id);
   }
 
@@ -65,7 +65,7 @@ export class FavoritesController {
   @ApiOkResponse({ type: FavoritesStatusResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   status(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Query() query: FavoritesStatusQueryDto,
   ): Promise<FavoritesStatusResDto> {
     return this.favorites.status(user.id, query.productIds);
@@ -74,13 +74,13 @@ export class FavoritesController {
   @Get()
   @ApiCookieAuth('web-access')
   @ApiOperation({ operationId: 'listFavorites', summary: 'Lấy sản phẩm yêu thích của tài khoản' })
-  @ApiOkResponse({ type: WebProductListResDto })
+  @ApiOkResponse({ type: FavoriteProductListResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async list(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Query() query: FavoritesListQueryDto,
-  ): Promise<WebProductListResDto> {
-    return WebCatalogMapper.toProductListResponse(
+  ): Promise<FavoriteProductListResDto> {
+    return FavoritesMapper.toProductListResponse(
       await this.favorites.list(user.id, query.page, query.limit),
     );
   }
@@ -94,7 +94,7 @@ export class FavoritesController {
   @ApiNotFoundResponse({ type: ErrorResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async add(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
   ): Promise<FavoriteMutationResDto> {
     return this.favorites.add(user.id, productId);
@@ -108,7 +108,7 @@ export class FavoritesController {
   @ApiOkResponse({ type: FavoriteMutationResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async remove(
-    @CurrentWebUser() user: WebProfile,
+    @CurrentWebUser() user: WebAuthPrincipal,
     @Param('productId', new ParseUUIDPipe({ version: '4' })) productId: string,
   ): Promise<FavoriteMutationResDto> {
     return this.favorites.remove(user.id, productId);

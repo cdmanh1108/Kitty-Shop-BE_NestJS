@@ -1,29 +1,14 @@
-import {
-  CanActivate,
-  createParamDecorator,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { AppConfiguration } from '@config/configuration';
-import type { Request, CookieOptions } from 'express';
+import type { Request } from 'express';
 import { WebSessionService } from '../application/web-session.service';
 import { authError } from '../application/web-auth.errors';
-import type { WebProfile } from '../domain/web-auth.repository';
+import type { WebAuthPrincipal } from './web-auth-principal';
+import type { WebAuthRequest } from './web-auth-request';
+import { WebAuthCookies } from '../api/web-auth-cookies';
 
-export interface WebRequest extends Request {
-  webUser?: WebProfile;
-}
-
-export const CurrentWebUser = createParamDecorator(
-  (_data: unknown, context: ExecutionContext): WebProfile => {
-    const user = context.switchToHttp().getRequest<WebRequest>().webUser;
-    if (!user) throw new ForbiddenException('Không tìm thấy phiên đăng nhập hợp lệ.');
-    return user;
-  },
-);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface WebAccessPayload {
@@ -43,50 +28,12 @@ function isWebAccessPayload(payload: unknown): payload is WebAccessPayload {
   );
 }
 
-@Injectable()
-export class WebAuthCookies {
-  constructor(private readonly config: ConfigService<AppConfiguration, true>) {}
-  private get production(): boolean {
-    return this.config.get('nodeEnv', { infer: true }) === 'production';
-  }
-  get accessName(): string {
-    return this.production ? '__Secure-kitty_web_access' : 'kitty_web_access';
-  }
-  get refreshName(): string {
-    return this.production ? '__Secure-kitty_web_refresh' : 'kitty_web_refresh';
-  }
-  get accessOptions(): CookieOptions {
-    return { httpOnly: true, secure: this.production, sameSite: 'lax', path: '/api' };
-  }
-  get refreshOptions(): CookieOptions {
-    return {
-      httpOnly: true,
-      secure: this.production,
-      sameSite: 'lax',
-      path: `/${this.config.get('apiPrefix', { infer: true }).replace(/^\/+|\/+$/g, '')}/web/auth`,
-    };
-  }
-  readAccess(request: Request): string | undefined {
-    return this.read(request, this.accessName);
-  }
-  readRefresh(request: Request): string | undefined {
-    return this.read(request, this.refreshName);
-  }
-  private read(request: Request, name: string): string | undefined {
-    return request.headers.cookie
-      ?.split(';')
-      .map((part) => part.trim())
-      .find((part) => part.startsWith(`${name}=`))
-      ?.slice(name.length + 1);
-  }
-}
-
 async function resolveWebRequestUser(
-  request: WebRequest,
+  request: WebAuthRequest,
   jwt: JwtService,
   session: WebSessionService,
   cookies: WebAuthCookies,
-): Promise<WebProfile | null> {
+): Promise<WebAuthPrincipal | null> {
   const token = cookies.readAccess(request);
   if (!token) return null;
 
@@ -115,8 +62,9 @@ export class WebJwtAuthGuard implements CanActivate {
     private readonly session: WebSessionService,
     private readonly cookies: WebAuthCookies,
   ) {}
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<WebRequest>();
+    const request = context.switchToHttp().getRequest<WebAuthRequest>();
     const user = await resolveWebRequestUser(request, this.jwt, this.session, this.cookies);
     if (!user) authError('AUTH_REQUIRED', 401);
     request.webUser = user;
@@ -136,8 +84,9 @@ export class OptionalWebJwtAuthGuard implements CanActivate {
     private readonly session: WebSessionService,
     private readonly cookies: WebAuthCookies,
   ) {}
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<WebRequest>();
+    const request = context.switchToHttp().getRequest<WebAuthRequest>();
     const user = await resolveWebRequestUser(request, this.jwt, this.session, this.cookies);
     if (user) request.webUser = user;
     return true;
@@ -147,6 +96,7 @@ export class OptionalWebJwtAuthGuard implements CanActivate {
 @Injectable()
 export class WebAuthOriginGuard implements CanActivate {
   constructor(private readonly config: ConfigService<AppConfiguration, true>) {}
+
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
     if (request.method === 'GET') return true;

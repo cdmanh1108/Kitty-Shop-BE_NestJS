@@ -8,11 +8,8 @@ import * as request from 'supertest';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { RequestContextMiddleware } from '../src/common/middleware/request-context.middleware';
 import { WebAuthController } from '../src/modules/web-auth/api/web-auth.controller';
-import {
-  WebAuthCookies,
-  WebAuthOriginGuard,
-  WebJwtAuthGuard,
-} from '../src/modules/web-auth/api/web-jwt-auth';
+import { WebAuthCookies } from '../src/modules/web-auth/api/web-auth-cookies';
+import { WebAuthOriginGuard, WebJwtAuthGuard } from '../src/modules/web-auth/public';
 import { WebRegistrationService } from '../src/modules/web-auth/application/web-registration.service';
 import { WebSessionService } from '../src/modules/web-auth/application/web-session.service';
 import type { Clock } from '../src/common/clock/clock';
