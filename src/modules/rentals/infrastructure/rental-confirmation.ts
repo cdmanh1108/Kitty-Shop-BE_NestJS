@@ -9,7 +9,7 @@ import { assertManualConfirmation, type ConfirmRentalData } from '../domain/rent
 import { RentalInvariantError } from '../domain/rental-errors';
 import { getWithTx } from './rental-queries';
 import { assertInventoryRentable } from './rental-inventory';
-import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
+import { lockRentalOrder } from '@database/prisma/rental-order-lock';
 
 export function confirmOrder(
   prisma: PrismaService,
@@ -18,7 +18,7 @@ export function confirmOrder(
   clock: Clock,
 ) {
   return serializableTransaction(prisma, async (tx) => {
-    if (!(await lockRentalMonetaryOrder(tx, input))) return null;
+    if (!(await lockRentalOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({
       where: { id: input.orderId, shopId: input.shopId },
     });

@@ -16,14 +16,17 @@ import { RentalClaimLostError } from '../src/modules/rentals/domain/rental-error
 import type { RentalOrderDetails } from '../src/modules/rentals/domain/rental.models';
 import type { CreateRentalOrderData } from '../src/modules/rentals/domain/rental.repository';
 import { createOrder } from '../src/modules/rentals/infrastructure/rental-booking';
+import {
+  completeRentalCreationClaim,
+  lockRentalCreationClaim,
+} from '../src/modules/rentals/infrastructure/rental-creation-idempotency';
 import { DEFAULT_RENTAL_POLICY } from '../src/modules/settings/domain/rental-policy';
 import {
-  claimIdempotency,
-  completeRentalClaim,
-  lockRentalClaim,
-  releaseIdempotency,
-  RENTAL_CLAIM_LEASE_MS,
-} from '../src/modules/rentals/infrastructure/rental-idempotency';
+  claimIdempotencyRecord,
+  lockIdempotencyClaim,
+  releaseIdempotencyClaim,
+  IDEMPOTENCY_CLAIM_LEASE_MS,
+} from '../src/database/prisma/idempotency';
 import { rentalServicePorts } from './fixtures/rental-ports.fixture';
 
 const now = new Date('2026-09-11T03:00:00Z');
@@ -139,7 +142,7 @@ function claimStore(initial: IdempotencyRecord[] = []) {
   );
   const identity = (shopId: string, scope: string, key: string) =>
     JSON.stringify([shopId, scope, key]);
-  type Delegate = Parameters<typeof claimIdempotency>[0]['idempotencyRecord'];
+  type Delegate = Parameters<typeof claimIdempotencyRecord>[0]['idempotencyRecord'];
   const create = jest.fn<ReturnType<Delegate['create']>, Parameters<Delegate['create']>>((args) => {
     const data = args.data;
     const key = identity(data.shopId ?? '', data.scope, data.key);
@@ -319,55 +322,61 @@ describe('audit port and request enrichment', () => {
   });
 });
 
-describe('fenced rental claims', () => {
+describe('fenced idempotency claims', () => {
   it('allows only one owner for concurrent same-key claims and isolates shops', async () => {
     const { prisma } = claimStore();
     const claims = await Promise.all([
-      claimIdempotency(prisma, clock, input),
-      claimIdempotency(prisma, clock, input),
+      claimIdempotencyRecord(prisma, clock, input),
+      claimIdempotencyRecord(prisma, clock, input),
     ]);
     expect(claims.map((claim) => claim.state).sort()).toEqual(['CLAIMED', 'IN_PROGRESS']);
-    expect(await claimIdempotency(prisma, clock, { ...input, shopId: 'other' })).toMatchObject({
+    expect(
+      await claimIdempotencyRecord(prisma, clock, { ...input, shopId: 'other' }),
+    ).toMatchObject({
       state: 'CLAIMED',
     });
   });
   it('keeps active claims in progress and rejects a different payload', async () => {
     const { prisma } = claimStore([persistedClaim()]);
-    expect(await claimIdempotency(prisma, clock, input)).toEqual({ state: 'IN_PROGRESS' });
-    expect(await claimIdempotency(prisma, clock, { ...input, requestHash: 'different' })).toEqual({
+    expect(await claimIdempotencyRecord(prisma, clock, input)).toEqual({ state: 'IN_PROGRESS' });
+    expect(
+      await claimIdempotencyRecord(prisma, clock, { ...input, requestHash: 'different' }),
+    ).toEqual({
       state: 'HASH_MISMATCH',
     });
   });
   it('recovers a stale claim at the lease boundary and fences the old executor and cleanup', async () => {
     const store = claimStore([
-      persistedClaim({ createdAt: new Date(now.getTime() - RENTAL_CLAIM_LEASE_MS) }),
+      persistedClaim({ createdAt: new Date(now.getTime() - IDEMPOTENCY_CLAIM_LEASE_MS) }),
     ]);
     const prisma = store.prisma;
-    const claim = await claimIdempotency(prisma, clock, input);
+    const claim = await claimIdempotencyRecord(prisma, clock, input);
     expect(claim.state).toBe('CLAIMED');
     if (claim.state !== 'CLAIMED') throw new Error('Expected owner');
     expect(claim.claimId).not.toBe('old-claim');
     const old = { scope: input.scope, key: input.key, claimId: 'old-claim' };
-    await expect(lockRentalClaim(prisma, input.shopId, old)).rejects.toBeInstanceOf(
+    await expect(lockRentalCreationClaim(prisma, input.shopId, old)).rejects.toBeInstanceOf(
       RentalClaimLostError,
     );
-    await releaseIdempotency(prisma, input.shopId, input.scope, input.key, old.claimId);
+    await releaseIdempotencyClaim(prisma, input.shopId, input.scope, input.key, old.claimId);
     expect([...store.records.values()][0]?.id).toBe(claim.claimId);
     await expect(
-      lockRentalClaim(prisma, input.shopId, { ...old, claimId: claim.claimId }),
-    ).resolves.toBeUndefined();
+      lockIdempotencyClaim(prisma, input.shopId, { ...old, claimId: claim.claimId }),
+    ).resolves.toBe(true);
   });
   it('does not reclaim a completed result even if its creation time is stale', async () => {
     const store = claimStore([
       persistedClaim({ createdAt: new Date(0), completedAt: now, responseCode: 201 }),
     ]);
     const prisma = store.prisma;
-    expect(await claimIdempotency(prisma, clock, input)).toEqual({
+    expect(await claimIdempotencyRecord(prisma, clock, input)).toEqual({
       state: 'COMPLETED',
       responseBody: null,
     });
     expect(store.update.mock.calls).toHaveLength(0);
-    expect(await claimIdempotency(prisma, clock, { ...input, requestHash: 'different' })).toEqual({
+    expect(
+      await claimIdempotencyRecord(prisma, clock, { ...input, requestHash: 'different' }),
+    ).toEqual({
       state: 'HASH_MISMATCH',
     });
   });
@@ -378,14 +387,16 @@ describe('fenced rental claims', () => {
       for (const record of store.records.values()) record.completedAt = now;
       return Promise.resolve({ count: 0 });
     });
-    expect(await claimIdempotency(prisma, clock, input)).toEqual({
+    expect(await claimIdempotencyRecord(prisma, clock, input)).toEqual({
       state: 'COMPLETED',
       responseBody: null,
     });
   });
   it('permits key reuse only after existing retention expires', async () => {
     const { prisma } = claimStore([persistedClaim({ completedAt: now, expiresAt: now })]);
-    expect(await claimIdempotency(prisma, clock, { ...input, requestHash: 'new' })).toMatchObject({
+    expect(
+      await claimIdempotencyRecord(prisma, clock, { ...input, requestHash: 'new' }),
+    ).toMatchObject({
       state: 'CLAIMED',
     });
   });
@@ -393,7 +404,7 @@ describe('fenced rental claims', () => {
     const store = claimStore([persistedClaim()]);
     const prisma = store.prisma;
     store.find.mockResolvedValue(null);
-    expect(await claimIdempotency(prisma, clock, input)).toEqual({ state: 'IN_PROGRESS' });
+    expect(await claimIdempotencyRecord(prisma, clock, input)).toEqual({ state: 'IN_PROGRESS' });
     expect(store.create.mock.calls).toHaveLength(3);
   });
 });
@@ -595,11 +606,13 @@ describe('application idempotent execution and audit', () => {
     const { prisma } = claimStore();
     const ports = rentalServicePorts();
     const repository = ports.creation;
-    repository.claimIdempotency.mockImplementation((data) => claimIdempotency(prisma, clock, data));
+    repository.claimIdempotency.mockImplementation((data) =>
+      claimIdempotencyRecord(prisma, clock, data),
+    );
     repository.createOrder.mockImplementation(async (data) => {
       if (!data.idempotency) throw new Error('Expected claim');
-      await lockRentalClaim(prisma, data.shopId, data.idempotency);
-      await completeRentalClaim(prisma, data.shopId, data.idempotency, orderDetails());
+      await lockRentalCreationClaim(prisma, data.shopId, data.idempotency);
+      await completeRentalCreationClaim(prisma, data.shopId, data.idempotency, orderDetails());
       return orderDetails();
     });
     const audit: jest.Mocked<AuditPort> = { log: jest.fn().mockResolvedValue(undefined) };

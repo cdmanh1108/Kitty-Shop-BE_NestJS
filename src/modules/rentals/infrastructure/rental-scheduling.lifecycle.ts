@@ -9,7 +9,7 @@ import { assertRentalReschedule, canRescheduleRental } from '../domain/rental-po
 import { RentalOverlapError, type RentalLifecycleRepository } from '../domain/rental.repository';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { assertChargeMutationAllowed } from '../domain/rental-monetary.policy';
-import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
+import { lockRentalOrder } from '@database/prisma/rental-order-lock';
 
 export async function reschedule(
   prisma: PrismaService,
@@ -82,7 +82,7 @@ export async function addCharge(
   input: Parameters<RentalLifecycleRepository['addCharge']>[0],
 ): ReturnType<RentalLifecycleRepository['addCharge']> {
   return serializableTransaction(prisma, async (tx) => {
-    if (!(await lockRentalMonetaryOrder(tx, input))) return null;
+    if (!(await lockRentalOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({
       where: { id: input.orderId, shopId: input.shopId },
     });

@@ -5,8 +5,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import { serializableTransaction } from '@database/prisma/transaction';
+import { lockRentalOrder } from '@database/prisma/rental-order-lock';
 import { assertChargeMutationAllowed } from '@modules/rentals/domain/rental-monetary.policy';
-import { lockRentalMonetaryOrder } from '@modules/rentals/infrastructure/rental-monetary-boundary';
 import type { DeliveryRepository } from '../domain/delivery.repository';
 
 @Injectable()
@@ -33,7 +33,7 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
       const changesMonetaryState = input.shippingFee > 0;
       if (
         changesMonetaryState &&
-        !(await lockRentalMonetaryOrder(tx, {
+        !(await lockRentalOrder(tx, {
           shopId: input.shopId,
           orderId: input.orderId,
         }))

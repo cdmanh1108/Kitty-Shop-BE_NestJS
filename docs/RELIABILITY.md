@@ -73,9 +73,10 @@ payloads conflict before replay or stale recovery.
 
 - Retention keeps the existing expiresAt supplied by the service (24 hours). Expired keys
   remain reusable; this is not indefinite deduplication.
-- Processing lease is a centralized five-minute constant, independent of retention.
-  Existing createdAt represents current claim acquisition time. Clock is injected into
-  the Rental Prisma adapter for deterministic expiry/stale decisions.
+- The Prisma idempotency-record adapter owns the shared five-minute processing lease,
+  independent of caller retention. Existing createdAt represents current claim acquisition
+  time. Clock is injected into each owning Prisma adapter for deterministic expiry/stale
+  decisions. Rental-specific replay serialization remains in Rentals infrastructure.
 - CLAIMED returns internal claimId, the existing row UUID. Recovery conditionally updates
   old ID, tenant/scope/key, hash, incompletion and createdAt <= now - lease. The winner
   rotates UUID and acquisition time and uses the retry's retention deadline. No relation
@@ -92,12 +93,17 @@ payloads conflict before replay or stale recovery.
   are logged without replacing the original error; stale recovery remains available.
 - Contention is bounded to three inspections. Active/contended claims retain in-progress
   409 behavior; ownership loss uses the same in-progress message. Failures are not cached
-  as completed responses. Recovery logs omit keys, hashes and response payloads.
+  as completed responses. The generic recovery event omits keys, hashes and response payloads.
 
 The fence, not timeout alone, prevents stale execution. There is no heartbeat and no
 assumption that an old lease proves a process dead. Lock waits retain existing DB/transaction
 settings. Helpers consume an infrastructure-local projection of the four required Prisma
 operations, supplied by the existing client or transaction, without owning connections.
+
+The tenant-scoped Rental Order `FOR UPDATE` primitive lives in
+`src/database/prisma/rental-order-lock.ts`. Rental, Finance and Delivery repositories pass
+their existing transaction client into it. It owns row locking only; Rental monetary
+invariants remain in the pure Rentals domain policy.
 
 ## Failure windows
 
@@ -126,6 +132,15 @@ Manual Admin receipts use the same fenced record table with their own actor-scop
 `finance.manual-payment.create.v1:<memberId>` namespace. Their 30-day result
 retention, stable omitted-`paidAt` marker, transactional audit and caller rollout are
 documented in [Manual receipt idempotency](MANUAL_RECEIPT_IDEMPOTENCY.md).
+
+The Finance manual-payment flow claims the key before opening its business transaction.
+Inside one Serializable transaction it conditionally updates the claim row first, locks
+the tenant-scoped Rental Order row next, reads order/settlement/payment state, creates the
+payment, recomputes payment/deposit state, inserts the required outbox event and durable
+audit row, then completes the replay snapshot. Claim completion shares the same Prisma
+transaction client as the payment and audit writes. Any failure rolls those writes back;
+the application then conditionally releases only that claim token. A replay returns the
+stored Finance response without repeating any business write.
 
 Drain/stop all old backend instances and in-flight rentals before enabling recovery.
 Old code completes/releases by key without fencing; a mixed-version rolling deployment

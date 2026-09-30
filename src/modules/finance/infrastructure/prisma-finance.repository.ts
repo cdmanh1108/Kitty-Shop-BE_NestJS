@@ -5,6 +5,13 @@ import { paginateMeta } from '@common/types/pagination';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
+import {
+  claimIdempotencyRecord,
+  completeIdempotencyClaim,
+  lockIdempotencyClaim,
+  releaseIdempotencyClaim,
+} from '@database/prisma/idempotency';
+import { lockRentalOrder } from '@database/prisma/rental-order-lock';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { CLOCK, type Clock } from '@common/clock/clock';
@@ -12,13 +19,6 @@ import {
   assertPaymentCreationAllowed,
   assertPaymentVoidAllowed,
 } from '@modules/rentals/domain/rental-monetary.policy';
-import { lockRentalMonetaryOrder } from '@modules/rentals/infrastructure/rental-monetary-boundary';
-import {
-  claimIdempotency,
-  lockRentalClaim,
-  releaseIdempotency,
-} from '@modules/rentals/infrastructure/rental-idempotency';
-import { RentalClaimLostError } from '@modules/rentals/domain/rental-errors';
 import { FinanceInvariantError, type FinanceRepository } from '../domain/finance.repository';
 import {
   FinancePaymentClaimLostError,
@@ -33,24 +33,20 @@ export class PrismaFinanceRepository implements FinanceRepository {
   ) {}
 
   claimPaymentIdempotency(input: Parameters<FinanceRepository['claimPaymentIdempotency']>[0]) {
-    return claimIdempotency(this.prisma, this.clock, input);
+    return claimIdempotencyRecord(this.prisma, this.clock, input);
   }
 
   releasePaymentIdempotency(shopId: string, scope: string, key: string, claimId: string) {
-    return releaseIdempotency(this.prisma, shopId, scope, key, claimId);
+    return releaseIdempotencyClaim(this.prisma, shopId, scope, key, claimId);
   }
 
   async createPayment(input: Parameters<FinanceRepository['createPayment']>[0]) {
     return serializableTransaction(this.prisma, async (tx) => {
       if (input.idempotency) {
-        try {
-          await lockRentalClaim(tx, input.shopId, input.idempotency);
-        } catch (error) {
-          if (error instanceof RentalClaimLostError) throw new FinancePaymentClaimLostError();
-          throw error;
-        }
+        const ownsClaim = await lockIdempotencyClaim(tx, input.shopId, input.idempotency);
+        if (!ownsClaim) throw new FinancePaymentClaimLostError();
       }
-      if (!(await lockRentalMonetaryOrder(tx, input))) return null;
+      if (!(await lockRentalOrder(tx, input))) return null;
       const order = await tx.rentalOrder.findFirst({
         where: { id: input.orderId, shopId: input.shopId },
       });
@@ -133,23 +129,16 @@ export class PrismaFinanceRepository implements FinanceRepository {
             },
           },
         });
-        const completed = await tx.idempotencyRecord.updateMany({
-          where: {
-            id: input.idempotency.claimId,
-            shopId: input.shopId,
-            scope: input.idempotency.scope,
-            key: input.idempotency.key,
-            completedAt: null,
-          },
-          data: {
-            responseCode: 201,
-            responseBody: toStoredManualPaymentCreateResult(
-              payment,
-            ) as unknown as Prisma.InputJsonValue,
-            completedAt: this.clock.now(),
-          },
+        const completed = await completeIdempotencyClaim(tx, {
+          shopId: input.shopId,
+          ...input.idempotency,
+          responseCode: 201,
+          responseBody: toStoredManualPaymentCreateResult(
+            payment,
+          ) as unknown as Prisma.InputJsonValue,
+          completedAt: this.clock.now(),
         });
-        if (completed.count !== 1) throw new FinancePaymentClaimLostError();
+        if (!completed) throw new FinancePaymentClaimLostError();
       }
       return payment;
     });
@@ -163,7 +152,7 @@ export class PrismaFinanceRepository implements FinanceRepository {
     if (!route) return null;
 
     return serializableTransaction(this.prisma, async (tx) => {
-      if (!(await lockRentalMonetaryOrder(tx, { shopId: input.shopId, orderId: route.orderId }))) {
+      if (!(await lockRentalOrder(tx, { shopId: input.shopId, orderId: route.orderId }))) {
         return null;
       }
       const order = await tx.rentalOrder.findFirst({

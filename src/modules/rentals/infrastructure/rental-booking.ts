@@ -1,6 +1,9 @@
 import { assertInventoryRentable } from './rental-inventory';
 import type { RentalOutboxEvent } from '../domain/rental.events';
-import { lockRentalClaim, completeRentalClaim } from './rental-idempotency';
+import {
+  completeRentalCreationClaim,
+  lockRentalCreationClaim,
+} from './rental-creation-idempotency';
 import {
   ALLOCATION_STATUS,
   RENTAL_ITEM_STATUS,
@@ -51,7 +54,7 @@ export async function createOrder(
   }
   try {
     return await serializableTransaction(prisma, async (tx) => {
-      if (data.idempotency) await lockRentalClaim(tx, data.shopId, data.idempotency);
+      if (data.idempotency) await lockRentalCreationClaim(tx, data.shopId, data.idempotency);
 
       assertAllocationPlan(data);
       if (data.storefrontEligibility) await assertStorefrontEligibleLines(tx, data);
@@ -207,7 +210,7 @@ export async function createOrder(
       });
       const result = await getWithTx(tx, data.shopId, order.id);
       if (data.idempotency) {
-        await completeRentalClaim(tx, data.shopId, data.idempotency, result);
+        await completeRentalCreationClaim(tx, data.shopId, data.idempotency, result);
       }
       return result;
     });

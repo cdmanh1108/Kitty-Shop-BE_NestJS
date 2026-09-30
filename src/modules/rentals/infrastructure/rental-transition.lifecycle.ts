@@ -14,7 +14,7 @@ import { serializableTransaction } from '@database/prisma/transaction';
 import type { Prisma } from '@prisma/client';
 import type { RentalLifecycleRepository } from '../domain/rental.repository';
 import { getWithTx } from './rental-queries';
-import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
+import { lockRentalOrder } from '@database/prisma/rental-order-lock';
 import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
 import { canTransitionDelivery, DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 
@@ -26,7 +26,7 @@ export async function transition(
 ): ReturnType<RentalLifecycleRepository['transition']> {
   return serializableTransaction(prisma, async (tx) => {
     if (input.toStatus === RENTAL_STATUS.CANCELLED) {
-      if (!(await lockRentalMonetaryOrder(tx, input))) return null;
+      if (!(await lockRentalOrder(tx, input))) return null;
     }
     const orderWhere = {
       id: input.orderId,

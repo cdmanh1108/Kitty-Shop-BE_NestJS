@@ -13,7 +13,7 @@ import { Prisma } from '@prisma/client';
 import type { SettleRentalOrderData } from '../domain/rental.repository';
 import type { RentalOrderDetails } from '../domain/rental.models';
 import { getWithTx } from './rental-queries';
-import { lockRentalMonetaryOrder } from './rental-monetary-boundary';
+import { lockRentalOrder } from '@database/prisma/rental-order-lock';
 
 export async function settleOrder(
   prisma: PrismaService,
@@ -22,7 +22,7 @@ export async function settleOrder(
   clock: Clock,
 ): Promise<RentalOrderDetails> {
   return serializableTransaction(prisma, async (tx) => {
-    if (!(await lockRentalMonetaryOrder(tx, input))) return null;
+    if (!(await lockRentalOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({
       where: { id: input.orderId, shopId: input.shopId },
       include: {

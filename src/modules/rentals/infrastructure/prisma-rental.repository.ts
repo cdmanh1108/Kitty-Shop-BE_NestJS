@@ -4,6 +4,7 @@ import {
   type RentalPolicyProvider,
 } from '@modules/settings/domain/rental-policy';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { claimIdempotencyRecord, releaseIdempotencyClaim } from '@database/prisma/idempotency';
 import { Injectable, Inject } from '@nestjs/common';
 import type {
   RentalAvailabilityReader,
@@ -27,7 +28,6 @@ import {
 } from './rental-queries';
 import { getBookableVariant } from './rental-availability';
 import { createOrder } from './rental-booking';
-import { claimIdempotency, releaseIdempotency } from './rental-idempotency';
 import { receiveReturn } from './rental-return.lifecycle';
 import { settleOrder } from './rental-settlement.lifecycle';
 import { transition } from './rental-transition.lifecycle';
@@ -146,13 +146,13 @@ export class PrismaRentalRepository
   claimIdempotency(
     ...args: Parameters<RentalCreationRepository['claimIdempotency']>
   ): ReturnType<RentalCreationRepository['claimIdempotency']> {
-    return claimIdempotency(this.prisma, this.clock, ...args);
+    return claimIdempotencyRecord(this.prisma, this.clock, ...args);
   }
 
   releaseIdempotency(
     ...args: Parameters<RentalCreationRepository['releaseIdempotency']>
   ): ReturnType<RentalCreationRepository['releaseIdempotency']> {
-    return releaseIdempotency(this.prisma, ...args);
+    return releaseIdempotencyClaim(this.prisma, ...args);
   }
 
   findActiveVariantIdsByProduct(

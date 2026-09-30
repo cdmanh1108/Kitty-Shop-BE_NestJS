@@ -4,17 +4,14 @@ import type { JsonValue } from '@common/types/json';
 import { Logger } from '@nestjs/common';
 import { Prisma, type IdempotencyRecord } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import { RentalClaimLostError } from '../domain/rental-errors';
-import type { RentalOrderDetails } from '../domain/rental.models';
-import type { CreateRentalOrderData, RentalCreationRepository } from '../domain/rental.repository';
-import { toWebRentalCreateResult } from '../domain/web-rental-create-result';
 
-// Processing lease is independent of the caller's existing 24-hour replay retention.
-export const RENTAL_CLAIM_LEASE_MS = 5 * 60 * 1000;
-const logger = new Logger('RentalIdempotency');
-// Infrastructure-local projection of only the Prisma operations/results this boundary uses.
-// Both PrismaService and the caller's TransactionClient satisfy it; no client is created here.
-type RentalIdempotencyClient = {
+// Processing lease is independent of the caller's replay-retention deadline.
+export const IDEMPOTENCY_CLAIM_LEASE_MS = 5 * 60 * 1000;
+const CLAIM_ATTEMPTS = 3;
+const logger = new Logger('IdempotencyStore');
+
+/** Narrow Prisma projection used by the shared idempotency-record adapter. */
+export type IdempotencyRecordClient = {
   idempotencyRecord: {
     create(args: Prisma.IdempotencyRecordCreateArgs): Promise<{ id: string }>;
     findUnique(
@@ -27,17 +24,36 @@ type RentalIdempotencyClient = {
     deleteMany(args: Prisma.IdempotencyRecordDeleteManyArgs): Promise<Prisma.BatchPayload>;
   };
 };
-type RentalClaim = NonNullable<CreateRentalOrderData['idempotency']>;
 
-export async function claimIdempotency(
-  prisma: RentalIdempotencyClient,
+export interface IdempotencyClaimInput {
+  shopId: string;
+  scope: string;
+  key: string;
+  requestHash: string;
+  expiresAt: Date;
+}
+
+export interface IdempotencyClaimOwner {
+  scope: string;
+  key: string;
+  claimId: string;
+}
+
+export type IdempotencyClaimResult =
+  | { state: 'CLAIMED'; claimId: string }
+  | { state: 'IN_PROGRESS' }
+  | { state: 'HASH_MISMATCH' }
+  | { state: 'COMPLETED'; responseBody: JsonValue };
+
+export async function claimIdempotencyRecord(
+  prisma: IdempotencyRecordClient,
   clock: Clock,
-  input: Parameters<RentalCreationRepository['claimIdempotency']>[0],
-): ReturnType<RentalCreationRepository['claimIdempotency']> {
+  input: IdempotencyClaimInput,
+): Promise<IdempotencyClaimResult> {
   // Bounded contention retry; never recurse indefinitely when another claimant changes a row.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < CLAIM_ATTEMPTS; attempt += 1) {
     const now = clock.now();
-    const staleBefore = new Date(now.getTime() - RENTAL_CLAIM_LEASE_MS);
+    const staleBefore = new Date(now.getTime() - IDEMPOTENCY_CLAIM_LEASE_MS);
     await prisma.idempotencyRecord.deleteMany({
       where: {
         shopId: input.shopId,
@@ -46,6 +62,7 @@ export async function claimIdempotency(
         expiresAt: { lte: now },
       },
     });
+
     try {
       const claimId = randomUUID();
       await prisma.idempotencyRecord.create({ data: { ...input, id: claimId, createdAt: now } });
@@ -75,9 +92,8 @@ export async function claimIdempotency(
     if (existing.createdAt > staleBefore) return { state: 'IN_PROGRESS' };
 
     const claimId = randomUUID();
-    // No table references this ID. Rotating it gives every lease a distinct fencing token
-    // without a schema change. A stale process cannot execute or release its successor.
-    // This UPDATE contends with the row lock held throughout an executing booking.
+    // Rotating the row ID fences every lease without a schema change. Recovery
+    // contends with the row lock held throughout an executing business transaction.
     const recovered = await prisma.idempotencyRecord.updateMany({
       where: {
         id: existing.id,
@@ -92,7 +108,7 @@ export async function claimIdempotency(
     });
     if (recovered.count === 1) {
       logger.warn({
-        event: 'rental.idempotency.recovered',
+        event: 'idempotency.claim.recovered',
         shopId: input.shopId,
         requestId: currentRequestMetadata()?.requestId,
       });
@@ -102,55 +118,54 @@ export async function claimIdempotency(
   return { state: 'IN_PROGRESS' };
 }
 
-export async function lockRentalClaim(
-  tx: RentalIdempotencyClient,
+/**
+ * Conditionally updates the ownership row inside the caller's transaction.
+ * Pass the same transaction client used for every protected business write.
+ */
+export async function lockIdempotencyClaim(
+  tx: IdempotencyRecordClient,
   shopId: string,
-  claim: RentalClaim,
-): Promise<void> {
-  // An actual conditional UPDATE acquires the PostgreSQL row lock until transaction end.
-  // Merely SELECTing the token would allow recovery between validation and business writes.
+  claim: IdempotencyClaimOwner,
+): Promise<boolean> {
+  // An UPDATE acquires the PostgreSQL row lock until transaction end. A SELECT
+  // would let stale recovery replace the token before business writes complete.
   const locked = await tx.idempotencyRecord.updateMany({
     where: { id: claim.claimId, shopId, scope: claim.scope, key: claim.key, completedAt: null },
     data: { id: claim.claimId },
   });
-  if (locked.count !== 1) throw new RentalClaimLostError();
+  return locked.count === 1;
 }
 
-export async function completeRentalClaim(
-  tx: RentalIdempotencyClient,
-  shopId: string,
-  claim: RentalClaim,
-  result: RentalOrderDetails,
-): Promise<void> {
-  if (!result) throw new RentalClaimLostError();
-  const webResult = toWebRentalCreateResult(result);
-  const responseBody: Prisma.InputJsonValue =
-    claim.responseFormat === 'WEB_RENTAL_ORDER_CREATE_V1'
-      ? ({
-          version: 1,
-          kind: 'web-rental-order-create',
-          result: {
-            orderCode: webResult.orderCode,
-            totalAmount: webResult.totalAmount,
-            depositAmount: webResult.depositAmount,
-            status: webResult.status,
-            paymentStatus: webResult.paymentStatus,
-          },
-        } satisfies Prisma.InputJsonObject)
-      : (JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue);
+/** Completes the claim atomically with the caller's business transaction. */
+export async function completeIdempotencyClaim(
+  tx: IdempotencyRecordClient,
+  input: IdempotencyClaimOwner & {
+    shopId: string;
+    responseCode: number;
+    responseBody: Prisma.InputJsonValue;
+    completedAt: Date;
+  },
+): Promise<boolean> {
   const completed = await tx.idempotencyRecord.updateMany({
-    where: { id: claim.claimId, shopId, scope: claim.scope, key: claim.key, completedAt: null },
+    where: {
+      id: input.claimId,
+      shopId: input.shopId,
+      scope: input.scope,
+      key: input.key,
+      completedAt: null,
+    },
     data: {
-      responseCode: 201,
-      responseBody,
-      completedAt: new Date(),
+      responseCode: input.responseCode,
+      responseBody: input.responseBody,
+      completedAt: input.completedAt,
     },
   });
-  if (completed.count !== 1) throw new RentalClaimLostError();
+  return completed.count === 1;
 }
 
-export async function releaseIdempotency(
-  prisma: RentalIdempotencyClient,
+/** Deletes only the caller's incomplete claim; stale owners cannot delete successors. */
+export async function releaseIdempotencyClaim(
+  prisma: IdempotencyRecordClient,
   shopId: string,
   scope: string,
   key: string,
