@@ -7,6 +7,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { CHARGE_TYPE } from '../domain/charge-type';
+import { RENTAL_STATUS } from '../domain/rental-status';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { OBJECT_STORAGE_PORT, type ObjectStoragePort } from '@common/storage/object-storage.port';
 import { validateAndHashImage } from '@common/storage/storage-key.builder';
 import { PERMISSIONS } from '@common/constants/permissions';
@@ -17,7 +20,9 @@ import {
   type RentalLifecycleRepository,
   type RentalOrderReader,
 } from '../domain/rental.repository';
-import type { SettleRentalOrderInput } from './rental.contracts';
+import type { AddRentalChargeInput, SettleRentalOrderInput } from './rental.contracts';
+
+const CHARGE_TYPES: ReadonlySet<string> = new Set(Object.values(CHARGE_TYPE));
 
 export interface SettlementImage {
   buffer: Buffer;
@@ -34,6 +39,7 @@ export class RentalSettlementService {
     @Inject(RENTAL_LIFECYCLE_REPOSITORY)
     private readonly lifecycle: RentalLifecycleRepository,
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {}
 
   async settle(
@@ -138,6 +144,53 @@ export class RentalSettlementService {
       body: await this.storage.getObject(settlement.evidenceKey),
       mimeType: settlement.evidenceMimeType,
     };
+  }
+
+  async returnCollateral(user: CurrentUser, id: string) {
+    const order = await this.lifecycle.returnCollateral(user.shopId, id, user.memberId);
+    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'COLLATERAL_RETURNED',
+      entityType: 'rental_order',
+      entityId: id,
+    });
+    return order;
+  }
+
+  async addCharge(user: CurrentUser, id: string, input: AddRentalChargeInput) {
+    if (!CHARGE_TYPES.has(input.chargeType))
+      throw new BadRequestException('Loại phụ phí không hợp lệ.');
+    const current = await this.orderReader.get(user.shopId, id);
+    if (!current) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (current.status === RENTAL_STATUS.COMPLETED || current.status === RENTAL_STATUS.CANCELLED) {
+      throw new BadRequestException('Không thể thêm phụ phí cho đơn thuê đã đóng hoặc đã hủy.');
+    }
+    if (current.settlement) {
+      throw new BadRequestException('Không thể thêm phụ phí sau khi đã kết toán đơn thuê.');
+    }
+    const order = await this.lifecycle.addCharge({
+      shopId: user.shopId,
+      orderId: id,
+      chargeType: input.chargeType,
+      description: input.description,
+      amount: input.amount,
+      quantity: input.quantity,
+      createdBy: user.memberId,
+    });
+    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'ADD_CHARGE',
+      entityType: 'rental_order',
+      entityId: id,
+      newValues: { ...input },
+    });
+    return order;
   }
 
   private authorize(user: CurrentUser) {

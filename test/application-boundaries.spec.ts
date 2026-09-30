@@ -12,7 +12,8 @@ import {
   toCreateRentalOrderInput,
   toRentalListQuery,
 } from '../src/modules/rentals/api/rental.mapper';
-import { RentalService } from '../src/modules/rentals/application/rental.service';
+import { RentalCreationService } from '../src/modules/rentals/application/rental-creation.service';
+import { RentalReadService } from '../src/modules/rentals/application/rental-read.service';
 import { ReportService } from '../src/modules/reports/application/report.service';
 import type { ReportRepository } from '../src/modules/reports/domain/report.repository';
 import { toPerformanceQuery } from '../src/modules/reports/api/report.mapper';
@@ -27,13 +28,11 @@ const user: CurrentUser = {
   fullName: 'Admin',
   permissions: [],
 };
-function rentalService(ports: ReturnType<typeof rentalServicePorts>) {
-  return new RentalService(
+function rentalCreationService(ports: ReturnType<typeof rentalServicePorts>) {
+  return new RentalCreationService(
     ports.creation,
     ports.creationValidator,
     ports.availability,
-    ports.orderReader,
-    ports.lifecycle,
     audit(),
     fixedClock,
   );
@@ -72,7 +71,7 @@ describe('transport to application contracts', () => {
       page: '2',
       from: '2026-09-12T10:00:00+07:00',
     });
-    const service = rentalService(ports);
+    const service = new RentalReadService(ports.orderReader);
     expect(await service.list(user, toRentalListQuery(query))).toBe(result);
     expect(ports.orderReader.list.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
@@ -89,7 +88,7 @@ describe('transport to application contracts', () => {
     const ports = rentalServicePorts();
     ports.creation.claimIdempotency.mockResolvedValue({ state: 'COMPLETED', responseBody: null });
     const dto = request();
-    const service = rentalService(ports);
+    const service = rentalCreationService(ports);
     await expect(service.create(user, toCreateRentalOrderInput(dto), 'retry')).resolves.toBeNull();
     expect(ports.creation.claimIdempotency.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
@@ -105,8 +104,10 @@ describe('transport to application contracts', () => {
   it('keeps the existing missing-order and invalid schedule errors', async () => {
     const ports = rentalServicePorts();
     ports.orderReader.get.mockResolvedValue(null);
-    const service = rentalService(ports);
-    await expect(service.get(user, 'missing')).rejects.toThrow('Không tìm thấy đơn thuê.');
+    const service = rentalCreationService(ports);
+    await expect(new RentalReadService(ports.orderReader).get(user, 'missing')).rejects.toThrow(
+      'Không tìm thấy đơn thuê.',
+    );
     const input = toCreateRentalOrderInput(request());
     input.rentalEndAt = input.rentalStartAt;
     await expect(service.create(user, input)).rejects.toThrow(

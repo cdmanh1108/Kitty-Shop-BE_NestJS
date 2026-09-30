@@ -29,7 +29,9 @@ import {
   WebAuthOriginGuard,
   type WebAuthRequest,
 } from '@modules/web-auth/public';
-import { WebRentalService } from '../../application/web-rental.service';
+import { WebRentalEvaluationService } from '../../application/web-rental-evaluation.service';
+import { WebRentalOrderService } from '../../application/web-rental-order.service';
+import { WebRentalLookupService } from '../../application/web-rental-lookup.service';
 import {
   WebAvailabilityQueryDto,
   WebAvailabilityResDto,
@@ -48,7 +50,9 @@ import {
 export class WebRentalController {
   constructor(
     private readonly shopResolver: ShopResolver,
-    private readonly rentalService: WebRentalService,
+    private readonly evaluation: WebRentalEvaluationService,
+    private readonly orders: WebRentalOrderService,
+    private readonly lookups: WebRentalLookupService,
   ) {}
 
   @Get('availability')
@@ -66,7 +70,7 @@ export class WebRentalController {
   })
   async checkAvailability(@Query() query: WebAvailabilityQueryDto): Promise<WebAvailabilityResDto> {
     const shopId = await this.shopResolver.resolveShopId();
-    return this.rentalService.checkAvailability(shopId, query);
+    return this.evaluation.checkAvailability(shopId, query);
   }
 
   @Post('rental/quote')
@@ -85,7 +89,7 @@ export class WebRentalController {
   })
   async calculateQuote(@Body() body: WebRentalQuoteReqDto): Promise<WebRentalQuoteResDto> {
     const shopId = await this.shopResolver.resolveShopId();
-    return this.rentalService.calculateQuote(shopId, body);
+    return this.evaluation.calculateQuote(shopId, body);
   }
 
   @Post('rental-orders')
@@ -129,7 +133,7 @@ export class WebRentalController {
       .map((header, index) => ({ header, value: request.rawHeaders[index * 2 + 1] }))
       .filter(({ header }) => header.toLowerCase() === 'idempotency-key')
       .map(({ value }) => value ?? '');
-    return this.rentalService.createOrder(
+    return this.orders.createOrder(
       shopId,
       body,
       idempotencyKeys.length === 0
@@ -158,6 +162,6 @@ export class WebRentalController {
   })
   async lookupOrder(@Body() body: WebOrderLookupReqDto): Promise<WebOrderLookupResDto> {
     const shopId = await this.shopResolver.resolveShopId();
-    return this.rentalService.lookupOrder(shopId, body);
+    return this.lookups.lookupOrder(shopId, body);
   }
 }

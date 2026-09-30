@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+﻿import { Logger } from '@nestjs/common';
 import { EventEmitter } from 'node:events';
 import type { Request, Response } from 'express';
 import {
@@ -55,7 +55,7 @@ describe('application logging', () => {
     const rentalError = new Error('token=secret-rental');
     Object.defineProperty(rentalError, 'stack', {
       value:
-        'Error: token=secret-rental\n    at fn (/app/src/modules/rentals/rental.service.ts:10:5)',
+        'Error: token=secret-rental\n    at fn (/app/src/modules/rentals/rental-creation.service.ts:10:5)',
     });
     const financeError = new Error('phone=0900123456');
     Object.defineProperty(financeError, 'stack', {
@@ -66,7 +66,7 @@ describe('application logging', () => {
     const rentalDiagnostic = safeErrorDiagnostic(rentalError);
     const financeDiagnostic = safeErrorDiagnostic(financeError);
 
-    expect(rentalDiagnostic.frames).toEqual(['src/modules/rentals/rental.service.ts:10']);
+    expect(rentalDiagnostic.frames).toEqual(['src/modules/rentals/rental-creation.service.ts:10']);
     expect(financeDiagnostic.frames).toEqual(['src/modules/finance/finance.service.ts:20']);
     expect(rentalDiagnostic.fingerprint).not.toBe(financeDiagnostic.fingerprint);
     expect(JSON.stringify([rentalDiagnostic, financeDiagnostic])).not.toMatch(
@@ -77,12 +77,13 @@ describe('application logging', () => {
   it('does not use error messages in diagnostic fingerprints', () => {
     const first = Object.assign(new Error('token=secret-A'), { code: 'P2034' });
     Object.defineProperty(first, 'stack', {
-      value: 'Error: token=secret-A\n    at fn (/app/src/modules/rentals/rental.service.ts:10:5)',
+      value:
+        'Error: token=secret-A\n    at fn (/app/src/modules/rentals/rental-creation.service.ts:10:5)',
     });
     const second = Object.assign(new Error('phone=0900123456 secret-B'), { code: 'P2034' });
     Object.defineProperty(second, 'stack', {
       value:
-        'Error: phone=0900123456 secret-B\n    at fn (/app/src/modules/rentals/rental.service.ts:10:5)',
+        'Error: phone=0900123456 secret-B\n    at fn (/app/src/modules/rentals/rental-creation.service.ts:10:5)',
     });
 
     const firstDiagnostic = safeErrorDiagnostic(first);
@@ -168,7 +169,7 @@ describe('application logging', () => {
     );
     Object.defineProperty(failure, 'stack', {
       value:
-        'Error: SELECT * FROM customers WHERE phone=0900123456 token=secret postgres://user:password@db.internal:5432/app\n    at fn (/app/src/modules/rentals/rental.service.ts:10:5)',
+        'Error: SELECT * FROM customers WHERE phone=0900123456 token=secret postgres://user:password@db.internal:5432/app\n    at fn (/app/src/modules/rentals/rental-creation.service.ts:10:5)',
     });
     logger.error(
       {
@@ -199,7 +200,7 @@ describe('application logging', () => {
         event: 'failure',
         error: {
           errorType: 'Error',
-          frames: ['src/modules/rentals/rental.service.ts:10'],
+          frames: ['src/modules/rentals/rental-creation.service.ts:10'],
         },
       },
     });

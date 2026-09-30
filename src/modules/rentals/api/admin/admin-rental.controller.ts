@@ -44,7 +44,10 @@ import {
   ApiUnauthorizedResponse,
   ApiPayloadTooLargeResponse,
 } from '@nestjs/swagger';
-import { RentalService } from '../../application/rental.service';
+import { RentalCreationService } from '../../application/rental-creation.service';
+import { RentalLifecycleService } from '../../application/rental-lifecycle.service';
+import { RentalReadService } from '../../application/rental-read.service';
+import { RentalReturnService } from '../../application/rental-return.service';
 import { RentalReadPresenter } from '../../application/rental-read.presenter';
 import {
   AddRentalChargeReqDto,
@@ -75,7 +78,10 @@ import { ApiSurface } from '@common/decorators/api-surface.decorator';
 @Controller('admin/rental-orders')
 export class AdminRentalController {
   constructor(
-    private readonly service: RentalService,
+    private readonly reads: RentalReadService,
+    private readonly creation: RentalCreationService,
+    private readonly lifecycle: RentalLifecycleService,
+    private readonly returns: RentalReturnService,
     private readonly confirmations: RentalConfirmationService,
     private readonly settlements: RentalSettlementService,
     private readonly responses: RentalReadPresenter,
@@ -86,7 +92,7 @@ export class AdminRentalController {
   @ApiOperation({ summary: 'List/search orders; use from/until for calendar overlap queries' })
   @ApiOkResponse({ type: RentalOrderPageResDto })
   async list(@CurrentUser() user: CurrentUserType, @Query() query: RentalListQueryDto) {
-    const page = await this.service.list(user, toRentalListQuery(query));
+    const page = await this.reads.list(user, toRentalListQuery(query));
     return {
       items: page.items.map((item) => toRentalSummary(this.responses.summary(item))),
       meta: page.meta,
@@ -97,7 +103,7 @@ export class AdminRentalController {
   @Permissions(PERMISSIONS.RENTALS_VIEW)
   @ApiOkResponse({ type: RentalOrderResDto })
   get(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
-    return this.service
+    return this.reads
       .get(user, id)
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
@@ -116,7 +122,7 @@ export class AdminRentalController {
     @Body() body: CreateRentalOrderReqDto,
     @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.service
+    return this.creation
       .create(user, toCreateRentalOrderInput(body), idempotencyKey)
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
@@ -133,7 +139,7 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: RescheduleRentalReqDto,
   ) {
-    return this.service
+    return this.lifecycle
       .reschedule(user, id, toRescheduleRentalInput(body))
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
@@ -213,7 +219,7 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: TransitionRentalReqDto,
   ) {
-    return this.service
+    return this.lifecycle
       .start(user, id, toTransitionRentalInput(body))
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
@@ -222,7 +228,7 @@ export class AdminRentalController {
   @Permissions(PERMISSIONS.RENTALS_UPDATE)
   @ApiOkResponse({ type: RentalOrderResDto })
   returnCollateral(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
-    return this.service
+    return this.settlements
       .returnCollateral(user, id)
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
@@ -244,7 +250,7 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Query('returnedAt') returnedAt?: string,
   ) {
-    return this.service.getReturnPreview(user, id, returnedAt ? new Date(returnedAt) : undefined);
+    return this.returns.getReturnPreview(user, id, returnedAt ? new Date(returnedAt) : undefined);
   }
 
   @Post(':id/return')
@@ -259,7 +265,7 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: ReturnRentalOrderReqDto,
   ) {
-    return this.service
+    return this.returns
       .receiveReturn(user, id, toReturnRentalOrderInput(body))
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
@@ -311,7 +317,7 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: TransitionRentalReqDto,
   ) {
-    return this.service
+    return this.lifecycle
       .cancel(user, id, toTransitionRentalInput(body))
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
@@ -324,7 +330,7 @@ export class AdminRentalController {
     @Param('id') id: string,
     @Body() body: AddRentalChargeReqDto,
   ) {
-    return this.service
+    return this.settlements
       .addCharge(user, id, toAddRentalChargeInput(body))
       .then((order) => toRentalResponse(this.responses.details(order)));
   }

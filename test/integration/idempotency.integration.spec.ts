@@ -13,7 +13,7 @@ import {
   uniqueCode,
 } from '../fixtures/test-factories';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
-import { RentalService } from '../../src/modules/rentals/application/rental.service';
+import { RentalCreationService } from '../../src/modules/rentals/application/rental-creation.service';
 import type { Clock } from '../../src/common/clock/clock';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
@@ -40,7 +40,7 @@ describe('Idempotency Integration with PostgreSQL', () => {
   let repo: PrismaRentalRepository;
   let auditLogMock: jest.MockedFunction<AuditPort['log']>;
   let auditMock: AuditPort;
-  let service: RentalService;
+  let service: RentalCreationService;
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
@@ -50,7 +50,7 @@ describe('Idempotency Integration with PostgreSQL', () => {
     auditMock = {
       log: auditLogMock,
     };
-    service = new RentalService(repo, repo, repo, repo, repo, auditMock, testClock);
+    service = new RentalCreationService(repo, repo, repo, auditMock, testClock);
   });
 
   beforeEach(async () => {

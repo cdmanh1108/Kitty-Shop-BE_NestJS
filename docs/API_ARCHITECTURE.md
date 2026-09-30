@@ -26,7 +26,9 @@ We **NEVER** duplicate domain or application business logic (no duplicate availa
                     ┌────────────────────▼────────────────────┐
                     │               APPLICATION               │
                     │                                         │
-                    │ RentalService, WebRentalService         │
+                    │ Rental Read/Creation/Lifecycle          │
+                    │ Rental Return/Confirmation/Settlement   │
+                    │ Web Evaluation/Order/Lookup             │
                     │ Catalog Queries, Inventory Allocation   │
                     │ Authoritative Quote Calculation         │
                     │ Order Lookup Validation                 │
@@ -88,8 +90,15 @@ src/
 │   │   │   │   └── web-rental.controller.ts      # Public Storefront Booking Controller
 │   │   │   └── rental.controller.ts              # Backward-compatibility re-export
 │   │   ├── application/
-│   │   │   ├── rental.service.ts                 # Admin Rental use cases
-│   │   │   └── web-rental.service.ts             # Public Web use cases (reuses RentalRepository)
+│   │   │   ├── rental-read.service.ts  # admin order reads
+│   │   │   ├── rental-creation.service.ts  # offline rental creation
+│   │   │   ├── rental-lifecycle.service.ts  # admin transitions and rescheduling
+│   │   │   ├── rental-return.service.ts  # return preview and receipt
+│   │   │   ├── rental-confirmation.service.ts  # confirmation
+│   │   │   ├── rental-settlement.service.ts  # charges, collateral and settlement
+│   │   │   ├── web-rental-evaluation.service.ts  # storefront evaluation
+│   │   │   ├── web-rental-order.service.ts  # storefront order creation
+│   │   │   ├── web-rental-lookup.service.ts  # guest order lookup
 │   │   ├── domain/
 │   │   └── infrastructure/
 │   │

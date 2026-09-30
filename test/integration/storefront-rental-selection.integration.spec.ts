@@ -1,7 +1,8 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
-import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
+import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
+import { WebRentalEvaluationService } from '../../src/modules/rentals/application/web-rental-evaluation.service';
 import { RentalInventoryUnavailableError } from '../../src/modules/rentals/domain/rental-errors';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { SettingsService } from '../../src/modules/settings/application/settings.service';
@@ -17,7 +18,8 @@ import {
 describe('Storefront rental selection and allocation', () => {
   let prisma: PrismaService;
   let rentals: PrismaRentalRepository;
-  let web: WebRentalService;
+  let web: WebRentalOrderService;
+  let evaluation: WebRentalEvaluationService;
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
@@ -25,8 +27,8 @@ describe('Storefront rental selection and allocation', () => {
       log: () => Promise.resolve(),
     });
     rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(
-      rentals,
+    evaluation = new WebRentalEvaluationService(rentals, settings);
+    web = new WebRentalOrderService(
       rentals,
       rentals,
       settings,
@@ -57,7 +59,7 @@ describe('Storefront rental selection and allocation', () => {
     const f = await rentalScenario(prisma);
 
     await expect(
-      web.calculateQuote(f.shop.id, {
+      evaluation.calculateQuote(f.shop.id, {
         ...interval,
         items: [{ productId: f.product.id, quantity: 1 }],
         deliveryMethod: 'self_pickup',
@@ -83,10 +85,10 @@ describe('Storefront rental selection and allocation', () => {
     });
 
     await expect(
-      web.checkAvailability(f.shop.id, { ...interval, productId: f.product.id }),
+      evaluation.checkAvailability(f.shop.id, { ...interval, productId: f.product.id }),
     ).resolves.toEqual({ available: false, availableQuantity: 0 });
     await expect(
-      web.calculateQuote(f.shop.id, {
+      evaluation.calculateQuote(f.shop.id, {
         ...interval,
         items: [{ productId: f.product.id, quantity: 1 }],
         deliveryMethod: 'self_pickup',
@@ -105,7 +107,7 @@ describe('Storefront rental selection and allocation', () => {
     ];
 
     await expect(
-      web.calculateQuote(f.shop.id, {
+      evaluation.calculateQuote(f.shop.id, {
         ...interval,
         items: duplicateItems,
         deliveryMethod: 'self_pickup',

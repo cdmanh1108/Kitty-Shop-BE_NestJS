@@ -1,37 +1,14 @@
 import { NotFoundException } from '@nestjs/common';
-import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
-import type { RentalPolicyProvider } from '../../src/modules/settings/domain/rental-policy';
-import type { CustomerRepository } from '../../src/modules/customers/domain/customer.repository';
-import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
-import {
-  rentalAvailabilityReaderMock,
-  rentalCreationRepositoryMock,
-  rentalOrderReaderMock,
-} from '../fixtures/rental-ports.fixture';
+import { WebRentalLookupService } from '../../src/modules/rentals/application/web-rental-lookup.service';
+import { rentalOrderReaderMock } from '../fixtures/rental-ports.fixture';
 
 describe('Web Order Lookup Security and Behavior', () => {
-  let service: WebRentalService;
+  let service: WebRentalLookupService;
   let orderReader: ReturnType<typeof rentalOrderReaderMock>;
 
   beforeEach(() => {
-    const creation = rentalCreationRepositoryMock();
-    const availability = rentalAvailabilityReaderMock();
     orderReader = rentalOrderReaderMock();
-
-    const mockPolicyProvider: RentalPolicyProvider = {
-      getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY),
-    };
-
-    const mockCustomerRepo: Partial<CustomerRepository> = {};
-
-    service = new WebRentalService(
-      creation,
-      availability,
-      orderReader,
-      mockPolicyProvider,
-      mockCustomerRepo as unknown as CustomerRepository,
-      { now: () => new Date('2026-09-20T00:00:00.000Z') },
-    );
+    service = new WebRentalLookupService(orderReader);
   });
 
   it('successfully returns sanitized order details when orderCode and phone match', async () => {

@@ -1,7 +1,8 @@
 import type { CurrentUser } from '../../src/common/types/current-user';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
-import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
+import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
+import { WebRentalEvaluationService } from '../../src/modules/rentals/application/web-rental-evaluation.service';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { SettingsService } from '../../src/modules/settings/application/settings.service';
 import { PrismaSettingsRepository } from '../../src/modules/settings/infrastructure/prisma-settings.repository';
@@ -22,7 +23,8 @@ describe('Web rental shipping persistence', () => {
   let prisma: PrismaService;
   let settings: SettingsService;
   let rentals: PrismaRentalRepository;
-  let web: WebRentalService;
+  let web: WebRentalOrderService;
+  let evaluation: WebRentalEvaluationService;
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
@@ -30,8 +32,8 @@ describe('Web rental shipping persistence', () => {
       log: () => Promise.resolve(),
     });
     rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(
-      rentals,
+    evaluation = new WebRentalEvaluationService(rentals, settings);
+    web = new WebRentalOrderService(
       rentals,
       rentals,
       settings,
@@ -83,7 +85,7 @@ describe('Web rental shipping persistence', () => {
       items: [{ variantId: input.variantId, quantity }],
       deliveryMethod: input.delivery,
     };
-    const quote = await web.calculateQuote(input.shopId, quoteRequest);
+    const quote = await evaluation.calculateQuote(input.shopId, quoteRequest);
     const response = await web.createOrder(
       input.shopId,
       {

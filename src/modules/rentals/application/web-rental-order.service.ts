@@ -2,17 +2,14 @@ import {
   BadRequestException,
   ConflictException,
   Inject,
-  InternalServerErrorException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { generateDatedReference } from '@common/utils/reference-number';
 import { CLOCK, type Clock } from '@common/clock/clock';
-import {
-  InvalidCustomerPhoneError,
-  normalizeCustomerPhone,
-} from '@modules/customers/domain/customer-phone';
+import { InvalidCustomerPhoneError } from '@modules/customers/domain/customer-phone';
 import {
   CUSTOMER_REPOSITORY,
   type CustomerRepository,
@@ -25,37 +22,22 @@ import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
   RENTAL_AVAILABILITY_READER,
   RENTAL_CREATION_REPOSITORY,
-  RENTAL_ORDER_READER,
   type CreateRentalOrderData,
   type RentalAvailabilityReader,
   type RentalCreationRepository,
-  type RentalOrderReader,
 } from '../domain/rental.repository';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type {
-  WebAvailabilityQueryInput,
-  WebAvailabilityResult,
   WebCreateOrderInput,
   WebCreateOrderResult,
   WebCheckoutOwnerContext,
-  WebOrderLookupInput,
-  WebOrderLookupResult,
-  WebRentalQuoteInput,
-  WebRentalQuoteResult,
 } from './web-rental.contracts';
+import { resolveWebRentalSelection } from './web-rental-selection';
 import {
-  evaluateWebRentalSelection,
-  resolveWebRentalSelection,
-  type WebRentalSelectionFailure,
-} from './web-rental-selection';
-import {
-  assertWebRentalItems,
-  parseWebRentalDateRange,
-  WEB_RENTAL_MAX_ITEM_COUNT,
-  WEB_RENTAL_MAX_QUANTITY_PER_ITEM,
-  WEB_RENTAL_MAX_TOTAL_QUANTITY,
-  WebRentalInputValidationError,
-} from './web-rental-input-validation';
+  parseWebRentalDateRangeInput,
+  assertWebRentalItemsInput,
+  throwForInvalidWebRentalSelection,
+} from './web-rental-input';
 import {
   isStoredWebRentalCreateResult,
   toWebRentalCreateResult,
@@ -85,95 +67,15 @@ function stableJson(value: StableJsonValue): string {
     .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
     .join(',')}}`;
 }
-
 @Injectable()
-export class WebRentalService {
+export class WebRentalOrderService {
   constructor(
-    @Inject(RENTAL_CREATION_REPOSITORY)
-    private readonly creation: RentalCreationRepository,
-    @Inject(RENTAL_AVAILABILITY_READER)
-    private readonly availability: RentalAvailabilityReader,
-    @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
+    @Inject(RENTAL_CREATION_REPOSITORY) private readonly creation: RentalCreationRepository,
+    @Inject(RENTAL_AVAILABILITY_READER) private readonly availability: RentalAvailabilityReader,
     @Inject(RENTAL_POLICY_PROVIDER) private readonly policyProvider: RentalPolicyProvider,
     @Inject(CUSTOMER_REPOSITORY) private readonly customerRepository: CustomerRepository,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
-
-  async checkAvailability(
-    shopId: string,
-    query: WebAvailabilityQueryInput,
-  ): Promise<WebAvailabilityResult> {
-    const { from, until } = this.parseDateRange(query);
-    this.assertItems([{ productId: query.productId, variantId: query.variantId, quantity: 1 }]);
-
-    const durationDays = calculateRentalDurationDays(from, until);
-
-    const selection = await resolveWebRentalSelection(this.availability, {
-      shopId,
-      items: [{ productId: query.productId, variantId: query.variantId, quantity: 1 }],
-      durationDays,
-      from,
-      until,
-    });
-    if (!selection.valid) {
-      this.throwForInvalidSelection(selection.reason);
-      return { available: false, availableQuantity: 0 };
-    }
-
-    const demand = selection.demands[0];
-    if (!demand) return { available: false, availableQuantity: 0 };
-    const availableQuantity = demand.variant.availableInventory.length;
-    return { available: availableQuantity > 0, availableQuantity };
-  }
-
-  async calculateQuote(shopId: string, req: WebRentalQuoteInput): Promise<WebRentalQuoteResult> {
-    const { from, until } = this.parseDateRange(req);
-    this.assertItems(req.items);
-
-    const policy = await this.policyProvider.getPolicy(shopId);
-    const durationDays = calculateRentalDurationDays(from, until);
-    const selection = await evaluateWebRentalSelection(this.availability, {
-      shopId,
-      items: req.items,
-      durationDays,
-      from,
-      until,
-    });
-    if (selection.failure) {
-      this.throwForInvalidSelection(selection.failure);
-    }
-    let rentalSubtotal = 0;
-    let depositAmount = 0;
-    let allAvailable = selection.failure === undefined;
-
-    if (selection.failure === undefined) {
-      for (const { variant, quantity } of selection.demands) {
-        if (variant.ratePrice === null) {
-          allAvailable = false;
-          continue;
-        }
-        if (variant.availableInventory.length < quantity) allAvailable = false;
-        rentalSubtotal += variant.ratePrice * quantity;
-        depositAmount += variant.depositPerItem * quantity;
-      }
-    }
-
-    const standardShippingFee = policy.delivery.standardShippingFee;
-    const shippingFee = req.deliveryMethod === 'shop_delivery' ? standardShippingFee : 0;
-    const totalAmount = rentalSubtotal + shippingFee;
-
-    return {
-      durationDays,
-      rentalSubtotal,
-      depositAmount,
-      shippingFee,
-      totalAmount,
-      currency: 'VND',
-      available: allAvailable,
-      canCheckout: allAvailable,
-      items: selection.items,
-    };
-  }
 
   async createOrder(
     shopId: string,
@@ -181,8 +83,8 @@ export class WebRentalService {
     rawIdempotencyKey?: string | string[],
     owner: WebCheckoutOwnerContext = { webAccountId: null },
   ): Promise<WebCreateOrderResult> {
-    const { from, until } = this.parseDateRange(req);
-    this.assertItems(req.items);
+    const { from, until } = parseWebRentalDateRangeInput(req);
+    assertWebRentalItemsInput(req.items);
 
     const idempotencyKey = this.requireIdempotencyKey(rawIdempotencyKey);
     const requestHash = createHash('sha256')
@@ -247,7 +149,7 @@ export class WebRentalService {
         until,
       });
       if (!selection.valid) {
-        this.throwForInvalidSelection(selection.reason);
+        throwForInvalidWebRentalSelection(selection.reason);
         throw new NotFoundException('Sản phẩm đã chọn không khả dụng để thuê.');
       }
 
@@ -391,58 +293,6 @@ export class WebRentalService {
     return value;
   }
 
-  private parseDateRange(input: { pickupDate: string; returnDate: string }) {
-    try {
-      return parseWebRentalDateRange(input);
-    } catch (error) {
-      if (!(error instanceof WebRentalInputValidationError)) throw error;
-      if (error.code === 'INVALID_CALENDAR_DATE') {
-        throw new BadRequestException(
-          'Ngày thuê phải là ngày lịch hợp lệ theo định dạng YYYY-MM-DD.',
-        );
-      }
-      throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc.');
-    }
-  }
-
-  private assertItems(items: WebRentalQuoteInput['items']): void {
-    try {
-      assertWebRentalItems(items);
-    } catch (error) {
-      if (!(error instanceof WebRentalInputValidationError)) throw error;
-      switch (error.code) {
-        case 'INVALID_SELECTION':
-          throw new BadRequestException('Vui lòng cung cấp productId hoặc variantId.');
-        case 'INVALID_QUANTITY':
-          throw new BadRequestException(
-            `Số lượng thuê mỗi dòng phải là số nguyên từ 1 đến ${WEB_RENTAL_MAX_QUANTITY_PER_ITEM}.`,
-          );
-        case 'TOTAL_QUANTITY_EXCEEDED':
-          throw new BadRequestException(
-            `Tổng số lượng thuê không được vượt quá ${WEB_RENTAL_MAX_TOTAL_QUANTITY} món.`,
-          );
-        case 'TOO_MANY_ITEMS':
-          throw new BadRequestException(
-            `Đơn thuê không được có quá ${WEB_RENTAL_MAX_ITEM_COUNT} dòng sản phẩm.`,
-          );
-        default:
-          throw error;
-      }
-    }
-  }
-
-  private throwForInvalidSelection(reason: WebRentalSelectionFailure): void {
-    if (reason === 'INVALID_QUANTITY') {
-      throw new BadRequestException('Số lượng thuê phải là số nguyên dương.');
-    }
-    if (reason === 'MISSING_SELECTION') {
-      throw new BadRequestException('Vui lòng cung cấp productId hoặc variantId.');
-    }
-    if (reason === 'PRODUCT_VARIANT_MISMATCH') {
-      throw new BadRequestException('productId không khớp với variantId đã chọn.');
-    }
-  }
-
   private webCommandIdentity(req: WebCreateOrderInput): StableJsonValue {
     return {
       version: 1,
@@ -476,37 +326,5 @@ export class WebRentalService {
 
   private ownerScope(webAccountId: string | null): string {
     return webAccountId ? `web-account:${webAccountId}` : 'guest';
-  }
-
-  async lookupOrder(shopId: string, req: WebOrderLookupInput): Promise<WebOrderLookupResult> {
-    let normalizedPhone: string;
-    try {
-      normalizedPhone = normalizeCustomerPhone(req.phone);
-    } catch {
-      throw new NotFoundException('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
-    }
-
-    const order = await this.orderReader.lookupStorefrontOrder(shopId, req.orderCode);
-
-    if (!order || order.customerNormalizedPhone !== normalizedPhone) {
-      throw new NotFoundException('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
-    }
-
-    const rawPhone = order.customerPhone;
-    const maskedPhone =
-      rawPhone.length >= 7 ? `${rawPhone.slice(0, 3)}****${rawPhone.slice(-3)}` : rawPhone;
-
-    return {
-      orderCode: order.orderNumber,
-      customerName: order.customerFullName,
-      phoneMasked: maskedPhone,
-      pickupDate: order.rentalStartAt.toISOString().slice(0, 10),
-      returnDate: order.rentalEndAt.toISOString().slice(0, 10),
-      status: order.status,
-      totalAmount: order.grandTotal,
-      depositAmount: order.depositRequired,
-      paidAmount: order.paidAmount,
-      items: order.items,
-    };
   }
 }

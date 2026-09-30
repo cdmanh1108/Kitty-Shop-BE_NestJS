@@ -10,7 +10,7 @@ import { PrismaService } from '../src/database/prisma/prisma.service';
 import { AuditService } from '../src/modules/audit/application/audit.service';
 import type { AuditEntry, AuditPort } from '../src/modules/audit/domain/audit.port';
 import type { AuditRepository } from '../src/modules/audit/domain/audit.repository';
-import { RentalService } from '../src/modules/rentals/application/rental.service';
+import { RentalCreationService } from '../src/modules/rentals/application/rental-creation.service';
 import type { CreateRentalOrderInput } from '../src/modules/rentals/application/rental.contracts';
 import { RentalClaimLostError } from '../src/modules/rentals/domain/rental-errors';
 import type { RentalOrderDetails } from '../src/modules/rentals/domain/rental.models';
@@ -573,13 +573,11 @@ const requestInput = (): CreateRentalOrderInput => ({
 function rentalServiceWithPorts(
   ports: ReturnType<typeof rentalServicePorts>,
   audit: AuditPort,
-): RentalService {
-  return new RentalService(
+): RentalCreationService {
+  return new RentalCreationService(
     ports.creation,
     ports.creationValidator,
     ports.availability,
-    ports.orderReader,
-    ports.lifecycle,
     audit,
     clock,
   );

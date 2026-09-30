@@ -162,7 +162,9 @@ describe('rental evidence storage operation policy', () => {
     const objectStorage = storage();
     objectStorage.putObject.mockResolvedValueOnce({ storageKey: 'key', publicUrl: '' });
     objectStorage.deleteObject.mockResolvedValueOnce();
-    const service = new RentalSettlementService(orderReader, lifecycle, objectStorage);
+    const service = new RentalSettlementService(orderReader, lifecycle, objectStorage, {
+      log: () => Promise.resolve(),
+    });
 
     await expect(service.settle(user, 'order-1', {}, image)).rejects.toBe(original);
 
@@ -197,7 +199,9 @@ describe('rental evidence storage operation policy', () => {
       evidenceKey = input.key;
       return Promise.resolve({ storageKey: input.key, publicUrl: '' });
     });
-    const service = new RentalSettlementService(orderReader, lifecycle, objectStorage);
+    const service = new RentalSettlementService(orderReader, lifecycle, objectStorage, {
+      log: () => Promise.resolve(),
+    });
 
     await expect(service.settle(user, 'order-1', {}, image)).rejects.toBe(original);
 

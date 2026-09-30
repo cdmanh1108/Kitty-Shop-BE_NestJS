@@ -68,7 +68,7 @@ Outbox has no dispatcher/consumer, so there are no invented delivery/exactly-onc
 
 Retained Gemini's useful application and PostgreSQL test cases. Fixed unsafe implicit database selection, weak name matching, unowned-client cleanup, developer-config/secret inheritance, scheduler activation, unused permission options and timestamp-based fixture codes. Replaced broad untyped mock declarations with typed port functions. Added missing real rollback/concurrency/persistence/HTTP cases.
 
-Small production testability changes: RentalService receives the existing Clock explicitly for idempotency expiry; HTTP bootstrap is shared; test-mode config skips `.env`. A real regression test exposed customer name search matching every phone when the normalized query was empty. The repository now adds the phone predicate only for a nonempty digit query; name/code search and tenant filters remain intact. No endpoints, migrations or dependencies changed. Existing formatting cleanup from the unfinished working tree was preserved.
+Small production testability changes: RentalCreationService receives the existing Clock explicitly for idempotency expiry; HTTP bootstrap is shared; test-mode config skips `.env`. A real regression test exposed customer name search matching every phone when the normalized query was empty. The repository now adds the phone predicate only for a nonempty digit query; name/code search and tenant filters remain intact. No endpoints, migrations or dependencies changed. Existing formatting cleanup from the unfinished working tree was preserved.
 
 ## Quality gates for Task 8
 

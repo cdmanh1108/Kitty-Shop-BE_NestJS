@@ -11,8 +11,8 @@ an OFFLINE Admin order both have `web_account_id = NULL`.
 
 ## Write boundary
 
-Only trusted backend application services choose the source. `WebRentalService` always
-writes `ONLINE`; `RentalService` always writes `OFFLINE`. Neither Admin nor storefront
+Only trusted backend application services choose the source. `WebRentalOrderService` always
+writes `ONLINE`; `RentalCreationService` always writes `OFFLINE`. Neither Admin nor storefront
 request DTO accepts source or web-account ownership, and no update command changes it.
 
 The checkout controller uses optional Web JWT authentication. A missing access cookie is a

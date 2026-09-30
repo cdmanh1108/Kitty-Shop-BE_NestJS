@@ -12,11 +12,10 @@ import {
 import { INVENTORY_STATUS } from '../../src/modules/catalog/domain/catalog-status';
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 import { RentalSettlementService } from '../../src/modules/rentals/application/rental-settlement.service';
-import { RentalService } from '../../src/modules/rentals/application/rental.service';
+import { RentalReturnService } from '../../src/modules/rentals/application/rental-return.service';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
-import type { Clock } from '../../src/common/clock/clock';
 import type { ObjectStoragePort } from '../../src/common/storage/object-storage.port';
 import {
   rentalOrderDetailsFixture,
@@ -38,18 +37,11 @@ function storageMock(): jest.Mocked<ObjectStoragePort> {
   };
 }
 
-function rentalServiceForGuards(ports: ReturnType<typeof rentalServicePorts>): RentalService {
+function rentalReturnServiceForGuards(
+  ports: ReturnType<typeof rentalServicePorts>,
+): RentalReturnService {
   const audit: AuditPort = { log: () => Promise.resolve() };
-  const clock: Clock = { now: () => new Date() };
-  return new RentalService(
-    ports.creation,
-    ports.creationValidator,
-    ports.availability,
-    ports.orderReader,
-    ports.lifecycle,
-    audit,
-    clock,
-  );
+  return new RentalReturnService(ports.orderReader, ports.lifecycle, audit);
 }
 
 describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
@@ -346,7 +338,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
 
     it('rejects receiveReturn if user lacks rentals.return permission', async () => {
       const ports = rentalServicePorts();
-      const service = rentalServiceForGuards(ports);
+      const service = rentalReturnServiceForGuards(ports);
 
       await expect(
         service.receiveReturn(userWithoutPerms, 'order-1', {
@@ -360,7 +352,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
       ports.orderReader.get.mockResolvedValue(
         rentalOrderDetailsFixture({ status: RENTAL_STATUS.RESERVED }),
       );
-      const service = rentalServiceForGuards(ports);
+      const service = rentalReturnServiceForGuards(ports);
 
       await expect(
         service.receiveReturn(userWithReturn, 'order-1', {
@@ -377,7 +369,12 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
           settlement: rentalSettlementFixture(),
         }),
       );
-      const service = rentalServiceForGuards(ports);
+      const service = new RentalSettlementService(
+        ports.orderReader,
+        ports.lifecycle,
+        storageMock(),
+        { log: () => Promise.resolve() },
+      );
 
       await expect(
         service.addCharge(userWithReturn, 'order-1', {
@@ -393,6 +390,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
         rentalOrderReaderMock(),
         rentalLifecycleRepositoryMock(),
         storageMock(),
+        { log: () => Promise.resolve() },
       );
 
       await expect(
@@ -409,6 +407,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
         orderReader,
         rentalLifecycleRepositoryMock(),
         storageMock(),
+        { log: () => Promise.resolve() },
       );
 
       await expect(settlementService.settle(userWithSettle, 'order-1', {})).rejects.toThrow(
@@ -428,6 +427,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
         orderReader,
         rentalLifecycleRepositoryMock(),
         storageMock(),
+        { log: () => Promise.resolve() },
       );
 
       await expect(settlementService.settle(userWithSettle, 'order-1', {})).rejects.toThrow(

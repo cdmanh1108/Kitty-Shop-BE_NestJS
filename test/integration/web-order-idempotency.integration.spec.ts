@@ -1,6 +1,6 @@
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
-import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
+import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { SettingsService } from '../../src/modules/settings/application/settings.service';
 import { PrismaSettingsRepository } from '../../src/modules/settings/infrastructure/prisma-settings.repository';
@@ -14,7 +14,7 @@ import {
 
 describe('Web order idempotency', () => {
   let prisma: PrismaService;
-  let web: WebRentalService;
+  let web: WebRentalOrderService;
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
@@ -22,8 +22,7 @@ describe('Web order idempotency', () => {
       log: () => Promise.resolve(),
     });
     const rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(
-      rentals,
+    web = new WebRentalOrderService(
       rentals,
       rentals,
       settings,

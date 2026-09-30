@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
+import { WebRentalEvaluationService } from '../../src/modules/rentals/application/web-rental-evaluation.service';
+import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
+import { WebRentalLookupService } from '../../src/modules/rentals/application/web-rental-lookup.service';
 import type { CreateRentalOrderData } from '../../src/modules/rentals/domain/rental.repository';
 import type { RentalPolicyProvider } from '../../src/modules/settings/domain/rental-policy';
 import type { CustomerRepository } from '../../src/modules/customers/domain/customer.repository';
@@ -13,8 +15,10 @@ import {
 } from '../fixtures/rental-ports.fixture';
 import { rentalOrderDetailsFixture } from '../fixtures/rental-order.fixture';
 
-describe('WebRentalService', () => {
-  let service: WebRentalService;
+describe('Web rental use cases', () => {
+  let evaluationService: WebRentalEvaluationService;
+  let orderService: WebRentalOrderService;
+  let lookupService: WebRentalLookupService;
   let creation: ReturnType<typeof rentalCreationRepositoryMock>;
   let availability: ReturnType<typeof rentalAvailabilityReaderMock>;
   let orderReader: ReturnType<typeof rentalOrderReaderMock>;
@@ -39,14 +43,18 @@ describe('WebRentalService', () => {
       resolveForBooking: jest.fn().mockResolvedValue({ id: 'cust-1' }),
     };
 
-    service = new WebRentalService(
+    evaluationService = new WebRentalEvaluationService(
+      availability,
+      mockPolicyProvider as unknown as RentalPolicyProvider,
+    );
+    orderService = new WebRentalOrderService(
       creation,
       availability,
-      orderReader,
       mockPolicyProvider as unknown as RentalPolicyProvider,
       mockCustomerRepo as unknown as CustomerRepository,
       { now: () => new Date('2026-09-20T00:00:00.000Z') },
     );
+    lookupService = new WebRentalLookupService(orderReader);
   });
 
   function firstCreateOrderInput(): CreateRentalOrderData {
@@ -59,7 +67,7 @@ describe('WebRentalService', () => {
   describe('checkAvailability', () => {
     it('rejects invalid calendar dates before catalog access', async () => {
       await expect(
-        service.checkAvailability('shop-1', {
+        evaluationService.checkAvailability('shop-1', {
           pickupDate: '2026-02-29',
           returnDate: '2026-03-01',
           variantId: 'var-1',
@@ -71,7 +79,7 @@ describe('WebRentalService', () => {
 
     it('throws BadRequestException if pickupDate is equal to or after returnDate', async () => {
       await expect(
-        service.checkAvailability('shop-1', {
+        evaluationService.checkAvailability('shop-1', {
           pickupDate: '2026-09-25',
           returnDate: '2026-09-20',
           variantId: 'var-1',
@@ -95,7 +103,7 @@ describe('WebRentalService', () => {
         ],
       });
 
-      const result = await service.checkAvailability('shop-1', {
+      const result = await evaluationService.checkAvailability('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
         variantId: 'var-1',
@@ -115,7 +123,7 @@ describe('WebRentalService', () => {
 
     it('does not aggregate availability across ambiguous product variants', async () => {
       availability.findActiveVariantIdsByProduct.mockResolvedValue(['v-1', 'v-2']);
-      const result = await service.checkAvailability('shop-1', {
+      const result = await evaluationService.checkAvailability('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
         productId: 'prod-1',
@@ -145,7 +153,7 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.checkAvailability('shop-1', {
+        evaluationService.checkAvailability('shop-1', {
           pickupDate: '2026-09-20',
           returnDate: '2026-09-23',
           productId: 'prod-1',
@@ -157,7 +165,7 @@ describe('WebRentalService', () => {
   describe('calculateQuote', () => {
     it('rejects oversized item quantities before policy or catalog access', async () => {
       await expect(
-        service.calculateQuote('shop-1', {
+        evaluationService.calculateQuote('shop-1', {
           pickupDate: '2026-09-20',
           returnDate: '2026-09-23',
           items: [{ variantId: 'var-1', quantity: 21 }],
@@ -188,7 +196,7 @@ describe('WebRentalService', () => {
         ],
       });
 
-      const result = await service.calculateQuote('shop-1', {
+      const result = await evaluationService.calculateQuote('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
         items: [{ variantId: 'var-1', quantity: 2 }],
@@ -216,7 +224,7 @@ describe('WebRentalService', () => {
         availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }], // only 1 available
       });
 
-      const result = await service.calculateQuote('shop-1', {
+      const result = await evaluationService.calculateQuote('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
         items: [{ variantId: 'var-1', quantity: 2 }],
@@ -277,7 +285,7 @@ describe('WebRentalService', () => {
           availableInventory: [],
         });
 
-      const result = await service.calculateQuote('shop-1', {
+      const result = await evaluationService.calculateQuote('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
         items: [
@@ -331,7 +339,7 @@ describe('WebRentalService', () => {
     it('returns a line issue when the selected variant is no longer rentable', async () => {
       availability.getBookableVariant.mockResolvedValue(null);
 
-      const result = await service.calculateQuote('shop-1', {
+      const result = await evaluationService.calculateQuote('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
         items: [{ productId: 'prod-1', variantId: 'var-1', quantity: 1 }],
@@ -352,7 +360,7 @@ describe('WebRentalService', () => {
 
     it('rejects a non-positive or fractional rental quantity before pricing', async () => {
       await expect(
-        service.calculateQuote('shop-1', {
+        evaluationService.calculateQuote('shop-1', {
           pickupDate: '2026-09-20',
           returnDate: '2026-09-23',
           items: [{ variantId: 'var-1', quantity: 0 }],
@@ -361,7 +369,7 @@ describe('WebRentalService', () => {
       ).rejects.toThrow(BadRequestException);
 
       await expect(
-        service.calculateQuote('shop-1', {
+        evaluationService.calculateQuote('shop-1', {
           pickupDate: '2026-09-20',
           returnDate: '2026-09-23',
           items: [{ variantId: 'var-1', quantity: 1.5 }],
@@ -383,7 +391,7 @@ describe('WebRentalService', () => {
         availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
       });
 
-      const result = await service.calculateQuote('shop-1', {
+      const result = await evaluationService.calculateQuote('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
         items: [
@@ -424,7 +432,7 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.calculateQuote('shop-1', {
+        evaluationService.calculateQuote('shop-1', {
           pickupDate: '2026-09-20',
           returnDate: '2026-09-23',
           items: [
@@ -439,7 +447,7 @@ describe('WebRentalService', () => {
   describe('createOrder', () => {
     it('rejects invalid calendar dates before an idempotency claim', async () => {
       await expect(
-        service.createOrder(
+        orderService.createOrder(
           'shop-1',
           {
             customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
@@ -465,7 +473,7 @@ describe('WebRentalService', () => {
     });
 
     it('requires an opaque idempotency key before any customer or booking work', async () => {
-      await expect(service.createOrder('shop-1', webOrderInput())).rejects.toThrow(
+      await expect(orderService.createOrder('shop-1', webOrderInput())).rejects.toThrow(
         BadRequestException,
       );
       expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
@@ -475,7 +483,7 @@ describe('WebRentalService', () => {
 
     it('rejects ambiguous multi-value keys before claiming', async () => {
       await expect(
-        service.createOrder('shop-1', webOrderInput(), ['key-a', 'key-b']),
+        orderService.createOrder('shop-1', webOrderInput(), ['key-a', 'key-b']),
       ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_KEY_INVALID' } });
       expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
     });
@@ -497,7 +505,7 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder('shop-1', webOrderInput(), 'web-replay-key'),
+        orderService.createOrder('shop-1', webOrderInput(), 'web-replay-key'),
       ).resolves.toEqual({
         orderCode: 'RT-REPLAY',
         totalAmount: 250000,
@@ -514,7 +522,7 @@ describe('WebRentalService', () => {
       creation.claimIdempotency.mockResolvedValue({ state: 'HASH_MISMATCH' });
 
       await expect(
-        service.createOrder('shop-1', webOrderInput(), 'web-reused-key'),
+        orderService.createOrder('shop-1', webOrderInput(), 'web-reused-key'),
       ).rejects.toMatchObject({
         response: {
           code: 'IDEMPOTENCY_KEY_REUSED',
@@ -537,7 +545,7 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder(
+        orderService.createOrder(
           'shop-1',
           {
             customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
@@ -576,7 +584,7 @@ describe('WebRentalService', () => {
         }),
       );
 
-      const res = await service.createOrder(
+      const res = await orderService.createOrder(
         'shop-1',
         {
           customer: { name: 'Trần Thị B', phone: '0987654321' },
@@ -621,7 +629,7 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder(
+        orderService.createOrder(
           'shop-1',
           {
             customer: { name: 'Trần Thị B', phone: 'invalid-phone' },
@@ -661,13 +669,13 @@ describe('WebRentalService', () => {
         }),
       );
 
-      const quote = await service.calculateQuote('shop-1', {
+      const quote = await evaluationService.calculateQuote('shop-1', {
         pickupDate: '2026-09-20',
         returnDate: '2026-09-23',
         items: [{ variantId: 'var-1', quantity: 1 }],
         deliveryMethod: 'shop_delivery',
       });
-      const result = await service.createOrder(
+      const result = await orderService.createOrder(
         'shop-1',
         {
           customer: { name: 'Trần Thị B', phone: '0987654321' },
@@ -720,7 +728,7 @@ describe('WebRentalService', () => {
         }),
       );
 
-      await service.createOrder(
+      await orderService.createOrder(
         'shop-1',
         {
           customer: { name: 'Trần Thị B', phone: '0987654321' },
@@ -764,7 +772,7 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder(
+        orderService.createOrder(
           'shop-1',
           {
             customer: { name: 'Trần Thị B', phone: '0987654321' },
@@ -790,7 +798,7 @@ describe('WebRentalService', () => {
       });
 
       await expect(
-        service.createOrder(
+        orderService.createOrder(
           'shop-1',
           {
             customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
@@ -823,7 +831,7 @@ describe('WebRentalService', () => {
         items: [{ name: 'Váy đỏ', imageUrl: 'https://img.com/1.jpg', quantity: 1 }],
       });
 
-      const res = await service.lookupOrder('shop-1', {
+      const res = await lookupService.lookupOrder('shop-1', {
         orderCode: 'RT-001',
         phone: '0912345678',
       });

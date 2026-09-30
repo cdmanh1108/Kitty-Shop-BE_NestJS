@@ -1,5 +1,5 @@
 import { RentalReadPresenter } from '../../src/modules/rentals/application/rental-read.presenter';
-import { WebRentalService } from '../../src/modules/rentals/application/web-rental.service';
+import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
 import { toRentalResponse } from '../../src/modules/rentals/api/rental.response';
 import { ConflictException } from '@nestjs/common';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
@@ -17,7 +17,7 @@ import {
 describe('Web payment preference persistence', () => {
   let prisma: PrismaService;
   let rentals: PrismaRentalRepository;
-  let web: WebRentalService;
+  let web: WebRentalOrderService;
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
@@ -25,8 +25,7 @@ describe('Web payment preference persistence', () => {
       log: () => Promise.resolve(),
     });
     rentals = new PrismaRentalRepository(prisma, fixedClock, settings);
-    web = new WebRentalService(
-      rentals,
+    web = new WebRentalOrderService(
       rentals,
       rentals,
       settings,

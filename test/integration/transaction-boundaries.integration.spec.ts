@@ -9,7 +9,7 @@ import {
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { rentalScenario, fixedClock } from '../fixtures/rental.fixture';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
-import { RentalService } from '../../src/modules/rentals/application/rental.service';
+import { RentalCreationService } from '../../src/modules/rentals/application/rental-creation.service';
 import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';
 import { PrismaReportRepository } from '../../src/modules/reports/infrastructure/prisma-report.repository';
 import { AuditService } from '../../src/modules/audit/application/audit.service';
@@ -43,15 +43,7 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
   it('rolls back rental, items, allocation, history and idempotency completion when outbox insertion fails', async () => {
     const f = await rentalScenario(prisma);
     const audit = new AuditService(new PrismaAuditRepository(prisma));
-    const service = new RentalService(
-      rentals,
-      rentals,
-      rentals,
-      rentals,
-      rentals,
-      audit,
-      fixedClock,
-    );
+    const service = new RentalCreationService(rentals, rentals, rentals, audit, fixedClock);
     await failOutbox(async () => {
       await expect(service.create(f.principal, f.input, 'outbox-failure')).rejects.toThrow();
     });
@@ -95,9 +87,7 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
 
   it('persists one safe audit with correlation and principal while replay creates no duplicate audit', async () => {
     const f = await rentalScenario(prisma);
-    const service = new RentalService(
-      rentals,
-      rentals,
+    const service = new RentalCreationService(
       rentals,
       rentals,
       rentals,

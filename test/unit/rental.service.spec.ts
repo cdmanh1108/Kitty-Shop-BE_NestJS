@@ -1,4 +1,5 @@
-import { RentalService } from '../../src/modules/rentals/application/rental.service';
+import { RentalCreationService } from '../../src/modules/rentals/application/rental-creation.service';
+import { RentalLifecycleService } from '../../src/modules/rentals/application/rental-lifecycle.service';
 import type {
   BookableVariant,
   RentalCreationRepository,
@@ -15,8 +16,9 @@ import { rentalServicePorts } from '../fixtures/rental-ports.fixture';
 
 type CompleteRentalOrder = NonNullable<RentalOrderDetails>;
 
-describe('RentalService Unit Tests', () => {
-  let service: RentalService;
+describe('Rental creation and lifecycle services', () => {
+  let service: RentalCreationService;
+  let lifecycleService: RentalLifecycleService;
   let ports: ReturnType<typeof rentalServicePorts>;
   let audit: jest.Mocked<AuditPort>;
   let clock: jest.Mocked<Clock>;
@@ -144,15 +146,14 @@ describe('RentalService Unit Tests', () => {
       now: jest.fn().mockReturnValue(fixedTime),
     };
 
-    service = new RentalService(
+    service = new RentalCreationService(
       ports.creation,
       ports.creationValidator,
       ports.availability,
-      ports.orderReader,
-      ports.lifecycle,
       audit,
       clock,
     );
+    lifecycleService = new RentalLifecycleService(ports.orderReader, ports.lifecycle, audit);
   });
 
   describe('create', () => {
@@ -381,7 +382,7 @@ describe('RentalService Unit Tests', () => {
       ports.lifecycle.transition.mockResolvedValueOnce(null);
 
       await expect(
-        service.start(currentUser, 'order-1', { reason: 'Ready to start' }),
+        lifecycleService.start(currentUser, 'order-1', { reason: 'Ready to start' }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -391,7 +392,7 @@ describe('RentalService Unit Tests', () => {
         createSampleOrder({ status: RENTAL_STATUS.CANCELLED }),
       );
 
-      const cancelled = await service.cancel(currentUser, 'order-1', {
+      const cancelled = await lifecycleService.cancel(currentUser, 'order-1', {
         reason: 'Customer changed mind',
       });
       expect(cancelled.status).toBe(RENTAL_STATUS.CANCELLED);
@@ -403,7 +404,7 @@ describe('RentalService Unit Tests', () => {
       ports.orderReader.getSchedule.mockResolvedValueOnce(null);
 
       await expect(
-        service.reschedule(currentUser, 'non-existent', {
+        lifecycleService.reschedule(currentUser, 'non-existent', {
           rentalStartAt: '2026-10-10T10:00:00.000Z',
           rentalEndAt: '2026-10-12T10:00:00.000Z',
         }),
@@ -418,7 +419,7 @@ describe('RentalService Unit Tests', () => {
       });
 
       await expect(
-        service.reschedule(currentUser, 'order-1', {
+        lifecycleService.reschedule(currentUser, 'order-1', {
           rentalStartAt: '2026-10-10T10:00:00.000Z',
           rentalEndAt: '2026-10-12T10:00:00.000Z',
         }),
@@ -435,7 +436,7 @@ describe('RentalService Unit Tests', () => {
       });
 
       await expect(
-        service.reschedule(currentUser, 'order-1', {
+        lifecycleService.reschedule(currentUser, 'order-1', {
           rentalStartAt: '2026-10-12T10:00:00.000Z',
           rentalEndAt: '2026-10-10T10:00:00.000Z',
         }),
@@ -457,7 +458,7 @@ describe('RentalService Unit Tests', () => {
         }),
       );
 
-      const rescheduled = await service.reschedule(currentUser, 'order-1', {
+      const rescheduled = await lifecycleService.reschedule(currentUser, 'order-1', {
         rentalStartAt: '2026-10-10T00:00:00.000Z',
         rentalEndAt: '2026-10-12T00:00:00.000Z',
       });
