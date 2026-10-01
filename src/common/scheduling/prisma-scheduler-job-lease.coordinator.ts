@@ -11,7 +11,7 @@ export type SchedulerJobLeaseResult<T> =
 
 export class SchedulerJobLeaseOwnershipLostError extends Error {
   constructor(cause?: Error) {
-    super('Scheduler job lease ownership was lost.', { cause });
+    super('Đã mất quyền sở hữu khóa điều phối tác vụ.', { cause });
     this.name = SchedulerJobLeaseOwnershipLostError.name;
   }
 }
@@ -62,7 +62,7 @@ export class PrismaSchedulerJobLeaseCoordinator {
           })
           .catch((error: unknown) => {
             ownershipFailure = new SchedulerJobLeaseOwnershipLostError(
-              asError(error, 'Scheduler job lease renewal failed.'),
+              asError(error, 'Không thể gia hạn khóa điều phối tác vụ.'),
             );
           })
           .finally(() => {
@@ -96,12 +96,15 @@ export class PrismaSchedulerJobLeaseCoordinator {
           ownershipFailure = new SchedulerJobLeaseOwnershipLostError();
       } catch (error: unknown) {
         releaseError = error;
-        this.onLeaseReleaseFailure?.(jobKey, asError(error, 'Scheduler job lease release failed.'));
+        this.onLeaseReleaseFailure?.(
+          jobKey,
+          asError(error, 'Không thể giải phóng khóa điều phối tác vụ.'),
+        );
       }
 
-      if (workError) throw asError(workError, 'Scheduler job work failed.');
+      if (workError) throw asError(workError, 'Tác vụ theo lịch không thể hoàn tất.');
       if (ownershipFailure) throw ownershipFailure;
-      if (releaseError) throw asError(releaseError, 'Scheduler job lease release failed.');
+      if (releaseError) throw asError(releaseError, 'Không thể giải phóng khóa điều phối tác vụ.');
       return { acquired: true, value: value as T, acquireDurationMs };
     } finally {
       this.locallyHeldKeys.delete(jobKey);

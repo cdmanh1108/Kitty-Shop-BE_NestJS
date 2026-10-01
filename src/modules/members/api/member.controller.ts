@@ -43,10 +43,10 @@ export class MemberController {
 
   @Patch(':id')
   @Permissions(PERMISSIONS.MEMBERS_MANAGE)
-  @ApiOkResponse({ description: 'Member status and role assignments updated.' })
+  @ApiOkResponse({ description: 'Đã cập nhật trạng thái thành viên và các vai trò được gán.' })
   @ApiBadRequestResponse({
     description:
-      'Invalid member update, including role codes that do not exist in the current shop.',
+      'Thông tin thành viên không hợp lệ, bao gồm mã vai trò không tồn tại trong cửa hàng hiện tại.',
   })
   update(
     @CurrentUser() user: CurrentUserType,

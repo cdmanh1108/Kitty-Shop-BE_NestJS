@@ -57,7 +57,7 @@ export class DeliveryController {
   @ApiConflictResponse({
     type: ErrorResDto,
     description:
-      'The requested delivery transition is not allowed or lost a concurrent update race.',
+      'Không thể thực hiện chuyển trạng thái giao hàng này hoặc trạng thái đã thay đổi đồng thời.',
   })
   @ApiNotFoundResponse({ type: ErrorResDto })
   updateStatus(

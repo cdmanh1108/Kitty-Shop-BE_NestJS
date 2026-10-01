@@ -103,7 +103,10 @@ export class WebAccountRentalOrdersController {
   @ApiOkResponse({ type: WebAccountRentalOrderCancellationResDto })
   @ApiBadRequestResponse({ type: ErrorResDto })
   @ApiConflictResponse({ type: ErrorResDto })
-  @ApiForbiddenResponse({ type: ErrorResDto, description: 'Rejected Web origin.' })
+  @ApiForbiddenResponse({
+    type: ErrorResDto,
+    description: 'Nguồn yêu cầu web không được chấp nhận.',
+  })
   @ApiNotFoundResponse({ type: ErrorResDto })
   @ApiUnauthorizedResponse({ type: ErrorResDto })
   async cancel(

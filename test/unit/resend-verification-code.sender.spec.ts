@@ -55,7 +55,7 @@ describe('ResendVerificationCodeSender', () => {
     ).rejects.toMatchObject({
       name: 'VerificationCodeDeliveryError',
       reason: 'provider_rejected',
-      message: 'Verification code delivery failed',
+      message: 'Không thể gửi mã xác minh.',
     });
   });
 
@@ -69,7 +69,7 @@ describe('ResendVerificationCodeSender', () => {
     ).rejects.toMatchObject({
       name: 'VerificationCodeDeliveryError',
       reason: 'provider_unavailable',
-      message: 'Verification code delivery failed',
+      message: 'Không thể gửi mã xác minh.',
     });
   });
 });

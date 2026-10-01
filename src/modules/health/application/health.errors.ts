@@ -1,7 +1,9 @@
 import { ApplicationError } from '@common/errors/application-error';
 
 export class HealthDependencyUnavailableError extends ApplicationError {
+  readonly kind = 'UNAVAILABLE' as const;
+
   constructor() {
-    super('Health dependency is unavailable.');
+    super('Dịch vụ phụ thuộc của hệ thống hiện không khả dụng.');
   }
 }

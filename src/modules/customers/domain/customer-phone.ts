@@ -1,8 +1,10 @@
-export class InvalidCustomerPhoneError extends Error {
-  readonly code = 'INVALID_PHONE';
+import { ApplicationError } from '@common/errors/application-error';
+
+export class InvalidCustomerPhoneError extends ApplicationError {
+  readonly kind = 'VALIDATION' as const;
 
   constructor() {
-    super('Số điện thoại không hợp lệ.');
+    super('Số điện thoại không hợp lệ.', 'INVALID_PHONE');
   }
 }
 

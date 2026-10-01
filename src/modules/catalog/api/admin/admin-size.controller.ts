@@ -39,7 +39,7 @@ export class AdminSizeController {
   @Post('sizes')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
   @ApiCreatedResponse({ type: SizeManagementResDto })
-  @ApiBadRequestResponse({ description: 'Invalid Size fields.' })
+  @ApiBadRequestResponse({ description: 'Thông tin kích cỡ không hợp lệ.' })
   @ApiConflictResponse({ description: 'SIZE_CODE_ALREADY_EXISTS.' })
   async createSize(@CurrentUser() user: CurrentUserType, @Body() body: CreateSizeReqDto) {
     return toSizeResponse(await this.service.createSize(user, toCreateSizeInput(body)));
@@ -48,7 +48,9 @@ export class AdminSizeController {
   @Get('sizes')
   @Permissions(PERMISSIONS.CATALOG_VIEW)
   @ApiOkResponse({ type: SizeManagementPageResDto })
-  @ApiBadRequestResponse({ description: 'Invalid list filters or pagination.' })
+  @ApiBadRequestResponse({
+    description: 'Bộ lọc danh sách hoặc thông tin phân trang không hợp lệ.',
+  })
   listSizes(@CurrentUser() user: CurrentUserType, @Query() query: SizeListQueryDto) {
     return this.service.listSizes(user, toSizeListQuery(query));
   }
@@ -64,7 +66,7 @@ export class AdminSizeController {
   @Patch('sizes/:id')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
   @ApiOkResponse({ type: SizeManagementResDto })
-  @ApiBadRequestResponse({ description: 'Invalid Size fields.' })
+  @ApiBadRequestResponse({ description: 'Thông tin kích cỡ không hợp lệ.' })
   @ApiNotFoundResponse({ description: 'SIZE_NOT_FOUND.' })
   @ApiConflictResponse({ description: 'SIZE_CODE_ALREADY_EXISTS.' })
   async updateSize(
@@ -78,7 +80,7 @@ export class AdminSizeController {
   @Patch('sizes/:id/status')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
   @ApiOkResponse({ type: SizeManagementResDto })
-  @ApiBadRequestResponse({ description: 'Invalid Size status.' })
+  @ApiBadRequestResponse({ description: 'Trạng thái kích cỡ không hợp lệ.' })
   @ApiNotFoundResponse({ description: 'SIZE_NOT_FOUND.' })
   async updateSizeStatus(
     @CurrentUser() user: CurrentUserType,

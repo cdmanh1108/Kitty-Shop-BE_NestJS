@@ -7,7 +7,7 @@ describe('web auth configuration', () => {
         AUTH_OTP_BYPASS_ENABLED: 'true',
         AUTH_OTP_BYPASS_CODE: '123456',
       }),
-    ).toThrow('forbidden');
+    ).toThrow('Không được bật bỏ qua OTP trong môi trường production.');
   });
   it('requires a six-digit configured development code', () => {
     expect(() =>
@@ -16,6 +16,6 @@ describe('web auth configuration', () => {
         AUTH_OTP_BYPASS_ENABLED: 'true',
         AUTH_OTP_BYPASS_CODE: '123',
       }),
-    ).toThrow('six digits');
+    ).toThrow('AUTH_OTP_BYPASS_CODE phải gồm 6 chữ số khi được bật.');
   });
 });

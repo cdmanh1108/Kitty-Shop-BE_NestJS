@@ -24,7 +24,7 @@ class AuthCleanupPhaseError extends Error {
     readonly phase: 'admin_refresh_families' | 'web_refresh_families' | 'web_otp_challenges',
     cause: Error,
   ) {
-    super(`Auth cleanup failed during ${phase}.`, { cause });
+    super(`Không thể dọn dẹp dữ liệu xác thực ở bước ${phase}.`, { cause });
     this.name = AuthCleanupPhaseError.name;
   }
 }
@@ -91,7 +91,9 @@ export class AuthCleanupService {
     } catch (error) {
       throw new AuthCleanupPhaseError(
         phase,
-        error instanceof Error ? error : new Error('Unknown cleanup phase failure.'),
+        error instanceof Error
+          ? error
+          : new Error('Đã xảy ra lỗi không xác định trong quá trình dọn dẹp.'),
       );
     }
   }

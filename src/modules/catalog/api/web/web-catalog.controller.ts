@@ -97,7 +97,7 @@ export class WebCatalogController {
   })
   @ApiBadRequestResponse({
     type: ErrorResDto,
-    description: 'Body selection không hợp lệ hoặc vượt giới hạn batch.',
+    description: 'Phần dữ liệu lựa chọn không hợp lệ hoặc vượt quá giới hạn theo lô.',
   })
   async resolveSelections(
     @Body() body: WebStorefrontSelectionResolveReqDto,

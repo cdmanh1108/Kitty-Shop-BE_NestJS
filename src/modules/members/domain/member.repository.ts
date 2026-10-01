@@ -4,13 +4,13 @@ export const MEMBER_REPOSITORY = Symbol('MEMBER_REPOSITORY');
 
 export class MemberRoleNotFoundError extends Error {
   constructor() {
-    super('One or more roles do not exist in this shop.');
+    super('Một hoặc nhiều vai trò không tồn tại trong cửa hàng này.');
   }
 }
 
 export class MemberRoleCodesEmptyError extends Error {
   constructor() {
-    super('At least one role code is required when replacing member roles.');
+    super('Cần có ít nhất một mã vai trò khi thay thế vai trò của thành viên.');
   }
 }
 

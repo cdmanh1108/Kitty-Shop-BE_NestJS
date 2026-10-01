@@ -35,6 +35,8 @@ describe('HealthService', () => {
       thrown = error;
     }
     expect(thrown).toBeInstanceOf(HealthDependencyUnavailableError);
-    expect(thrown).toMatchObject({ message: 'Health dependency is unavailable.' });
+    expect(thrown).toMatchObject({
+      message: 'Dịch vụ phụ thuộc của hệ thống hiện không khả dụng.',
+    });
   });
 });

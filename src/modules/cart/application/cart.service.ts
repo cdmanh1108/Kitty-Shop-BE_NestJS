@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ApplicationError } from '@common/errors/application-error';
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import {
   CART_REPOSITORY,
@@ -11,19 +12,31 @@ export const CART_MAX_ITEM_COUNT = 20;
 export const CART_MAX_QUANTITY_PER_ITEM = 20;
 export const CART_MAX_TOTAL_QUANTITY = 50;
 
-export class CartInputError extends Error {
-  constructor(readonly code: 'INVALID_CART_PERIOD' | 'INVALID_CART_SELECTION') {
+export class CartInputError extends ApplicationError {
+  readonly kind = 'VALIDATION' as const;
+
+  constructor(override readonly code: 'INVALID_CART_PERIOD' | 'INVALID_CART_SELECTION') {
     super(
       code === 'INVALID_CART_PERIOD'
         ? 'Khoảng ngày thuê trong giỏ không hợp lệ.'
         : 'Lựa chọn trong giỏ không hợp lệ.',
+      code,
+      undefined,
+      { includeCodeAndMessageInDetails: false },
     );
   }
 }
 
-export class CartVersionConflictError extends Error {
+export class CartVersionConflictError extends ApplicationError {
+  readonly kind = 'CONFLICT' as const;
+
   constructor() {
-    super('Giỏ thuê đã được cập nhật ở nơi khác. Vui lòng đồng bộ lại trước khi tiếp tục.');
+    super(
+      'Giỏ thuê đã được cập nhật ở nơi khác. Vui lòng đồng bộ lại trước khi tiếp tục.',
+      'CART_VERSION_CONFLICT',
+      undefined,
+      { includeCodeAndMessageInDetails: false },
+    );
   }
 }
 

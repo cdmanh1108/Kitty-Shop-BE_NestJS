@@ -1,3 +1,4 @@
+import { ApplicationError } from '@common/errors/application-error';
 import type {
   PaymentDirection,
   PaymentPurpose,
@@ -13,7 +14,15 @@ import type {
 } from './finance.models';
 import type { FinanceIdempotencyClaim } from './manual-payment-idempotency';
 
-export class FinanceInvariantError extends Error {}
+export class FinanceInvariantError extends ApplicationError {
+  readonly kind = 'VALIDATION' as const;
+
+  constructor(message: string) {
+    super(message, 'FINANCE_INVARIANT_ERROR', undefined, {
+      includeCodeAndMessageInDetails: false,
+    });
+  }
+}
 
 export const FINANCE_REPOSITORY = Symbol('FINANCE_REPOSITORY');
 

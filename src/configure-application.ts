@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import type { AppConfiguration } from './config/configuration';
 import { createAdminOpenApiDocument, createWebOpenApiDocument } from './common/swagger/openapi';
 import { ApplicationLogger } from './common/logging/application-logger';
+import { vietnameseValidationMessage } from './common/validation/validation-message';
 
 export function configureApplication(app: INestApplication): void {
   const config = app.get(ConfigService<AppConfiguration, true>);
@@ -43,7 +44,7 @@ export function configureApplication(app: INestApplication): void {
                   ? `Trường "${field}" không được phép gửi trong yêu cầu.`
                   : constraint === 'unknownValue'
                     ? 'Dữ liệu gửi lên không hợp lệ.'
-                    : message,
+                    : vietnameseValidationMessage(constraint, message),
               ),
               ...messages(error.children ?? [], field),
             ];

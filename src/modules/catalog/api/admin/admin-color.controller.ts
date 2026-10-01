@@ -39,7 +39,7 @@ export class AdminColorController {
   @Post('colors')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
   @ApiCreatedResponse({ type: ColorManagementResDto })
-  @ApiBadRequestResponse({ description: 'Invalid Color fields.' })
+  @ApiBadRequestResponse({ description: 'Thông tin màu sắc không hợp lệ.' })
   @ApiConflictResponse({ description: 'COLOR_CODE_ALREADY_EXISTS.' })
   async createColor(@CurrentUser() user: CurrentUserType, @Body() body: CreateColorReqDto) {
     return toColorResponse(await this.service.createColor(user, toCreateColorInput(body)));
@@ -48,7 +48,9 @@ export class AdminColorController {
   @Get('colors')
   @Permissions(PERMISSIONS.CATALOG_VIEW)
   @ApiOkResponse({ type: ColorManagementPageResDto })
-  @ApiBadRequestResponse({ description: 'Invalid list filters or pagination.' })
+  @ApiBadRequestResponse({
+    description: 'Bộ lọc danh sách hoặc thông tin phân trang không hợp lệ.',
+  })
   listColors(@CurrentUser() user: CurrentUserType, @Query() query: ColorListQueryDto) {
     return this.service.listColors(user, toColorListQuery(query));
   }
@@ -64,7 +66,7 @@ export class AdminColorController {
   @Patch('colors/:id')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
   @ApiOkResponse({ type: ColorManagementResDto })
-  @ApiBadRequestResponse({ description: 'Invalid Color fields.' })
+  @ApiBadRequestResponse({ description: 'Thông tin màu sắc không hợp lệ.' })
   @ApiNotFoundResponse({ description: 'COLOR_NOT_FOUND.' })
   @ApiConflictResponse({ description: 'COLOR_CODE_ALREADY_EXISTS.' })
   async updateColor(
@@ -78,7 +80,7 @@ export class AdminColorController {
   @Patch('colors/:id/status')
   @Permissions(PERMISSIONS.CATALOG_MANAGE)
   @ApiOkResponse({ type: ColorManagementResDto })
-  @ApiBadRequestResponse({ description: 'Invalid Color status.' })
+  @ApiBadRequestResponse({ description: 'Trạng thái màu sắc không hợp lệ.' })
   @ApiNotFoundResponse({ description: 'COLOR_NOT_FOUND.' })
   async updateColorStatus(
     @CurrentUser() user: CurrentUserType,

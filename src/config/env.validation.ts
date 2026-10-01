@@ -30,13 +30,15 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     const email = parseEmailConfiguration(config);
     const resendApiKey = required(config, 'RESEND_API_KEY');
     if (!resendApiKey.startsWith('re_'))
-      throw new Error('RESEND_API_KEY must be a valid Resend API key.');
+      throw new Error('RESEND_API_KEY phải là API key hợp lệ của Resend.');
     const fromAddress = required(config, 'EMAIL_FROM_ADDRESS');
     if (!/^[^\s<>@]+@[^\s<>.@]+(?:\.[^\s<>.@]+)+$/.test(fromAddress))
-      throw new Error('EMAIL_FROM_ADDRESS must be a valid email address.');
+      throw new Error('EMAIL_FROM_ADDRESS phải là địa chỉ email hợp lệ.');
     const fromName = email.fromName;
     if (!fromName || fromName.length > 80 || /[\r\n<>]/.test(fromName))
-      throw new Error('EMAIL_FROM_NAME must be a non-empty display name of at most 80 characters.');
+      throw new Error(
+        'EMAIL_FROM_NAME phải là tên hiển thị không được để trống và không vượt quá 80 ký tự.',
+      );
   }
 
   if (

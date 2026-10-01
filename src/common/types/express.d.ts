@@ -1,11 +1,17 @@
 import type { CurrentUser } from './current-user';
-import type { WebProfile } from '@modules/web-auth/domain/web-auth.repository';
+
+interface WebRequestIdentity {
+  id: string;
+  email: string | null;
+  emailVerifiedAt: Date | null;
+  createdAt: Date;
+}
 
 declare global {
   namespace Express {
     interface Request {
       currentUser?: CurrentUser;
-      webUser?: WebProfile;
+      webUser?: WebRequestIdentity;
       requestId?: string;
     }
   }

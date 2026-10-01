@@ -10,27 +10,26 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
+import {
+  ApplicationError,
+  type ApplicationErrorKind,
+} from '../src/common/errors/application-error';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { redactLog } from '../src/common/logging/application-logger';
-import { RentalOverlapError } from '../src/modules/rentals/domain/rental-errors';
-import {
-  InvalidRentalIntervalError,
-  RentalClaimLostError,
-  RentalInvariantError,
-} from '../src/modules/rentals/domain/rental-errors';
-import { FinanceInvariantError } from '../src/modules/finance/domain/finance.repository';
-import {
-  CATALOG_ERROR_CODE,
-  CatalogInvariantError,
-} from '../src/modules/catalog/domain/catalog-errors';
-import { BookingCustomerUnavailableError } from '../src/modules/customers/domain/customer-errors';
-import {
-  InvalidRentalInputError,
-  RentalAccessDeniedError,
-  RentalNotFoundError,
-} from '../src/modules/rentals/application/rental.errors';
-import { DeliveryTransitionNotAllowedError } from '../src/modules/deliveries/application/delivery.errors';
-import { WebAuthApplicationError } from '../src/modules/web-auth/domain/web-auth.errors';
+
+class TestApplicationError extends ApplicationError {
+  constructor(
+    kind: ApplicationErrorKind,
+    code: string,
+    message: string,
+    exposeOnServerError = false,
+  ) {
+    super(message, code, undefined, { exposeOnServerError });
+    this.kind = kind;
+  }
+
+  readonly kind: ApplicationErrorKind;
+}
 
 interface MockResponsePayload {
   statusCode: number;
@@ -92,24 +91,76 @@ describe('AllExceptionsFilter', () => {
     jest.restoreAllMocks();
   });
 
-  describe('canonical domain error mapping', () => {
+  describe('cross-application error contract mapping', () => {
     beforeEach(() => {
       filter = new AllExceptionsFilter();
     });
 
-    it('preserves the semantic rental code without interpreting the message', () => {
+    it.each([
+      ['NOT_FOUND', 404, 'RESOURCE_MISSING'],
+      ['CONFLICT', 409, 'COLOR_IN_USE'],
+      ['VALIDATION', 400, 'INVALID_SELECTION'],
+      ['UNAUTHORIZED', 401, 'AUTH_REQUIRED'],
+      ['FORBIDDEN', 403, 'ACCESS_DENIED'],
+      ['TOO_MANY_REQUESTS', 429, 'RATE_LIMITED'],
+    ] as const)(
+      'maps %s metadata to HTTP while preserving the application code',
+      (kind, status, code) => {
+        const error = new TestApplicationError(kind, code, 'Known application message.');
+        filter.catch(error, mockHost);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(status);
+        expect(sentPayload).toMatchObject({
+          statusCode: status,
+          code,
+          message: 'Known application message.',
+          details: { code, message: 'Known application message.' },
+          requestId: 'req-test-12345',
+          path: '/api/v1/rentals',
+        });
+      },
+    );
+
+    it('does not recognize arbitrary objects that merely have an error code', () => {
       filter.catch(
-        new RentalInvariantError(
-          'RESCHEDULE_LIMIT_EXCEEDED',
-          'Đã vượt quá thời hạn đổi lịch cho phép.',
-        ),
+        { kind: 'CONFLICT', code: 'SHOULD_NOT_BE_PUBLIC', message: 'spoofed' },
         mockHost,
       );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(sentPayload).toMatchObject({
-        statusCode: 400,
-        code: 'RESCHEDULE_LIMIT_EXCEEDED',
-        message: 'Đã vượt quá thời hạn đổi lịch cho phép.',
+        statusCode: 500,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
       });
+      expect(JSON.stringify(sentPayload)).not.toContain('SHOULD_NOT_BE_PUBLIC');
+      expect(JSON.stringify(sentPayload)).not.toContain('spoofed');
+    });
+
+    it.each([undefined, null, 'thrown text', 42])(
+      'handles unknown thrown values safely: %s',
+      (thrown) => {
+        filter.catch(thrown, mockHost);
+
+        expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+        expect(sentPayload).toMatchObject({ statusCode: 500, code: 'INTERNAL_SERVER_ERROR' });
+      },
+    );
+
+    it('sanitizes internal application errors', () => {
+      filter.catch(
+        new TestApplicationError('INTERNAL', 'PRIVATE_FAILURE', 'database password'),
+        mockHost,
+      );
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(sentPayload).toMatchObject({
+        statusCode: 500,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
+      });
+      expect(JSON.stringify(sentPayload)).not.toContain('PRIVATE_FAILURE');
+      expect(JSON.stringify(sentPayload)).not.toContain('database password');
     });
 
     it('maps exhausted serialization retries to a sanitized conflict', () => {
@@ -124,122 +175,21 @@ describe('AllExceptionsFilter', () => {
       expect(JSON.stringify(sentPayload)).not.toContain('private SQL');
     });
 
-    it('maps RentalOverlapError to 409 RENTAL_OVERLAP', () => {
-      const error = new RentalOverlapError();
-      filter.catch(error, mockHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
-      expect(sentPayload).toMatchObject({
-        statusCode: 409,
-        code: 'RENTAL_OVERLAP',
-        message: 'Một hoặc nhiều món đồ không còn trống trong khoảng thời gian đã chọn.',
-        requestId: 'req-test-12345',
-        path: '/api/v1/rentals',
-      });
-      expect(sentPayload.details).toBeUndefined();
-    });
-
-    it('maps RentalClaimLostError to 409 RENTAL_CLAIM_LOST', () => {
-      const error = new RentalClaimLostError();
-      filter.catch(error, mockHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
-      expect(sentPayload).toMatchObject({
-        statusCode: 409,
-        code: 'RENTAL_CLAIM_LOST',
-        message: 'Yêu cầu này đang được xử lý. Vui lòng chờ và thử lại.',
-      });
-    });
-
-    it('maps InvalidRentalIntervalError to 400 INVALID_RENTAL_INTERVAL', () => {
-      const error = new InvalidRentalIntervalError();
-      filter.catch(error, mockHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-      expect(sentPayload).toMatchObject({
-        statusCode: 400,
-        code: 'INVALID_RENTAL_INTERVAL',
-        message: 'Khoảng thời gian thuê không hợp lệ.',
-      });
-    });
-
-    it('maps FinanceInvariantError to 400 FINANCE_INVARIANT_ERROR', () => {
-      const error = new FinanceInvariantError('Đơn thuê của khoản chi không thuộc cửa hàng này.');
-      filter.catch(error, mockHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-      expect(sentPayload).toMatchObject({
-        statusCode: 400,
-        code: 'FINANCE_INVARIANT_ERROR',
-        message: 'Đơn thuê của khoản chi không thuộc cửa hàng này.',
-      });
-    });
-
-    it('maps CatalogInvariantError by code regardless of message wording', () => {
-      const error = new CatalogInvariantError(
-        CATALOG_ERROR_CODE.SIZE_NOT_FOUND,
-        'Any future localized wording remains safe for HTTP classification.',
+    it('keeps explicit safe server errors public without filter code knowledge', () => {
+      filter.catch(
+        new TestApplicationError(
+          'UNAVAILABLE',
+          'SAFE_PUBLIC_ERROR',
+          'Không thể gửi mã xác thực lúc này. Vui lòng thử lại sau.',
+          true,
+        ),
+        mockHost,
       );
-      filter.catch(error, mockHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
-      expect(sentPayload).toMatchObject({
-        statusCode: 404,
-        code: CATALOG_ERROR_CODE.SIZE_NOT_FOUND,
-        message: 'Any future localized wording remains safe for HTTP classification.',
-      });
-    });
-
-    it('maps a typed Catalog conflict without inspecting its message', () => {
-      const error = new CatalogInvariantError(
-        CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS,
-        'Completely unrelated wording.',
-      );
-      filter.catch(error, mockHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
-      expect(sentPayload).toMatchObject({
-        statusCode: HttpStatus.CONFLICT,
-        code: CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS,
-      });
-    });
-
-    it('maps an unavailable booking customer without exposing profile metadata', () => {
-      filter.catch(new BookingCustomerUnavailableError(), mockHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
-      expect(sentPayload).toMatchObject({
-        statusCode: HttpStatus.CONFLICT,
-        code: 'BOOKING_CUSTOMER_UNAVAILABLE',
-      });
-      expect(sentPayload.details).toBeUndefined();
-    });
-
-    it.each([
-      [new InvalidRentalInputError('Invalid rental dates.'), 400, 'HTTP_400'],
-      [new WebAuthApplicationError('INVALID_CREDENTIALS'), 401, 'INVALID_CREDENTIALS'],
-      [new RentalAccessDeniedError('You cannot settle this order.'), 403, 'HTTP_403'],
-      [new RentalNotFoundError('Rental not found.'), 404, 'HTTP_404'],
-      [new DeliveryTransitionNotAllowedError(), 409, 'DELIVERY_INVALID_TRANSITION'],
-    ])('maps application error to its existing HTTP contract (%s)', (error, status, code) => {
-      filter.catch(error, mockHost);
-
-      expect(mockResponse.status).toHaveBeenCalledWith(status);
-      expect(sentPayload).toMatchObject({ statusCode: status, code, message: error.message });
-      if (error.code) {
-        expect(sentPayload.details).toEqual({ code: error.code, message: error.message });
-      } else {
-        expect(sentPayload.details).toBeUndefined();
-      }
-    });
-
-    it('keeps verification delivery failures as public 503 application errors', () => {
-      filter.catch(new WebAuthApplicationError('VERIFICATION_DELIVERY_FAILED'), mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.SERVICE_UNAVAILABLE);
       expect(sentPayload).toMatchObject({
         statusCode: 503,
-        code: 'VERIFICATION_DELIVERY_FAILED',
+        code: 'SAFE_PUBLIC_ERROR',
         message: 'Không thể gửi mã xác thực lúc này. Vui lòng thử lại sau.',
       });
       expect(sentPayload.details).toBeUndefined();
@@ -251,24 +201,24 @@ describe('AllExceptionsFilter', () => {
       filter = new AllExceptionsFilter();
     });
 
-    it('translates P2002 unique constraint error without leaking table/column details', () => {
+    it('does not treat an unclassified P2002 as a business conflict', () => {
       const prismaError = new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed on the fields: (`email`)',
         { code: 'P2002', clientVersion: '6.19.3' },
       );
       filter.catch(prismaError, mockHost);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(sentPayload).toMatchObject({
-        statusCode: 409,
-        code: 'UNIQUE_CONSTRAINT_VIOLATION',
-        message: 'Dữ liệu đã tồn tại. Vui lòng kiểm tra thông tin bị trùng.',
+        statusCode: 500,
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
       });
       expect(sentPayload.details).toBeUndefined();
       expect(JSON.stringify(sentPayload)).not.toContain('email');
     });
 
-    it('translates P2025 record not found error without leaking entity details', () => {
+    it('keeps generic P2025 record-not-found handling without leaking entity details', () => {
       const prismaError = new Prisma.PrismaClientKnownRequestError(
         'An operation failed because it depends on one or more records that were required but not found. Record to update not found.',
         { code: 'P2025', clientVersion: '6.19.3' },
@@ -457,10 +407,10 @@ describe('AllExceptionsFilter', () => {
       });
     });
 
-    it('preserves the safe OTP delivery error so registration can recover', () => {
+    it('sanitizes server error responses while preserving the status', () => {
       filter.catch(
         new ServiceUnavailableException({
-          code: 'OTP_DELIVERY_UNAVAILABLE',
+          code: 'PRIVATE_SERVER_CODE',
           message: 'Chưa thể gửi mã xác thực. Vui lòng thử gửi lại sau.',
         }),
         mockHost,
@@ -468,8 +418,8 @@ describe('AllExceptionsFilter', () => {
 
       expect(sentPayload).toMatchObject({
         statusCode: 503,
-        code: 'OTP_DELIVERY_UNAVAILABLE',
-        message: 'Chưa thể gửi mã xác thực. Vui lòng thử gửi lại sau.',
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
       });
       expect(sentPayload.details).toBeUndefined();
     });

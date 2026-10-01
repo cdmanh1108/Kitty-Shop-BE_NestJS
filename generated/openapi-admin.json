@@ -504,7 +504,7 @@
             }
           },
           "400": {
-            "description": "Invalid Size fields."
+            "description": "Thông tin kích cỡ không hợp lệ."
           },
           "409": {
             "description": "SIZE_CODE_ALREADY_EXISTS."
@@ -580,7 +580,7 @@
             }
           },
           "400": {
-            "description": "Invalid list filters or pagination."
+            "description": "Bộ lọc danh sách hoặc thông tin phân trang không hợp lệ."
           }
         },
         "security": [
@@ -666,7 +666,7 @@
             }
           },
           "400": {
-            "description": "Invalid Size fields."
+            "description": "Thông tin kích cỡ không hợp lệ."
           },
           "404": {
             "description": "SIZE_NOT_FOUND."
@@ -765,7 +765,7 @@
             }
           },
           "400": {
-            "description": "Invalid Size status."
+            "description": "Trạng thái kích cỡ không hợp lệ."
           },
           "404": {
             "description": "SIZE_NOT_FOUND."
@@ -808,7 +808,7 @@
             }
           },
           "400": {
-            "description": "Invalid Color fields."
+            "description": "Thông tin màu sắc không hợp lệ."
           },
           "409": {
             "description": "COLOR_CODE_ALREADY_EXISTS."
@@ -884,7 +884,7 @@
             }
           },
           "400": {
-            "description": "Invalid list filters or pagination."
+            "description": "Bộ lọc danh sách hoặc thông tin phân trang không hợp lệ."
           }
         },
         "security": [
@@ -970,7 +970,7 @@
             }
           },
           "400": {
-            "description": "Invalid Color fields."
+            "description": "Thông tin màu sắc không hợp lệ."
           },
           "404": {
             "description": "COLOR_NOT_FOUND."
@@ -1069,7 +1069,7 @@
             }
           },
           "400": {
-            "description": "Invalid Color status."
+            "description": "Trạng thái màu sắc không hợp lệ."
           },
           "404": {
             "description": "COLOR_NOT_FOUND."
@@ -2716,19 +2716,19 @@
             }
           },
           "400": {
-            "description": "Invalid collateral, evidence, or order state (including repeated confirmation)."
+            "description": "Thông tin tài sản bảo đảm, ảnh chứng từ hoặc trạng thái đơn không hợp lệ (bao gồm trường hợp xác nhận lặp)."
           },
           "401": {
-            "description": "Authentication required."
+            "description": "Yêu cầu xác thực."
           },
           "403": {
-            "description": "Requires rentals.confirm."
+            "description": "Cần có quyền rentals.confirm."
           },
           "404": {
-            "description": "Order does not exist in authenticated shop."
+            "description": "Không tìm thấy đơn trong cửa hàng đã xác thực."
           },
           "413": {
-            "description": "Evidence exceeds 15 MiB."
+            "description": "Ảnh chứng từ vượt quá 15 MiB."
           }
         },
         "security": [
@@ -2768,13 +2768,13 @@
             }
           },
           "401": {
-            "description": "Authentication required."
+            "description": "Yêu cầu xác thực."
           },
           "403": {
-            "description": "Requires rentals.confirm."
+            "description": "Cần có quyền rentals.confirm."
           },
           "404": {
-            "description": "Order does not exist in authenticated shop."
+            "description": "Không tìm thấy đơn trong cửa hàng đã xác thực."
           }
         },
         "security": [
@@ -2814,13 +2814,13 @@
             }
           },
           "401": {
-            "description": "Authentication required."
+            "description": "Yêu cầu xác thực."
           },
           "403": {
-            "description": "Requires rentals.confirm."
+            "description": "Cần có quyền rentals.confirm."
           },
           "404": {
-            "description": "Order or evidence does not exist in authenticated shop."
+            "description": "Không tìm thấy đơn hoặc ảnh chứng từ trong cửa hàng đã xác thực."
           }
         },
         "security": [
@@ -4070,7 +4070,7 @@
             }
           },
           "409": {
-            "description": "The requested delivery transition is not allowed or lost a concurrent update race.",
+            "description": "Không thể thực hiện chuyển trạng thái giao hàng này hoặc trạng thái đã thay đổi đồng thời.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4139,7 +4139,7 @@
             "description": ""
           },
           "409": {
-            "description": "A refresh for this shop is already in progress."
+            "description": "Đang có yêu cầu làm mới lời nhắc cho cửa hàng này."
           }
         },
         "security": [
@@ -4444,10 +4444,10 @@
         },
         "responses": {
           "200": {
-            "description": "Member status and role assignments updated."
+            "description": "Đã cập nhật trạng thái thành viên và các vai trò được gán."
           },
           "400": {
-            "description": "Invalid member update, including role codes that do not exist in the current shop."
+            "description": "Thông tin thành viên không hợp lệ, bao gồm mã vai trò không tồn tại trong cửa hàng hiện tại."
           }
         },
         "security": [

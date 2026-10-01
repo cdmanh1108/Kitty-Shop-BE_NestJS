@@ -67,7 +67,7 @@
             }
           },
           "503": {
-            "description": "Verification delivery unavailable; account remains pending and resend can recover",
+            "description": "Chưa thể gửi mã xác minh; tài khoản vẫn ở trạng thái chờ và có thể khôi phục bằng cách gửi lại mã.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1087,7 +1087,7 @@
             }
           },
           "400": {
-            "description": "Body selection không hợp lệ hoặc vượt giới hạn batch.",
+            "description": "Phần dữ liệu lựa chọn không hợp lệ hoặc vượt quá giới hạn theo lô.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1592,7 +1592,7 @@
             }
           },
           "403": {
-            "description": "Rejected Web origin.",
+            "description": "Nguồn yêu cầu web không được chấp nhận.",
             "content": {
               "application/json": {
                 "schema": {

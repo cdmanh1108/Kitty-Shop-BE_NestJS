@@ -37,7 +37,7 @@ export class HealthController {
   @Get('ready')
   @ApiOperation({ summary: 'Readiness probe including PostgreSQL' })
   @ApiOkResponse({ type: ReadyHealthResDto })
-  @ApiServiceUnavailableResponse({ description: 'A required dependency is unavailable.' })
+  @ApiServiceUnavailableResponse({ description: 'Dịch vụ phụ thuộc bắt buộc hiện không khả dụng.' })
   ready() {
     return this.service.ready();
   }

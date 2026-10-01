@@ -155,12 +155,13 @@ export class AdminRentalController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(ConfirmationUploadInterceptor)
   @ApiBadRequestResponse({
-    description: 'Invalid collateral, evidence, or order state (including repeated confirmation).',
+    description:
+      'Thông tin tài sản bảo đảm, ảnh chứng từ hoặc trạng thái đơn không hợp lệ (bao gồm trường hợp xác nhận lặp).',
   })
-  @ApiForbiddenResponse({ description: 'Requires rentals.confirm.' })
-  @ApiUnauthorizedResponse({ description: 'Authentication required.' })
-  @ApiPayloadTooLargeResponse({ description: 'Evidence exceeds 15 MiB.' })
-  @ApiNotFoundResponse({ description: 'Order does not exist in authenticated shop.' })
+  @ApiForbiddenResponse({ description: 'Cần có quyền rentals.confirm.' })
+  @ApiUnauthorizedResponse({ description: 'Yêu cầu xác thực.' })
+  @ApiPayloadTooLargeResponse({ description: 'Ảnh chứng từ vượt quá 15 MiB.' })
+  @ApiNotFoundResponse({ description: 'Không tìm thấy đơn trong cửa hàng đã xác thực.' })
   @ApiOkResponse({ type: RentalOrderResDto })
   confirm(
     @CurrentUser() user: CurrentUserType,
@@ -186,18 +187,20 @@ export class AdminRentalController {
 
   @Get(':id/confirmation-options')
   @Permissions(PERMISSIONS.RENTALS_CONFIRM)
-  @ApiForbiddenResponse({ description: 'Requires rentals.confirm.' })
-  @ApiNotFoundResponse({ description: 'Order does not exist in authenticated shop.' })
-  @ApiUnauthorizedResponse({ description: 'Authentication required.' })
+  @ApiForbiddenResponse({ description: 'Cần có quyền rentals.confirm.' })
+  @ApiNotFoundResponse({ description: 'Không tìm thấy đơn trong cửa hàng đã xác thực.' })
+  @ApiUnauthorizedResponse({ description: 'Yêu cầu xác thực.' })
   @ApiOkResponse({ type: ConfirmationOptionsResDto })
   confirmationOptions(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
     return this.confirmations.options(user, id);
   }
 
   @Get(':id/confirmation/evidence')
-  @ApiForbiddenResponse({ description: 'Requires rentals.confirm.' })
-  @ApiNotFoundResponse({ description: 'Order or evidence does not exist in authenticated shop.' })
-  @ApiUnauthorizedResponse({ description: 'Authentication required.' })
+  @ApiForbiddenResponse({ description: 'Cần có quyền rentals.confirm.' })
+  @ApiNotFoundResponse({
+    description: 'Không tìm thấy đơn hoặc ảnh chứng từ trong cửa hàng đã xác thực.',
+  })
+  @ApiUnauthorizedResponse({ description: 'Yêu cầu xác thực.' })
   @Header('Cache-Control', 'private, no-store')
   @Permissions(PERMISSIONS.RENTALS_CONFIRM)
   @ApiOkResponse({

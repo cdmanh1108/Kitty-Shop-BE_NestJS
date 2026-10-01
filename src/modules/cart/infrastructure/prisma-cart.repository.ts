@@ -68,11 +68,11 @@ function mapCart(cart: PrismaCart): CartSnapshot {
 }
 
 function parseItems(value: Prisma.JsonValue): CartSelection[] {
-  if (!Array.isArray(value)) throw new Error('Persisted web cart items are invalid.');
+  if (!Array.isArray(value)) throw new Error('Các mục giỏ hàng đã lưu không hợp lệ.');
   const items: CartSelection[] = [];
   for (const item of value) {
     if (!item || typeof item !== 'object' || Array.isArray(item))
-      throw new Error('Persisted web cart item is invalid.');
+      throw new Error('Mục giỏ hàng đã lưu không hợp lệ.');
     const candidate = item as Record<string, Prisma.JsonValue>;
     if (
       typeof candidate.productId !== 'string' ||
@@ -80,7 +80,7 @@ function parseItems(value: Prisma.JsonValue): CartSelection[] {
       typeof candidate.quantity !== 'number' ||
       !Number.isSafeInteger(candidate.quantity)
     )
-      throw new Error('Persisted web cart item is invalid.');
+      throw new Error('Mục giỏ hàng đã lưu không hợp lệ.');
     items.push({
       productId: candidate.productId,
       variantId: candidate.variantId,

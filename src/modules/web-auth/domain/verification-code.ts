@@ -7,7 +7,7 @@ export interface VerificationCodeSender {
 
 export class VerificationCodeDeliveryError extends Error {
   constructor(readonly reason: 'provider_rejected' | 'provider_unavailable') {
-    super('Verification code delivery failed');
+    super('Không thể gửi mã xác minh.');
     this.name = 'VerificationCodeDeliveryError';
   }
 }

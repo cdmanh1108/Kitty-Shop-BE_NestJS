@@ -29,7 +29,7 @@ export interface ReminderRefreshCoordinator {
 
 export class ReminderRefreshOwnershipLostError extends Error {
   constructor(cause?: Error) {
-    super('Reminder refresh lease ownership was lost.', { cause });
+    super('Đã mất quyền sở hữu khóa làm mới lời nhắc.', { cause });
     this.name = ReminderRefreshOwnershipLostError.name;
   }
 }

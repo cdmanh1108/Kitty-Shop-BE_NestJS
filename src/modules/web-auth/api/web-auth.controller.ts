@@ -78,7 +78,7 @@ export class WebAuthController {
     status: 503,
     type: ErrorResDto,
     description:
-      'Verification delivery unavailable; account remains pending and resend can recover',
+      'Chưa thể gửi mã xác minh; tài khoản vẫn ở trạng thái chờ và có thể khôi phục bằng cách gửi lại mã.',
   })
   register(@Body() input: WebCredentialsDto): Promise<WebChallengeDto> {
     return this.registration.register({ email: input.email, password: input.password });

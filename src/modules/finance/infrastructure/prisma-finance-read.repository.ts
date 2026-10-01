@@ -80,7 +80,7 @@ export class PrismaFinanceReadRepository implements FinanceReadRepository {
         COALESCE((SELECT jsonb_agg(jsonb_build_object('category', category, 'amount', amount) ORDER BY category) FROM breakdown), '[]'::jsonb) AS breakdown
       FROM totals
     `);
-    if (!row) throw new Error('Finance aggregate returned no row');
+    if (!row) throw new Error('Không tìm thấy dữ liệu tổng hợp tài chính.');
     return row;
   }
   async transactions(input: Parameters<FinanceReadRepository['transactions']>[0]) {
@@ -98,7 +98,7 @@ export class PrismaFinanceReadRepository implements FinanceReadRepository {
           'orderId', order_id, 'orderCode', order_code
         ) ORDER BY occurred_at ${order}, id ${order}) FROM page), '[]'::jsonb) AS items
     `);
-    if (!row) throw new Error('Finance page returned no row');
+    if (!row) throw new Error('Không tìm thấy trang dữ liệu tài chính.');
     return { items: row.items, meta: paginateMeta(input.page, input.limit, row.total) };
   }
 }

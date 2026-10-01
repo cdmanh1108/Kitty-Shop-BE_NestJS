@@ -8,7 +8,7 @@ export class WebEmailDto {
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? (normalizeWebEmail(value) ?? value) : value,
   )
-  @IsEmail({ allow_utf8_local_part: false }, { message: 'A valid email address is required.' })
+  @IsEmail({ allow_utf8_local_part: false }, { message: 'Email không hợp lệ.' })
   @MaxLength(254)
   email!: string;
 }
@@ -20,25 +20,25 @@ export class WebCredentialsDto extends WebEmailDto {
     format: 'password',
     description: '8-64 characters, at most 72 UTF-8 bytes',
   })
-  @IsString({ message: 'Password must be a string.' })
-  @Length(8, 64, { message: 'Password must be 8 to 64 characters long.' })
+  @IsString({ message: 'Mật khẩu phải là chuỗi ký tự.' })
+  @Length(8, 64, { message: 'Mật khẩu phải có từ 8 đến 64 ký tự.' })
   password!: string;
 }
 
 export class WebVerifyOtpDto {
   @ApiProperty({ format: 'uuid' })
-  @IsUUID('4', { message: 'Invalid verification request.' })
+  @IsUUID('4', { message: 'Yêu cầu xác minh không hợp lệ.' })
   challengeId!: string;
   @ApiProperty({ pattern: '^\\d{6}$', minLength: 6, maxLength: 6 })
-  @IsString({ message: 'Verification code must be a string.' })
-  @MaxLength(6, { message: 'Verification code must contain six digits.' })
-  @Matches(/^\d{6}$/, { message: 'Verification code must contain six digits.' })
+  @IsString({ message: 'Mã xác minh phải là chuỗi ký tự.' })
+  @MaxLength(6, { message: 'Mã xác minh phải gồm 6 chữ số.' })
+  @Matches(/^\d{6}$/, { message: 'Mã xác minh phải gồm 6 chữ số.' })
   otp!: string;
 }
 
 export class WebResendOtpDto {
   @ApiProperty({ format: 'uuid', description: 'The current registration verification challenge.' })
-  @IsUUID('4', { message: 'Invalid verification request.' })
+  @IsUUID('4', { message: 'Yêu cầu xác minh không hợp lệ.' })
   challengeId!: string;
 }
 

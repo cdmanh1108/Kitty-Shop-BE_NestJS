@@ -14,17 +14,17 @@ export interface WebAuthConfiguration {
 export function parseWebAuthConfiguration(env: Record<string, unknown>): WebAuthConfiguration {
   const flag = env.AUTH_OTP_BYPASS_ENABLED ?? 'false';
   if (flag !== 'true' && flag !== 'false')
-    throw new Error('AUTH_OTP_BYPASS_ENABLED must be true or false');
+    throw new Error('AUTH_OTP_BYPASS_ENABLED phải là true hoặc false.');
   if (env.NODE_ENV === 'production' && flag === 'true')
-    throw new Error('OTP bypass is forbidden in production');
+    throw new Error('Không được bật bỏ qua OTP trong môi trường production.');
   const code = env.AUTH_OTP_BYPASS_CODE ?? '';
   if (typeof code !== 'string' || (flag === 'true' && !/^\d{6}$/.test(code)))
-    throw new Error('AUTH_OTP_BYPASS_CODE must contain six digits when enabled');
+    throw new Error('AUTH_OTP_BYPASS_CODE phải gồm 6 chữ số khi được bật.');
   const integer = (key: string, fallback: number, maximum: number): number => {
     const raw = env[key] ?? String(fallback);
     const value = typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : NaN;
     if (!Number.isSafeInteger(value) || value < 1 || value > maximum)
-      throw new Error(`${key} is outside its supported range`);
+      throw new Error(`${key} nằm ngoài phạm vi giá trị được hỗ trợ.`);
     return value;
   };
   return {

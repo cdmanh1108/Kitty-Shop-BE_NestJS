@@ -96,7 +96,7 @@ export class WebRegistrationService {
         result.challenge.id,
         this.clock.now(),
       );
-      if (!accepted) throw new Error('Verification delivery state was not updated');
+      if (!accepted) throw new Error('Không thể cập nhật trạng thái gửi mã xác minh.');
       this.logger.log(`Verification email accepted; operation=${operation}`);
     } catch (error) {
       const settings = this.config.get('webAuth', { infer: true });

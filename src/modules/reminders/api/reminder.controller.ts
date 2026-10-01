@@ -40,7 +40,7 @@ export class ReminderController {
   @Post('refresh')
   @Permissions(PERMISSIONS.REMINDERS_MANAGE)
   @ApiCreatedResponse()
-  @ApiConflictResponse({ description: 'A refresh for this shop is already in progress.' })
+  @ApiConflictResponse({ description: 'Đang có yêu cầu làm mới lời nhắc cho cửa hàng này.' })
   refresh(@CurrentUser() user: CurrentUserType) {
     return this.service.refreshForUser(user);
   }

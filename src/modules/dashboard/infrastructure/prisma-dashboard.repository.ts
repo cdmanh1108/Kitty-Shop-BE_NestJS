@@ -51,7 +51,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
         COALESCE((SELECT SUM(revenue) FROM daily WHERE day >= (${input.monthStart}::timestamptz AT TIME ZONE ${input.timezone})::date), 0)::float8 AS "revenueMonth",
         (SELECT jsonb_agg(jsonb_build_object('date', day, 'revenue', revenue) ORDER BY day) FROM series) AS "revenueSeries"
     `);
-    if (!row) throw new Error('Dashboard aggregate returned no row');
+    if (!row) throw new Error('Không tìm thấy dữ liệu tổng hợp của trang tổng quan.');
     return row;
   }
 
@@ -113,7 +113,7 @@ export class PrismaDashboardRepository implements DashboardRepository {
           FROM attention a JOIN customers c ON c.id = a.customer_id AND c.shop_id = ${input.shopId}::uuid), '[]'::jsonb) AS "attentionOrders"
       FROM balances
     `);
-    if (!row) throw new Error('Dashboard aggregate returned no row');
+    if (!row) throw new Error('Không tìm thấy dữ liệu tổng hợp của trang tổng quan.');
     return row;
   }
 }

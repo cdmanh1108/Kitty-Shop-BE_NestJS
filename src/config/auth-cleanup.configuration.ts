@@ -10,7 +10,7 @@ function boolean(env: Record<string, unknown>, key: string, fallback: boolean): 
   if (raw === undefined || raw === '') return fallback;
   if (raw === 'true') return true;
   if (raw === 'false') return false;
-  throw new Error(`${key} must be true or false`);
+  throw new Error(`${key} phải là true hoặc false.`);
 }
 
 function integer(
@@ -23,7 +23,7 @@ function integer(
   if (raw === undefined || raw === '') return fallback;
   const value = typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : NaN;
   if (!Number.isSafeInteger(value) || value < 1 || value > maximum) {
-    throw new Error(`${key} is outside its supported range`);
+    throw new Error(`${key} nằm ngoài phạm vi giá trị được hỗ trợ.`);
   }
   return value;
 }
