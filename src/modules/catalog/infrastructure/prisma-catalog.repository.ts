@@ -2,7 +2,13 @@ import {
   PUBLIC_MEDIA_URL_RESOLVER,
   type PublicMediaUrlResolver,
 } from '@common/storage/public-url.resolver';
-import { inventorySummary, inventoryHistory } from './inventory-read-queries';
+import {
+  inventorySummary,
+  inventoryHistory,
+  listInventory,
+  findInventoryItem,
+  findAvailableInventory,
+} from './inventory-queries';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CatalogCategoryRepository } from '../domain/catalog-category.repository';
@@ -37,8 +43,8 @@ import {
   removeProductMedia,
 } from './product-commands';
 import { listStorefrontCategories } from './storefront-category.queries';
+import { listStorefrontProducts } from './storefront-product-list.queries';
 import {
-  listStorefrontProducts,
   listStorefrontProductsByIds,
   findStorefrontProductBySlug,
 } from './storefront-product.queries';
@@ -47,10 +53,7 @@ import {
   addInventoryItem,
   updateInventoryStatus,
   archiveInventoryItem,
-  listInventory,
-  findInventoryItem,
-  findAvailableInventory,
-} from './inventory-persistence';
+} from './inventory-commands';
 
 @Injectable()
 export class PrismaCatalogRepository

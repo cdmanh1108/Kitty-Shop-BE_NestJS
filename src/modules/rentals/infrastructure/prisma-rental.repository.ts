@@ -6,27 +6,25 @@ import {
 import { PrismaService } from '@database/prisma/prisma.service';
 import { claimIdempotencyRecord, releaseIdempotencyClaim } from '@database/prisma/idempotency';
 import { Injectable, Inject } from '@nestjs/common';
+import type { RentalAvailabilityReader } from '../domain/ports/rental-availability.port';
 import type {
-  RentalAvailabilityReader,
   RentalCreationRepository,
   RentalCreationValidator,
-  RentalLifecycleRepository,
-  RentalOrderReader,
-  WebAccountRentalOrdersReader,
-} from '../domain/rental.repository';
+} from '../domain/ports/rental-creation.port';
+import type { RentalLifecycleRepository } from '../domain/ports/rental-lifecycle.port';
+import type { RentalOrderReader } from '../domain/ports/rental-order-reader.port';
+import type { WebAccountRentalOrdersReader } from '../domain/ports/web-account-rental-orders.reader';
+import { customerExists, locationExists } from './rental-creation-validation.queries';
+import { list, get, getStatus, getSchedule } from './rental-admin.queries';
 import {
-  customerExists,
-  locationExists,
-  list,
-  get,
-  getStatus,
-  getSchedule,
   findActiveVariantIdsByProduct,
   findActiveVariantIdsByProducts,
+} from './rental-availability';
+import {
   lookupStorefrontOrder,
   listWebAccountOrders,
   getWebAccountOrder,
-} from './rental-queries';
+} from './rental-web-order.queries';
 import { getBookableVariant, getBookableVariants } from './rental-availability';
 import { createOrder } from './rental-booking';
 import { receiveReturn } from './rental-return.lifecycle';

@@ -10,8 +10,8 @@ import type {
   WebProductDetailDto,
   WebProductListItemDto,
   WebProductListResDto,
-  WebStorefrontSelectionResolveResDto,
-} from './dto/web-catalog.dto';
+} from './dto/web-product.dto';
+import type { WebStorefrontSelectionResolveResDto } from './dto/web-storefront-selection.dto';
 
 /**
  * Authoritative Web DTO mapper for the public storefront catalog API surface.

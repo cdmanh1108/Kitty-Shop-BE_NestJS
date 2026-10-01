@@ -2,7 +2,7 @@ import type {
   WebAccountRentalOrderDetail,
   WebAccountRentalOrderListItem,
   WebAccountRentalOrderPage,
-} from '../../domain/rental.repository';
+} from '../../domain/ports/web-account-rental-orders.reader';
 import type {
   WebAccountRentalOrderDetailResDto,
   WebAccountRentalOrderCancellationResDto,

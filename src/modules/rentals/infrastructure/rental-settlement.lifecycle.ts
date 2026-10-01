@@ -10,9 +10,9 @@ import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { Prisma } from '@prisma/client';
-import type { SettleRentalOrderData } from '../domain/rental.repository';
+import type { SettleRentalOrderData } from '../domain/ports/rental-lifecycle.port';
 import type { RentalOrderDetails } from '../domain/rental.models';
-import { getWithTx } from './rental-queries';
+import { getWithTx } from './rental-admin.queries';
 import { lockRentalOrder } from '@database/prisma/rental-order-lock';
 
 export async function settleOrder(

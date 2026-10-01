@@ -74,9 +74,10 @@ The real Product list uses a small list mapper; editor queries preserve raw gene
 
 ## Files and verification
 
-- `domain/catalog.read-models.ts`, `catalog.models.ts`, `catalog.repository.ts`: explicit projections and typed ports.
-- `application/catalog.service.ts`, `api/catalog.controller.ts`, `catalog.dto.ts`, `catalog-read.dto.ts`: use cases, validated routes and Swagger contracts.
-- `infrastructure/product-queries.ts`, `catalog-lookups.ts`, `inventory-persistence.ts`, `inventory-read-queries.ts`, `prisma-catalog.repository.ts`: selects, aggregation and scoped persistence.
+- `domain/catalog.read-models.ts`, `catalog.models.ts`, `catalog-product.repository.ts`, `catalog-inventory.repository.ts`: explicit projections and resource-specific ports.
+- `domain/catalog-errors.ts`, `catalog-product.inputs.ts`, `catalog-inventory.inputs.ts`: domain errors and typed product/inventory inputs.
+- `application/category.service.ts`, `product.service.ts`, `inventory.service.ts`, `api/admin/*`: use cases, validated routes and resource-owned Swagger DTOs.
+- `infrastructure/product-queries.ts`, `catalog-lookups.ts`, `inventory-commands.ts`, `inventory-queries.ts`, `prisma-catalog.repository.ts`: selects, aggregation and scoped persistence.
 - `test/integration/catalog-read-models.integration.spec.ts`: >200 counts, pagination, nullable/zero prices, bounds, shop isolation, history order, combined filters, one batch price query and summary without inventory-list reads.
 - `test/e2e/catalog-reads.e2e.spec.ts`: static routing, authentication, permissions, pagination validation and rejected tenant injection.
 - Existing catalog unit fixtures updated for the explicit port additions.

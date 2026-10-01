@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import {
   RENTAL_AVAILABILITY_READER,
   type RentalAvailabilityReader,
-} from '../domain/rental.repository';
+} from '../domain/ports/rental-availability.port';
 import {
   RENTAL_POLICY_PROVIDER,
   type RentalPolicyProvider,

@@ -1,5 +1,5 @@
 import { INVENTORY_STATUS, type InventoryStatus } from './catalog-status';
-import { CATALOG_ERROR_CODE, CatalogInvariantError } from './catalog.repository';
+import { CATALOG_ERROR_CODE, CatalogInvariantError } from './catalog-errors';
 
 const INVENTORY_STATUS_LABELS: Readonly<Record<string, string>> = {
   AVAILABLE: 'có sẵn',

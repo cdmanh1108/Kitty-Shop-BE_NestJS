@@ -1,4 +1,4 @@
-import { CatalogInvariantError } from '../../src/modules/catalog/domain/catalog.repository';
+import { CatalogInvariantError } from '../../src/modules/catalog/domain/catalog-errors';
 import {
   generateProductSlug,
   normalizeProductSlug,

@@ -12,7 +12,7 @@ import { rentalScenario, fixedClock, payRentalForConfirmation } from '../fixture
 import { createTestShop, uniqueCode } from '../fixtures/test-factories';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
-import { CatalogInvariantError } from '../../src/modules/catalog/domain/catalog.repository';
+import { CatalogInvariantError } from '../../src/modules/catalog/domain/catalog-errors';
 import { RentalInventoryUnavailableError } from '../../src/modules/rentals/domain/rental-errors';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 

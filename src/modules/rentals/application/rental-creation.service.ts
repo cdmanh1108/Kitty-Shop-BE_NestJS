@@ -17,14 +17,16 @@ import type { RentalOrderDetails } from '../domain/rental.models';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
   RENTAL_AVAILABILITY_READER,
+  type RentalAvailabilityReader,
+} from '../domain/ports/rental-availability.port';
+import {
   RENTAL_CREATION_VALIDATOR,
   RENTAL_CREATION_REPOSITORY,
-  RentalOverlapError,
   type CreateRentalOrderData,
-  type RentalAvailabilityReader,
   type RentalCreationValidator,
   type RentalCreationRepository,
-} from '../domain/rental.repository';
+} from '../domain/ports/rental-creation.port';
+import { RentalOverlapError } from '../domain/rental-errors';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type { CreateRentalOrderInput } from './rental.contracts';
 import {

@@ -1,7 +1,7 @@
 ﻿import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import type { Clock } from '../../src/common/clock/clock';
 import type { CurrentUser } from '../../src/common/types/current-user';
-import type { CreateRentalOrderData } from '../../src/modules/rentals/domain/rental.repository';
+import type { CreateRentalOrderData } from '../../src/modules/rentals/domain/ports/rental-creation.port';
 import type { CreateRentalOrderInput } from '../../src/modules/rentals/application/rental.contracts';
 import { RENTAL_ORDER_SOURCE } from '../../src/modules/rentals/domain/rental-order-source';
 import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';

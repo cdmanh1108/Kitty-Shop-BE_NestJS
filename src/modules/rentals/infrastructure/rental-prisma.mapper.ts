@@ -1,6 +1,9 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { Prisma } from '@prisma/client';
-import type { BookableVariant, RentalGetBookableVariantData } from '../domain/rental.repository';
+import type {
+  BookableVariant,
+  RentalGetBookableVariantData,
+} from '../domain/ports/rental-availability.port';
 import { resolveRentalPricing } from '../domain/rental-pricing';
 import { availableInventoryWhere } from '@database/prisma/inventory-availability';
 

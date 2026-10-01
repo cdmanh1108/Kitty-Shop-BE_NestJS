@@ -14,11 +14,13 @@ import {
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
   RENTAL_AVAILABILITY_READER,
+  type RentalAvailabilityReader,
+} from '../domain/ports/rental-availability.port';
+import {
   RENTAL_CREATION_REPOSITORY,
   type CreateRentalOrderData,
-  type RentalAvailabilityReader,
   type RentalCreationRepository,
-} from '../domain/rental.repository';
+} from '../domain/ports/rental-creation.port';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type {
   WebCreateOrderInput,

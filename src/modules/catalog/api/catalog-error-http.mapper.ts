@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { CATALOG_ERROR_CODE, type CatalogErrorCode } from '../domain/catalog.repository';
+import { CATALOG_ERROR_CODE, type CatalogErrorCode } from '../domain/catalog-errors';
 
 /** Maps stable catalog business semantics at the HTTP boundary; messages never participate. */
 export function mapCatalogErrorToHttpStatus(code: CatalogErrorCode): HttpStatus {

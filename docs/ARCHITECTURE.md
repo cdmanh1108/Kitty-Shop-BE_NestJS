@@ -113,13 +113,16 @@ Rental and Catalog ports remain unchanged. Their injectable Prisma adapters forw
 infrastructure-local functions, using the existing PrismaService; no additional clients
 or providers are created.
 
-- Rentals: `rental-queries` owns reads and the shared transaction-aware detail loader;
-  `rental-availability` owns bookable variant lookup; `rental-prisma.mapper` owns its
+- Rentals: `rental-admin.queries` owns admin rental-order reads and the shared
+  transaction-aware detail loader; `rental-web-order.queries` owns storefront order
+  lookup/account reads; `rental-creation-validation.queries` owns creation reference checks.
+  `rental-availability` owns bookable variant and active-variant lookup; `rental-prisma.mapper` owns its
   typed include and Decimal/nullable mapping. `rental-booking` owns creation;
   `rental-idempotency` owns claim/recovery/transactional completion; `rental-lifecycle` owns transitions, rescheduling and charges.
-- Catalog: `product-queries` owns product reads; `product-commands` owns product,
+- Catalog: `product-queries` owns admin product reads; `product-commands` owns product,
   variant/rate and media aggregate writes. Its variant creation helper receives the
-  caller's transaction. `inventory-persistence` owns inventory reads/state/history;
+  caller's transaction. `inventory-commands` owns inventory mutations; `inventory-queries`
+  owns inventory lists, details, availability, summary and history;
   `catalog-lookups` owns catalog reference data.
 - `database/prisma/inventory-availability` owns the shared inventory filter
   used by Catalog and Rentals infrastructure. Intervals remain half-open, and the

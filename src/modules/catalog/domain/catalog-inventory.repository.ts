@@ -14,7 +14,7 @@ import type {
   CatalogFindAvailableInventoryCriteria,
   CatalogListInventoryCriteria,
   CatalogUpdateInventoryStatusData,
-} from './catalog.repository';
+} from './catalog-inventory.inputs';
 
 export const CATALOG_INVENTORY_REPOSITORY = Symbol('CATALOG_INVENTORY_REPOSITORY');
 

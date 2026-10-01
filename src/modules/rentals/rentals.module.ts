@@ -17,14 +17,14 @@ import { WebAccountRentalOrdersService } from './application/web-account-rental-
 import { RentalConfirmationService } from './application/rental-confirmation.service';
 import { RentalSettlementService } from './application/rental-settlement.service';
 import { RentalReadPresenter } from './application/rental-read.presenter';
+import { RENTAL_AVAILABILITY_READER } from './domain/ports/rental-availability.port';
 import {
-  RENTAL_AVAILABILITY_READER,
   RENTAL_CREATION_VALIDATOR,
   RENTAL_CREATION_REPOSITORY,
-  RENTAL_LIFECYCLE_REPOSITORY,
-  RENTAL_ORDER_READER,
-  WEB_ACCOUNT_RENTAL_ORDERS_READER,
-} from './domain/rental.repository';
+} from './domain/ports/rental-creation.port';
+import { RENTAL_LIFECYCLE_REPOSITORY } from './domain/ports/rental-lifecycle.port';
+import { RENTAL_ORDER_READER } from './domain/ports/rental-order-reader.port';
+import { WEB_ACCOUNT_RENTAL_ORDERS_READER } from './domain/ports/web-account-rental-orders.reader';
 import { PrismaRentalRepository } from './infrastructure/prisma-rental.repository';
 
 @Module({

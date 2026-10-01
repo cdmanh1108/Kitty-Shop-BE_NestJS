@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { WebRentalEvaluationService } from '../../src/modules/rentals/application/web-rental-evaluation.service';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
 import { WebRentalLookupService } from '../../src/modules/rentals/application/web-rental-lookup.service';
-import type { CreateRentalOrderData } from '../../src/modules/rentals/domain/rental.repository';
+import type { CreateRentalOrderData } from '../../src/modules/rentals/domain/ports/rental-creation.port';
 import type { RentalPolicyProvider } from '../../src/modules/settings/domain/rental-policy';
 import type { CustomerRepository } from '../../src/modules/customers/domain/customer.repository';
 import { InvalidCustomerPhoneError } from '../../src/modules/customers/domain/customer-phone';

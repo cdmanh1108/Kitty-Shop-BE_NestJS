@@ -2,7 +2,7 @@ import {
   InventorySummaryResDto,
   InventoryHistoryQueryDto,
   InventoryHistoryPageResDto,
-} from '../catalog-read.dto';
+} from './dto/inventory.dto';
 import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';

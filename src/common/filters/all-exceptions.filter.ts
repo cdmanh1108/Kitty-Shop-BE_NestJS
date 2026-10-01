@@ -9,7 +9,7 @@ import {
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { ApplicationError } from '@common/errors/application-error';
-import { RentalOverlapError } from '@modules/rentals/domain/rental.repository';
+import { RentalOverlapError } from '@modules/rentals/domain/rental-errors';
 import {
   RentalClaimLostError,
   InvalidRentalIntervalError,
@@ -17,7 +17,7 @@ import {
   RentalInvariantError,
 } from '@modules/rentals/domain/rental-errors';
 import { FinanceInvariantError } from '@modules/finance/domain/finance.repository';
-import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
+import { CatalogInvariantError } from '@modules/catalog/domain/catalog-errors';
 import { mapCatalogErrorToHttpStatus } from '@modules/catalog/api/catalog-error-http.mapper';
 import {
   BookingCustomerUnavailableError,

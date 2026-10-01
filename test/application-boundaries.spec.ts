@@ -7,7 +7,8 @@ import * as ts from 'typescript';
 import type { AuditPort } from '../src/modules/audit/domain/audit.port';
 import type { CurrentUser } from '../src/common/types/current-user';
 import { paginateMeta } from '../src/common/types/pagination';
-import { CreateRentalOrderReqDto, RentalListQueryDto } from '../src/modules/rentals/api/rental.dto';
+import { CreateRentalOrderReqDto } from '../src/modules/rentals/api/admin/dto/rental-creation.dto';
+import { RentalListQueryDto } from '../src/modules/rentals/api/admin/dto/rental-order.dto';
 import {
   toCreateRentalOrderInput,
   toRentalListQuery,

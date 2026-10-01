@@ -35,13 +35,11 @@ import { WebRentalLookupService } from '../../application/web-rental-lookup.serv
 import {
   WebAvailabilityQueryDto,
   WebAvailabilityResDto,
-  WebCreateOrderReqDto,
-  WebCreateOrderResDto,
-  WebOrderLookupReqDto,
-  WebOrderLookupResDto,
   WebRentalQuoteReqDto,
   WebRentalQuoteResDto,
-} from './dto/web-rental.dto';
+} from './dto/web-rental-evaluation.dto';
+import { WebCreateOrderReqDto, WebCreateOrderResDto } from './dto/web-rental-order.dto';
+import { WebOrderLookupReqDto, WebOrderLookupResDto } from './dto/web-rental-lookup.dto';
 
 @Public()
 @ApiTags('Web - Rental Orders')

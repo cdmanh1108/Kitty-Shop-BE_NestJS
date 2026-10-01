@@ -20,10 +20,12 @@ import {
 } from '@modules/settings/domain/rental-policy';
 import {
   RENTAL_LIFECYCLE_REPOSITORY,
-  RENTAL_ORDER_READER,
   type RentalLifecycleRepository,
+} from '../domain/ports/rental-lifecycle.port';
+import {
+  RENTAL_ORDER_READER,
   type RentalOrderReader,
-} from '../domain/rental.repository';
+} from '../domain/ports/rental-order-reader.port';
 import { assertManualConfirmation, type ConfirmRentalInput } from '../domain/rental-confirmation';
 import {
   InvalidRentalEvidenceError,

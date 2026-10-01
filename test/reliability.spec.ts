@@ -15,7 +15,7 @@ import { applicationLoggerMock } from './helpers/application-logger';
 import type { CreateRentalOrderInput } from '../src/modules/rentals/application/rental.contracts';
 import { RentalClaimLostError } from '../src/modules/rentals/domain/rental-errors';
 import type { RentalOrderDetails } from '../src/modules/rentals/domain/rental.models';
-import type { CreateRentalOrderData } from '../src/modules/rentals/domain/rental.repository';
+import type { CreateRentalOrderData } from '../src/modules/rentals/domain/ports/rental-creation.port';
 import { createOrder } from '../src/modules/rentals/infrastructure/rental-booking';
 import {
   completeRentalCreationClaim,

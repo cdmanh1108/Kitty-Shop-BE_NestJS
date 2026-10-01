@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
-import { RENTAL_ORDER_READER, type RentalOrderReader } from '../domain/rental.repository';
+import {
+  RENTAL_ORDER_READER,
+  type RentalOrderReader,
+} from '../domain/ports/rental-order-reader.port';
 import type { RentalListQuery } from './rental.contracts';
 import { RentalNotFoundError } from './rental.errors';
 

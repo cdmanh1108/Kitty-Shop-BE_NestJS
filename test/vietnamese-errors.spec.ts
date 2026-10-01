@@ -5,8 +5,8 @@ import * as request from 'supertest';
 import type { Server } from 'node:http';
 import { configureApplication } from '../src/configure-application';
 import { LoginReqDto } from '../src/modules/auth/api/auth.dto';
-import { CreateRentalOrderReqDto } from '../src/modules/rentals/api/rental.dto';
-import { WebCreateOrderReqDto } from '../src/modules/rentals/api/web/dto/web-rental.dto';
+import { CreateRentalOrderReqDto } from '../src/modules/rentals/api/admin/dto/rental-creation.dto';
+import { WebCreateOrderReqDto } from '../src/modules/rentals/api/web/dto/web-rental-order.dto';
 
 @Controller('validation')
 class ValidationController {

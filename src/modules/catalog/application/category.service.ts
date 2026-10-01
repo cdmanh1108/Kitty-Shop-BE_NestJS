@@ -10,7 +10,7 @@ import type {
   CreateCategoryInput,
   UpdateCategoryInput,
 } from './catalog.contracts';
-import { CatalogInvariantError } from '../domain/catalog.repository';
+import { CatalogInvariantError } from '../domain/catalog-errors';
 import { CategoryInUseError } from './catalog-application.errors';
 
 @Injectable()

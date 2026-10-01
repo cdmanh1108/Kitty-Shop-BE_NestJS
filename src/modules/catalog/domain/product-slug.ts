@@ -1,5 +1,5 @@
 import { slugify } from '@common/utils/slugify';
-import { CATALOG_ERROR_CODE, CatalogInvariantError } from './catalog.repository';
+import { CATALOG_ERROR_CODE, CatalogInvariantError } from './catalog-errors';
 
 /** Canonical persisted public identity for a product. */
 export function normalizeProductSlug(value: string): string {

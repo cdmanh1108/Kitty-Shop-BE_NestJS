@@ -1,0 +1,155 @@
+import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
+import { paginateMeta } from '@common/types/pagination';
+import type { PrismaService } from '@database/prisma/prisma.service';
+import type { Prisma, PrismaClient } from '@prisma/client';
+import type { RentalOrderReader } from '../domain/ports/rental-order-reader.port';
+
+export async function list(
+  prisma: PrismaService,
+  input: Parameters<RentalOrderReader['list']>[0],
+): ReturnType<RentalOrderReader['list']> {
+  const phoneSearch = input.search?.replace(/\D/g, '');
+  const where = {
+    shopId: input.shopId,
+    ...(input.customerId ? { customerId: input.customerId } : {}),
+    ...(input.status ? { status: input.status } : {}),
+    ...(input.paymentStatus ? { paymentStatus: input.paymentStatus } : {}),
+    ...(input.from || input.until
+      ? {
+          rentalStartAt: input.until ? { lt: input.until } : undefined,
+          rentalEndAt: input.from ? { gt: input.from } : undefined,
+        }
+      : {}),
+    ...(input.search
+      ? {
+          OR: [
+            { orderNumber: { contains: input.search, mode: 'insensitive' as const } },
+            { customer: { fullName: { contains: input.search, mode: 'insensitive' as const } } },
+            ...(phoneSearch ? [{ customer: { normalizedPhone: { contains: phoneSearch } } }] : []),
+          ],
+        }
+      : {}),
+  };
+  const [items, total] = await prisma.$transaction([
+    prisma.rentalOrder.findMany({
+      where,
+      select: {
+        id: true,
+        orderNumber: true,
+        customerId: true,
+        rentalStartAt: true,
+        rentalEndAt: true,
+        status: true,
+        paymentStatus: true,
+        depositStatus: true,
+        grandTotal: true,
+        customer: { select: { id: true, fullName: true, phone: true } },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: (input.page - 1) * input.limit,
+      take: input.limit,
+    }),
+    prisma.rentalOrder.count({ where }),
+  ]);
+  const counts = items.length
+    ? await prisma.rentalOrderItem.groupBy({
+        by: ['orderId'],
+        where: { shopId: input.shopId, orderId: { in: items.map((item) => item.id) } },
+        orderBy: { orderId: 'asc' },
+        _sum: { quantity: true },
+        _count: { _all: true },
+      })
+    : [];
+  const countByOrder = new Map(
+    counts.map((row) => [
+      row.orderId,
+      { itemCount: row._sum.quantity ?? 0, productCount: row._count._all },
+    ]),
+  );
+  return {
+    items: items.map((item) => ({
+      ...item,
+      itemCount: countByOrder.get(item.id)?.itemCount ?? 0,
+      productCount: countByOrder.get(item.id)?.productCount ?? 0,
+    })),
+    meta: paginateMeta(input.page, input.limit, total),
+  };
+}
+
+export function get(
+  prisma: PrismaService,
+  shopId: string,
+  id: string,
+): ReturnType<RentalOrderReader['get']> {
+  return getWithTx(prisma, shopId, id);
+}
+
+export async function getStatus(
+  prisma: PrismaService,
+  shopId: string,
+  id: string,
+): ReturnType<RentalOrderReader['getStatus']> {
+  const order = await prisma.rentalOrder.findFirst({
+    where: { id, shopId },
+    select: { status: true },
+  });
+  return order?.status ?? null;
+}
+
+export function getSchedule(
+  prisma: PrismaService,
+  shopId: string,
+  id: string,
+): ReturnType<RentalOrderReader['getSchedule']> {
+  return prisma.rentalOrder.findFirst({
+    where: { id, shopId },
+    select: { status: true, rentalStartAt: true, rentalEndAt: true },
+  });
+}
+
+export function getWithTx(
+  tx: Prisma.TransactionClient | PrismaClient,
+  shopId: string,
+  id: string,
+): ReturnType<RentalOrderReader['get']> {
+  return tx.rentalOrder.findFirst({
+    where: { id, shopId },
+    include: {
+      confirmation: true,
+      returnRecord: { include: { inspections: true } },
+      settlement: true,
+      customer: true,
+      location: true,
+      items: {
+        include: {
+          allocations: { include: { inventoryItem: true } },
+          variant: {
+            include: {
+              media: {
+                where: { mediaType: 'IMAGE' },
+                orderBy: { sortOrder: 'asc' },
+                take: 1,
+              },
+            },
+          },
+          product: {
+            include: {
+              media: {
+                where: { mediaType: 'IMAGE' },
+                orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                take: 1,
+              },
+            },
+          },
+        },
+      },
+      charges: { where: { voidedAt: null }, orderBy: { createdAt: 'asc' } },
+      payments: {
+        where: { status: TRANSACTION_STATUS.COMPLETED, voidedAt: null },
+        orderBy: { paidAt: 'asc' },
+      },
+      deliveries: { orderBy: { createdAt: 'asc' } },
+      statusHistory: { orderBy: { changedAt: 'asc' } },
+    },
+  });
+}

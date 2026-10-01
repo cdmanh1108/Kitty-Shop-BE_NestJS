@@ -1,6 +1,6 @@
 import { toBookableVariant, bookableVariantInclude } from './rental-prisma.mapper';
 import type { PrismaService } from '@database/prisma/prisma.service';
-import type { RentalAvailabilityReader } from '../domain/rental.repository';
+import type { RentalAvailabilityReader } from '../domain/ports/rental-availability.port';
 import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
 
 export async function getBookableVariant(
@@ -49,4 +49,43 @@ export async function getBookableVariants(
     const bookable = toBookableVariant(variant ?? null, input.durationDays);
     return bookable ? [bookable] : [];
   });
+}
+
+export async function findActiveVariantIdsByProduct(
+  prisma: PrismaService,
+  shopId: string,
+  productId: string,
+  storefrontEligibility = false,
+): Promise<string[]> {
+  const result = await findActiveVariantIdsByProducts(
+    prisma,
+    shopId,
+    [productId],
+    storefrontEligibility,
+  );
+  return result[productId] ?? [];
+}
+
+export async function findActiveVariantIdsByProducts(
+  prisma: PrismaService,
+  shopId: string,
+  productIds: readonly string[],
+  storefrontEligibility = false,
+): Promise<Record<string, string[]>> {
+  const uniqueProductIds = [...new Set(productIds)];
+  if (uniqueProductIds.length === 0) return {};
+
+  const variants = await prisma.productVariant.findMany({
+    where: {
+      productId: { in: uniqueProductIds },
+      shopId,
+      status: 'ACTIVE',
+      archivedAt: null,
+      ...(storefrontEligibility ? { product: storefrontProductEligibility } : {}),
+    },
+    select: { id: true, productId: true },
+  });
+  const idsByProduct = new Map(uniqueProductIds.map((productId) => [productId, [] as string[]]));
+  for (const variant of variants) idsByProduct.get(variant.productId)?.push(variant.id);
+  return Object.fromEntries(idsByProduct);
 }

@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { normalizeCustomerPhone } from '@modules/customers/domain/customer-phone';
-import { RENTAL_ORDER_READER, type RentalOrderReader } from '../domain/rental.repository';
+import {
+  RENTAL_ORDER_READER,
+  type RentalOrderReader,
+} from '../domain/ports/rental-order-reader.port';
 import type { WebOrderLookupInput, WebOrderLookupResult } from './web-rental.contracts';
 import { RentalNotFoundError } from './rental.errors';
 

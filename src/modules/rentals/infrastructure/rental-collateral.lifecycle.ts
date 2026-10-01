@@ -6,9 +6,9 @@ import { RENTAL_STATUS } from '../domain/rental-status';
 import { calculateLateCharges } from '../domain/rental-settlement';
 import { RentalInvariantError } from '../domain/rental-errors';
 import type { RentalOrderDetails } from '../domain/rental.models';
-import type { ReturnPreviewData } from '../domain/rental.repository';
+import type { ReturnPreviewData } from '../domain/ports/rental-order-reader.port';
 import { rentalLedger } from './rental-ledger';
-import { getWithTx } from './rental-queries';
+import { getWithTx } from './rental-admin.queries';
 
 export async function getReturnPreview(
   prisma: PrismaService,

@@ -28,12 +28,14 @@ import {
   WebProductDetailDto,
   WebProductListQueryDto,
   WebProductListResDto,
+} from './dto/web-product.dto';
+import {
   WebResolvedStorefrontSelectionDto,
   WebSelectionRequiredStorefrontSelectionDto,
   WebStorefrontSelectionResolveReqDto,
   WebStorefrontSelectionResolveResDto,
   WebUnavailableStorefrontSelectionDto,
-} from './dto/web-catalog.dto';
+} from './dto/web-storefront-selection.dto';
 
 @ApiTags('Web - Catalog')
 @ApiSurface('web')

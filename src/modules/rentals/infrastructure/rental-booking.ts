@@ -15,12 +15,12 @@ import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/pa
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import type { Prisma } from '@prisma/client';
-import {
-  RentalOverlapError,
-  type CreateRentalOrderData,
-  type RentalCreationRepository,
-} from '../domain/rental.repository';
-import { getWithTx } from './rental-queries';
+import { RentalOverlapError } from '../domain/rental-errors';
+import type {
+  CreateRentalOrderData,
+  RentalCreationRepository,
+} from '../domain/ports/rental-creation.port';
+import { getWithTx } from './rental-admin.queries';
 import { isOverlapError } from './rental-errors';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { RentalInventoryUnavailableError, RentalInvariantError } from '../domain/rental-errors';

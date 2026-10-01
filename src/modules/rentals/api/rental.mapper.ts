@@ -11,15 +11,17 @@ import type {
 } from '../application/rental.contracts';
 import type {
   AddRentalChargeReqDto,
+  RescheduleRentalReqDto,
+  TransitionRentalReqDto,
+} from './admin/dto/rental-lifecycle.dto';
+import type {
   CreateRentalItemReqDto,
   CreateRentalOrderReqDto,
   RentalChargeReqDto,
   RentalDeliveryReqDto,
-  RentalListQueryDto,
-  RescheduleRentalReqDto,
-  ReturnRentalOrderReqDto,
-  TransitionRentalReqDto,
-} from './rental.dto';
+} from './admin/dto/rental-creation.dto';
+import type { RentalListQueryDto } from './admin/dto/rental-order.dto';
+import type { ReturnRentalOrderReqDto } from './admin/dto/rental-return.dto';
 
 export function toAddRentalChargeInput(dto: AddRentalChargeReqDto): AddRentalChargeInput {
   return { ...dto };

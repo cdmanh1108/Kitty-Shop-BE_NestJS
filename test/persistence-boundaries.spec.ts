@@ -9,8 +9,8 @@ import {
   bookableVariantInclude,
 } from '../src/modules/rentals/infrastructure/rental-prisma.mapper';
 import { availableInventoryWhere } from '../src/database/prisma/inventory-availability';
-import { RentalOverlapError } from '../src/modules/rentals/domain/rental.repository';
-import { CatalogInvariantError } from '../src/modules/catalog/domain/catalog.repository';
+import { RentalOverlapError } from '../src/modules/rentals/domain/rental-errors';
+import { CatalogInvariantError } from '../src/modules/catalog/domain/catalog-errors';
 
 const now = new Date('2026-09-11T01:30:00Z');
 function variant(): NonNullable<Parameters<typeof toBookableVariant>[0]> {

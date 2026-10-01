@@ -3,7 +3,7 @@ import type { Server } from 'node:http';
 import * as request from 'supertest';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { RentalReadPresenter } from '../../src/modules/rentals/application/rental-read.presenter';
-import { getWithTx } from '../../src/modules/rentals/infrastructure/rental-queries';
+import { getWithTx } from '../../src/modules/rentals/infrastructure/rental-admin.queries';
 import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';
 import { rentalScenario } from '../fixtures/rental.fixture';
 import { uniqueCode } from '../fixtures/test-factories';

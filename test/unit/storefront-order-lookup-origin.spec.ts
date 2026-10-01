@@ -1,5 +1,5 @@
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
-import { lookupStorefrontOrder } from '../../src/modules/rentals/infrastructure/rental-queries';
+import { lookupStorefrontOrder } from '../../src/modules/rentals/infrastructure/rental-web-order.queries';
 
 describe('lookupStorefrontOrder', () => {
   it('limits public guest lookup to storefront-created ONLINE orders', async () => {

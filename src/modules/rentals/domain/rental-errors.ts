@@ -30,3 +30,9 @@ export class RentalInventoryUnavailableError extends Error {
     this.name = 'RentalInventoryUnavailableError';
   }
 }
+
+export class RentalOverlapError extends Error {
+  constructor() {
+    super('Một hoặc nhiều món đồ không còn trống trong khoảng thời gian đã chọn.');
+  }
+}

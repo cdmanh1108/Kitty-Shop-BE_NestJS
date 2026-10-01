@@ -3,6 +3,7 @@
 ## 1. Overview & Architectural Principle
 
 `kitty-be` serves two distinct consumers:
+
 1. **Admin Portal (`kitty-admin-fe`)**: Internal management for staff, store operations, warehouse inventory, finance, settlements, and reporting.
 2. **Web Storefront (`kitty-web-nextjs`)**: Public customer-facing rental catalogue, availability checking, instant quoting, web bookings, and order lookup.
 
@@ -68,15 +69,19 @@ src/
 │       └── tenant.module.ts
 │
 ├── modules/
-│   ├── catalog/
+│   ├── catalog/       # Catalog, categories, inventory and reference data
 │   │   ├── api/
 │   │   │   ├── admin/
-│   │   │   │   └── admin-catalog.controller.ts   # Admin Catalog endpoints
+│   │   │   │   ├── admin-category.controller.ts
+│   │   │   │   ├── admin-catalog-reference.controller.ts
+│   │   │   │   ├── admin-inventory.controller.ts
+│   │   │   │   ├── admin-product.controller.ts
+│   │   │   │   └── dto/                          # Category, product and inventory DTOs
 │   │   │   ├── web/
-│   │   │   │   ├── dto/web-catalog.dto.ts        # Public-safe Web DTOs
+│   │   │   │   ├── dto/web-product.dto.ts
+│   │   │   │   ├── dto/web-storefront-selection.dto.ts
 │   │   │   │   ├── web-catalog.controller.ts     # Public Storefront Controller
 │   │   │   │   └── web-catalog.mapper.ts         # Domain -> Web DTO transformer
-│   │   │   └── catalog.controller.ts             # Backward-compatibility re-export
 │   │   ├── application/
 │   │   ├── domain/
 │   │   └── infrastructure/
@@ -84,11 +89,11 @@ src/
 │   ├── rentals/
 │   │   ├── api/
 │   │   │   ├── admin/
-│   │   │   │   └── admin-rental.controller.ts    # Admin Rental endpoints
+│   │   │   │   ├── admin-rental.controller.ts    # Admin Rental endpoints
+│   │   │   │   └── dto/                          # Creation, order, lifecycle, return and settlement
 │   │   │   ├── web/
-│   │   │   │   ├── dto/web-rental.dto.ts         # Public Web Rental DTOs
+│   │   │   │   ├── dto/                          # Evaluation, order, lookup and account-order DTOs
 │   │   │   │   └── web-rental.controller.ts      # Public Storefront Booking Controller
-│   │   │   └── rental.controller.ts              # Backward-compatibility re-export
 │   │   ├── application/
 │   │   │   ├── rental-read.service.ts  # admin order reads
 │   │   │   ├── rental-creation.service.ts  # offline rental creation
@@ -110,7 +115,7 @@ src/
 │   │   │       └── web-policy.controller.ts      # GET /web/policies
 │   │   └── ...
 │   │
-│   ├── inventory/      # Admin-only module (no web API)
+│   ├── web-auth/       # Public storefront identity and sessions
 │   ├── finance/        # Admin-only module (no web API)
 │   ├── deliveries/     # Admin-only module (no web API)
 │   ├── reports/        # Admin-only module (no web API)
@@ -125,12 +130,13 @@ src/
 
 Two distinct Swagger UIs and OpenAPI JSON documents are exposed:
 
-| Target | Swagger UI | OpenAPI JSON | Scope | Consumers |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin API** | `/docs/admin` (and `/docs`) | `/docs/admin-json` & `generated/openapi-admin.json` | Internal operations & full admin controls | `kitty-admin-fe` |
-| **Web Sale API** | `/docs/web` | `/docs/web-json` & `generated/openapi-web.json` | Public storefront catalog, availability, quote, booking | `kitty-web-nextjs` |
+| Target           | Swagger UI                  | OpenAPI JSON                                        | Scope                                                   | Consumers          |
+| :--------------- | :-------------------------- | :-------------------------------------------------- | :------------------------------------------------------ | :----------------- |
+| **Admin API**    | `/docs/admin` (and `/docs`) | `/docs/admin-json` & `generated/openapi-admin.json` | Internal operations & full admin controls               | `kitty-admin-fe`   |
+| **Web Sale API** | `/docs/web`                 | `/docs/web-json` & `generated/openapi-web.json`     | Public storefront catalog, availability, quote, booking | `kitty-web-nextjs` |
 
 ### Backward Compatibility for Legacy Consumers
+
 `generated/openapi.json` is preserved as the Admin OpenAPI specification to prevent breaking changes for `kitty-admin-fe` scripts (`npm run api:sync`, `npm run api:check`).
 
 ---
@@ -138,15 +144,19 @@ Two distinct Swagger UIs and OpenAPI JSON documents are exposed:
 ## 4. Code Generation Workflow
 
 1. **Backend Export**:
+
    ```bash
    npm run openapi:export
    ```
+
    Generates:
+
    - `generated/openapi-admin.json`
    - `generated/openapi-web.json`
    - `generated/openapi.json`
 
 2. **Admin Frontend (`kitty-admin-fe`)**:
+
    ```bash
    npm run api:sync
    npm run api:check

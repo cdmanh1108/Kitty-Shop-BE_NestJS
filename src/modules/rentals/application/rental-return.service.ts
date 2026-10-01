@@ -5,10 +5,12 @@ import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { RENTAL_STATUS } from '../domain/rental-status';
 import {
   RENTAL_LIFECYCLE_REPOSITORY,
-  RENTAL_ORDER_READER,
   type RentalLifecycleRepository,
+} from '../domain/ports/rental-lifecycle.port';
+import {
+  RENTAL_ORDER_READER,
   type RentalOrderReader,
-} from '../domain/rental.repository';
+} from '../domain/ports/rental-order-reader.port';
 import type { ReturnRentalOrderInput } from './rental.contracts';
 import {
   RentalAccessDeniedError,

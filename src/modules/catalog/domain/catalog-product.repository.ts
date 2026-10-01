@@ -13,7 +13,7 @@ import type {
   CreateProductData,
   ProductMediaData,
   UpdateProductData,
-} from './catalog.repository';
+} from './catalog-product.inputs';
 
 export const CATALOG_PRODUCT_REPOSITORY = Symbol('CATALOG_PRODUCT_REPOSITORY');
 

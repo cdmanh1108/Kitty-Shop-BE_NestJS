@@ -12,7 +12,7 @@ import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import { redactLog } from '../src/common/logging/application-logger';
-import { RentalOverlapError } from '../src/modules/rentals/domain/rental.repository';
+import { RentalOverlapError } from '../src/modules/rentals/domain/rental-errors';
 import {
   InvalidRentalIntervalError,
   RentalClaimLostError,
@@ -22,7 +22,7 @@ import { FinanceInvariantError } from '../src/modules/finance/domain/finance.rep
 import {
   CATALOG_ERROR_CODE,
   CatalogInvariantError,
-} from '../src/modules/catalog/domain/catalog.repository';
+} from '../src/modules/catalog/domain/catalog-errors';
 import { BookingCustomerUnavailableError } from '../src/modules/customers/domain/customer-errors';
 import {
   InvalidRentalInputError,

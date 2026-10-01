@@ -3,7 +3,7 @@ import {
   validateInventoryStatusTransition,
   getAllowedOperationalTransitions,
 } from '@modules/catalog/domain/inventory-status.policy';
-import { CatalogInvariantError } from '@modules/catalog/domain/catalog.repository';
+import { CatalogInvariantError } from '@modules/catalog/domain/catalog-errors';
 
 describe('Inventory Status Transition Policy', () => {
   describe('validateInventoryStatusTransition', () => {

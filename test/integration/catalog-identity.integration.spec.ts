@@ -15,7 +15,7 @@ import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/publi
 import {
   CATALOG_ERROR_CODE,
   CatalogProductSlugAlreadyExistsError,
-} from '../../src/modules/catalog/domain/catalog.repository';
+} from '../../src/modules/catalog/domain/catalog-errors';
 
 describe('Product Slug Identity Integration', () => {
   let app: INestApplication;

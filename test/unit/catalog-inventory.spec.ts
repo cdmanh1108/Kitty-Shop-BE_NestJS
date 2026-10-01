@@ -1,9 +1,6 @@
 import { InventoryService } from '@modules/catalog/application/inventory.service';
 import type { CatalogInventoryRepository } from '@modules/catalog/domain/catalog-inventory.repository';
-import {
-  CATALOG_ERROR_CODE,
-  CatalogInvariantError,
-} from '@modules/catalog/domain/catalog.repository';
+import { CATALOG_ERROR_CODE, CatalogInvariantError } from '@modules/catalog/domain/catalog-errors';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';

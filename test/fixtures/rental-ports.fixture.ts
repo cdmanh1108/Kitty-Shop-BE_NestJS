@@ -1,11 +1,11 @@
+import type { RentalAvailabilityReader } from '../../src/modules/rentals/domain/ports/rental-availability.port';
 import type {
-  RentalAvailabilityReader,
   RentalCreationRepository,
   RentalCreationValidator,
-  RentalLifecycleRepository,
-  RentalOrderReader,
-  WebAccountRentalOrdersReader,
-} from '../../src/modules/rentals/domain/rental.repository';
+} from '../../src/modules/rentals/domain/ports/rental-creation.port';
+import type { RentalLifecycleRepository } from '../../src/modules/rentals/domain/ports/rental-lifecycle.port';
+import type { RentalOrderReader } from '../../src/modules/rentals/domain/ports/rental-order-reader.port';
+import type { WebAccountRentalOrdersReader } from '../../src/modules/rentals/domain/ports/web-account-rental-orders.reader';
 
 export function rentalAvailabilityReaderMock(): jest.Mocked<RentalAvailabilityReader> {
   const reader: jest.Mocked<RentalAvailabilityReader> = {

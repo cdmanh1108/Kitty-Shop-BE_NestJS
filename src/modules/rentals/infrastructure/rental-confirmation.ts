@@ -7,7 +7,7 @@ import type { Clock } from '@common/clock/clock';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { assertManualConfirmation, type ConfirmRentalData } from '../domain/rental-confirmation';
 import { RentalInvariantError } from '../domain/rental-errors';
-import { getWithTx } from './rental-queries';
+import { getWithTx } from './rental-admin.queries';
 import { assertInventoryRentable } from './rental-inventory';
 import { lockRentalOrder } from '@database/prisma/rental-order-lock';
 

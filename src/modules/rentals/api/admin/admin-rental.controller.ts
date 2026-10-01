@@ -51,16 +51,17 @@ import { RentalReturnService } from '../../application/rental-return.service';
 import { RentalReadPresenter } from '../../application/rental-read.presenter';
 import {
   AddRentalChargeReqDto,
-  CreateRentalOrderReqDto,
+  RescheduleRentalReqDto,
+  TransitionRentalReqDto,
+} from './dto/rental-lifecycle.dto';
+import { CreateRentalOrderReqDto } from './dto/rental-creation.dto';
+import {
   RentalListQueryDto,
   RentalOrderPageResDto,
   RentalOrderResDto,
-  RescheduleRentalReqDto,
-  ReturnPreviewResDto,
-  ReturnRentalOrderReqDto,
-  SettleRentalOrderReqDto,
-  TransitionRentalReqDto,
-} from '../rental.dto';
+} from './dto/rental-order.dto';
+import { ReturnPreviewResDto, ReturnRentalOrderReqDto } from './dto/rental-return.dto';
+import { SettleRentalOrderReqDto } from './dto/rental-settlement.dto';
 import {
   toAddRentalChargeInput,
   toCreateRentalOrderInput,

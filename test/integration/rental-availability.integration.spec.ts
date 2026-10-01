@@ -13,7 +13,7 @@ import {
 } from '../fixtures/test-factories';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { SystemClock } from '../../src/common/clock/system-clock';
-import { RentalOverlapError } from '../../src/modules/rentals/domain/rental.repository';
+import { RentalOverlapError } from '../../src/modules/rentals/domain/rental-errors';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 
 describe('Rental Availability & Exclusion Constraint Integration', () => {

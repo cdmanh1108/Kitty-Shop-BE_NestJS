@@ -1,12 +1,13 @@
 import { assertInventoryRentable } from './rental-inventory';
-import { getWithTx } from './rental-queries';
+import { getWithTx } from './rental-admin.queries';
 import { isOverlapError } from './rental-errors';
 import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { ALLOCATION_STATUS } from '../domain/rental-status';
 import { assertRentalReschedule, canRescheduleRental } from '../domain/rental-policy';
-import { RentalOverlapError, type RentalLifecycleRepository } from '../domain/rental.repository';
+import { RentalOverlapError } from '../domain/rental-errors';
+import type { RentalLifecycleRepository } from '../domain/ports/rental-lifecycle.port';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { assertChargeMutationAllowed } from '../domain/rental-monetary.policy';
 import { lockRentalOrder } from '@database/prisma/rental-order-lock';

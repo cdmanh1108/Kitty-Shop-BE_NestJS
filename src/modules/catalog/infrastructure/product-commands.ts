@@ -7,14 +7,14 @@ import type {
   CreateProductData,
   ProductMediaData,
   UpdateProductData,
-} from '../domain/catalog.repository';
+} from '../domain/catalog-product.inputs';
 import type { CatalogProductRepository } from '../domain/catalog-product.repository';
 import {
   CATALOG_ERROR_CODE,
   CatalogCategoryError,
   CatalogInvariantError,
   CatalogProductSlugAlreadyExistsError,
-} from '../domain/catalog.repository';
+} from '../domain/catalog-errors';
 import { generateProductSlug, normalizeProductSlug } from '../domain/product-slug';
 
 function handleProductUniqueViolation(error: unknown): never {

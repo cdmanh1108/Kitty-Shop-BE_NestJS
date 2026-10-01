@@ -4,12 +4,14 @@ import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/pa
 import { Inject, Injectable } from '@nestjs/common';
 import {
   RENTAL_LIFECYCLE_REPOSITORY,
-  WEB_ACCOUNT_RENTAL_ORDERS_READER,
   type RentalLifecycleRepository,
+} from '../domain/ports/rental-lifecycle.port';
+import {
+  WEB_ACCOUNT_RENTAL_ORDERS_READER,
   type WebAccountRentalOrdersReader,
   type WebAccountRentalOrderDetail,
   type WebAccountRentalOrderPage,
-} from '../domain/rental.repository';
+} from '../domain/ports/web-account-rental-orders.reader';
 import { RentalInvariantError } from '../domain/rental-errors';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { RENTAL_STATUS } from '../domain/rental-status';

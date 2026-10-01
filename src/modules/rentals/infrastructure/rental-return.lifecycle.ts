@@ -13,9 +13,9 @@ import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { Prisma } from '@prisma/client';
 import { CHARGE_TYPE } from '../domain/charge-type';
-import type { ReceiveRentalReturnData } from '../domain/rental.repository';
+import type { ReceiveRentalReturnData } from '../domain/ports/rental-lifecycle.port';
 import type { RentalOrderDetails } from '../domain/rental.models';
-import { getWithTx } from './rental-queries';
+import { getWithTx } from './rental-admin.queries';
 import {
   assertReturnInspection,
   INSPECTION_TO_INVENTORY_STATUS,

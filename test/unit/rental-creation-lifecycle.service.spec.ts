@@ -1,10 +1,8 @@
 import { RentalCreationService } from '../../src/modules/rentals/application/rental-creation.service';
 import { RentalLifecycleService } from '../../src/modules/rentals/application/rental-lifecycle.service';
-import type {
-  BookableVariant,
-  RentalCreationRepository,
-  RentalLifecycleRepository,
-} from '../../src/modules/rentals/domain/rental.repository';
+import type { BookableVariant } from '../../src/modules/rentals/domain/ports/rental-availability.port';
+import type { RentalCreationRepository } from '../../src/modules/rentals/domain/ports/rental-creation.port';
+import type { RentalLifecycleRepository } from '../../src/modules/rentals/domain/ports/rental-lifecycle.port';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { Clock } from '../../src/common/clock/clock';
 import type { CurrentUser } from '../../src/common/types/current-user';

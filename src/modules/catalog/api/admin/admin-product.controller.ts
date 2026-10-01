@@ -1,4 +1,4 @@
-import { ProductLookupPageResDto } from '../catalog-read.dto';
+import { ProductLookupPageResDto } from './dto/product-query.dto';
 import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';

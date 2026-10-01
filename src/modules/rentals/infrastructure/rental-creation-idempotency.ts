@@ -2,7 +2,7 @@ import type { IdempotencyRecordClient } from '@database/prisma/idempotency';
 import { completeIdempotencyClaim, lockIdempotencyClaim } from '@database/prisma/idempotency';
 import { RentalClaimLostError } from '../domain/rental-errors';
 import type { RentalOrderDetails } from '../domain/rental.models';
-import type { CreateRentalOrderData } from '../domain/rental.repository';
+import type { CreateRentalOrderData } from '../domain/ports/rental-creation.port';
 import { toWebRentalCreateResult } from '../domain/web-rental-create-result';
 import type { Prisma } from '@prisma/client';
 

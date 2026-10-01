@@ -1,4 +1,7 @@
-import type { BookableVariant, RentalAvailabilityReader } from '../domain/rental.repository';
+import type {
+  BookableVariant,
+  RentalAvailabilityReader,
+} from '../domain/ports/rental-availability.port';
 import type {
   WebRentalItemInput,
   WebRentalLineAvailability,

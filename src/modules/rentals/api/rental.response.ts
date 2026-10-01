@@ -2,7 +2,7 @@ import type {
   RentalDetailsResult,
   RentalOrderSummaryResult,
 } from '../application/rental-read.models';
-import type { RentalOrderListItemResDto, RentalOrderResDto } from './rental.dto';
+import type { RentalOrderListItemResDto, RentalOrderResDto } from './admin/dto/rental-order.dto';
 
 function timestamp(value: Date | string): string {
   return typeof value === 'string' ? value : value.toISOString();

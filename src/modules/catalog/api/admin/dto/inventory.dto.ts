@@ -3,7 +3,16 @@ import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
 import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import { ColorSummaryResDto, ShopLocationSummaryResDto, SizeSummaryResDto } from './category.dto';
 import { RentalRateResDto } from './product.dto';
 
@@ -205,5 +214,42 @@ export class InventoryListItemResDto extends PickType(InventoryItemResDto, [
 
 export class InventoryPageResDto {
   @ApiProperty({ type: [InventoryListItemResDto] }) items!: InventoryListItemResDto[];
+  @ApiProperty({ type: PaginationMetaResDto }) meta!: PaginationMetaResDto;
+}
+
+export class InventorySummaryResDto {
+  @ApiProperty() total!: number;
+  @ApiProperty() available!: number;
+  @ApiProperty() occupied!: number;
+  @ApiProperty() needsAttention!: number;
+}
+
+export class InventoryHistoryQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsOptional()
+  productId?: string;
+  @ApiPropertyOptional()
+  @IsUUID(undefined, { message: 'Mã món đồ phải là UUID hợp lệ.' })
+  @IsOptional()
+  inventoryItemId?: string;
+  @ApiPropertyOptional({ type: Number, maximum: 100, default: 20 })
+  @Max(100, { message: 'Số kết quả mỗi trang phải nhỏ hơn hoặc bằng $constraint1.' })
+  override limit = 20;
+}
+
+export class InventoryHistoryItemResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() inventoryItemId!: string;
+  @ApiProperty() sku!: string;
+  @ApiProperty() productName!: string;
+  @ApiProperty({ type: String, nullable: true }) fromStatus!: string | null;
+  @ApiProperty() toStatus!: string;
+  @ApiProperty({ type: String, nullable: true }) reason!: string | null;
+  @ApiProperty() changedAt!: string;
+}
+
+export class InventoryHistoryPageResDto {
+  @ApiProperty({ type: [InventoryHistoryItemResDto] }) items!: InventoryHistoryItemResDto[];
   @ApiProperty({ type: PaginationMetaResDto }) meta!: PaginationMetaResDto;
 }

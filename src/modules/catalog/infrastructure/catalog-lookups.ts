@@ -4,7 +4,7 @@ import type { CatalogReferenceDataRepository } from '../domain/catalog-reference
 import {
   CatalogCategoryCodeAlreadyExistsError,
   CatalogCategoryInvalidParentError,
-} from '../domain/catalog.repository';
+} from '../domain/catalog-errors';
 import { Prisma } from '@prisma/client';
 
 export async function listLookups(

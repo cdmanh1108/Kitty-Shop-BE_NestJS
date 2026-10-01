@@ -16,9 +16,9 @@ import {
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
 import { fixedClock, rentalScenario, payRentalForConfirmation } from '../fixtures/rental.fixture';
-import { RentalOverlapError } from '../../src/modules/rentals/domain/rental.repository';
+import { RentalOverlapError } from '../../src/modules/rentals/domain/rental-errors';
 import { RentalInventoryUnavailableError } from '../../src/modules/rentals/domain/rental-errors';
-import { CatalogInvariantError } from '../../src/modules/catalog/domain/catalog.repository';
+import { CatalogInvariantError } from '../../src/modules/catalog/domain/catalog-errors';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 
 describe('Concurrent Rental Creation & Transaction Rollback Integration', () => {

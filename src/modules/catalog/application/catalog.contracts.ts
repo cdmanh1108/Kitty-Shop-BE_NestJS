@@ -4,7 +4,7 @@ import type {
   CreateProductData,
   ProductMediaData,
   UpdateProductData,
-} from '../domain/catalog.repository';
+} from '../domain/catalog-product.inputs';
 export interface AddInventoryInput {
   variantId: string;
   locationId?: string;

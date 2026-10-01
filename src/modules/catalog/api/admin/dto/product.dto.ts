@@ -1,4 +1,3 @@
-import { ProductListItemResDto } from '../../catalog-read.dto';
 import { PaginationMetaResDto } from '@common/dto/response.dto';
 import { PRODUCT_STATUS } from '@modules/catalog/domain/catalog-status';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -289,6 +288,22 @@ export class ProductResDto {
   @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
   @ApiPropertyOptional() createdAt?: string;
   @ApiPropertyOptional() updatedAt?: string;
+}
+
+export class ProductListItemResDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() status!: string;
+  @ApiProperty() categoryId!: string;
+  @ApiProperty() categoryName!: string;
+  @ApiProperty({ type: String, nullable: true }) imageUrl!: string | null;
+  @ApiProperty({ type: String }) defaultDepositAmount!: string;
+  @ApiProperty() variantCount!: number;
+  @ApiProperty({ type: [String] }) sizes!: string[];
+  @ApiProperty({ type: [String] }) colors!: string[];
+  @ApiProperty({ type: String, nullable: true }) minPrice!: string | null;
+  @ApiProperty({ type: String, nullable: true }) maxPrice!: string | null;
 }
 
 export class ProductPageResDto {

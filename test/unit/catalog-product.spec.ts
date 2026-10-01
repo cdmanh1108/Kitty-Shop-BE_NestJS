@@ -10,7 +10,7 @@ import {
   CatalogCategoryError,
   CatalogInvariantError,
   CatalogProductSlugAlreadyExistsError,
-} from '../../src/modules/catalog/domain/catalog.repository';
+} from '../../src/modules/catalog/domain/catalog-errors';
 import type { CatalogProductRepository } from '../../src/modules/catalog/domain/catalog-product.repository';
 import { ProductService } from '../../src/modules/catalog/application/product.service';
 import {
