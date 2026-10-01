@@ -105,8 +105,8 @@ export async function listInventory(
             sizeId: true,
             colorId: true,
             product: { select: { id: true, code: true, name: true, categoryId: true } },
-            size: { select: { id: true, code: true, name: true, sortOrder: true } },
-            color: { select: { id: true, code: true, name: true, hexColor: true } },
+            size: { select: { id: true, code: true, name: true, sortOrder: true, isActive: true } },
+            color: { select: { id: true, code: true, name: true, hexColor: true, isActive: true } },
           },
         },
         allocations: {

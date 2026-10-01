@@ -7662,13 +7662,17 @@
           },
           "sortOrder": {
             "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
           }
         },
         "required": [
           "id",
           "code",
           "name",
-          "sortOrder"
+          "sortOrder",
+          "isActive"
         ]
       },
       "ColorSummaryResDto": {
@@ -7686,12 +7690,16 @@
           "hexColor": {
             "type": "string",
             "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
           }
         },
         "required": [
           "id",
           "code",
-          "name"
+          "name",
+          "isActive"
         ]
       },
       "ShopLocationSummaryResDto": {

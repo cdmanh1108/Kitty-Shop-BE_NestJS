@@ -31,6 +31,7 @@ export class ColorSummaryResDto {
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) hexColor!: string | null;
+  @ApiProperty() isActive!: boolean;
 }
 
 export class UpdateColorReqDto {

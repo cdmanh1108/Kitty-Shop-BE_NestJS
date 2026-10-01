@@ -213,8 +213,8 @@ export async function findProduct(
           colorId: true,
           depositAmountOverride: true,
           status: true,
-          size: { select: { name: true } },
-          color: { select: { name: true, hexColor: true } },
+          size: { select: { id: true, code: true, name: true, sortOrder: true, isActive: true } },
+          color: { select: { id: true, code: true, name: true, hexColor: true, isActive: true } },
           rentalRates: {
             where: { isActive: true },
             orderBy: { durationDays: 'asc' },

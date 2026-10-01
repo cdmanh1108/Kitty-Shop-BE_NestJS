@@ -34,6 +34,7 @@ export class SizeSummaryResDto {
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
   @ApiProperty() sortOrder!: number;
+  @ApiProperty() isActive!: boolean;
 }
 
 export class UpdateSizeReqDto {

@@ -20,8 +20,8 @@ export type CatalogLookups = {
       productCount: number;
     }
   >;
-  sizes: Array<Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder'>>;
-  colors: Array<Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor'>>;
+  sizes: Array<Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder' | 'isActive'>>;
+  colors: Array<Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor' | 'isActive'>>;
   locations: Array<Pick<ShopLocationRecord, 'id' | 'code' | 'name' | 'isPrimary'>>;
 };
 
