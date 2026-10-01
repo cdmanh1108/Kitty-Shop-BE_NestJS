@@ -140,6 +140,9 @@ describe('ColorService and SizeService', () => {
   let findColorByCodeMock: jest.MockedFunction<CatalogColorRepository['findColorByCode']>;
   let isColorInUseMock: jest.MockedFunction<CatalogColorRepository['isColorInUse']>;
   let deleteColorMock: jest.MockedFunction<CatalogColorRepository['deleteColor']>;
+  let listColorsMock: jest.MockedFunction<CatalogColorRepository['listColors']>;
+  let updateColorMock: jest.MockedFunction<CatalogColorRepository['updateColor']>;
+  let updateColorStatusMock: jest.MockedFunction<CatalogColorRepository['updateColorStatus']>;
   let createSizeMock: jest.MockedFunction<CatalogSizeRepository['createSize']>;
   let findSizeByIdMock: jest.MockedFunction<CatalogSizeRepository['findSizeById']>;
   let findSizeByCodeMock: jest.MockedFunction<CatalogSizeRepository['findSizeByCode']>;
@@ -152,10 +155,16 @@ describe('ColorService and SizeService', () => {
     findColorByCodeMock = jest.fn().mockResolvedValue(null);
     isColorInUseMock = jest.fn();
     deleteColorMock = jest.fn();
+    listColorsMock = jest.fn();
+    updateColorMock = jest.fn();
+    updateColorStatusMock = jest.fn();
     colorRepository = {
+      listColors: listColorsMock,
       createColor: createColorMock,
       findColorById: findColorByIdMock,
       findColorByCode: findColorByCodeMock,
+      updateColor: updateColorMock,
+      updateColorStatus: updateColorStatusMock,
       isColorInUse: isColorInUseMock,
       deleteColor: deleteColorMock,
     };
@@ -210,6 +219,130 @@ describe('ColorService and SizeService', () => {
       service.createColor(user, { code: ' red ', name: 'Đỏ', hexColor: ' ' }),
     ).rejects.toMatchObject({ code: CATALOG_ERROR_CODE.COLOR_CODE_ALREADY_EXISTS });
     expect(createColorMock).not.toHaveBeenCalled();
+  });
+
+  it('trims management search and scopes list criteria to the current shop', async () => {
+    listColorsMock.mockResolvedValue({
+      items: [],
+      meta: { page: 2, limit: 10, total: 0, totalPages: 0 },
+    });
+    const service = new ColorService(colorRepository, { log: auditLog });
+
+    await service.listColors(user, { page: 2, limit: 10, q: ' RED ', status: 'ALL' });
+
+    expect(listColorsMock).toHaveBeenCalledWith({
+      shopId: user.shopId,
+      page: 2,
+      limit: 10,
+      q: 'RED',
+      status: 'ALL',
+    });
+  });
+
+  it('allows an inactive Color to keep its own code and applies only requested update fields', async () => {
+    const inactiveColor = { ...colorRecord, isActive: false };
+    findColorByIdMock.mockResolvedValue(inactiveColor);
+    findColorByCodeMock.mockResolvedValue(inactiveColor);
+    updateColorMock.mockResolvedValue({ ...inactiveColor, name: 'Red wine' });
+    const service = new ColorService(colorRepository, { log: auditLog });
+
+    await expect(
+      service.updateColor(user, inactiveColor.id, { name: ' Red wine ' }),
+    ).resolves.toMatchObject({
+      name: 'Red wine',
+      code: 'RED',
+      isActive: false,
+    });
+    expect(updateColorMock).toHaveBeenCalledWith(user.shopId, inactiveColor.id, {
+      name: 'Red wine',
+    });
+    expect(auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'UPDATE',
+        oldValues: {
+          id: inactiveColor.id,
+          code: inactiveColor.code,
+          name: 'Đỏ đô',
+          hexColor: inactiveColor.hexColor,
+          isActive: false,
+        },
+        newValues: {
+          id: inactiveColor.id,
+          code: inactiveColor.code,
+          name: 'Red wine',
+          hexColor: inactiveColor.hexColor,
+          isActive: false,
+        },
+      }),
+    );
+  });
+
+  it('allows the same normalized code on its own record and translates another record duplicate', async () => {
+    findColorByIdMock.mockResolvedValue(colorRecord);
+    findColorByCodeMock.mockResolvedValue(colorRecord);
+    updateColorMock.mockResolvedValue(colorRecord);
+    const service = new ColorService(colorRepository, { log: auditLog });
+
+    await expect(service.updateColor(user, colorRecord.id, { code: ' red ' })).resolves.toBe(
+      colorRecord,
+    );
+    expect(updateColorMock).toHaveBeenCalledWith(user.shopId, colorRecord.id, { code: 'RED' });
+
+    findColorByCodeMock.mockResolvedValue({ ...colorRecord, id: 'color-2' });
+    await expect(
+      service.updateColor(user, colorRecord.id, { code: ' blue ' }),
+    ).rejects.toMatchObject({ code: CATALOG_ERROR_CODE.COLOR_CODE_ALREADY_EXISTS });
+  });
+
+  it('clears hexColor only when explicitly requested and leaves an empty patch unaudited', async () => {
+    findColorByIdMock.mockResolvedValue(colorRecord);
+    updateColorMock.mockResolvedValue({ ...colorRecord, hexColor: null });
+    const service = new ColorService(colorRepository, { log: auditLog });
+
+    await expect(
+      service.updateColor(user, colorRecord.id, { hexColor: null }),
+    ).resolves.toMatchObject({
+      hexColor: null,
+    });
+    expect(updateColorMock).toHaveBeenCalledWith(user.shopId, colorRecord.id, { hexColor: null });
+
+    auditLog.mockClear();
+    await expect(service.updateColor(user, colorRecord.id, {})).resolves.toBe(colorRecord);
+    expect(updateColorMock).toHaveBeenCalledTimes(1);
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it('audits only actual Color status transitions', async () => {
+    updateColorStatusMock.mockResolvedValue({ color: colorRecord, changed: false });
+    const service = new ColorService(colorRepository, { log: auditLog });
+
+    await service.updateColorStatus(user, colorRecord.id, true);
+    expect(auditLog).not.toHaveBeenCalled();
+
+    updateColorStatusMock.mockResolvedValue({
+      color: { ...colorRecord, isActive: false },
+      changed: true,
+    });
+    await service.updateColorStatus(user, colorRecord.id, false);
+    expect(auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'STATUS_CHANGE',
+        oldValues: {
+          id: colorRecord.id,
+          code: colorRecord.code,
+          name: colorRecord.name,
+          hexColor: colorRecord.hexColor,
+          isActive: true,
+        },
+        newValues: {
+          id: colorRecord.id,
+          code: colorRecord.code,
+          name: colorRecord.name,
+          hexColor: colorRecord.hexColor,
+          isActive: false,
+        },
+      }),
+    );
   });
 
   it('normalizes Size, defaults sort order and audits persisted business fields', async () => {

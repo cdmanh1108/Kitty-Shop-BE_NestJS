@@ -524,7 +524,281 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorManagementResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Color fields."
+          },
+          "409": {
+            "description": "COLOR_CODE_ALREADY_EXISTS."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      },
+      "get": {
+        "operationId": "CatalogController_listColors",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm kiếm theo mã hoặc tên màu.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "ALL",
+              "type": "string",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "INACTIVE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorManagementPageResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid list filters or pagination."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/catalog/colors/{id}": {
+      "get": {
+        "operationId": "CatalogController_getColor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorManagementResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "COLOR_NOT_FOUND."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      },
+      "patch": {
+        "operationId": "CatalogController_updateColor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateColorReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorManagementResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Color fields."
+          },
+          "404": {
+            "description": "COLOR_NOT_FOUND."
+          },
+          "409": {
+            "description": "COLOR_CODE_ALREADY_EXISTS."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      },
+      "delete": {
+        "operationId": "CatalogController_deleteColor",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "COLOR_NOT_FOUND."
+          },
+          "409": {
+            "description": "COLOR_IN_USE."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/catalog/colors/{id}/status": {
+      "patch": {
+        "operationId": "CatalogController_updateColorStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateColorStatusReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorManagementResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Color status."
+          },
+          "404": {
+            "description": "COLOR_NOT_FOUND."
           }
         },
         "security": [
@@ -4313,6 +4587,95 @@
         "required": [
           "code",
           "name"
+        ]
+      },
+      "ColorManagementResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "hexColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "hexColor",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ColorManagementPageResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColorManagementResDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "UpdateColorReqDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": " red ",
+            "description": "Được trim rồi chuyển thành chữ in hoa; mã sau chuẩn hóa chỉ gồm A-Z, 0-9, dấu gạch dưới và tối đa 50 ký tự."
+          },
+          "name": {
+            "type": "string",
+            "example": " Đỏ đô ",
+            "description": "Khoảng trắng đầu/cuối sẽ được loại bỏ; tên sau chuẩn hóa không rỗng và tối đa 100 ký tự."
+          },
+          "hexColor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#ff00aa",
+            "description": "Bỏ trường này để giữ nguyên; gửi null hoặc chuỗi rỗng để xóa mã màu."
+          }
+        }
+      },
+      "UpdateColorStatusReqDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "description": "Bật hoặc ngừng sử dụng màu."
+          }
+        },
+        "required": [
+          "isActive"
         ]
       },
       "ProductPageResDto": {

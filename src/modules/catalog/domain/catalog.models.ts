@@ -34,6 +34,11 @@ export type CategoryListItem = Pick<
   parent?: { id: string; code: string; name: string } | null;
 };
 export type CategoryPage = PaginatedResult<CategoryListItem>;
+export type ColorManagementItem = Pick<
+  ColorRecord,
+  'id' | 'code' | 'name' | 'hexColor' | 'isActive' | 'createdAt' | 'updatedAt'
+>;
+export type ColorPage = PaginatedResult<ColorManagementItem>;
 export type CategoryOption = Pick<CategoryRecord, 'id' | 'parentId' | 'code' | 'name'> & {
   status: 'ACTIVE' | 'INACTIVE';
 };

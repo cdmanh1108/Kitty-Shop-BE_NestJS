@@ -2,12 +2,14 @@ import type {
   AddInventoryInput,
   AddVariantInput,
   AvailabilityQuery,
+  ColorListQuery,
   CreateCategoryInput,
   CategoryListQuery,
   CreateColorInput,
   CreateProductInput,
   CreateSizeInput,
   UpdateCategoryInput,
+  UpdateColorInput,
   InventoryListQuery,
   ProductListQuery,
   ProductMediaInput,
@@ -23,6 +25,8 @@ import type {
   UpdateCategoryReqDto,
 } from './admin/dto/category.dto';
 import type { CreateColorReqDto } from './admin/dto/color.dto';
+import type { UpdateColorReqDto } from './admin/dto/color.dto';
+import type { ColorListQueryDto } from './admin/dto/color-query.dto';
 import type { CreateSizeReqDto } from './admin/dto/size.dto';
 import type {
   AddVariantReqDto,
@@ -40,6 +44,8 @@ import type {
   UpdateInventoryStatusReqDto,
 } from './admin/dto/inventory.dto';
 import type { ProductListQueryDto } from './admin/dto/product-query.dto';
+import type { ColorRecord } from '../domain/catalog.records';
+import type { ColorManagementItem } from '../domain/catalog.models';
 
 export function toAddInventoryInput(dto: AddInventoryReqDto): AddInventoryInput {
   return { ...dto };
@@ -69,6 +75,23 @@ export function toUpdateCategoryInput(dto: UpdateCategoryReqDto): UpdateCategory
 }
 export function toCreateColorInput(dto: CreateColorReqDto): CreateColorInput {
   return { ...dto };
+}
+export function toColorListQuery(dto: ColorListQueryDto): ColorListQuery {
+  return { ...dto };
+}
+export function toUpdateColorInput(dto: UpdateColorReqDto): UpdateColorInput {
+  return { ...dto };
+}
+export function toColorResponse(color: ColorRecord): ColorManagementItem {
+  return {
+    id: color.id,
+    code: color.code,
+    name: color.name,
+    hexColor: color.hexColor,
+    isActive: color.isActive,
+    createdAt: color.createdAt,
+    updatedAt: color.updatedAt,
+  };
 }
 export function toCreateProductInput(dto: CreateProductReqDto): CreateProductInput {
   return {

@@ -36,7 +36,10 @@ import {
   findColorByCode,
   findColorById,
   isColorInUse,
+  updateColor,
+  updateColorStatus,
 } from './color-commands';
+import { listColors } from './color-queries';
 import { listProducts, findProduct, lookupProducts } from './product-queries';
 import {
   createProduct,
@@ -189,6 +192,11 @@ export class PrismaCatalogRepository
   ): ReturnType<CatalogRepository['createColor']> {
     return createColor(this.prisma, ...args);
   }
+  listColors(
+    ...args: Parameters<CatalogRepository['listColors']>
+  ): ReturnType<CatalogRepository['listColors']> {
+    return listColors(this.prisma, ...args);
+  }
   findColorById(
     ...args: Parameters<CatalogRepository['findColorById']>
   ): ReturnType<CatalogRepository['findColorById']> {
@@ -198,6 +206,16 @@ export class PrismaCatalogRepository
     ...args: Parameters<CatalogRepository['findColorByCode']>
   ): ReturnType<CatalogRepository['findColorByCode']> {
     return findColorByCode(this.prisma, ...args);
+  }
+  updateColor(
+    ...args: Parameters<CatalogRepository['updateColor']>
+  ): ReturnType<CatalogRepository['updateColor']> {
+    return updateColor(this.prisma, ...args);
+  }
+  updateColorStatus(
+    ...args: Parameters<CatalogRepository['updateColorStatus']>
+  ): ReturnType<CatalogRepository['updateColorStatus']> {
+    return updateColorStatus(this.prisma, ...args);
   }
   isColorInUse(
     ...args: Parameters<CatalogRepository['isColorInUse']>

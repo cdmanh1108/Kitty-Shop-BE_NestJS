@@ -57,6 +57,17 @@ export interface CreateColorInput {
   hexColor?: string;
 }
 
+export interface ColorListQuery extends PaginationParams {
+  q?: string;
+  status?: 'ALL' | 'ACTIVE' | 'INACTIVE';
+}
+
+export interface UpdateColorInput {
+  code?: string;
+  name?: string;
+  hexColor?: string | null;
+}
+
 export type CreateProductInput = CreateProductData;
 
 export type ProductVariantInput = CreateProductData['variants'][number];

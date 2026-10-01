@@ -1,7 +1,11 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { CATALOG_ERROR_CODE } from '@modules/catalog/domain/catalog-errors';
-import { createColor, deleteColor } from '@modules/catalog/infrastructure/color-commands';
+import {
+  createColor,
+  deleteColor,
+  updateColor,
+} from '@modules/catalog/infrastructure/color-commands';
 import { createSize, deleteSize } from '@modules/catalog/infrastructure/size-commands';
 
 function prismaError(code: 'P2002' | 'P2003'): Prisma.PrismaClientKnownRequestError {
@@ -20,6 +24,16 @@ describe('Color and Size persistence error mapping', () => {
     await expect(
       createColor(prisma, 'shop-1', { code: 'RED', name: 'Red', hexColor: null }),
     ).rejects.toMatchObject({ code: CATALOG_ERROR_CODE.COLOR_CODE_ALREADY_EXISTS });
+  });
+
+  it('maps a Color update unique-constraint race to COLOR_CODE_ALREADY_EXISTS', async () => {
+    const prisma = {
+      color: { updateMany: jest.fn().mockRejectedValue(prismaError('P2002')) },
+    } as unknown as PrismaService;
+
+    await expect(updateColor(prisma, 'shop-1', 'color-1', { code: 'RED' })).rejects.toMatchObject({
+      code: CATALOG_ERROR_CODE.COLOR_CODE_ALREADY_EXISTS,
+    });
   });
 
   it('maps a Size unique-constraint race to SIZE_CODE_ALREADY_EXISTS', async () => {
