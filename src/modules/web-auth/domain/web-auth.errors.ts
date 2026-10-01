@@ -1,6 +1,6 @@
-import { HttpException } from '@nestjs/common';
+import { ApplicationError } from '@common/errors/application-error';
 
-const messages: Record<string, string> = {
+export const WEB_AUTH_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   INVALID_EMAIL: 'Please enter a valid email address.',
   INVALID_PASSWORD: 'Password must be 8 to 64 characters and at most 72 UTF-8 bytes.',
   EMAIL_ALREADY_REGISTERED: 'This email is already registered. Please sign in to continue.',
@@ -18,9 +18,12 @@ const messages: Record<string, string> = {
   EMAIL_ALREADY_VERIFIED: 'This email is already verified. Please sign in.',
 };
 
-export function authError(code: string, status = 400): never {
-  throw new HttpException(
-    { code, message: messages[code] ?? 'Could not complete the request.' },
-    status,
-  );
+export class WebAuthApplicationError extends ApplicationError {
+  constructor(code: string) {
+    super(WEB_AUTH_ERROR_MESSAGES[code] ?? 'Could not complete the request.', code);
+  }
+}
+
+export function webAuthError(code: string): never {
+  throw new WebAuthApplicationError(code);
 }

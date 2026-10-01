@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import { Prisma, type IdempotencyRecord } from '@prisma/client';
 import type { Clock } from '../src/common/clock/clock';
 import {
@@ -11,6 +10,8 @@ import { AuditService } from '../src/modules/audit/application/audit.service';
 import type { AuditEntry, AuditPort } from '../src/modules/audit/domain/audit.port';
 import type { AuditRepository } from '../src/modules/audit/domain/audit.repository';
 import { RentalCreationService } from '../src/modules/rentals/application/rental-creation.service';
+import { RentalOperationConflictError } from '../src/modules/rentals/application/rental.errors';
+import { applicationLoggerMock } from './helpers/application-logger';
 import type { CreateRentalOrderInput } from '../src/modules/rentals/application/rental.contracts';
 import { RentalClaimLostError } from '../src/modules/rentals/domain/rental-errors';
 import type { RentalOrderDetails } from '../src/modules/rentals/domain/rental.models';
@@ -248,9 +249,6 @@ function claimStore(initial: IdempotencyRecord[] = []) {
 }
 
 afterEach(() => jest.restoreAllMocks());
-beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-});
 
 describe('audit port and request enrichment', () => {
   const repository = (): jest.Mocked<AuditRepository> => ({
@@ -292,13 +290,13 @@ describe('audit port and request enrichment', () => {
   it('does not reject successful business work when best-effort persistence fails', async () => {
     const persistence = repository();
     persistence.create.mockRejectedValue(new Error('private DB details'));
-    const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const logger = applicationLoggerMock();
     await expect(
       withRequestContext({ requestId: 'request-1' }, () =>
-        new AuditService(persistence).log(entry),
+        new AuditService(persistence, logger.factory).log(entry),
       ),
     ).resolves.toBeUndefined();
-    expect(log.mock.calls[0]?.[0]).toMatchObject({
+    expect(logger.error.mock.calls[0]?.[0]).toMatchObject({
       event: 'audit.persist.failed',
       requestId: 'request-1',
       shopId: 'shop',
@@ -592,7 +590,6 @@ describe('application idempotent execution and audit', () => {
       create: jest.fn().mockRejectedValue(new Error('audit unavailable')),
       list: jest.fn(),
     };
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await expect(
       rentalServiceWithPorts(ports, new AuditService(auditRepository)).create(user, requestInput()),
     ).resolves.toMatchObject({ id: 'order' });
@@ -633,11 +630,10 @@ describe('application idempotent execution and audit', () => {
     repository.claimIdempotency.mockResolvedValue({ state: 'CLAIMED', claimId: 'owner' });
     repository.createOrder.mockRejectedValue(new RentalClaimLostError());
     repository.releaseIdempotency.mockRejectedValue(new Error('cleanup unavailable'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const audit: jest.Mocked<AuditPort> = { log: jest.fn() };
     await expect(
       rentalServiceWithPorts(ports, audit).create(user, requestInput(), 'key'),
-    ).rejects.toMatchObject({ status: 409 });
+    ).rejects.toBeInstanceOf(RentalOperationConflictError);
     expect(repository.releaseIdempotency.mock.calls[0]).toEqual([
       'shop',
       'rental-order.create',

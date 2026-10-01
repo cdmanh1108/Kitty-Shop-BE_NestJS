@@ -1,6 +1,6 @@
 import type { CurrentUser, JwtAccessPayload } from '@common/types/current-user';
 import type { AppConfiguration } from '@config/configuration';
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { ShopResolver } from '@common/tenant/shop-resolver';
@@ -8,6 +8,7 @@ import { compare, hash } from 'bcryptjs';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { AUTH_REPOSITORY, type AuthIdentity, type AuthRepository } from '../domain/auth.repository';
 import type { ChangePasswordInput, LoginInput, LoginResult } from './auth.contracts';
+import { AdminAuthenticationError } from './auth.errors';
 
 @Injectable()
 export class AuthService {
@@ -30,7 +31,7 @@ export class AuthService {
       identity.memberStatus !== 'ACTIVE' ||
       !(await compare(input.password, identity.passwordHash))
     ) {
-      throw new UnauthorizedException('Email hoặc mật khẩu không chính xác.');
+      throw new AdminAuthenticationError('Email hoặc mật khẩu không chính xác.');
     }
 
     await this.repository.updateLastLogin(identity.userId);
@@ -50,7 +51,7 @@ export class AuthService {
     context: { ipAddress?: string; userAgent?: string },
   ): Promise<LoginResult> {
     if (!rawToken) {
-      throw new UnauthorizedException(
+      throw new AdminAuthenticationError(
         'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
       );
     }
@@ -63,7 +64,7 @@ export class AuthService {
       new Date(),
     );
     if (rotation.outcome !== 'ROTATED') {
-      throw new UnauthorizedException(
+      throw new AdminAuthenticationError(
         'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
       );
     }
@@ -86,10 +87,10 @@ export class AuthService {
       user.shopId,
     );
     if (!currentHash || !(await compare(input.currentPassword, currentHash))) {
-      throw new UnauthorizedException('Mật khẩu hiện tại không chính xác.');
+      throw new AdminAuthenticationError('Mật khẩu hiện tại không chính xác.');
     }
     if (await compare(input.newPassword, currentHash)) {
-      throw new UnauthorizedException('Mật khẩu mới phải khác mật khẩu hiện tại.');
+      throw new AdminAuthenticationError('Mật khẩu mới phải khác mật khẩu hiện tại.');
     }
     await this.repository.updatePasswordAndRevokeSessions(
       user.userId,

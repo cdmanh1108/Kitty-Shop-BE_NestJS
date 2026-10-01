@@ -1,12 +1,6 @@
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   CATALOG_PRODUCT_REPOSITORY,
   type CatalogProductRepository,
@@ -19,7 +13,11 @@ import type {
   UpdateProductInput,
   UpsertRentalRateInput,
 } from './catalog.contracts';
-import { withCatalogInvariant } from './catalog-invariant';
+import {
+  CatalogResourceNotFoundError,
+  DuplicateProductVariantCombinationError,
+  InvalidCatalogInputError,
+} from './catalog-application.errors';
 
 @Injectable()
 export class ProductService {
@@ -38,27 +36,27 @@ export class ProductService {
 
   async getProduct(user: CurrentUser, id: string) {
     const product = await this.repository.findProduct(user.shopId, id);
-    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm.');
+    if (!product) throw new CatalogResourceNotFoundError('Không tìm thấy sản phẩm.');
     return (await this.repository.findProduct(user.shopId, product.id)) ?? product;
   }
 
   async createProduct(user: CurrentUser, input: CreateProductInput) {
     const duplicateVariantCodes = input.variants.map((item) => item.variantCode);
     if (new Set(duplicateVariantCodes).size !== duplicateVariantCodes.length) {
-      throw new BadRequestException('Mã biến thể không được trùng nhau trong cùng yêu cầu.');
+      throw new InvalidCatalogInputError('Mã biến thể không được trùng nhau trong cùng yêu cầu.');
     }
     const seenCombinations = new Set<string>();
     for (const variant of input.variants) {
       const key = String(variant.sizeId ?? 'null') + '::' + String(variant.colorId ?? 'null');
       if (seenCombinations.has(key)) {
-        throw new ConflictException(
+        throw new DuplicateProductVariantCombinationError(
           'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
         );
       }
       seenCombinations.add(key);
       const durations = variant.rentalRates.map((rate) => rate.durationDays);
       if (new Set(durations).size !== durations.length) {
-        throw new BadRequestException(
+        throw new InvalidCatalogInputError(
           'Số ngày trong các mức giá thuê của biến thể ' +
             variant.variantCode +
             ' không được trùng nhau.',
@@ -66,11 +64,9 @@ export class ProductService {
       }
     }
     if (input.media.filter((item) => item.isPrimary).length > 1) {
-      throw new BadRequestException('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
+      throw new InvalidCatalogInputError('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
     }
-    const product = await withCatalogInvariant(() =>
-      this.repository.createProduct(user.shopId, input),
-    );
+    const product = await this.repository.createProduct(user.shopId, input);
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -84,10 +80,8 @@ export class ProductService {
   }
 
   async addVariant(user: CurrentUser, productId: string, input: AddVariantInput) {
-    const variant = await withCatalogInvariant(() =>
-      this.repository.addVariant(user.shopId, productId, input),
-    );
-    if (!variant) throw new NotFoundException('Không tìm thấy sản phẩm.');
+    const variant = await this.repository.addVariant(user.shopId, productId, input);
+    if (!variant) throw new CatalogResourceNotFoundError('Không tìm thấy sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -102,26 +96,24 @@ export class ProductService {
 
   async upsertRentalRate(user: CurrentUser, variantId: string, input: UpsertRentalRateInput) {
     const rate = await this.repository.upsertRentalRate(user.shopId, variantId, input);
-    if (!rate) throw new NotFoundException('Không tìm thấy biến thể sản phẩm.');
+    if (!rate) throw new CatalogResourceNotFoundError('Không tìm thấy biến thể sản phẩm.');
     return rate;
   }
 
   async updateProduct(user: CurrentUser, id: string, input: UpdateProductInput) {
-    const updated = await withCatalogInvariant(() =>
-      this.repository.updateProduct(user.shopId, id, {
-        name: input.name,
-        slug: input.slug,
-        categoryId: input.categoryId,
-        description: input.description,
-        defaultDepositAmount: input.defaultDepositAmount,
-        replacementValue: input.replacementValue,
-        facebookPostUrl: input.facebookPostUrl,
-        isPublic: input.isPublic,
-        isRentable: input.isRentable,
-        status: input.status,
-      }),
-    );
-    if (!updated) throw new NotFoundException('Không tìm thấy sản phẩm.');
+    const updated = await this.repository.updateProduct(user.shopId, id, {
+      name: input.name,
+      slug: input.slug,
+      categoryId: input.categoryId,
+      description: input.description,
+      defaultDepositAmount: input.defaultDepositAmount,
+      replacementValue: input.replacementValue,
+      facebookPostUrl: input.facebookPostUrl,
+      isPublic: input.isPublic,
+      isRentable: input.isRentable,
+      status: input.status,
+    });
+    if (!updated) throw new CatalogResourceNotFoundError('Không tìm thấy sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -135,10 +127,8 @@ export class ProductService {
   }
 
   async archiveProduct(user: CurrentUser, id: string) {
-    const archived = await withCatalogInvariant(() =>
-      this.repository.archiveProduct(user.shopId, id),
-    );
-    if (!archived) throw new NotFoundException('Không tìm thấy sản phẩm.');
+    const archived = await this.repository.archiveProduct(user.shopId, id);
+    if (!archived) throw new CatalogResourceNotFoundError('Không tìm thấy sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -152,7 +142,7 @@ export class ProductService {
 
   async addProductMedia(user: CurrentUser, productId: string, input: ProductMediaInput) {
     const media = await this.repository.addProductMedia(user.shopId, productId, input);
-    if (!media) throw new NotFoundException('Không tìm thấy sản phẩm.');
+    if (!media) throw new CatalogResourceNotFoundError('Không tìm thấy sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -167,7 +157,7 @@ export class ProductService {
 
   async removeProductMedia(user: CurrentUser, productId: string, mediaId: string) {
     const removed = await this.repository.removeProductMedia(user.shopId, productId, mediaId);
-    if (!removed) throw new NotFoundException('Không tìm thấy hình ảnh sản phẩm.');
+    if (!removed) throw new CatalogResourceNotFoundError('Không tìm thấy hình ảnh sản phẩm.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,

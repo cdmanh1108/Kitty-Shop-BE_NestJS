@@ -1,8 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import { RENTAL_ORDER_READER, type RentalOrderReader } from '../domain/rental.repository';
 import type { RentalListQuery } from './rental.contracts';
+import { RentalNotFoundError } from './rental.errors';
 
 @Injectable()
 export class RentalReadService {
@@ -27,7 +28,7 @@ export class RentalReadService {
 
   async get(user: CurrentUser, id: string) {
     const order = await this.orderReader.get(user.shopId, id);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     return order;
   }
 }

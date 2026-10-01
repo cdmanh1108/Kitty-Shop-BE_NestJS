@@ -1,5 +1,5 @@
-import { NotFoundException } from '@nestjs/common';
 import { FavoritesService } from '../../src/modules/favorites/application/favorites.service';
+import { FavoriteProductNotFoundError } from '../../src/modules/favorites/application/favorite.errors';
 import type { FavoriteRepository } from '../../src/modules/favorites/domain/favorite.repository';
 import type { StorefrontCatalogRepository } from '../../src/modules/catalog/domain/storefront-catalog.repository';
 import type { StorefrontProductItem } from '../../src/modules/catalog/domain/catalog.models';
@@ -73,7 +73,9 @@ describe('FavoritesService', () => {
       resolveShopId: jest.fn().mockResolvedValue('shop-id'),
     });
 
-    await expect(service.add('account-id', product.id)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.add('account-id', product.id)).rejects.toBeInstanceOf(
+      FavoriteProductNotFoundError,
+    );
     expect(add).not.toHaveBeenCalled();
   });
 

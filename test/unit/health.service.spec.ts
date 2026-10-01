@@ -1,5 +1,5 @@
-import { ServiceUnavailableException } from '@nestjs/common';
 import { HealthService } from '../../src/modules/health/application/health.service';
+import { HealthDependencyUnavailableError } from '../../src/modules/health/application/health.errors';
 import type { HealthRepository } from '../../src/modules/health/domain/health.repository';
 
 function repository(): jest.Mocked<HealthRepository> {
@@ -23,7 +23,7 @@ describe('HealthService', () => {
     await expect(service.ready()).resolves.toMatchObject({ status: 'ok', database: 'up' });
   });
 
-  it('returns service unavailable when PostgreSQL cannot be reached', async () => {
+  it('reports dependency failure as an application error when PostgreSQL cannot be reached', async () => {
     const persistence = repository();
     persistence.databaseReady.mockRejectedValue(new Error('connection refused'));
     const service = new HealthService(persistence);
@@ -34,8 +34,7 @@ describe('HealthService', () => {
     } catch (error) {
       thrown = error;
     }
-    expect(thrown).toBeInstanceOf(ServiceUnavailableException);
-    if (!(thrown instanceof ServiceUnavailableException)) throw thrown;
-    expect(thrown.getStatus()).toBe(503);
+    expect(thrown).toBeInstanceOf(HealthDependencyUnavailableError);
+    expect(thrown).toMatchObject({ message: 'Health dependency is unavailable.' });
   });
 });

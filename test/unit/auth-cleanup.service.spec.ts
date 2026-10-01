@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import type { Clock } from '../../src/common/clock/clock';
 import type { AppConfiguration } from '../../src/config/configuration';
 import { AuthCleanupService } from '../../src/modules/auth-cleanup/application/auth-cleanup.service';
+import { AuthCleanupJob } from '../../src/modules/auth-cleanup/infrastructure/jobs/auth-cleanup.job';
 import type {
   AuthCleanupCoordinator,
   AuthCleanupOwnership,
@@ -89,8 +90,9 @@ describe('AuthCleanupService', () => {
     persistence.purgeAdminRefreshTokenFamilies.mockRejectedValue(new Error('database unavailable'));
     const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const service = new AuthCleanupService(persistence, coordinator(), clock, config());
+    const job = new AuthCleanupJob(service, config());
 
-    await expect(service.cleanupScheduled()).resolves.toBeUndefined();
+    await expect(job.execute()).resolves.toBeUndefined();
     expect(error).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'auth.cleanup.failed',

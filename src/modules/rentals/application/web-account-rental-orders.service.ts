@@ -1,7 +1,7 @@
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   RENTAL_LIFECYCLE_REPOSITORY,
   WEB_ACCOUNT_RENTAL_ORDERS_READER,
@@ -17,6 +17,7 @@ import type {
   WebAccountRentalOrderCancellationResult,
   WebAccountRentalOrdersQuery,
 } from './web-account-rental-orders.contracts';
+import { RentalNotFoundError, WebRentalCancellationConflictError } from './rental.errors';
 
 const WEB_CANCELLATION_REASON = 'WEB_USER_CANCELLED';
 const SELF_CANCELLABLE_DEPOSIT_STATUSES = new Set<string>([
@@ -56,19 +57,19 @@ export class WebAccountRentalOrdersService {
     const order = await this.getInShop(shopId, webAccountId, orderCode);
 
     if (order.status !== RENTAL_STATUS.RESERVED) {
-      throw new ConflictException({
-        code: 'WEB_ORDER_CANNOT_BE_CANCELLED',
-        message: 'Đơn thuê không còn ở trạng thái có thể tự hủy.',
-      });
+      throw new WebRentalCancellationConflictError(
+        'Đơn thuê không còn ở trạng thái có thể tự hủy.',
+        'WEB_ORDER_CANNOT_BE_CANCELLED',
+      );
     }
     if (
       order.paymentStatus !== ORDER_PAYMENT_STATUS.UNPAID ||
       !SELF_CANCELLABLE_DEPOSIT_STATUSES.has(order.depositStatus)
     ) {
-      throw new ConflictException({
-        code: 'WEB_ORDER_PAYMENT_PREVENTS_CANCELLATION',
-        message: 'Đơn đã có thanh toán hoặc đặt cọc. Vui lòng liên hệ cửa hàng để được hỗ trợ.',
-      });
+      throw new WebRentalCancellationConflictError(
+        'Đơn đã có thanh toán hoặc đặt cọc. Vui lòng liên hệ cửa hàng để được hỗ trợ.',
+        'WEB_ORDER_PAYMENT_PREVENTS_CANCELLATION',
+      );
     }
 
     try {
@@ -84,10 +85,10 @@ export class WebAccountRentalOrdersService {
         requireNoCompletedPayments: true,
       });
       if (!cancelled?.cancelledAt) {
-        throw new ConflictException({
-          code: 'WEB_ORDER_CANCELLATION_CONFLICT',
-          message: 'Đơn thuê vừa được cập nhật. Vui lòng tải lại và thử lại.',
-        });
+        throw new WebRentalCancellationConflictError(
+          'Đơn thuê vừa được cập nhật. Vui lòng tải lại và thử lại.',
+          'WEB_ORDER_CANCELLATION_CONFLICT',
+        );
       }
       await this.audit.log({
         shopId,
@@ -116,10 +117,10 @@ export class WebAccountRentalOrdersService {
         error instanceof RentalInvariantError &&
         error.code === 'WEB_ORDER_PAYMENT_PREVENTS_CANCELLATION'
       ) {
-        throw new ConflictException({
-          code: error.code,
-          message: 'Đơn đã có thanh toán hoặc đặt cọc. Vui lòng liên hệ cửa hàng để được hỗ trợ.',
-        });
+        throw new WebRentalCancellationConflictError(
+          'Đơn đã có thanh toán hoặc đặt cọc. Vui lòng liên hệ cửa hàng để được hỗ trợ.',
+          error.code,
+        );
       }
       throw error;
     }
@@ -131,7 +132,7 @@ export class WebAccountRentalOrdersService {
     orderCode: string,
   ): Promise<WebAccountRentalOrderDetail> {
     const order = await this.rentals.getWebAccountOrder(shopId, webAccountId, orderCode);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     return order;
   }
 }

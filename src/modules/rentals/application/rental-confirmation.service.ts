@@ -1,11 +1,10 @@
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import {
-  BadRequestException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+  APPLICATION_LOGGER,
+  silentApplicationLog,
+  type ApplicationLog,
+  type ApplicationLoggerFactory,
+} from '@common/logging/application-logger.port';
 import { randomUUID } from 'node:crypto';
 import { OBJECT_STORAGE_PORT, type ObjectStoragePort } from '@common/storage/object-storage.port';
 import {
@@ -26,6 +25,13 @@ import {
   type RentalOrderReader,
 } from '../domain/rental.repository';
 import { assertManualConfirmation, type ConfirmRentalInput } from '../domain/rental-confirmation';
+import {
+  InvalidRentalEvidenceError,
+  RentalAccessDeniedError,
+  RentalEvidenceNotFoundError,
+  RentalNotFoundError,
+  RentalOperationNotAllowedError,
+} from './rental.errors';
 
 export interface ConfirmationImage {
   buffer: Buffer;
@@ -35,19 +41,23 @@ export interface ConfirmationImage {
 
 @Injectable()
 export class RentalConfirmationService {
-  private readonly logger = new Logger(RentalConfirmationService.name);
+  private readonly logger: ApplicationLog;
+
   constructor(
     @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
     @Inject(RENTAL_LIFECYCLE_REPOSITORY)
     private readonly lifecycle: RentalLifecycleRepository,
     @Inject(RENTAL_POLICY_PROVIDER) private readonly policies: RentalPolicyProvider,
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
-  ) {}
+    @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+  ) {
+    this.logger = loggerFactory?.create(RentalConfirmationService.name) ?? silentApplicationLog;
+  }
 
   async options(user: CurrentUser, orderId: string) {
     this.authorize(user);
     const order = await this.orderReader.get(user.shopId, orderId);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     const policy = await this.policies.getPolicy(user.shopId);
     return {
       allowedMethods: policy.deposit.allowedMethods,
@@ -66,9 +76,11 @@ export class RentalConfirmationService {
   ) {
     this.authorize(user);
     const order = await this.orderReader.get(user.shopId, orderId);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     if (order.status !== 'RESERVED')
-      throw new BadRequestException('Chỉ có thể xác nhận đơn đang ở trạng thái đã đặt trước.');
+      throw new RentalOperationNotAllowedError(
+        'Chỉ có thể xác nhận đơn đang ở trạng thái đã đặt trước.',
+      );
     assertManualConfirmation(input, await this.policies.getPolicy(user.shopId));
     let evidence: { key: string; filename: string; mimeType: string; size: number } | undefined;
     if (file) {
@@ -76,12 +88,12 @@ export class RentalConfirmationService {
       try {
         image = validateAndHashImage(file.buffer, file.mimetype);
       } catch (error) {
-        throw new BadRequestException(
+        throw new InvalidRentalEvidenceError(
           error instanceof Error ? error.message : 'Ảnh bằng chứng không hợp lệ.',
         );
       }
       if (file.mimetype !== image.mimeType)
-        throw new BadRequestException('Loại tệp không khớp nội dung hình ảnh.');
+        throw new InvalidRentalEvidenceError('Loại tệp không khớp nội dung hình ảnh.');
       const filename =
         Array.from(file.originalname, (character) =>
           character.charCodeAt(0) < 32 ||
@@ -121,7 +133,7 @@ export class RentalConfirmationService {
         requestId: currentRequestMetadata()?.requestId,
         evidence,
       });
-      if (!result) throw new NotFoundException('Không tìm thấy đơn thuê.');
+      if (!result) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
       return result;
     } catch (error) {
       if (evidence) {
@@ -143,7 +155,7 @@ export class RentalConfirmationService {
     const order = await this.orderReader.get(user.shopId, orderId);
     const confirmation = order?.confirmation;
     if (!confirmation?.evidenceKey || !confirmation.evidenceMimeType)
-      throw new NotFoundException('Không tìm thấy ảnh bằng chứng.');
+      throw new RentalEvidenceNotFoundError('Không tìm thấy ảnh bằng chứng.');
     return {
       body: await this.storage.getObject(confirmation.evidenceKey),
       mimeType: confirmation.evidenceMimeType,
@@ -152,6 +164,6 @@ export class RentalConfirmationService {
 
   private authorize(user: CurrentUser) {
     if (!user.permissions.includes(PERMISSIONS.RENTALS_CONFIRM))
-      throw new ForbiddenException('Bạn không có quyền xác nhận đơn thuê.');
+      throw new RentalAccessDeniedError('Bạn không có quyền xác nhận đơn thuê.');
   }
 }

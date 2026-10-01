@@ -1,10 +1,10 @@
-import { BadRequestException } from '@nestjs/common';
 import { MemberService } from '../../src/modules/members/application/member.service';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import {
   MemberRoleNotFoundError,
   type MemberRepository,
 } from '../../src/modules/members/domain/member.repository';
+import { MemberRoleSelectionError } from '../../src/modules/members/application/member.errors';
 
 describe('MemberService update', () => {
   const user = {
@@ -35,8 +35,7 @@ describe('MemberService update', () => {
         roleCodes: ['SUPERVISOR', 'ROLE_MISSING'],
       }),
     ).rejects.toMatchObject({
-      status: 400,
-      response: { code: 'MEMBER_ROLE_NOT_FOUND' },
+      code: 'MEMBER_ROLE_NOT_FOUND',
     });
     expect(audits.log.mock.calls).toHaveLength(0);
   });
@@ -73,7 +72,7 @@ describe('MemberService update', () => {
       new MemberService(members, audit()).update(user, 'target-1', {
         roleCodes: [],
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(MemberRoleSelectionError);
     expect(members.update.mock.calls).toHaveLength(0);
   });
 });

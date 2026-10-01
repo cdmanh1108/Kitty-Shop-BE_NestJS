@@ -1,8 +1,8 @@
-import { ConflictException } from '@nestjs/common';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
 import type { CatalogCategoryRepository } from '@modules/catalog/domain/catalog-category.repository';
 import { CategoryService } from '@modules/catalog/application/category.service';
+import { CategoryInUseError } from '@modules/catalog/application/catalog-application.errors';
 
 describe('CategoryService', () => {
   const user: CurrentUser = {
@@ -78,7 +78,7 @@ describe('CategoryService', () => {
     repository.deleteCategory.mockResolvedValue('in-use');
 
     await expect(service.deleteCategory(user, 'category-1')).rejects.toBeInstanceOf(
-      ConflictException,
+      CategoryInUseError,
     );
     expect(auditLogMock).not.toHaveBeenCalled();
   });

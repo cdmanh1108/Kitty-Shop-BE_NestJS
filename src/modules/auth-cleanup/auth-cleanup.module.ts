@@ -5,11 +5,13 @@ import { AUTH_CLEANUP_COORDINATOR } from './domain/auth-cleanup-coordinator';
 import { AUTH_CLEANUP_REPOSITORY } from './domain/auth-cleanup.repository';
 import { PrismaAuthCleanupCoordinator } from './infrastructure/prisma-auth-cleanup.coordinator';
 import { PrismaAuthCleanupRepository } from './infrastructure/prisma-auth-cleanup.repository';
+import { AuthCleanupJob } from './infrastructure/jobs/auth-cleanup.job';
 
 @Module({
   imports: [ClockModule],
   providers: [
     AuthCleanupService,
+    AuthCleanupJob,
     PrismaAuthCleanupRepository,
     PrismaAuthCleanupCoordinator,
     { provide: AUTH_CLEANUP_REPOSITORY, useExisting: PrismaAuthCleanupRepository },

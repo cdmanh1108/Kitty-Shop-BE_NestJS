@@ -14,7 +14,7 @@ import {
 } from '../domain/web-auth.repository';
 import type { CredentialsInput, WebSessionContext, WebTokenResult } from './web-auth.contracts';
 import { normalizeWebAuthEmail, validateWebAuthPassword } from './web-auth.credentials';
-import { authError } from './web-auth.errors';
+import { webAuthError } from '../domain/web-auth.errors';
 
 @Injectable()
 export class WebSessionService {
@@ -32,9 +32,9 @@ export class WebSessionService {
     // Keep the same bcrypt work for missing accounts to avoid an enumeration oracle.
     const dummyHash = '$2b$12$C6UzMDM.H6dfI/f/IKcEe.5bH5XmGYWlkJKMYRnHX4CILJQUPB6eW';
     const valid = await compare(input.password, account?.passwordHash ?? dummyHash);
-    if (!account || !valid) authError('INVALID_CREDENTIALS', 401);
-    if (account.disabledAt) authError('ACCOUNT_DISABLED', 403);
-    if (!account.emailVerifiedAt) authError('EMAIL_NOT_VERIFIED', 403);
+    if (!account || !valid) webAuthError('INVALID_CREDENTIALS');
+    if (account.disabledAt) webAuthError('ACCOUNT_DISABLED');
+    if (!account.emailVerifiedAt) webAuthError('EMAIL_NOT_VERIFIED');
 
     const refresh = this.prepareRefresh(context);
     if (
@@ -44,19 +44,19 @@ export class WebSessionService {
         familyId: randomUUID(),
       }))
     )
-      authError('AUTH_REQUIRED', 401);
+      webAuthError('AUTH_REQUIRED');
     return this.issueTokens(account, refresh.rawToken, refresh.data.expiresAt);
   }
 
   async refresh(rawToken: string | undefined, context: WebSessionContext): Promise<WebTokenResult> {
-    if (!rawToken || !/^[A-Za-z0-9_-]{64}$/.test(rawToken)) authError('AUTH_REQUIRED', 401);
+    if (!rawToken || !/^[A-Za-z0-9_-]{64}$/.test(rawToken)) webAuthError('AUTH_REQUIRED');
     const replacement = this.prepareRefresh(context);
     const rotation = await this.repository.rotateRefreshToken(
       this.tokenHash(rawToken),
       replacement.data,
       this.clock.now(),
     );
-    if (rotation.outcome !== 'ROTATED') authError('AUTH_REQUIRED', 401);
+    if (rotation.outcome !== 'ROTATED') webAuthError('AUTH_REQUIRED');
     return this.issueTokens(rotation.account, replacement.rawToken, replacement.data.expiresAt);
   }
 
@@ -69,7 +69,7 @@ export class WebSessionService {
     const account = await this.repository.findAccountById(accountId);
     // A valid pre-migration JWT remains usable for a legacy row with no email.
     if (!account || account.disabledAt || (account.email !== null && !account.emailVerifiedAt))
-      authError('AUTH_REQUIRED', 401);
+      webAuthError('AUTH_REQUIRED');
     return this.profile(account);
   }
 

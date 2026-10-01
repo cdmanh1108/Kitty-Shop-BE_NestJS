@@ -1,11 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { generateDatedReference } from '@common/utils/reference-number';
 import { CLOCK, type Clock } from '@common/clock/clock';
@@ -42,6 +35,17 @@ import {
   isStoredWebRentalCreateResult,
   toWebRentalCreateResult,
 } from '../domain/web-rental-create-result';
+import {
+  InvalidRentalCustomerDetailsError,
+  InvalidRentalIdempotencyKeyError,
+  RentalCreationConflictError,
+  RentalIdempotencyConflictError,
+  RentalInventoryConflictError,
+  RentalIdempotencyReplayUnavailableError,
+  RentalNotFoundError,
+  RentalPricingUnavailableError,
+  UnsupportedRentalCollateralError,
+} from './rental.errors';
 
 const WEB_CREATE_IDEMPOTENCY_SCOPE = 'web-rental-order.create.v1';
 const WEB_CREATE_IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -103,23 +107,20 @@ export class WebRentalOrderService {
       expiresAt: new Date(this.clock.now().getTime() + WEB_CREATE_IDEMPOTENCY_RETENTION_MS),
     });
     if (claim.state === 'HASH_MISMATCH') {
-      throw new ConflictException({
-        code: 'IDEMPOTENCY_KEY_REUSED',
-        message: 'Mã chống trùng đã được sử dụng cho một yêu cầu khác.',
-      });
+      throw new RentalIdempotencyConflictError(
+        'Mã chống trùng đã được sử dụng cho một yêu cầu khác.',
+        'IDEMPOTENCY_KEY_REUSED',
+      );
     }
     if (claim.state === 'IN_PROGRESS') {
-      throw new ConflictException({
-        code: 'IDEMPOTENCY_IN_PROGRESS',
-        message: 'Yêu cầu này đang được xử lý. Vui lòng thử lại với cùng mã chống trùng.',
-      });
+      throw new RentalIdempotencyConflictError(
+        'Yêu cầu này đang được xử lý. Vui lòng thử lại với cùng mã chống trùng.',
+        'IDEMPOTENCY_IN_PROGRESS',
+      );
     }
     if (claim.state === 'COMPLETED') {
       if (!isStoredWebRentalCreateResult(claim.responseBody)) {
-        throw new InternalServerErrorException({
-          code: 'IDEMPOTENCY_REPLAY_INVALID',
-          message: 'Không thể khôi phục kết quả yêu cầu đã hoàn tất.',
-        });
+        throw new RentalIdempotencyReplayUnavailableError();
       }
       return claim.responseBody.result;
     }
@@ -133,11 +134,15 @@ export class WebRentalOrderService {
       const documentType = req.collateral?.documentType;
 
       if (!policy.deposit.allowedMethods.includes(collateralMethod)) {
-        throw new BadRequestException('Phương thức đặt cọc không được chính sách hỗ trợ.');
+        throw new UnsupportedRentalCollateralError(
+          'Phương thức đặt cọc không được chính sách hỗ trợ.',
+        );
       }
       if (collateralMethod === 'DOCUMENT') {
         if (!documentType || !policy.deposit.allowedDocumentTypes.includes(documentType)) {
-          throw new BadRequestException('Loại giấy tờ đặt cọc không được chính sách hỗ trợ.');
+          throw new UnsupportedRentalCollateralError(
+            'Loại giấy tờ đặt cọc không được chính sách hỗ trợ.',
+          );
         }
       }
 
@@ -150,19 +155,19 @@ export class WebRentalOrderService {
       });
       if (!selection.valid) {
         throwForInvalidWebRentalSelection(selection.reason);
-        throw new NotFoundException('Sản phẩm đã chọn không khả dụng để thuê.');
+        throw new RentalNotFoundError('Sản phẩm đã chọn không khả dụng để thuê.');
       }
 
       const lines: CreateRentalOrderData['lines'] = [];
       for (const { variant, quantity } of selection.demands) {
         if (variant.ratePrice === null) {
-          throw new BadRequestException(
+          throw new RentalPricingUnavailableError(
             `Sản phẩm ${variant.productName} chưa được cấu hình giá thuê cho ${durationDays} ngày.`,
           );
         }
 
         if (variant.availableInventory.length < quantity) {
-          throw new ConflictException(
+          throw new RentalInventoryConflictError(
             `Sản phẩm ${variant.productName} không đủ số lượng có sẵn trong khoảng ngày đã chọn.`,
           );
         }
@@ -208,7 +213,7 @@ export class WebRentalOrderService {
         });
       } catch (error) {
         if (error instanceof InvalidCustomerPhoneError) {
-          throw new BadRequestException('Số điện thoại người thuê không hợp lệ.');
+          throw new InvalidRentalCustomerDetailsError('Số điện thoại người thuê không hợp lệ.');
         }
         throw error;
       }
@@ -252,7 +257,7 @@ export class WebRentalOrderService {
       });
 
       if (!order) {
-        throw new ConflictException('Không thể tạo đơn thuê.');
+        throw new RentalCreationConflictError('Không thể tạo đơn thuê.');
       }
 
       return toWebRentalCreateResult(order);
@@ -273,22 +278,22 @@ export class WebRentalOrderService {
 
   private requireIdempotencyKey(value: string | string[] | undefined): string {
     if (value === undefined) {
-      throw new BadRequestException({
-        code: 'IDEMPOTENCY_KEY_REQUIRED',
-        message: 'Yêu cầu phải có một Idempotency-Key hợp lệ.',
-      });
+      throw new InvalidRentalIdempotencyKeyError(
+        'Yêu cầu phải có một Idempotency-Key hợp lệ.',
+        'IDEMPOTENCY_KEY_REQUIRED',
+      );
     }
     if (Array.isArray(value) || typeof value !== 'string') {
-      throw new BadRequestException({
-        code: 'IDEMPOTENCY_KEY_INVALID',
-        message: 'Idempotency-Key phải có đúng một giá trị.',
-      });
+      throw new InvalidRentalIdempotencyKeyError(
+        'Idempotency-Key phải có đúng một giá trị.',
+        'IDEMPOTENCY_KEY_INVALID',
+      );
     }
     if (!/^[\x21-\x7e]{1,255}$/.test(value)) {
-      throw new BadRequestException({
-        code: 'IDEMPOTENCY_KEY_INVALID',
-        message: 'Idempotency-Key phải có từ 1 đến 255 ký tự ASCII không có khoảng trắng.',
-      });
+      throw new InvalidRentalIdempotencyKeyError(
+        'Idempotency-Key phải có từ 1 đến 255 ký tự ASCII không có khoảng trắng.',
+        'IDEMPOTENCY_KEY_INVALID',
+      );
     }
     return value;
   }

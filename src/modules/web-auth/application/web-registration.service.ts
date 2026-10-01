@@ -1,6 +1,12 @@
 import { CLOCK, type Clock } from '@common/clock/clock';
 import type { AppConfiguration } from '@config/configuration';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  APPLICATION_LOGGER,
+  silentApplicationLog,
+  type ApplicationLog,
+  type ApplicationLoggerFactory,
+} from '@common/logging/application-logger.port';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { hash } from 'bcryptjs';
 import { createHmac, randomUUID } from 'node:crypto';
@@ -20,11 +26,11 @@ import {
 } from '../domain/web-auth.repository';
 import type { ChallengeResult, CredentialsInput } from './web-auth.contracts';
 import { normalizeWebAuthEmail, validateWebAuthPassword } from './web-auth.credentials';
-import { authError } from './web-auth.errors';
+import { webAuthError } from '../domain/web-auth.errors';
 
 @Injectable()
 export class WebRegistrationService {
-  private readonly logger = new Logger(WebRegistrationService.name);
+  private readonly logger: ApplicationLog;
 
   constructor(
     @Inject(WEB_AUTH_REPOSITORY) private readonly repository: WebAuthRepository,
@@ -34,14 +40,17 @@ export class WebRegistrationService {
     private readonly codeSender: VerificationCodeSender,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly config: ConfigService<AppConfiguration, true>,
-  ) {}
+    @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+  ) {
+    this.logger = loggerFactory?.create(WebRegistrationService.name) ?? silentApplicationLog;
+  }
 
   async register(input: CredentialsInput): Promise<ChallengeResult> {
     const email = normalizeWebAuthEmail(input.email);
     validateWebAuthPassword(input.password);
     const existing = await this.repository.findAccountByEmail(email);
     if (existing && (existing.emailVerifiedAt || existing.disabledAt))
-      authError('EMAIL_ALREADY_REGISTERED', 409);
+      webAuthError('EMAIL_ALREADY_REGISTERED');
 
     return this.issueVerificationChallenge({
       kind: 'register',
@@ -58,7 +67,7 @@ export class WebRegistrationService {
       this.clock.now(),
       this.config.get('webAuth', { infer: true }).otpMaxAttempts,
     );
-    if ('error' in result) authError(result.error);
+    if ('error' in result) webAuthError(result.error);
     return result;
   }
 
@@ -76,13 +85,7 @@ export class WebRegistrationService {
     const issueRequest: ChallengeIssueRequest = { ...request, challenge, now };
     const result = await this.repository.issueVerificationChallenge(issueRequest);
     if ('error' in result) {
-      const status =
-        result.error === 'OTP_RESEND_TOO_SOON'
-          ? 429
-          : result.error === 'EMAIL_ALREADY_REGISTERED'
-            ? 409
-            : 400;
-      authError(result.error, status);
+      webAuthError(result.error);
     }
     const operation = request.kind;
     let fallbackFailureReason = 'provider_unavailable';
@@ -116,7 +119,7 @@ export class WebRegistrationService {
       this.logger.error(
         `Verification email delivery failed; operation=${operation}; reason=${reason}`,
       );
-      authError('VERIFICATION_DELIVERY_FAILED', 503);
+      webAuthError('VERIFICATION_DELIVERY_FAILED');
     }
     return this.challengeResult(result.email, result.challenge);
   }

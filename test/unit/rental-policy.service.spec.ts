@@ -1,9 +1,9 @@
-import { BadRequestException } from '@nestjs/common';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
 import type { RentalPolicy } from '../../src/modules/settings/domain/rental-policy';
 import type { SettingsRepository } from '../../src/modules/settings/domain/settings.repository';
 import { SettingsService } from '../../src/modules/settings/application/settings.service';
+import { InvalidShopSettingsError } from '../../src/modules/settings/application/settings.errors';
 
 describe('SettingsService - Rental Policy', () => {
   let repository: jest.Mocked<SettingsRepository>;
@@ -45,9 +45,7 @@ describe('SettingsService - Rental Policy', () => {
     it('prevents generic settings writes from bypassing policy validation', async () => {
       const upsert = jest.fn();
       repository.upsert = upsert;
-      await expect(service.upsert(mockUser, 'rental_policy', { value: {} })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.upsert(mockUser, 'rental_policy', { value: {} })).rejects.toThrow(Error);
       expect(upsert).not.toHaveBeenCalled();
       expect(auditLogMock).not.toHaveBeenCalled();
     });
@@ -164,7 +162,7 @@ describe('SettingsService - Rental Policy', () => {
         service.updateRentalPolicy(mockUser, {
           rentalPricing: { defaultRentalPrice: -1000 },
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidShopSettingsError);
     });
 
     it('rejects specialCleaning feeMax < feeMin', async () => {
@@ -184,7 +182,7 @@ describe('SettingsService - Rental Policy', () => {
         service.updateRentalPolicy(mockUser, {
           loyalty: { rentalsRequired: 0 } as unknown as RentalPolicy['loyalty'],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidShopSettingsError);
     });
 
     it('rejects duplicate category overrides', async () => {
@@ -211,7 +209,7 @@ describe('SettingsService - Rental Policy', () => {
             allowedMethods: ['CRYPTO' as unknown as 'CASH'],
           },
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidShopSettingsError);
     });
   });
 

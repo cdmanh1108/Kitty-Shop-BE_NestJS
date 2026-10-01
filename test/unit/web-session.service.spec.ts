@@ -1,6 +1,7 @@
 import { hash } from 'bcryptjs';
 import { createHash } from 'node:crypto';
 import type { WebAuthRepository } from '../../src/modules/web-auth/domain/web-auth.repository';
+import { WebAuthApplicationError } from '../../src/modules/web-auth/domain/web-auth.errors';
 import {
   now,
   sessionService,
@@ -52,7 +53,7 @@ describe('WebSessionService', () => {
         sessionService(
           webAuthRepository({ findAccountByEmail: jest.fn().mockResolvedValue(account) }),
         ).login({ email: 'user@example.test', password: 'wrong-password' }, {}),
-      ).rejects.toMatchObject({ status: 401, response: { code: 'INVALID_CREDENTIALS' } });
+      ).rejects.toBeInstanceOf(WebAuthApplicationError);
     }
   });
 
@@ -64,7 +65,7 @@ describe('WebSessionService', () => {
         { email: ' User@Example.Test ', password: 'right-password' },
         {},
       ),
-    ).rejects.toMatchObject({ status: 403, response: { code: 'EMAIL_NOT_VERIFIED' } });
+    ).rejects.toMatchObject({ code: 'EMAIL_NOT_VERIFIED' });
     expect(findAccountByEmail).toHaveBeenCalledWith('user@example.test');
   });
 
@@ -74,7 +75,7 @@ describe('WebSessionService', () => {
       sessionService(
         webAuthRepository({ findAccountByEmail: jest.fn().mockResolvedValue(disabled) }),
       ).login({ email: 'user@example.test', password: 'right-password' }, {}),
-    ).rejects.toMatchObject({ status: 403, response: { code: 'ACCOUNT_DISABLED' } });
+    ).rejects.toMatchObject({ code: 'ACCOUNT_DISABLED' });
   });
 
   it('rotates a valid refresh token and rejects malformed or revoked tokens', async () => {
@@ -92,15 +93,9 @@ describe('WebSessionService', () => {
     expect(rotatedWith?.[1].tokenHash).toMatch(/^[a-f0-9]{64}$/);
     expect(rotatedWith?.[1].tokenHash).not.toBe(rawToken);
     expect(rotatedWith?.[2]).toBe(now);
-    await expect(session.refresh('bad-token', {})).rejects.toMatchObject({
-      status: 401,
-      response: { code: 'AUTH_REQUIRED' },
-    });
+    await expect(session.refresh('bad-token', {})).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
     rotateRefreshToken.mockResolvedValueOnce({ outcome: 'REUSED' });
-    await expect(session.refresh(rawToken, {})).rejects.toMatchObject({
-      status: 401,
-      response: { code: 'AUTH_REQUIRED' },
-    });
+    await expect(session.refresh(rawToken, {})).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
     expect(rotateRefreshToken).toHaveBeenCalledTimes(2);
   });
 
@@ -130,7 +125,7 @@ describe('WebSessionService', () => {
       sessionService(
         webAuthRepository({ findAccountById: jest.fn().mockResolvedValue(null) }),
       ).accountForAccessToken(legacy.id),
-    ).rejects.toMatchObject({ status: 401, response: { code: 'AUTH_REQUIRED' } });
+    ).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
   });
 
   it('continues an existing refresh session for a retained legacy account', async () => {

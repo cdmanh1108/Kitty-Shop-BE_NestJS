@@ -1,4 +1,3 @@
-import { NotFoundException } from '@nestjs/common';
 import {
   WebCatalogMapper,
   toWebCategory,
@@ -9,6 +8,7 @@ import {
 } from '../../src/modules/catalog/api/web/web-catalog.mapper';
 import { WebCatalogController } from '../../src/modules/catalog/api/web/web-catalog.controller';
 import { WebCatalogService } from '../../src/modules/catalog/application/web-catalog.service';
+import { CatalogResourceNotFoundError } from '../../src/modules/catalog/application/catalog-application.errors';
 import type { StorefrontCatalogRepository } from '../../src/modules/catalog/domain/storefront-catalog.repository';
 import type {
   StorefrontCategory,
@@ -350,11 +350,11 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(mockRepo.findStorefrontProductBySlug).toHaveBeenCalledWith('shop-1', 'dam-da-hoi');
     });
 
-    it('throws NotFoundException when slug is not found', async () => {
+    it('throws Error when slug is not found', async () => {
       mockRepo.findStorefrontProductBySlug.mockResolvedValue(null);
 
       await expect(service.getProduct('shop-1', 'non-existing-slug')).rejects.toThrow(
-        NotFoundException,
+        CatalogResourceNotFoundError,
       );
     });
 

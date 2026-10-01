@@ -3,14 +3,13 @@ import { CHARGE_TYPE } from '../domain/charge-type';
 import { generateDatedReference } from '@common/utils/reference-number';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+  APPLICATION_LOGGER,
+  silentApplicationLog,
+  type ApplicationLog,
+  type ApplicationLoggerFactory,
+} from '@common/logging/application-logger.port';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import { createHash } from 'node:crypto';
 import type { JsonSerialized } from '@common/types/json';
@@ -28,44 +27,61 @@ import {
 } from '../domain/rental.repository';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type { CreateRentalOrderInput } from './rental.contracts';
+import {
+  InvalidRentalIdempotencyKeyError,
+  InvalidRentalItemSelectionError,
+  InvalidRentalPeriodError,
+  InvalidRentalChargeError,
+  RentalAvailabilityConflictError,
+  RentalIdempotencyConflictError,
+  RentalInventoryConflictError,
+  RentalNotFoundError,
+  RentalPricingUnavailableError,
+} from './rental.errors';
 
 const CHARGE_TYPES: ReadonlySet<string> = new Set(Object.values(CHARGE_TYPE));
 @Injectable()
 export class RentalCreationService {
-  private readonly logger = new Logger(RentalCreationService.name);
+  private readonly logger: ApplicationLog;
+
   constructor(
     @Inject(RENTAL_CREATION_REPOSITORY) private readonly creation: RentalCreationRepository,
     @Inject(RENTAL_CREATION_VALIDATOR) private readonly creationValidator: RentalCreationValidator,
     @Inject(RENTAL_AVAILABILITY_READER) private readonly availability: RentalAvailabilityReader,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(CLOCK) private readonly clock: Clock,
-  ) {}
+    @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+  ) {
+    this.logger = loggerFactory?.create(RentalCreationService.name) ?? silentApplicationLog;
+  }
 
   async create(user: CurrentUser, input: CreateRentalOrderInput, idempotencyKey?: string) {
     const start = new Date(input.rentalStartAt);
     const end = new Date(input.rentalEndAt);
     if (start >= end)
-      throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.');
+      throw new InvalidRentalPeriodError(
+        'Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.',
+      );
     if (!(await this.creationValidator.customerExists(user.shopId, input.customerId))) {
-      throw new NotFoundException('Khách hàng không tồn tại hoặc đã ngừng hoạt động.');
+      throw new RentalNotFoundError('Khách hàng không tồn tại hoặc đã ngừng hoạt động.');
     }
     if (
       input.locationId &&
       !(await this.creationValidator.locationExists(user.shopId, input.locationId))
     ) {
-      throw new NotFoundException('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.');
+      throw new RentalNotFoundError('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.');
     }
 
     const variantIds = input.items.map((item) => item.variantId);
     if (new Set(variantIds).size !== variantIds.length) {
-      throw new BadRequestException(
+      throw new InvalidRentalItemSelectionError(
         'Mỗi biến thể sản phẩm chỉ được xuất hiện một lần trong đơn thuê.',
       );
     }
 
     for (const charge of input.charges) {
       if (!CHARGE_TYPES.has(charge.chargeType)) {
-        throw new BadRequestException(`Loại phụ phí không hợp lệ: ${charge.chargeType}.`);
+        throw new InvalidRentalChargeError(`Loại phụ phí không hợp lệ: ${charge.chargeType}.`);
       }
     }
 
@@ -76,7 +92,9 @@ export class RentalCreationService {
 
     if (idempotencyKey) {
       if (idempotencyKey.length > 255)
-        throw new BadRequestException('Mã chống trùng yêu cầu không được dài quá 255 ký tự.');
+        throw new InvalidRentalIdempotencyKeyError(
+          'Mã chống trùng yêu cầu không được dài quá 255 ký tự.',
+        );
       const claim = await this.creation.claimIdempotency({
         shopId: user.shopId,
         scope,
@@ -85,14 +103,16 @@ export class RentalCreationService {
         expiresAt: new Date(this.clock.now().getTime() + 24 * 60 * 60 * 1000),
       });
       if (claim.state === 'HASH_MISMATCH') {
-        throw new ConflictException(
+        throw new RentalIdempotencyConflictError(
           'Mã chống trùng đã được sử dụng cho một yêu cầu khác. Vui lòng gửi lại với mã mới.',
         );
       }
       if (claim.state === 'COMPLETED')
         return claim.responseBody as JsonSerialized<RentalOrderDetails>;
       if (claim.state === 'IN_PROGRESS') {
-        throw new ConflictException('Yêu cầu này đang được xử lý. Vui lòng chờ và thử lại.');
+        throw new RentalIdempotencyConflictError(
+          'Yêu cầu này đang được xử lý. Vui lòng chờ và thử lại.',
+        );
       }
       claimId = claim.claimId;
     }
@@ -108,14 +128,14 @@ export class RentalCreationService {
           until: end,
         });
         if (!variant)
-          throw new NotFoundException(`Biến thể ${item.variantId} không được phép cho thuê.`);
+          throw new RentalNotFoundError(`Biến thể ${item.variantId} không được phép cho thuê.`);
         const effectiveUnitPrice =
           item.unitRentalPrice !== undefined && item.unitRentalPrice !== null
             ? item.unitRentalPrice
             : variant.ratePrice;
 
         if (effectiveUnitPrice === null || effectiveUnitPrice < 0) {
-          throw new BadRequestException(
+          throw new RentalPricingUnavailableError(
             `Chưa cấu hình giá thuê ${durationDays} ngày cho biến thể ${variant.variantCode}. Vui lòng nhập giá thuê ghi đè.`,
           );
         }
@@ -126,12 +146,14 @@ export class RentalCreationService {
         let selected: Array<{ id: string; sku: string }>;
         if (item.inventoryItemIds?.length) {
           if (item.inventoryItemIds.length !== item.quantity) {
-            throw new BadRequestException('Số món đồ được chọn phải bằng số lượng thuê.');
+            throw new InvalidRentalItemSelectionError(
+              'Số món đồ được chọn phải bằng số lượng thuê.',
+            );
           }
           selected = item.inventoryItemIds.map((id) => {
             const inventory = byId.get(id);
             if (!inventory) {
-              throw new ConflictException(
+              throw new RentalInventoryConflictError(
                 `Món đồ ${id} không còn trống trong khoảng thời gian này.`,
               );
             }
@@ -141,7 +163,7 @@ export class RentalCreationService {
           selected = variant.availableInventory.slice(0, item.quantity);
         }
         if (selected.length < item.quantity) {
-          throw new ConflictException(
+          throw new RentalInventoryConflictError(
             `Biến thể ${variant.variantCode} chỉ còn ${variant.availableInventory.length} món đồ có thể cho thuê.`,
           );
         }
@@ -223,7 +245,7 @@ export class RentalCreationService {
         }
       }
       if (error instanceof RentalOverlapError || error instanceof RentalClaimLostError)
-        throw new ConflictException(error.message);
+        throw new RentalAvailabilityConflictError(error.message);
       throw error;
     }
   }

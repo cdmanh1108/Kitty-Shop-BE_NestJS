@@ -4,6 +4,7 @@ import type {
   WebAuthRepository,
 } from '../../src/modules/web-auth/domain/web-auth.repository';
 import type { VerificationCodeSender } from '../../src/modules/web-auth/domain/verification-code';
+import { WebAuthApplicationError } from '../../src/modules/web-auth/domain/web-auth.errors';
 import { now, registrationService, testAccount, webAuthRepository } from './web-auth-test-fixtures';
 
 const activeChallenge = (id: string, accountId = 'account'): OtpChallenge => ({
@@ -69,12 +70,15 @@ describe('WebRegistrationService', () => {
         email: 'user@example.test',
         password: 'password1',
       }),
+    ).rejects.toBeInstanceOf(WebAuthApplicationError);
+    await expect(
+      registrationService(repo, { send }, { generate: () => '123456' }).register({
+        email: 'user@example.test',
+        password: 'password1',
+      }),
     ).rejects.toMatchObject({
-      status: 503,
-      response: {
-        code: 'VERIFICATION_DELIVERY_FAILED',
-        message: 'Không thể gửi mã xác thực lúc này. Vui lòng thử lại sau.',
-      },
+      code: 'VERIFICATION_DELIVERY_FAILED',
+      message: 'Không thể gửi mã xác thực lúc này. Vui lòng thử lại sau.',
     });
     expect(markVerificationDeliverySent).not.toHaveBeenCalled();
     expect(markVerificationDeliveryFailed).toHaveBeenCalledWith(
@@ -90,7 +94,7 @@ describe('WebRegistrationService', () => {
         email: 'not an email',
         password: 'password1',
       }),
-    ).rejects.toMatchObject({ response: { code: 'INVALID_EMAIL' } });
+    ).rejects.toMatchObject({ code: 'INVALID_EMAIL' });
     expect(findAccountByEmail).not.toHaveBeenCalled();
   });
 
@@ -103,7 +107,7 @@ describe('WebRegistrationService', () => {
         registrationService(
           webAuthRepository({ findAccountByEmail: jest.fn().mockResolvedValue(existing) }),
         ).register({ email: 'user@example.test', password: 'right-password' }),
-      ).rejects.toMatchObject({ status: 409, response: { code: 'EMAIL_ALREADY_REGISTERED' } });
+      ).rejects.toMatchObject({ code: 'EMAIL_ALREADY_REGISTERED' });
     }
   });
 
@@ -143,7 +147,7 @@ describe('WebRegistrationService', () => {
         email: 'user@example.test',
         password: 'right-password',
       }),
-    ).rejects.toMatchObject({ status: 429, response: { code: 'OTP_RESEND_TOO_SOON' } });
+    ).rejects.toMatchObject({ code: 'OTP_RESEND_TOO_SOON' });
     expect(issue).toHaveBeenCalledTimes(1);
     expect(send).not.toHaveBeenCalled();
   });
@@ -169,7 +173,7 @@ describe('WebRegistrationService', () => {
 
   it('preserves resend cooldown and verified-account rejection without delivery', async () => {
     const send = jest.fn();
-    for (const [error, status] of [
+    for (const [error] of [
       ['OTP_RESEND_TOO_SOON', 429],
       ['EMAIL_ALREADY_VERIFIED', 400],
     ] as const) {
@@ -178,7 +182,7 @@ describe('WebRegistrationService', () => {
           webAuthRepository({ issueVerificationChallenge: jest.fn().mockResolvedValue({ error }) }),
           { send },
         ).resend('challenge-id'),
-      ).rejects.toMatchObject({ status, response: { code: error } });
+      ).rejects.toMatchObject({ code: error });
     }
     expect(send).not.toHaveBeenCalled();
   });
@@ -203,7 +207,7 @@ describe('WebRegistrationService', () => {
         registrationService(
           webAuthRepository({ verify: jest.fn().mockResolvedValue({ error }) }),
         ).verify('challenge-id', '000000'),
-      ).rejects.toMatchObject({ status: 400, response: { code: error } });
+      ).rejects.toMatchObject({ code: error });
     },
   );
 });

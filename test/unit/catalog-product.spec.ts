@@ -1,4 +1,3 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
@@ -14,6 +13,11 @@ import {
 } from '../../src/modules/catalog/domain/catalog.repository';
 import type { CatalogProductRepository } from '../../src/modules/catalog/domain/catalog-product.repository';
 import { ProductService } from '../../src/modules/catalog/application/product.service';
+import {
+  CatalogResourceNotFoundError,
+  DuplicateProductVariantCombinationError,
+  InvalidCatalogInputError,
+} from '../../src/modules/catalog/application/catalog-application.errors';
 
 describe('ProductService', () => {
   let repository: CatalogProductRepository;
@@ -60,8 +64,8 @@ describe('ProductService', () => {
 
   describe('createProduct', () => {
     it.each([
-      ['CATEGORY_NOT_FOUND', NotFoundException],
-      ['CATEGORY_INACTIVE', ConflictException],
+      ['CATEGORY_NOT_FOUND', CatalogInvariantError],
+      ['CATEGORY_INACTIVE', CatalogInvariantError],
     ] as const)('maps %s to a semantic HTTP error', async (code, exceptionType) => {
       createProductMock.mockRejectedValue(new CatalogCategoryError(code));
       const promise = service.createProduct(mockUser, {
@@ -74,7 +78,7 @@ describe('ProductService', () => {
         media: [],
       });
       await expect(promise).rejects.toBeInstanceOf(exceptionType);
-      await expect(promise).rejects.toMatchObject({ response: { code } });
+      await expect(promise).rejects.toMatchObject({ code });
     });
 
     it('creates product with multiple variants (M/Trắng and M/Hồng) atomically', async () => {
@@ -170,7 +174,7 @@ describe('ProductService', () => {
           ],
           media: [],
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(DuplicateProductVariantCombinationError);
     });
 
     it('rejects duplicate variant codes in request', async () => {
@@ -197,7 +201,7 @@ describe('ProductService', () => {
           ],
           media: [],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidCatalogInputError);
     });
 
     it('rejects multiple primary images', async () => {
@@ -220,10 +224,10 @@ describe('ProductService', () => {
             { url: 'https://example.com/2.jpg', isPrimary: true, sortOrder: 1 },
           ],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidCatalogInputError);
     });
 
-    it('throws ConflictException with code PRODUCT_SLUG_ALREADY_EXISTS when slug already exists', async () => {
+    it('throws Error with code PRODUCT_SLUG_ALREADY_EXISTS when slug already exists', async () => {
       createProductMock.mockRejectedValue(new CatalogProductSlugAlreadyExistsError());
 
       try {
@@ -243,15 +247,13 @@ describe('ProductService', () => {
           ],
           media: [],
         });
-        fail('expected to throw ConflictException');
+        fail('expected to throw Error');
       } catch (error) {
-        expect(error).toBeInstanceOf(ConflictException);
-        const res = (error as ConflictException).getResponse() as {
-          code?: string;
-          message?: string;
-        };
-        expect(res.code).toBe('PRODUCT_SLUG_ALREADY_EXISTS');
-        expect(res.message).toBe('Slug sản phẩm đã tồn tại trong cửa hàng.');
+        expect(error).toBeInstanceOf(Error);
+        expect(error).toMatchObject({
+          code: 'PRODUCT_SLUG_ALREADY_EXISTS',
+          message: 'Slug sản phẩm đã tồn tại trong cửa hàng.',
+        });
       }
     });
   });
@@ -298,27 +300,25 @@ describe('ProductService', () => {
       );
     });
 
-    it('throws NotFoundException when product does not exist', async () => {
+    it('throws Error when product does not exist', async () => {
       updateProductMock.mockResolvedValue(null);
       await expect(
         service.updateProduct(mockUser, 'non-existent', { name: 'Test' }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(CatalogResourceNotFoundError);
     });
 
-    it('throws ConflictException with code PRODUCT_SLUG_ALREADY_EXISTS when updated slug collides', async () => {
+    it('throws Error with code PRODUCT_SLUG_ALREADY_EXISTS when updated slug collides', async () => {
       updateProductMock.mockRejectedValue(new CatalogProductSlugAlreadyExistsError());
 
       try {
         await service.updateProduct(mockUser, 'prod-1', { slug: 'already-used-slug' });
-        fail('expected to throw ConflictException');
+        fail('expected to throw Error');
       } catch (error) {
-        expect(error).toBeInstanceOf(ConflictException);
-        const res = (error as ConflictException).getResponse() as {
-          code?: string;
-          message?: string;
-        };
-        expect(res.code).toBe('PRODUCT_SLUG_ALREADY_EXISTS');
-        expect(res.message).toBe('Slug sản phẩm đã tồn tại trong cửa hàng.');
+        expect(error).toBeInstanceOf(Error);
+        expect(error).toMatchObject({
+          code: 'PRODUCT_SLUG_ALREADY_EXISTS',
+          message: 'Slug sản phẩm đã tồn tại trong cửa hàng.',
+        });
       }
     });
 
@@ -371,14 +371,16 @@ describe('ProductService', () => {
       );
     });
 
-    it('throws ConflictException when product has active rentals', async () => {
+    it('throws Error when product has active rentals', async () => {
       archiveProductMock.mockRejectedValue(
         new CatalogInvariantError(
           CATALOG_ERROR_CODE.PRODUCT_ACTIVE_RENTAL,
           'Không thể lưu trữ sản phẩm đang có lịch thuê chưa kết thúc.',
         ),
       );
-      await expect(service.archiveProduct(mockUser, 'prod-1')).rejects.toThrow(ConflictException);
+      await expect(service.archiveProduct(mockUser, 'prod-1')).rejects.toThrow(
+        CatalogInvariantError,
+      );
     });
   });
 });

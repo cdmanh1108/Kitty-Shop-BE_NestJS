@@ -2,8 +2,13 @@ import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
 import { canRescheduleRental } from '@modules/rentals/domain/rental-policy';
 import { ORDER_PAYMENT_STATUS, DEPOSIT_STATUS } from '@modules/finance/domain/payment-status';
 import { CLOCK, type Clock } from '@common/clock/clock';
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import {
+  APPLICATION_LOGGER,
+  silentApplicationLog,
+  type ApplicationLog,
+  type ApplicationLoggerFactory,
+} from '@common/logging/application-logger.port';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
 import { zonedDateKey, zonedDayRange } from '@common/utils/timezone';
 import {
@@ -16,22 +21,25 @@ import {
   type ReminderRefreshCoordinator,
   type ReminderRefreshOwnership,
 } from '../domain/reminder-refresh-coordinator';
+import { ReminderNotFoundError, ReminderRefreshAlreadyRunningError } from './reminder.errors';
 
 /** Bounds query materialization and sequential reminder writes for one shop refresh page. */
 export const REMINDER_CANDIDATE_BATCH_SIZE = 100;
 
 @Injectable()
 export class ReminderService {
-  private readonly logger = new Logger(ReminderService.name);
+  private readonly logger: ApplicationLog;
 
   constructor(
     @Inject(REMINDER_REPOSITORY) private readonly repository: ReminderRepository,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(REMINDER_REFRESH_COORDINATOR)
     private readonly refreshCoordinator: ReminderRefreshCoordinator,
-  ) {}
+    @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+  ) {
+    this.logger = loggerFactory?.create(ReminderService.name) ?? silentApplicationLog;
+  }
 
-  @Cron('0 */10 * * * *')
   async refreshAll(): Promise<void> {
     const shops = await this.repository.activeShops();
     for (const shop of shops) {
@@ -58,7 +66,7 @@ export class ReminderService {
     const shop = (await this.repository.activeShops()).find((item) => item.id === user.shopId);
     const refreshed = await this.refreshShop(user.shopId, shop?.timezone ?? 'Asia/Ho_Chi_Minh');
     if (!refreshed) {
-      throw new ConflictException('Đang có tiến trình làm mới lời nhắc cho cửa hàng này.');
+      throw new ReminderRefreshAlreadyRunningError();
     }
     return { refreshed: true };
   }
@@ -69,7 +77,7 @@ export class ReminderService {
 
   async dismiss(user: CurrentUser, id: string) {
     const reminder = await this.repository.dismiss(user.shopId, id, user.memberId);
-    if (!reminder) throw new NotFoundException('Không tìm thấy lời nhắc.');
+    if (!reminder) throw new ReminderNotFoundError();
     return reminder;
   }
 

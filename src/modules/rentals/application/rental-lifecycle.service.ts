@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { RENTAL_STATUS, type RentalStatus } from '../domain/rental-status';
@@ -21,6 +15,13 @@ import {
   type RentalOrderReader,
 } from '../domain/rental.repository';
 import type { RescheduleRentalInput, TransitionRentalInput } from './rental.contracts';
+import {
+  InvalidRentalPeriodError,
+  RentalAvailabilityConflictError,
+  RentalNotFoundError,
+  RentalOperationNotAllowedError,
+  RentalStateChangedConflictError,
+} from './rental.errors';
 
 const RENTAL_STATUS_LABELS: Readonly<Record<string, string>> = {
   DRAFT: 'nháp',
@@ -61,19 +62,23 @@ export class RentalLifecycleService {
 
   async reschedule(user: CurrentUser, id: string, input: RescheduleRentalInput) {
     const current = await this.orderReader.getSchedule(user.shopId, id);
-    if (!current) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!current) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     if (!canRescheduleRental(current.status)) {
-      throw new BadRequestException('Chỉ có thể đổi lịch đơn đã đặt trước hoặc đã xác nhận.');
+      throw new RentalOperationNotAllowedError(
+        'Chỉ có thể đổi lịch đơn đã đặt trước hoặc đã xác nhận.',
+      );
     }
     const start = new Date(input.rentalStartAt);
     const end = new Date(input.rentalEndAt);
     if (start >= end)
-      throw new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.');
+      throw new InvalidRentalPeriodError(
+        'Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.',
+      );
     if (
       calculateRentalDurationDays(current.rentalStartAt, current.rentalEndAt) !==
       calculateRentalDurationDays(start, end)
     ) {
-      throw new BadRequestException(
+      throw new InvalidRentalPeriodError(
         'Thay đổi số ngày thuê cần tính lại giá. Vui lòng giữ nguyên số ngày thuê hoặc tạo lại đơn với giá mới.',
       );
     }
@@ -86,7 +91,9 @@ export class RentalLifecycleService {
         changedBy: user.memberId,
       });
       if (!order)
-        throw new BadRequestException('Không thể đổi lịch đơn thuê ở trạng thái hiện tại.');
+        throw new RentalOperationNotAllowedError(
+          'Không thể đổi lịch đơn thuê ở trạng thái hiện tại.',
+        );
       await this.audit.log({
         shopId: user.shopId,
         actorUserId: user.userId,
@@ -98,7 +105,8 @@ export class RentalLifecycleService {
       });
       return order;
     } catch (error) {
-      if (error instanceof RentalOverlapError) throw new ConflictException(error.message);
+      if (error instanceof RentalOverlapError)
+        throw new RentalAvailabilityConflictError(error.message);
       throw error;
     }
   }
@@ -111,12 +119,12 @@ export class RentalLifecycleService {
     reason?: string,
   ) {
     const currentStatus = await this.orderReader.getStatus(user.shopId, id);
-    if (!currentStatus) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!currentStatus) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     if (!allowedFrom.some((status) => status === currentStatus)) {
-      throw new BadRequestException({
-        code: 'RENTAL_TRANSITION_NOT_ALLOWED',
-        message: `Không thể chuyển đơn thuê từ trạng thái ${RENTAL_STATUS_LABELS[currentStatus] ?? 'không hợp lệ'} sang ${RENTAL_STATUS_LABELS[toStatus] ?? 'không hợp lệ'}.`,
-      });
+      throw new RentalOperationNotAllowedError(
+        `Không thể chuyển đơn thuê từ trạng thái ${RENTAL_STATUS_LABELS[currentStatus] ?? 'không hợp lệ'} sang ${RENTAL_STATUS_LABELS[toStatus] ?? 'không hợp lệ'}.`,
+        'RENTAL_TRANSITION_NOT_ALLOWED',
+      );
     }
     const order = await this.lifecycle.transition({
       shopId: user.shopId,
@@ -127,7 +135,7 @@ export class RentalLifecycleService {
       reason,
     });
     if (!order)
-      throw new ConflictException(
+      throw new RentalStateChangedConflictError(
         'Trạng thái đơn thuê vừa được thay đổi. Vui lòng tải lại và thử lại.',
       );
     await this.audit.log({

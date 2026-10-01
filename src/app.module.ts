@@ -28,6 +28,7 @@ import { ReportsModule } from '@modules/reports/reports.module';
 import { SettingsModule } from '@modules/settings/settings.module';
 import { StorageModule } from '@common/storage/storage.module';
 import { TenantModule } from '@common/tenant/tenant.module';
+import { LoggingModule } from '@common/logging/logging.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { TenantModule } from '@common/tenant/tenant.module';
     PrismaModule,
     TenantModule,
     StorageModule,
+    LoggingModule,
     AuditModule,
     AuthModule,
     AuthCleanupModule,

@@ -1,5 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import type { AppConfiguration } from '@config/configuration';
@@ -32,8 +31,6 @@ class AuthCleanupPhaseError extends Error {
 
 @Injectable()
 export class AuthCleanupService {
-  private readonly logger = new Logger(AuthCleanupService.name);
-
   constructor(
     @Inject(AUTH_CLEANUP_REPOSITORY) private readonly repository: AuthCleanupRepository,
     @Inject(AUTH_CLEANUP_COORDINATOR) private readonly coordinator: AuthCleanupCoordinator,
@@ -41,37 +38,7 @@ export class AuthCleanupService {
     private readonly config: ConfigService<AppConfiguration, true>,
   ) {}
 
-  @Cron('0 15 3 * * *')
-  async cleanupScheduled(): Promise<void> {
-    const cleanup = this.config.get('authCleanup', { infer: true });
-    if (!cleanup.enabled) return;
-
-    const startedAt = Date.now();
-    try {
-      const execution = await this.coordinator.runIfOwner((ownership) =>
-        this.cleanupOwned(ownership),
-      );
-      if (!execution.acquired) {
-        this.logger.log({ event: 'auth.cleanup.skipped_busy', coordinationMode: 'database_lease' });
-        return;
-      }
-      this.logger.log({
-        event: 'auth.cleanup.completed',
-        ...execution.value,
-        durationMs: Date.now() - startedAt,
-        coordinationMode: 'database_lease',
-      });
-    } catch (error) {
-      this.logger.error({
-        event: 'auth.cleanup.failed',
-        durationMs: Date.now() - startedAt,
-        phase: error instanceof AuthCleanupPhaseError ? error.phase : 'lease_or_orchestration',
-        errorClass: error instanceof Error ? error.constructor.name : 'UnknownError',
-      });
-    }
-  }
-
-  /** Enables deterministic application and integration tests without invoking cron. */
+  /** Executes cleanup independently of its scheduler trigger. */
   async cleanupNow(): Promise<AuthCleanupResult | null> {
     if (!this.config.get('authCleanup', { infer: true }).enabled) return null;
     const execution = await this.coordinator.runIfOwner((ownership) =>

@@ -1,13 +1,7 @@
 import type { CurrentUser } from '@common/types/current-user';
 import { prepareAuditLogData } from '@modules/audit/application/audit-entry-preparer';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { hash } from 'bcryptjs';
 import {
   MEMBER_REPOSITORY,
@@ -16,6 +10,12 @@ import {
   type MemberRepository,
 } from '../domain/member.repository';
 import type { CreateMemberInput, UpdateMemberInput } from './member.contracts';
+import {
+  MemberEmailAlreadyUsedError,
+  MemberNotFoundError,
+  MemberRoleSelectionError,
+  MemberSelfDeactivationError,
+} from './member.errors';
 
 @Injectable()
 export class MemberService {
@@ -33,7 +33,7 @@ export class MemberService {
 
   async create(user: CurrentUser, input: CreateMemberInput) {
     if (await this.repository.membershipExists(user.shopId, input.email)) {
-      throw new ConflictException('Email này đã được sử dụng bởi một thành viên của cửa hàng.');
+      throw new MemberEmailAlreadyUsedError();
     }
     const passwordHash = await hash(input.password, 12);
     const member = await this.repository.create({
@@ -44,7 +44,7 @@ export class MemberService {
       employeeCode: input.employeeCode,
       roleCodes: input.roleCodes,
     });
-    if (!member) throw new BadRequestException('Một hoặc nhiều vai trò không tồn tại.');
+    if (!member) throw new MemberRoleSelectionError();
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -59,15 +59,13 @@ export class MemberService {
 
   async update(user: CurrentUser, id: string, input: UpdateMemberInput) {
     if (id === user.memberId && input.status === 'INACTIVE') {
-      throw new BadRequestException(
-        'Bạn không thể vô hiệu hóa tư cách thành viên hiện tại của chính mình.',
-      );
+      throw new MemberSelfDeactivationError();
     }
     if (input.roleCodes?.length === 0) {
-      throw new BadRequestException({
-        code: 'MEMBER_ROLE_CODES_EMPTY',
-        message: 'Danh sách mã vai trò phải có ít nhất một phần tử.',
-      });
+      throw new MemberRoleSelectionError(
+        'Danh sách mã vai trò phải có ít nhất một phần tử.',
+        'MEMBER_ROLE_CODES_EMPTY',
+      );
     }
     let member: Awaited<ReturnType<MemberRepository['update']>>;
     try {
@@ -87,20 +85,17 @@ export class MemberService {
       });
     } catch (error) {
       if (error instanceof MemberRoleCodesEmptyError) {
-        throw new BadRequestException({
-          code: 'MEMBER_ROLE_CODES_EMPTY',
-          message: 'Danh sách mã vai trò phải có ít nhất một phần tử.',
-        });
+        throw new MemberRoleSelectionError(
+          'Danh sách mã vai trò phải có ít nhất một phần tử.',
+          'MEMBER_ROLE_CODES_EMPTY',
+        );
       }
       if (error instanceof MemberRoleNotFoundError) {
-        throw new BadRequestException({
-          code: 'MEMBER_ROLE_NOT_FOUND',
-          message: error.message,
-        });
+        throw new MemberRoleSelectionError(error.message, 'MEMBER_ROLE_NOT_FOUND');
       }
       throw error;
     }
-    if (!member) throw new NotFoundException('Không tìm thấy thành viên hoặc vai trò.');
+    if (!member) throw new MemberNotFoundError();
     return member;
   }
 }

@@ -1,4 +1,3 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { InventoryService } from '@modules/catalog/application/inventory.service';
 import type { CatalogInventoryRepository } from '@modules/catalog/domain/catalog-inventory.repository';
 import {
@@ -8,6 +7,10 @@ import {
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
+import {
+  CatalogResourceNotFoundError,
+  InvalidCatalogInputError,
+} from '@modules/catalog/application/catalog-application.errors';
 
 describe('InventoryService', () => {
   let service: InventoryService;
@@ -246,9 +249,11 @@ describe('InventoryService', () => {
       expect(res.id).toBe('item-1');
     });
 
-    it('throws NotFoundException when item does not exist', async () => {
+    it('throws Error when item does not exist', async () => {
       findInventoryItemMock.mockResolvedValue(null);
-      await expect(service.getInventory(user, 'non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.getInventory(user, 'non-existent')).rejects.toThrow(
+        CatalogResourceNotFoundError,
+      );
     });
   });
 
@@ -293,14 +298,14 @@ describe('InventoryService', () => {
       );
     });
 
-    it('throws NotFoundException if variant does not exist', async () => {
+    it('throws Error if variant does not exist', async () => {
       addInventoryItemMock.mockResolvedValue(null);
       await expect(
         service.addInventory(user, { variantId: 'non-existent', sku: 'SKU-01' }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(CatalogResourceNotFoundError);
     });
 
-    it('maps duplicate SKU invariant error to ConflictException', async () => {
+    it('maps duplicate SKU invariant error to Error', async () => {
       addInventoryItemMock.mockRejectedValue(
         new CatalogInvariantError(
           CATALOG_ERROR_CODE.INVENTORY_SKU_ALREADY_EXISTS,
@@ -310,7 +315,7 @@ describe('InventoryService', () => {
 
       await expect(
         service.addInventory(user, { variantId: 'var-1', sku: 'SP001-01' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(CatalogInvariantError);
     });
   });
 
@@ -369,15 +374,15 @@ describe('InventoryService', () => {
       );
     });
 
-    it('rejects unsupported status enum with BadRequestException', async () => {
+    it('rejects unsupported status enum with Error', async () => {
       await expect(
         service.updateInventoryStatus(user, 'item-1', {
           status: 'UNSUPPORTED' as unknown as InventoryStatus,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidCatalogInputError);
     });
 
-    it('maps invariant error for active rental to ConflictException', async () => {
+    it('maps invariant error for active rental to Error', async () => {
       updateInventoryStatusMock.mockRejectedValue(
         new CatalogInvariantError(
           CATALOG_ERROR_CODE.INVENTORY_ACTIVE_ALLOCATION,
@@ -389,10 +394,10 @@ describe('InventoryService', () => {
         service.updateInventoryStatus(user, 'item-1', {
           status: INVENTORY_STATUS.CLEANING,
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(CatalogInvariantError);
     });
 
-    it('maps state mismatch invariant error to ConflictException', async () => {
+    it('maps state mismatch invariant error to Error', async () => {
       updateInventoryStatusMock.mockRejectedValue(
         new CatalogInvariantError(
           CATALOG_ERROR_CODE.INVENTORY_STATUS_MISMATCH,
@@ -406,10 +411,10 @@ describe('InventoryService', () => {
           expectedFromStatus: INVENTORY_STATUS.AVAILABLE,
           reason: 'Mất',
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(CatalogInvariantError);
     });
 
-    it('maps missing reason invariant error to BadRequestException', async () => {
+    it('maps missing reason invariant error to Error', async () => {
       updateInventoryStatusMock.mockRejectedValue(
         new CatalogInvariantError(
           CATALOG_ERROR_CODE.INVENTORY_STATUS_REASON_REQUIRED,
@@ -421,16 +426,16 @@ describe('InventoryService', () => {
         service.updateInventoryStatus(user, 'item-1', {
           status: INVENTORY_STATUS.DAMAGED,
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(CatalogInvariantError);
     });
 
-    it('throws NotFoundException when item does not exist', async () => {
+    it('throws Error when item does not exist', async () => {
       updateInventoryStatusMock.mockResolvedValue(null);
       await expect(
         service.updateInventoryStatus(user, 'item-404', {
           status: INVENTORY_STATUS.CLEANING,
         }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(CatalogResourceNotFoundError);
     });
   });
 
@@ -455,21 +460,23 @@ describe('InventoryService', () => {
       );
     });
 
-    it('throws NotFoundException if item does not exist', async () => {
+    it('throws Error if item does not exist', async () => {
       archiveInventoryItemMock.mockResolvedValue(false);
       await expect(service.archiveInventoryItem(user, 'item-404')).rejects.toThrow(
-        NotFoundException,
+        CatalogResourceNotFoundError,
       );
     });
 
-    it('throws ConflictException if item has active allocation', async () => {
+    it('throws Error if item has active allocation', async () => {
       archiveInventoryItemMock.mockRejectedValue(
         new CatalogInvariantError(
           CATALOG_ERROR_CODE.INVENTORY_ACTIVE_ALLOCATION,
           'Không thể ngừng sử dụng món đồ đang có lịch đặt hoặc đang được thuê.',
         ),
       );
-      await expect(service.archiveInventoryItem(user, 'item-1')).rejects.toThrow(ConflictException);
+      await expect(service.archiveInventoryItem(user, 'item-1')).rejects.toThrow(
+        CatalogInvariantError,
+      );
     });
   });
 });

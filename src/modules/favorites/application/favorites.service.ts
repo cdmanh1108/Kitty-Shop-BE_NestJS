@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { paginateMeta } from '@common/types/pagination';
 import { ShopResolver } from '@common/tenant/shop-resolver';
 import {
@@ -11,6 +11,7 @@ import {
   type FavoriteMutation,
   type FavoriteRepository,
 } from '../domain/favorite.repository';
+import { FavoriteProductNotFoundError } from './favorite.errors';
 
 export interface FavoriteMutationResult extends FavoriteMutation {
   productId: string;
@@ -45,11 +46,11 @@ export class FavoritesService {
     const shopId = await this.shopResolver.resolveShopId();
     const products = await this.catalog.listStorefrontProductsByIds(shopId, [productId]);
     if (products.length !== 1) {
-      throw new NotFoundException('Không tìm thấy sản phẩm.');
+      throw new FavoriteProductNotFoundError();
     }
     const result = await this.repository.add(accountId, shopId, productId);
     if (result.kind === 'product_missing') {
-      throw new NotFoundException('Không tìm thấy sản phẩm.');
+      throw new FavoriteProductNotFoundError();
     }
     return { productId, isFavorite: true, total: result.total };
   }

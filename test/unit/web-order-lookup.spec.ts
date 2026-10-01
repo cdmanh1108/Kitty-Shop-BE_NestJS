@@ -1,5 +1,5 @@
-import { NotFoundException } from '@nestjs/common';
 import { WebRentalLookupService } from '../../src/modules/rentals/application/web-rental-lookup.service';
+import { RentalNotFoundError } from '../../src/modules/rentals/application/rental.errors';
 import { rentalOrderReaderMock } from '../fixtures/rental-ports.fixture';
 
 describe('Web Order Lookup Security and Behavior', () => {
@@ -59,7 +59,7 @@ describe('Web Order Lookup Security and Behavior', () => {
     expect(result).not.toHaveProperty('customerId');
   });
 
-  it('rejects with NotFoundException when phone number does not match order owner', async () => {
+  it('rejects with Error when phone number does not match order owner', async () => {
     orderReader.lookupStorefrontOrder.mockResolvedValue({
       orderNumber: 'RT-20260920-001',
       status: 'confirmed',
@@ -80,10 +80,10 @@ describe('Web Order Lookup Security and Behavior', () => {
         orderCode: 'RT-20260920-001',
         phone: '0987654321', // mismatching phone
       }),
-    ).rejects.toThrow(NotFoundException);
+    ).rejects.toThrow(RentalNotFoundError);
   });
 
-  it('rejects with NotFoundException when orderCode does not exist', async () => {
+  it('rejects with Error when orderCode does not exist', async () => {
     orderReader.lookupStorefrontOrder.mockResolvedValue(null);
 
     await expect(
@@ -91,6 +91,6 @@ describe('Web Order Lookup Security and Behavior', () => {
         orderCode: 'NON-EXISTENT-CODE',
         phone: '0912345678',
       }),
-    ).rejects.toThrow(NotFoundException);
+    ).rejects.toThrow(RentalNotFoundError);
   });
 });

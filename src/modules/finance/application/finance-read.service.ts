@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import { localMidnightUtc, zonedDayRange, zonedMonthRange } from '@common/utils/timezone';
 import type { CurrentUser } from '@common/types/current-user';
@@ -8,6 +8,7 @@ import {
   type FinanceFilter,
   type FinanceCriteria,
 } from '../domain/finance-read.repository';
+import { InvalidFinancePeriodError } from './finance.errors';
 
 export function resolveFinancePeriod(filter: FinanceFilter, now: Date, timezone: string) {
   const key = (date: Date) =>
@@ -19,10 +20,10 @@ export function resolveFinancePeriod(filter: FinanceFilter, now: Date, timezone:
     }).format(date);
   const parse = (value: string) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
-      throw new BadRequestException('Ngày phải có định dạng YYYY-MM-DD.');
+      throw new InvalidFinancePeriodError('Ngày phải có định dạng YYYY-MM-DD.');
     const date = new Date(value + 'T00:00:00Z');
     if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value)
-      throw new BadRequestException('Ngày không hợp lệ.');
+      throw new InvalidFinancePeriodError('Ngày không hợp lệ.');
     return date;
   };
   const midnight = (date: Date) =>
@@ -30,7 +31,7 @@ export function resolveFinancePeriod(filter: FinanceFilter, now: Date, timezone:
   let range = zonedMonthRange(now, timezone);
   const preset = filter.preset ?? 'month';
   if (preset !== 'custom' && (filter.from || filter.to))
-    throw new BadRequestException('Chỉ nhập từ ngày/đến ngày khi chọn khoảng tùy chọn.');
+    throw new InvalidFinancePeriodError('Chỉ nhập từ ngày/đến ngày khi chọn khoảng tùy chọn.');
   if (preset === 'today') range = zonedDayRange(now, timezone);
   if (preset === 'week') {
     const monday = parse(key(now));
@@ -41,12 +42,14 @@ export function resolveFinancePeriod(filter: FinanceFilter, now: Date, timezone:
   }
   if (preset === 'custom') {
     if (!filter.from || !filter.to)
-      throw new BadRequestException('Vui lòng chọn đủ ngày bắt đầu và kết thúc.');
+      throw new InvalidFinancePeriodError('Vui lòng chọn đủ ngày bắt đầu và kết thúc.');
     const from = parse(filter.from);
     const to = parse(filter.to);
     const days = (to.getTime() - from.getTime()) / 86400000;
     if (days < 0 || days > 365)
-      throw new BadRequestException('Khoảng ngày phải đúng thứ tự và không vượt quá 366 ngày.');
+      throw new InvalidFinancePeriodError(
+        'Khoảng ngày phải đúng thứ tự và không vượt quá 366 ngày.',
+      );
     to.setUTCDate(to.getUTCDate() + 1);
     range = { start: midnight(from), end: midnight(to) };
   }

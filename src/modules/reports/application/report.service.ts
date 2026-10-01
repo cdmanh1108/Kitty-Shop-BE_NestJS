@@ -1,8 +1,9 @@
 import { CLOCK, type Clock } from '@common/clock/clock';
 import type { CurrentUser } from '@common/types/current-user';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { REPORT_REPOSITORY, type ReportRepository } from '../domain/report.repository';
 import type { PerformanceQuery, ReportRangeQuery } from './report.contracts';
+import { InvalidReportPeriodError } from './report.errors';
 
 @Injectable()
 export class ReportService {
@@ -37,9 +38,9 @@ export class ReportService {
     const until = query.until ? new Date(query.until) : this.clock.now();
     const from = query.from ? new Date(query.from) : new Date(until.getTime() - 30 * 86_400_000);
     if (from >= until)
-      throw new BadRequestException('Thời gian bắt đầu phải trước thời gian kết thúc.');
+      throw new InvalidReportPeriodError('Thời gian bắt đầu phải trước thời gian kết thúc.');
     if (until.getTime() - from.getTime() > 2 * 365 * 86_400_000) {
-      throw new BadRequestException('Khoảng thời gian báo cáo không được vượt quá 2 năm.');
+      throw new InvalidReportPeriodError('Khoảng thời gian báo cáo không được vượt quá 2 năm.');
     }
     return { from, until };
   }

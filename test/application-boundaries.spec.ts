@@ -172,6 +172,17 @@ describe('inner-layer import guard', () => {
         }
         if (!file.endsWith('.ts') || !/[\\/](application|domain)[\\/]/.test(file)) continue;
         const source = readFileSync(file, 'utf8');
+        const innerLayer = /[\\/](application|domain)[\\/]/.test(file);
+        const application = /[\\/]application[\\/]/.test(file);
+        if (
+          innerLayer &&
+          /\b(?:BadRequestException|NotFoundException|ConflictException|ForbiddenException|UnauthorizedException|HttpException|HttpStatus|InternalServerErrorException|ServiceUnavailableException|TooManyRequestsException)\b/.test(
+            source,
+          )
+        )
+          violations.push(file + ': HTTP transport dependency');
+        if (innerLayer && /@(?:Cron|Interval|Timeout)\s*\(/.test(source))
+          violations.push(file + ': scheduler decorator');
         if (source.includes('@modules/audit/application/audit.service'))
           violations.push(file + ': concrete audit dependency');
         const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
@@ -183,6 +194,22 @@ describe('inner-layer import guard', () => {
             ts.isStringLiteral(node.moduleSpecifier)
           ) {
             const target = node.moduleSpecifier.text;
+            if (innerLayer && target === '@nestjs/schedule')
+              violations.push(`${file}: scheduler runtime import`);
+            if (
+              application &&
+              target === '@nestjs/common' &&
+              ts.isImportDeclaration(node) &&
+              node.importClause?.namedBindings
+            ) {
+              const bindings = node.importClause.namedBindings;
+              if (ts.isNamedImports(bindings)) {
+                for (const element of bindings.elements) {
+                  if (!['Inject', 'Injectable', 'Optional'].includes(element.name.text))
+                    violations.push(`${file}: non-DI Nest symbol ${element.name.text}`);
+                }
+              }
+            }
             if (
               /\/api\/|\.dto$|swagger|class-validator|class-transformer|@prisma|\/infrastructure\//.test(
                 target,

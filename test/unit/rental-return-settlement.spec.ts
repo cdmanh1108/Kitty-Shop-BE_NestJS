@@ -13,7 +13,10 @@ import { INVENTORY_STATUS } from '../../src/modules/catalog/domain/catalog-statu
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 import { RentalSettlementService } from '../../src/modules/rentals/application/rental-settlement.service';
 import { RentalReturnService } from '../../src/modules/rentals/application/rental-return.service';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  RentalAccessDeniedError,
+  RentalOperationNotAllowedError,
+} from '../../src/modules/rentals/application/rental.errors';
 import type { CurrentUser } from '@common/types/current-user';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { ObjectStoragePort } from '../../src/common/storage/object-storage.port';
@@ -344,7 +347,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
         service.receiveReturn(userWithoutPerms, 'order-1', {
           inspections: [],
         }),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      ).rejects.toBeInstanceOf(RentalAccessDeniedError);
     });
 
     it('rejects receiveReturn if order is not ACTIVE', async () => {
@@ -358,7 +361,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
         service.receiveReturn(userWithReturn, 'order-1', {
           inspections: [{ inventoryItemId: 'inv-1', condition: 'NORMAL' }],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(RentalOperationNotAllowedError);
     });
 
     it('rejects addCharge if order is already settled', async () => {
@@ -395,7 +398,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
 
       await expect(
         settlementService.settle(userWithoutPerms, 'order-1', {}),
-      ).rejects.toBeInstanceOf(ForbiddenException);
+      ).rejects.toBeInstanceOf(RentalAccessDeniedError);
     });
 
     it('rejects settle if order is not in RETURNED status', async () => {

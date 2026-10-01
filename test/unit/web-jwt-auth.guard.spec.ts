@@ -1,7 +1,7 @@
 import { ForbiddenException, type ExecutionContext } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { JwtService } from '@nestjs/jwt';
-import { authError } from '../../src/modules/web-auth/application/web-auth.errors';
+import { webAuthHttpError } from '../../src/modules/web-auth/api/web-auth-http.errors';
 import type { WebSessionService } from '../../src/modules/web-auth/application/web-session.service';
 import {
   OptionalWebJwtAuthGuard,
@@ -102,7 +102,7 @@ describe('WebJwtAuthGuard', () => {
   );
 
   it('preserves account-state authentication rejection', async () => {
-    const accountForAccessToken = jest.fn(() => authError('AUTH_REQUIRED', 401));
+    const accountForAccessToken = jest.fn(() => webAuthHttpError('AUTH_REQUIRED', 401));
     const { guard, request } = setup({ accountForAccessToken });
 
     await expect(guard.canActivate(contextFor(request))).rejects.toMatchObject({

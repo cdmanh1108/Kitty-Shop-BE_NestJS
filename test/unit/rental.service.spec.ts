@@ -11,8 +11,13 @@ import type { CurrentUser } from '../../src/common/types/current-user';
 import type { RentalOrderDetails } from '../../src/modules/rentals/domain/rental.models';
 import { RENTAL_STATUS } from '../../src/modules/rentals/domain/rental-status';
 import { Prisma } from '@prisma/client';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { rentalServicePorts } from '../fixtures/rental-ports.fixture';
+import {
+  InvalidRentalInputError,
+  RentalNotFoundError,
+  RentalOperationConflictError,
+  RentalOperationNotAllowedError,
+} from '../../src/modules/rentals/application/rental.errors';
 
 type CompleteRentalOrder = NonNullable<RentalOrderDetails>;
 
@@ -157,7 +162,7 @@ describe('Rental creation and lifecycle services', () => {
   });
 
   describe('create', () => {
-    it('throws BadRequestException if rentalStartAt is >= rentalEndAt', async () => {
+    it('throws Error if rentalStartAt is >= rentalEndAt', async () => {
       await expect(
         service.create(currentUser, {
           customerId: 'cust-1',
@@ -167,10 +172,10 @@ describe('Rental creation and lifecycle services', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
     });
 
-    it('throws NotFoundException if customer does not exist in shop', async () => {
+    it('throws Error if customer does not exist in shop', async () => {
       ports.creationValidator.customerExists.mockResolvedValueOnce(false);
 
       await expect(
@@ -182,10 +187,12 @@ describe('Rental creation and lifecycle services', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [],
         }),
-      ).rejects.toThrow(new NotFoundException('Khách hàng không tồn tại hoặc đã ngừng hoạt động.'));
+      ).rejects.toThrow(
+        new RentalNotFoundError('Khách hàng không tồn tại hoặc đã ngừng hoạt động.'),
+      );
     });
 
-    it('throws NotFoundException if location is specified but does not exist in shop', async () => {
+    it('throws Error if location is specified but does not exist in shop', async () => {
       ports.creationValidator.locationExists.mockResolvedValueOnce(false);
 
       await expect(
@@ -199,11 +206,11 @@ describe('Rental creation and lifecycle services', () => {
           charges: [],
         }),
       ).rejects.toThrow(
-        new NotFoundException('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.'),
+        new RentalNotFoundError('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.'),
       );
     });
 
-    it('throws BadRequestException if duplicate variants are submitted in single order', async () => {
+    it('throws Error if duplicate variants are submitted in single order', async () => {
       await expect(
         service.create(currentUser, {
           customerId: 'cust-1',
@@ -217,11 +224,13 @@ describe('Rental creation and lifecycle services', () => {
           charges: [],
         }),
       ).rejects.toThrow(
-        new BadRequestException('Mỗi biến thể sản phẩm chỉ được xuất hiện một lần trong đơn thuê.'),
+        new InvalidRentalInputError(
+          'Mỗi biến thể sản phẩm chỉ được xuất hiện một lần trong đơn thuê.',
+        ),
       );
     });
 
-    it('throws BadRequestException if charge type is unsupported', async () => {
+    it('throws Error if charge type is unsupported', async () => {
       await expect(
         service.create(currentUser, {
           customerId: 'cust-1',
@@ -231,10 +240,10 @@ describe('Rental creation and lifecycle services', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [{ chargeType: 'UNSUPPORTED_TYPE', amount: 50000, quantity: 1 }],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
     });
 
-    it('throws NotFoundException if variant is not rentable or not found', async () => {
+    it('throws Error if variant is not rentable or not found', async () => {
       ports.availability.getBookableVariant.mockResolvedValueOnce(null);
 
       await expect(
@@ -246,10 +255,10 @@ describe('Rental creation and lifecycle services', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [],
         }),
-      ).rejects.toThrow(new NotFoundException('Biến thể var-1 không được phép cho thuê.'));
+      ).rejects.toThrow(new RentalNotFoundError('Biến thể var-1 không được phép cho thuê.'));
     });
 
-    it('throws BadRequestException if no rental rate is configured for the duration', async () => {
+    it('throws Error if no rental rate is configured for the duration', async () => {
       const bookableVariant: BookableVariant = {
         id: 'var-1',
         variantCode: 'VAR-1',
@@ -272,10 +281,10 @@ describe('Rental creation and lifecycle services', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
     });
 
-    it('throws ConflictException if available inventory is insufficient for requested quantity', async () => {
+    it('throws Error if available inventory is insufficient for requested quantity', async () => {
       const bookableVariant: BookableVariant = {
         id: 'var-1',
         variantCode: 'VAR-1',
@@ -298,7 +307,7 @@ describe('Rental creation and lifecycle services', () => {
           items: [{ variantId: 'var-1', quantity: 2 }], // requested 2
           charges: [],
         }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(RentalOperationConflictError);
     });
 
     it('orchestrates valid rental creation and logs audit event', async () => {
@@ -377,13 +386,13 @@ describe('Rental creation and lifecycle services', () => {
   });
 
   describe('transitions', () => {
-    it('throws BadRequestException if transition is rejected by policy or concurrent status change', async () => {
+    it('throws Error if transition is rejected by policy or concurrent status change', async () => {
       ports.orderReader.getStatus.mockResolvedValueOnce(RENTAL_STATUS.COMPLETED); // Terminal state
       ports.lifecycle.transition.mockResolvedValueOnce(null);
 
       await expect(
         lifecycleService.start(currentUser, 'order-1', { reason: 'Ready to start' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(RentalOperationNotAllowedError);
     });
 
     it('cancels order when in RESERVED status', async () => {
@@ -400,7 +409,7 @@ describe('Rental creation and lifecycle services', () => {
   });
 
   describe('reschedule', () => {
-    it('throws NotFoundException if order does not exist', async () => {
+    it('throws Error if order does not exist', async () => {
       ports.orderReader.getSchedule.mockResolvedValueOnce(null);
 
       await expect(
@@ -408,10 +417,10 @@ describe('Rental creation and lifecycle services', () => {
           rentalStartAt: '2026-10-10T10:00:00.000Z',
           rentalEndAt: '2026-10-12T10:00:00.000Z',
         }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(RentalNotFoundError);
     });
 
-    it('throws BadRequestException if order status cannot be rescheduled (e.g. ACTIVE or COMPLETED)', async () => {
+    it('throws Error if order status cannot be rescheduled (e.g. ACTIVE or COMPLETED)', async () => {
       ports.orderReader.getSchedule.mockResolvedValueOnce({
         status: RENTAL_STATUS.COMPLETED,
         rentalStartAt: new Date('2026-10-01T12:00:00.000Z'),
@@ -424,11 +433,13 @@ describe('Rental creation and lifecycle services', () => {
           rentalEndAt: '2026-10-12T10:00:00.000Z',
         }),
       ).rejects.toThrow(
-        new BadRequestException('Chỉ có thể đổi lịch đơn đã đặt trước hoặc đã xác nhận.'),
+        new RentalOperationNotAllowedError(
+          'Chỉ có thể đổi lịch đơn đã đặt trước hoặc đã xác nhận.',
+        ),
       );
     });
 
-    it('throws BadRequestException if new dates are invalid (start >= end)', async () => {
+    it('throws Error if new dates are invalid (start >= end)', async () => {
       ports.orderReader.getSchedule.mockResolvedValueOnce({
         status: RENTAL_STATUS.RESERVED,
         rentalStartAt: new Date('2026-10-05T00:00:00.000Z'),
@@ -441,7 +452,7 @@ describe('Rental creation and lifecycle services', () => {
           rentalEndAt: '2026-10-10T10:00:00.000Z',
         }),
       ).rejects.toThrow(
-        new BadRequestException('Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.'),
+        new InvalidRentalInputError('Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.'),
       );
     });
 

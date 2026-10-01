@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import { PERMISSIONS } from '../../src/common/constants/permissions';
 import type { CurrentUser } from '../../src/common/types/current-user';
 import type { ObjectStoragePort } from '../../src/common/storage/object-storage.port';
@@ -13,6 +12,7 @@ import {
   rentalLifecycleRepositoryMock,
   rentalOrderReaderMock,
 } from '../fixtures/rental-ports.fixture';
+import { applicationLoggerMock } from '../helpers/application-logger';
 
 const user: CurrentUser = {
   userId: 'user-1',
@@ -88,13 +88,14 @@ describe('rental evidence storage operation policy', () => {
     lifecycle.confirm.mockRejectedValueOnce(original);
     const objectStorage = storage();
     objectStorage.putObject.mockResolvedValueOnce({ storageKey: 'key', publicUrl: '' });
-    const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const logger = applicationLoggerMock();
     const policies = { getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY) };
     const service = new RentalConfirmationService(
       orderReader,
       lifecycle,
       policies as never,
       objectStorage,
+      logger.factory,
     );
 
     await expect(
@@ -107,7 +108,7 @@ describe('rental evidence storage operation policy', () => {
     ).rejects.toBe(original);
 
     expect(objectStorage.deleteObject.mock.calls).toHaveLength(0);
-    expect(log).toHaveBeenCalledWith({
+    expect(logger.error).toHaveBeenCalledWith({
       event: 'rental.confirmation.evidence.cleanup_failed',
       orderId: 'order-1',
     });
@@ -124,13 +125,14 @@ describe('rental evidence storage operation policy', () => {
     const objectStorage = storage();
     objectStorage.putObject.mockResolvedValueOnce({ storageKey: 'key', publicUrl: '' });
     objectStorage.deleteObject.mockRejectedValueOnce(new Error('cleanup timeout'));
-    const log = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const logger = applicationLoggerMock();
     const policies = { getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY) };
     const service = new RentalConfirmationService(
       orderReader,
       lifecycle,
       policies as never,
       objectStorage,
+      logger.factory,
     );
 
     await expect(
@@ -145,7 +147,7 @@ describe('rental evidence storage operation policy', () => {
     expect(objectStorage.deleteObject.mock.calls).toEqual([
       [expect.any(String), { purpose: 'cleanup' }],
     ]);
-    expect(log).toHaveBeenCalledWith({
+    expect(logger.error).toHaveBeenCalledWith({
       event: 'rental.confirmation.evidence.cleanup_failed',
       orderId: 'order-1',
     });

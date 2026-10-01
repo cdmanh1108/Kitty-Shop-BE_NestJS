@@ -2,18 +2,16 @@ import { generateDatedReference } from '@common/utils/reference-number';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import type { JsonValue } from '@common/types/json';
 import { PAYMENT_PURPOSE, PAYMENT_DIRECTION } from '@modules/finance/domain/payment-types';
+import {
+  APPLICATION_LOGGER,
+  silentApplicationLog,
+  type ApplicationLog,
+  type ApplicationLoggerFactory,
+} from '@common/logging/application-logger.port';
 
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
   FINANCE_REPOSITORY,
@@ -34,17 +32,28 @@ import type {
   ExpenseListQuery,
   PaymentListQuery,
 } from './finance.contracts';
+import {
+  FinanceRecordNotFoundError,
+  InvalidExpenseDetailsError,
+  InvalidPaymentCommandError,
+  ManualPaymentIdempotencyConflictError,
+  ManualPaymentReplayUnavailableError,
+} from './finance.errors';
 
 const PAYMENT_PURPOSES: ReadonlySet<string> = new Set(Object.values(PAYMENT_PURPOSE));
-const logger = new Logger('FinanceService');
 
 @Injectable()
 export class FinanceService {
+  private readonly logger: ApplicationLog;
+
   constructor(
     @Inject(FINANCE_REPOSITORY) private readonly repository: FinanceRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(CLOCK) private readonly clock: Clock,
-  ) {}
+    @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+  ) {
+    this.logger = loggerFactory?.create(FinanceService.name) ?? silentApplicationLog;
+  }
 
   listPayments(user: CurrentUser, query: PaymentListQuery) {
     return this.repository.listPayments({
@@ -65,20 +74,24 @@ export class FinanceService {
     rawIdempotencyKey?: string | string[],
   ): Promise<ManualPaymentCreateResult> {
     if (!PAYMENT_PURPOSES.has(input.purpose)) {
-      throw new BadRequestException('Mục đích thanh toán không hợp lệ.');
+      throw new InvalidPaymentCommandError('Mục đích thanh toán không hợp lệ.');
     }
     const refundPurpose =
       input.purpose === PAYMENT_PURPOSE.DEPOSIT_REFUND ||
       input.purpose === PAYMENT_PURPOSE.ORDER_REFUND;
     if (refundPurpose && input.direction !== PAYMENT_DIRECTION.OUT) {
-      throw new BadRequestException(`Giao dịch hoàn tiền (${input.purpose}) phải là khoản chi.`);
+      throw new InvalidPaymentCommandError(
+        `Giao dịch hoàn tiền (${input.purpose}) phải là khoản chi.`,
+      );
     }
     if (
       !refundPurpose &&
       input.direction === PAYMENT_DIRECTION.OUT &&
       input.purpose !== PAYMENT_PURPOSE.OTHER
     ) {
-      throw new BadRequestException('Giao dịch chi phải có mục đích hoàn tiền hoặc mục đích khác.');
+      throw new InvalidPaymentCommandError(
+        'Giao dịch chi phải có mục đích hoàn tiền hoặc mục đích khác.',
+      );
     }
     const key = requireIdempotencyKey(rawIdempotencyKey);
     const paidAt = input.paidAt ? parsePaidAt(input.paidAt) : undefined;
@@ -91,23 +104,20 @@ export class FinanceService {
       expiresAt: new Date(this.clock.now().getTime() + FINANCE_MANUAL_PAYMENT_REPLAY_RETENTION_MS),
     });
     if (claim.state === 'HASH_MISMATCH') {
-      throw new ConflictException({
-        code: 'IDEMPOTENCY_KEY_REUSED',
-        message: 'Mã chống trùng đã được dùng cho một yêu cầu ghi nhận tiền khác.',
-      });
+      throw new ManualPaymentIdempotencyConflictError(
+        'IDEMPOTENCY_KEY_REUSED',
+        'Mã chống trùng đã được dùng cho một yêu cầu ghi nhận tiền khác.',
+      );
     }
     if (claim.state === 'IN_PROGRESS') {
-      throw new ConflictException({
-        code: 'IDEMPOTENCY_IN_PROGRESS',
-        message: 'Yêu cầu ghi nhận tiền đang được xử lý. Vui lòng thử lại với cùng mã.',
-      });
+      throw new ManualPaymentIdempotencyConflictError(
+        'IDEMPOTENCY_IN_PROGRESS',
+        'Yêu cầu ghi nhận tiền đang được xử lý. Vui lòng thử lại với cùng mã.',
+      );
     }
     if (claim.state === 'COMPLETED') {
       if (!isStoredManualPaymentCreateResult(claim.responseBody)) {
-        throw new InternalServerErrorException({
-          code: 'IDEMPOTENCY_REPLAY_INVALID',
-          message: 'Không thể khôi phục kết quả giao dịch đã ghi nhận.',
-        });
+        throw new ManualPaymentReplayUnavailableError();
       }
       return claim.responseBody.result;
     }
@@ -131,19 +141,20 @@ export class FinanceService {
       });
     } catch (error) {
       if (error instanceof FinancePaymentClaimLostError) {
-        throw new ConflictException({
-          code: 'IDEMPOTENCY_CLAIM_LOST',
-          message: 'Yêu cầu ghi nhận tiền đã được thay thế. Vui lòng thử lại với cùng mã.',
-        });
+        throw new ManualPaymentIdempotencyConflictError(
+          'IDEMPOTENCY_CLAIM_LOST',
+          'Yêu cầu ghi nhận tiền đã được thay thế. Vui lòng thử lại với cùng mã.',
+        );
       }
-      if (error instanceof FinanceInvariantError) throw new BadRequestException(error.message);
+      if (error instanceof FinanceInvariantError)
+        throw new InvalidPaymentCommandError(error.message);
       throw error;
     } finally {
       if (!payment) {
         try {
           await this.repository.releasePaymentIdempotency(user.shopId, scope, key, claim.claimId);
         } catch (releaseError) {
-          logger.error({
+          this.logger.error({
             event: 'finance.manual-payment.idempotency.release.failed',
             shopId: user.shopId,
             error:
@@ -154,7 +165,7 @@ export class FinanceService {
         }
       }
     }
-    if (!payment) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!payment) throw new FinanceRecordNotFoundError('Không tìm thấy đơn thuê.');
     return toManualPaymentCreateResult(payment);
   }
 
@@ -164,7 +175,7 @@ export class FinanceService {
       paymentId: id,
       voidedBy: user.memberId,
     });
-    if (!payment) throw new NotFoundException('Không tìm thấy giao dịch thanh toán.');
+    if (!payment) throw new FinanceRecordNotFoundError('Không tìm thấy giao dịch thanh toán.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -196,13 +207,13 @@ export class FinanceService {
     const description = input.description.trim();
     const expenseDate = new Date(input.expenseDate + 'T00:00:00Z');
     if (description.length < 3 || description.length > 2000) {
-      throw new BadRequestException('Nội dung khoản chi cần từ 3 đến 2.000 ký tự.');
+      throw new InvalidExpenseDetailsError('Nội dung khoản chi cần từ 3 đến 2.000 ký tự.');
     }
     if (
       !Number.isFinite(expenseDate.getTime()) ||
       expenseDate.toISOString().slice(0, 10) !== input.expenseDate
     ) {
-      throw new BadRequestException('Ngày chi không hợp lệ.');
+      throw new InvalidExpenseDetailsError('Ngày chi không hợp lệ.');
     }
     let expense: Awaited<ReturnType<FinanceRepository['createExpense']>>;
     try {
@@ -222,7 +233,8 @@ export class FinanceService {
         createdBy: user.memberId,
       });
     } catch (error) {
-      if (error instanceof FinanceInvariantError) throw new BadRequestException(error.message);
+      if (error instanceof FinanceInvariantError)
+        throw new InvalidExpenseDetailsError(error.message);
       throw error;
     }
     await this.audit.log({
@@ -239,7 +251,7 @@ export class FinanceService {
 
   async voidExpense(user: CurrentUser, id: string) {
     const expense = await this.repository.voidExpense({ shopId: user.shopId, expenseId: id });
-    if (!expense) throw new NotFoundException('Không tìm thấy khoản chi.');
+    if (!expense) throw new FinanceRecordNotFoundError('Không tìm thấy khoản chi.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -254,16 +266,16 @@ export class FinanceService {
 
 function requireIdempotencyKey(value: string | string[] | undefined): string {
   if (value === undefined) {
-    throw new BadRequestException({
-      code: 'IDEMPOTENCY_KEY_REQUIRED',
-      message: 'Cần có Idempotency-Key để ghi nhận tiền.',
-    });
+    throw new InvalidPaymentCommandError(
+      'Cần có Idempotency-Key để ghi nhận tiền.',
+      'IDEMPOTENCY_KEY_REQUIRED',
+    );
   }
   if (Array.isArray(value) || !/^[\x21-\x7e]{1,255}$/.test(value)) {
-    throw new BadRequestException({
-      code: 'IDEMPOTENCY_KEY_INVALID',
-      message: 'Idempotency-Key không hợp lệ.',
-    });
+    throw new InvalidPaymentCommandError(
+      'Idempotency-Key không hợp lệ.',
+      'IDEMPOTENCY_KEY_INVALID',
+    );
   }
   return value;
 }
@@ -271,7 +283,7 @@ function requireIdempotencyKey(value: string | string[] | undefined): string {
 function parsePaidAt(value: string): Date {
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime()))
-    throw new BadRequestException('Thời gian thanh toán không hợp lệ.');
+    throw new InvalidPaymentCommandError('Thời gian thanh toán không hợp lệ.');
   return parsed;
 }
 

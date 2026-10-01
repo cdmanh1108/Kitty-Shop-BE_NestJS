@@ -3,7 +3,9 @@ import type { CustomerRepository } from '../../src/modules/customers/domain/cust
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { CurrentUser } from '../../src/common/types/current-user';
 import type { CustomerDetails } from '../../src/modules/customers/domain/customer.models';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { CustomerPhoneAlreadyExistsError } from '../../src/modules/customers/domain/customer-errors';
+import { InvalidCustomerPhoneError } from '../../src/modules/customers/domain/customer-phone';
+import { CustomerNotFoundError } from '../../src/modules/customers/application/customer.errors';
 
 describe('CustomerService Unit Tests', () => {
   let service: CustomerService;
@@ -82,12 +84,10 @@ describe('CustomerService Unit Tests', () => {
   });
 
   describe('get', () => {
-    it('throws NotFoundException if customer does not exist in shop', async () => {
+    it('throws Error if customer does not exist in shop', async () => {
       findByIdMock.mockResolvedValueOnce(null);
 
-      await expect(service.get(currentUser, 'non-existent')).rejects.toThrow(
-        new NotFoundException('Không tìm thấy khách hàng.'),
-      );
+      await expect(service.get(currentUser, 'non-existent')).rejects.toThrow(CustomerNotFoundError);
       expect(findByIdMock).toHaveBeenCalledWith('shop-1', 'non-existent');
     });
 
@@ -132,7 +132,7 @@ describe('CustomerService Unit Tests', () => {
     it('rejects invalid phone input', async () => {
       await expect(
         service.create(currentUser, { fullName: 'Customer', phone: 'not-a-phone' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidCustomerPhoneError);
       expect(createMock).not.toHaveBeenCalled();
     });
 
@@ -145,18 +145,18 @@ describe('CustomerService Unit Tests', () => {
 
       await expect(
         service.create(currentUser, { fullName: 'Duplicate', phone: '+84 912 345 678' }),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(CustomerPhoneAlreadyExistsError);
       expect(createMock).not.toHaveBeenCalled();
     });
   });
 
   describe('update', () => {
-    it('throws NotFoundException if customer does not exist in shop', async () => {
+    it('throws Error if customer does not exist in shop', async () => {
       updateMock.mockResolvedValueOnce(null);
 
       await expect(
         service.update(currentUser, 'non-existent', { fullName: 'Updated Name' }),
-      ).rejects.toThrow(new NotFoundException('Không tìm thấy khách hàng.'));
+      ).rejects.toThrow(CustomerNotFoundError);
     });
 
     it('updates customer and logs audit event', async () => {
@@ -188,12 +188,12 @@ describe('CustomerService Unit Tests', () => {
   });
 
   describe('addNote', () => {
-    it('throws NotFoundException if customer does not exist', async () => {
+    it('throws Error if customer does not exist', async () => {
       findByIdMock.mockResolvedValueOnce(null);
 
       await expect(
         service.addNote(currentUser, 'non-existent', { content: 'Some note', isPinned: false }),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(CustomerNotFoundError);
     });
 
     it('adds note for existing customer', async () => {

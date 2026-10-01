@@ -1,4 +1,3 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { WebRentalEvaluationService } from '../../src/modules/rentals/application/web-rental-evaluation.service';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -8,6 +7,10 @@ import type { RentalPolicyProvider } from '../../src/modules/settings/domain/ren
 import type { CustomerRepository } from '../../src/modules/customers/domain/customer.repository';
 import { InvalidCustomerPhoneError } from '../../src/modules/customers/domain/customer-phone';
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
+import {
+  InvalidRentalInputError,
+  RentalOperationConflictError,
+} from '../../src/modules/rentals/application/rental.errors';
 import {
   rentalAvailabilityReaderMock,
   rentalCreationRepositoryMock,
@@ -72,19 +75,19 @@ describe('Web rental use cases', () => {
           returnDate: '2026-03-01',
           variantId: 'var-1',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
       expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
       expect(availability.findActiveVariantIdsByProduct.mock.calls).toHaveLength(0);
     });
 
-    it('throws BadRequestException if pickupDate is equal to or after returnDate', async () => {
+    it('throws Error if pickupDate is equal to or after returnDate', async () => {
       await expect(
         evaluationService.checkAvailability('shop-1', {
           pickupDate: '2026-09-25',
           returnDate: '2026-09-20',
           variantId: 'var-1',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
     });
 
     it('returns availability and count for a specific variant', async () => {
@@ -170,7 +173,7 @@ describe('Web rental use cases', () => {
           returnDate: '2026-09-23',
           items: [{ variantId: 'var-1', quantity: 21 }],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
       expect(mockPolicyProvider.getPolicy).not.toHaveBeenCalled();
       expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
     });
@@ -366,7 +369,7 @@ describe('Web rental use cases', () => {
           items: [{ variantId: 'var-1', quantity: 0 }],
           deliveryMethod: 'self_pickup',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
 
       await expect(
         evaluationService.calculateQuote('shop-1', {
@@ -375,7 +378,7 @@ describe('Web rental use cases', () => {
           items: [{ variantId: 'var-1', quantity: 1.5 }],
           deliveryMethod: 'self_pickup',
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
     });
 
     it('merges duplicate variant demand before checking stock and calculating price', async () => {
@@ -440,7 +443,7 @@ describe('Web rental use cases', () => {
             { productId: 'another-product', variantId: 'var-1', quantity: 1 },
           ],
         }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
     });
   });
 
@@ -459,7 +462,7 @@ describe('Web rental use cases', () => {
           },
           'web-invalid-calendar',
         ),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
       expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
     });
 
@@ -473,9 +476,7 @@ describe('Web rental use cases', () => {
     });
 
     it('requires an opaque idempotency key before any customer or booking work', async () => {
-      await expect(orderService.createOrder('shop-1', webOrderInput())).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(orderService.createOrder('shop-1', webOrderInput())).rejects.toThrow(Error);
       expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
       expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
       expect(creation.createOrder.mock.calls).toHaveLength(0);
@@ -484,7 +485,7 @@ describe('Web rental use cases', () => {
     it('rejects ambiguous multi-value keys before claiming', async () => {
       await expect(
         orderService.createOrder('shop-1', webOrderInput(), ['key-a', 'key-b']),
-      ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_KEY_INVALID' } });
+      ).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_INVALID' });
       expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
     });
 
@@ -524,9 +525,7 @@ describe('Web rental use cases', () => {
       await expect(
         orderService.createOrder('shop-1', webOrderInput(), 'web-reused-key'),
       ).rejects.toMatchObject({
-        response: {
-          code: 'IDEMPOTENCY_KEY_REUSED',
-        },
+        code: 'IDEMPOTENCY_KEY_REUSED',
       });
       expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
     });
@@ -557,7 +556,7 @@ describe('Web rental use cases', () => {
           },
           'web-test-stock',
         ),
-      ).rejects.toThrow(ConflictException);
+      ).rejects.toThrow(RentalOperationConflictError);
       expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
     });
 
@@ -641,7 +640,7 @@ describe('Web rental use cases', () => {
           },
           'web-test-invalid-phone',
         ),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
       expect(creation.createOrder.mock.calls).toHaveLength(0);
     });
 
@@ -784,7 +783,7 @@ describe('Web rental use cases', () => {
           },
           'web-test-parent',
         ),
-      ).rejects.toThrow();
+      ).rejects.toThrow(InvalidRentalInputError);
       expect(creation.createOrder.mock.calls).toHaveLength(0);
     });
 
@@ -811,7 +810,7 @@ describe('Web rental use cases', () => {
           },
           'web-test-collateral',
         ),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(InvalidRentalInputError);
     });
   });
 

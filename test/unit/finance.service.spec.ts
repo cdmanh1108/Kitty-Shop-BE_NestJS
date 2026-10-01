@@ -8,8 +8,13 @@ import {
   TRANSACTION_STATUS,
   EXPENSE_STATUS,
 } from '../../src/modules/finance/domain/payment-status';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import {
+  FinanceRecordNotFoundError,
+  InvalidExpenseDetailsError,
+  InvalidPaymentCommandError,
+  ManualPaymentIdempotencyConflictError,
+} from '../../src/modules/finance/application/finance.errors';
 
 describe('FinanceService Unit Tests', () => {
   let service: FinanceService;
@@ -116,7 +121,7 @@ describe('FinanceService Unit Tests', () => {
           paymentMethod: 'CASH',
           amount: 100000,
         }),
-      ).rejects.toMatchObject({ response: { code: 'IDEMPOTENCY_KEY_REQUIRED' } });
+      ).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REQUIRED' });
       expect(claimPaymentIdempotencyMock).not.toHaveBeenCalled();
       expect(createPaymentMock).not.toHaveBeenCalled();
     });
@@ -169,13 +174,13 @@ describe('FinanceService Unit Tests', () => {
       await service.createPayment(currentUser, 'order-1', command, 'payment-stable');
       await expect(
         service.createPayment(currentUser, 'order-1', command, 'payment-stable'),
-      ).rejects.toBeInstanceOf(ConflictException);
+      ).rejects.toBeInstanceOf(ManualPaymentIdempotencyConflictError);
       expect(claimPaymentIdempotencyMock.mock.calls[0]?.[0]?.requestHash).toBe(
         claimPaymentIdempotencyMock.mock.calls[1]?.[0]?.requestHash,
       );
     });
 
-    it('throws BadRequestException if refund purpose is used with IN direction', async () => {
+    it('throws Error if refund purpose is used with IN direction', async () => {
       await expect(
         service.createPayment(currentUser, 'order-1', {
           direction: PAYMENT_DIRECTION.IN,
@@ -184,11 +189,11 @@ describe('FinanceService Unit Tests', () => {
           amount: 50000,
         }),
       ).rejects.toThrow(
-        new BadRequestException('Giao dịch hoàn tiền (DEPOSIT_REFUND) phải là khoản chi.'),
+        new InvalidPaymentCommandError('Giao dịch hoàn tiền (DEPOSIT_REFUND) phải là khoản chi.'),
       );
     });
 
-    it('throws BadRequestException if OUT direction is used with non-refund/non-other purpose', async () => {
+    it('throws Error if OUT direction is used with non-refund/non-other purpose', async () => {
       await expect(
         service.createPayment(currentUser, 'order-1', {
           direction: PAYMENT_DIRECTION.OUT,
@@ -197,11 +202,13 @@ describe('FinanceService Unit Tests', () => {
           amount: 50000,
         }),
       ).rejects.toThrow(
-        new BadRequestException('Giao dịch chi phải có mục đích hoàn tiền hoặc mục đích khác.'),
+        new InvalidPaymentCommandError(
+          'Giao dịch chi phải có mục đích hoàn tiền hoặc mục đích khác.',
+        ),
       );
     });
 
-    it('maps FinanceInvariantError to BadRequestException', async () => {
+    it('maps FinanceInvariantError to Error', async () => {
       repo.createPayment.mockRejectedValueOnce(
         new FinanceInvariantError('Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'),
       );
@@ -219,11 +226,11 @@ describe('FinanceService Unit Tests', () => {
           'payment-invariant',
         ),
       ).rejects.toThrow(
-        new BadRequestException('Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'),
+        new InvalidPaymentCommandError('Tiền hoàn cọc không được vượt quá tiền cọc đang giữ.'),
       );
     });
 
-    it('throws NotFoundException if order does not exist or belongs to another tenant', async () => {
+    it('throws Error if order does not exist or belongs to another tenant', async () => {
       repo.createPayment.mockResolvedValueOnce(null);
 
       await expect(
@@ -238,7 +245,7 @@ describe('FinanceService Unit Tests', () => {
           },
           'payment-missing-order',
         ),
-      ).rejects.toThrow(new NotFoundException('Không tìm thấy đơn thuê.'));
+      ).rejects.toThrow(new FinanceRecordNotFoundError('Không tìm thấy đơn thuê.'));
     });
 
     it('creates payment successfully and logs audit event', async () => {
@@ -267,11 +274,11 @@ describe('FinanceService Unit Tests', () => {
   });
 
   describe('voidPayment', () => {
-    it('throws NotFoundException if payment not found or belongs to another tenant', async () => {
+    it('throws Error if payment not found or belongs to another tenant', async () => {
       voidPaymentMock.mockResolvedValueOnce(null);
 
       await expect(service.voidPayment(currentUser, 'non-existent')).rejects.toThrow(
-        new NotFoundException('Không tìm thấy giao dịch thanh toán.'),
+        new FinanceRecordNotFoundError('Không tìm thấy giao dịch thanh toán.'),
       );
     });
 
@@ -292,7 +299,7 @@ describe('FinanceService Unit Tests', () => {
   });
 
   describe('createExpense', () => {
-    it('maps FinanceInvariantError to BadRequestException', async () => {
+    it('maps FinanceInvariantError to Error', async () => {
       createExpenseMock.mockRejectedValueOnce(
         new FinanceInvariantError('Expense category not active'),
       );
@@ -305,7 +312,7 @@ describe('FinanceService Unit Tests', () => {
           expenseDate: '2026-10-01',
           paymentMethod: 'CASH',
         }),
-      ).rejects.toThrow(new BadRequestException('Expense category not active'));
+      ).rejects.toThrow(new InvalidExpenseDetailsError('Expense category not active'));
     });
 
     it('creates expense successfully and logs audit event', async () => {
@@ -331,11 +338,11 @@ describe('FinanceService Unit Tests', () => {
   });
 
   describe('voidExpense', () => {
-    it('throws NotFoundException if expense not found or belongs to another tenant', async () => {
+    it('throws Error if expense not found or belongs to another tenant', async () => {
       voidExpenseMock.mockResolvedValueOnce(null);
 
       await expect(service.voidExpense(currentUser, 'non-existent')).rejects.toThrow(
-        new NotFoundException('Không tìm thấy khoản chi.'),
+        new FinanceRecordNotFoundError('Không tìm thấy khoản chi.'),
       );
     });
 

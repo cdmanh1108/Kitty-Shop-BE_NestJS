@@ -1,9 +1,10 @@
-import { ConflictException, Logger } from '@nestjs/common';
 import type { Clock } from '../../src/common/clock/clock';
 import type { CurrentUser } from '../../src/common/types/current-user';
 import { ReminderService } from '../../src/modules/reminders/application/reminder.service';
+import { ReminderRefreshAlreadyRunningError } from '../../src/modules/reminders/application/reminder.errors';
 import type { ReminderRefreshCoordinator } from '../../src/modules/reminders/domain/reminder-refresh-coordinator';
 import type { ReminderRepository } from '../../src/modules/reminders/domain/reminder.repository';
+import { applicationLoggerMock } from '../helpers/application-logger';
 
 const user: CurrentUser = {
   userId: 'user-1',
@@ -37,13 +38,13 @@ describe('Reminder refresh coordination', () => {
 
   it('skips a busy shop in cron without reading its C39 candidate workset', async () => {
     const persistence = repository();
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const logger = applicationLoggerMock();
 
-    await new ReminderService(persistence, clock, busyCoordinator()).refreshAll();
+    await new ReminderService(persistence, clock, busyCoordinator(), logger.factory).refreshAll();
 
     expect(persistence.candidatePage.mock.calls).toHaveLength(0);
     expect(persistence.resolveMissing.mock.calls).toHaveLength(0);
-    expect(log).toHaveBeenCalledWith(
+    expect(logger.log).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'reminders.refresh.skipped_busy',
         shopId: user.shopId,
@@ -57,7 +58,7 @@ describe('Reminder refresh coordination', () => {
 
     await expect(
       new ReminderService(persistence, clock, busyCoordinator()).refreshForUser(user),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toBeInstanceOf(ReminderRefreshAlreadyRunningError);
     expect(persistence.candidatePage.mock.calls).toHaveLength(0);
   });
 
@@ -67,19 +68,18 @@ describe('Reminder refresh coordination', () => {
     const coordinator = {
       runIfOwner: jest.fn().mockRejectedValue(failure),
     } as unknown as ReminderRefreshCoordinator;
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const logger = applicationLoggerMock();
 
-    await new ReminderService(persistence, clock, coordinator).refreshAll();
+    await new ReminderService(persistence, clock, coordinator, logger.factory).refreshAll();
 
-    expect(error).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'reminders.refresh.failed',
         shopId: user.shopId,
         error: failure,
       }),
     );
-    expect(log).not.toHaveBeenCalledWith(
+    expect(logger.log).not.toHaveBeenCalledWith(
       expect.objectContaining({ event: 'reminders.refresh.skipped_busy' }),
     );
   });

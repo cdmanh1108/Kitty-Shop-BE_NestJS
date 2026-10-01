@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import type { Clock } from '../../src/common/clock/clock';
 import type { CurrentUser } from '../../src/common/types/current-user';
 import {
@@ -10,6 +9,7 @@ import type {
   ReminderRepository,
 } from '../../src/modules/reminders/domain/reminder.repository';
 import { immediatelyAcquireReminderRefresh } from '../helpers/reminder-refresh-coordinator';
+import { applicationLoggerMock } from '../helpers/application-logger';
 
 const now = new Date('2026-09-22T03:00:00.000Z');
 const clock: Clock = { now: () => new Date(now) };
@@ -78,12 +78,13 @@ describe('Reminder refresh pagination', () => {
       .mockResolvedValueOnce({ items: [candidate('order-1')], nextCursor: 'order-1' })
       .mockResolvedValueOnce({ items: [candidate('order-2')], nextCursor: null });
     const { persistence, resolveMissing } = repository(candidatePage);
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const logger = applicationLoggerMock();
 
     await new ReminderService(
       persistence,
       clock,
       immediatelyAcquireReminderRefresh(),
+      logger.factory,
     ).refreshForUser(user);
 
     expect(candidatePage).toHaveBeenCalledTimes(2);
@@ -105,7 +106,7 @@ describe('Reminder refresh pagination', () => {
         'PICKUP_TODAY:order-2:2026-09-22',
       ]),
     );
-    expect(log).toHaveBeenCalledWith(
+    expect(logger.log).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'reminders.refresh.completed',
         shopId: user.shopId,
@@ -128,13 +129,18 @@ describe('Reminder refresh pagination', () => {
       .mockResolvedValueOnce({ items: [candidate('order-1')], nextCursor: 'order-1' })
       .mockRejectedValueOnce(failure);
     const { persistence, upsert, resolveMissing } = repository(candidatePage);
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const logger = applicationLoggerMock();
 
-    await new ReminderService(persistence, clock, immediatelyAcquireReminderRefresh()).refreshAll();
+    await new ReminderService(
+      persistence,
+      clock,
+      immediatelyAcquireReminderRefresh(),
+      logger.factory,
+    ).refreshAll();
 
     expect(upsert).toHaveBeenCalled();
     expect(resolveMissing).not.toHaveBeenCalled();
-    expect(error).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'reminders.refresh.failed',
         shopId: user.shopId,

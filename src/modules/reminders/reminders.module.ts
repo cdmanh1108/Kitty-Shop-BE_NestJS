@@ -6,12 +6,14 @@ import { REMINDER_REFRESH_COORDINATOR } from './domain/reminder-refresh-coordina
 import { REMINDER_REPOSITORY } from './domain/reminder.repository';
 import { PrismaReminderRefreshCoordinator } from './infrastructure/prisma-reminder-refresh.coordinator';
 import { PrismaReminderRepository } from './infrastructure/prisma-reminder.repository';
+import { ReminderRefreshJob } from './infrastructure/jobs/reminder-refresh.job';
 
 @Module({
   imports: [ClockModule],
   controllers: [ReminderController],
   providers: [
     ReminderService,
+    ReminderRefreshJob,
     PrismaReminderRepository,
     PrismaReminderRefreshCoordinator,
     { provide: REMINDER_REPOSITORY, useExisting: PrismaReminderRepository },

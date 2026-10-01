@@ -1,11 +1,10 @@
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import {
-  BadRequestException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+  APPLICATION_LOGGER,
+  silentApplicationLog,
+  type ApplicationLog,
+  type ApplicationLoggerFactory,
+} from '@common/logging/application-logger.port';
 import { randomUUID } from 'node:crypto';
 import { CHARGE_TYPE } from '../domain/charge-type';
 import { RENTAL_STATUS } from '../domain/rental-status';
@@ -21,6 +20,14 @@ import {
   type RentalOrderReader,
 } from '../domain/rental.repository';
 import type { AddRentalChargeInput, SettleRentalOrderInput } from './rental.contracts';
+import {
+  InvalidRentalEvidenceError,
+  InvalidRentalChargeError,
+  RentalAccessDeniedError,
+  RentalEvidenceNotFoundError,
+  RentalNotFoundError,
+  RentalOperationNotAllowedError,
+} from './rental.errors';
 
 const CHARGE_TYPES: ReadonlySet<string> = new Set(Object.values(CHARGE_TYPE));
 
@@ -32,7 +39,7 @@ export interface SettlementImage {
 
 @Injectable()
 export class RentalSettlementService {
-  private readonly logger = new Logger(RentalSettlementService.name);
+  private readonly logger: ApplicationLog;
 
   constructor(
     @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
@@ -40,7 +47,10 @@ export class RentalSettlementService {
     private readonly lifecycle: RentalLifecycleRepository,
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
-  ) {}
+    @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+  ) {
+    this.logger = loggerFactory?.create(RentalSettlementService.name) ?? silentApplicationLog;
+  }
 
   async settle(
     user: CurrentUser,
@@ -50,12 +60,12 @@ export class RentalSettlementService {
   ) {
     this.authorize(user);
     const order = await this.orderReader.get(user.shopId, orderId);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     if (order.status !== 'RETURNED') {
-      throw new BadRequestException('Chỉ có thể kết toán đơn ở trạng thái đã nhận trả.');
+      throw new RentalOperationNotAllowedError('Chỉ có thể kết toán đơn ở trạng thái đã nhận trả.');
     }
     if (order.settlement) {
-      throw new BadRequestException('Đơn thuê này đã được kết toán.');
+      throw new RentalOperationNotAllowedError('Đơn thuê này đã được kết toán.');
     }
 
     let evidence: { key: string; filename: string; mimeType: string; size: number } | undefined;
@@ -64,12 +74,12 @@ export class RentalSettlementService {
       try {
         image = validateAndHashImage(file.buffer, file.mimetype);
       } catch (error) {
-        throw new BadRequestException(
+        throw new InvalidRentalEvidenceError(
           error instanceof Error ? error.message : 'Ảnh bằng chứng không hợp lệ.',
         );
       }
       if (file.mimetype !== image.mimeType) {
-        throw new BadRequestException('Loại tệp không khớp nội dung hình ảnh.');
+        throw new InvalidRentalEvidenceError('Loại tệp không khớp nội dung hình ảnh.');
       }
       const filename =
         Array.from(file.originalname, (character) =>
@@ -116,7 +126,7 @@ export class RentalSettlementService {
         evidence,
       });
 
-      if (!result) throw new NotFoundException('Không tìm thấy đơn thuê.');
+      if (!result) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
       return result;
     } catch (error) {
       if (evidence) {
@@ -138,7 +148,7 @@ export class RentalSettlementService {
     const order = await this.orderReader.get(user.shopId, orderId);
     const settlement = order?.settlement;
     if (!settlement?.evidenceKey || !settlement.evidenceMimeType) {
-      throw new NotFoundException('Không tìm thấy ảnh bằng chứng kết toán.');
+      throw new RentalEvidenceNotFoundError('Không tìm thấy ảnh bằng chứng kết toán.');
     }
     return {
       body: await this.storage.getObject(settlement.evidenceKey),
@@ -148,7 +158,7 @@ export class RentalSettlementService {
 
   async returnCollateral(user: CurrentUser, id: string) {
     const order = await this.lifecycle.returnCollateral(user.shopId, id, user.memberId);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -162,14 +172,18 @@ export class RentalSettlementService {
 
   async addCharge(user: CurrentUser, id: string, input: AddRentalChargeInput) {
     if (!CHARGE_TYPES.has(input.chargeType))
-      throw new BadRequestException('Loại phụ phí không hợp lệ.');
+      throw new InvalidRentalChargeError('Loại phụ phí không hợp lệ.');
     const current = await this.orderReader.get(user.shopId, id);
-    if (!current) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!current) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     if (current.status === RENTAL_STATUS.COMPLETED || current.status === RENTAL_STATUS.CANCELLED) {
-      throw new BadRequestException('Không thể thêm phụ phí cho đơn thuê đã đóng hoặc đã hủy.');
+      throw new RentalOperationNotAllowedError(
+        'Không thể thêm phụ phí cho đơn thuê đã đóng hoặc đã hủy.',
+      );
     }
     if (current.settlement) {
-      throw new BadRequestException('Không thể thêm phụ phí sau khi đã kết toán đơn thuê.');
+      throw new RentalOperationNotAllowedError(
+        'Không thể thêm phụ phí sau khi đã kết toán đơn thuê.',
+      );
     }
     const order = await this.lifecycle.addCharge({
       shopId: user.shopId,
@@ -180,7 +194,7 @@ export class RentalSettlementService {
       quantity: input.quantity,
       createdBy: user.memberId,
     });
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -195,7 +209,7 @@ export class RentalSettlementService {
 
   private authorize(user: CurrentUser) {
     if (!user.permissions.includes(PERMISSIONS.RENTALS_SETTLE)) {
-      throw new ForbiddenException('Bạn không có quyền kết toán đơn thuê.');
+      throw new RentalAccessDeniedError('Bạn không có quyền kết toán đơn thuê.');
     }
   }
 }

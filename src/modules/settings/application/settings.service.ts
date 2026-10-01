@@ -1,7 +1,7 @@
 import type { CurrentUser } from '@common/types/current-user';
 import type { AuditSnapshot } from '@modules/audit/domain/audit.repository';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   DEFAULT_RENTAL_POLICY,
   RENTAL_POLICY_SETTING_KEY,
@@ -14,6 +14,7 @@ import type {
   UpdateShopInput,
   UpsertSettingInput,
 } from './settings.contracts';
+import { InvalidShopSettingsError, ShopNotFoundError } from './settings.errors';
 
 function buildEffectivePolicy(saved?: RentalPolicy | null): RentalPolicy {
   return {
@@ -117,14 +118,14 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     !Number.isInteger(policy.rentalPricing.defaultRentalPrice) ||
     policy.rentalPricing.defaultRentalPrice < 0
   ) {
-    throw new BadRequestException('Giá thuê mặc định phải là số nguyên không âm.');
+    throw new InvalidShopSettingsError('Giá thuê mặc định phải là số nguyên không âm.');
   }
 
   if (
     !Number.isInteger(policy.deposit.defaultCashDeposit) ||
     policy.deposit.defaultCashDeposit < 0
   ) {
-    throw new BadRequestException('Tiền cọc mặc định phải là số nguyên không âm.');
+    throw new InvalidShopSettingsError('Tiền cọc mặc định phải là số nguyên không âm.');
   }
 
   if (
@@ -132,14 +133,14 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     policy.deposit.allowedMethods.length === 0 ||
     policy.deposit.allowedMethods.some((m) => !['CASH', 'DOCUMENT'].includes(m))
   ) {
-    throw new BadRequestException('Phương thức đặt cọc phải gồm tiền mặt hoặc giấy tờ.');
+    throw new InvalidShopSettingsError('Phương thức đặt cọc phải gồm tiền mặt hoặc giấy tờ.');
   }
 
   if (
     !Array.isArray(policy.deposit.allowedDocumentTypes) ||
     policy.deposit.allowedDocumentTypes.some((d) => !['CCCD', 'GPLX'].includes(d))
   ) {
-    throw new BadRequestException(
+    throw new InvalidShopSettingsError(
       'Loại giấy tờ đặt cọc phải là căn cước công dân hoặc giấy phép lái xe.',
     );
   }
@@ -148,13 +149,15 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     const seen = new Set<string>();
     for (const override of policy.deposit.categoryOverrides) {
       if (seen.has(override.categoryId)) {
-        throw new BadRequestException(
+        throw new InvalidShopSettingsError(
           `Cấu hình tiền cọc bị trùng cho danh mục: ${override.categoryId}.`,
         );
       }
       seen.add(override.categoryId);
       if (!Number.isInteger(override.cashAmount) || override.cashAmount < 0) {
-        throw new BadRequestException('Tiền cọc riêng của danh mục phải là số nguyên không âm.');
+        throw new InvalidShopSettingsError(
+          'Tiền cọc riêng của danh mục phải là số nguyên không âm.',
+        );
       }
     }
   }
@@ -163,7 +166,7 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     !Number.isInteger(policy.reschedule.maxDaysFromBooking) ||
     policy.reschedule.maxDaysFromBooking < 1
   ) {
-    throw new BadRequestException(
+    throw new InvalidShopSettingsError(
       'Số ngày tối đa được đổi lịch kể từ khi đặt thuê phải ít nhất là 1.',
     );
   }
@@ -172,42 +175,48 @@ function validateResultingPolicy(policy: RentalPolicy): void {
     !Number.isInteger(policy.lateReturn.feePerItemPerDay) ||
     policy.lateReturn.feePerItemPerDay < 0
   ) {
-    throw new BadRequestException('Phí trả trễ mỗi món mỗi ngày phải là số nguyên không âm.');
+    throw new InvalidShopSettingsError('Phí trả trễ mỗi món mỗi ngày phải là số nguyên không âm.');
   }
 
   if (
     !Number.isInteger(policy.lateReturn.newRentalChargeFromLateDay) ||
     policy.lateReturn.newRentalChargeFromLateDay < 1
   ) {
-    throw new BadRequestException('Ngày trả trễ bắt đầu tính lượt thuê mới phải ít nhất là 1.');
+    throw new InvalidShopSettingsError(
+      'Ngày trả trễ bắt đầu tính lượt thuê mới phải ít nhất là 1.',
+    );
   }
 
   if (!Number.isInteger(policy.specialCleaning.feeMin) || policy.specialCleaning.feeMin < 0) {
-    throw new BadRequestException('Phí vệ sinh đặc biệt tối thiểu phải là số nguyên không âm.');
+    throw new InvalidShopSettingsError(
+      'Phí vệ sinh đặc biệt tối thiểu phải là số nguyên không âm.',
+    );
   }
 
   if (!Number.isInteger(policy.specialCleaning.feeMax) || policy.specialCleaning.feeMax < 0) {
-    throw new BadRequestException('Phí vệ sinh đặc biệt tối đa phải là số nguyên không âm.');
+    throw new InvalidShopSettingsError('Phí vệ sinh đặc biệt tối đa phải là số nguyên không âm.');
   }
 
   if (policy.specialCleaning.feeMax < policy.specialCleaning.feeMin) {
-    throw new BadRequestException('Phí vệ sinh đặc biệt tối đa không được nhỏ hơn phí tối thiểu.');
+    throw new InvalidShopSettingsError(
+      'Phí vệ sinh đặc biệt tối đa không được nhỏ hơn phí tối thiểu.',
+    );
   }
 
   if (typeof policy.loyalty.enabled !== 'boolean') {
-    throw new BadRequestException('Trạng thái bật tích điểm phải là giá trị đúng hoặc sai.');
+    throw new InvalidShopSettingsError('Trạng thái bật tích điểm phải là giá trị đúng hoặc sai.');
   }
 
   if (!Number.isInteger(policy.loyalty.rentalsRequired) || policy.loyalty.rentalsRequired < 1) {
-    throw new BadRequestException('Số lượt thuê cần để nhận thưởng phải ít nhất là 1.');
+    throw new InvalidShopSettingsError('Số lượt thuê cần để nhận thưởng phải ít nhất là 1.');
   }
 
   if (!Number.isInteger(policy.loyalty.rewardRentalValue) || policy.loyalty.rewardRentalValue < 0) {
-    throw new BadRequestException('Giá trị thưởng thuê phải là số nguyên không âm.');
+    throw new InvalidShopSettingsError('Giá trị thưởng thuê phải là số nguyên không âm.');
   }
 
   if (typeof policy.loyalty.stackableWithPromotions !== 'boolean') {
-    throw new BadRequestException(
+    throw new InvalidShopSettingsError(
       'Tùy chọn kết hợp tích điểm với khuyến mãi phải là giá trị đúng hoặc sai.',
     );
   }
@@ -243,16 +252,16 @@ export class SettingsService implements RentalPolicyProvider {
 
   async shop(user: CurrentUser) {
     const shop = await this.repository.getShop(user.shopId);
-    if (!shop) throw new NotFoundException('Không tìm thấy cửa hàng.');
+    if (!shop) throw new ShopNotFoundError();
     return shop;
   }
 
   async upsert(user: CurrentUser, key: string, input: UpsertSettingInput) {
     if (key === RENTAL_POLICY_SETTING_KEY) {
-      throw new BadRequestException({
-        code: 'RENTAL_POLICY_REQUIRES_VALIDATED_UPDATE',
-        message: 'Vui lòng cập nhật quy tắc kinh doanh tại mục chính sách thuê.',
-      });
+      throw new InvalidShopSettingsError(
+        'Vui lòng cập nhật quy tắc kinh doanh tại mục chính sách thuê.',
+        'RENTAL_POLICY_REQUIRES_VALIDATED_UPDATE',
+      );
     }
     const setting = await this.repository.upsert({
       shopId: user.shopId,

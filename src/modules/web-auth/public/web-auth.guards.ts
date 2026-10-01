@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { AppConfiguration } from '@config/configuration';
 import type { Request } from 'express';
 import { WebSessionService } from '../application/web-session.service';
-import { authError } from '../application/web-auth.errors';
+import { webAuthHttpError } from '../api/web-auth-http.errors';
 import type { WebAuthPrincipal } from './web-auth-principal';
 import type { WebAuthRequest } from './web-auth-request';
 import { WebAuthCookies } from '../api/web-auth-cookies';
@@ -45,10 +45,10 @@ async function resolveWebRequestUser(
       audience: 'kitty-web',
     });
   } catch {
-    authError('AUTH_REQUIRED', 401);
+    webAuthHttpError('AUTH_REQUIRED', 401);
   }
 
-  if (!isWebAccessPayload(payload)) authError('AUTH_REQUIRED', 401);
+  if (!isWebAccessPayload(payload)) webAuthHttpError('AUTH_REQUIRED', 401);
 
   // Account reload is intentionally outside the token-failure boundary: a repository outage
   // must reach the global error filter as infrastructure failure, never become a false 401.
@@ -66,7 +66,7 @@ export class WebJwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<WebAuthRequest>();
     const user = await resolveWebRequestUser(request, this.jwt, this.session, this.cookies);
-    if (!user) authError('AUTH_REQUIRED', 401);
+    if (!user) webAuthHttpError('AUTH_REQUIRED', 401);
     request.webUser = user;
     return true;
   }

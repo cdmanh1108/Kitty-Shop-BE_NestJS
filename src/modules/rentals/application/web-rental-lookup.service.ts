@@ -1,7 +1,8 @@
-import { NotFoundException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { normalizeCustomerPhone } from '@modules/customers/domain/customer-phone';
 import { RENTAL_ORDER_READER, type RentalOrderReader } from '../domain/rental.repository';
 import type { WebOrderLookupInput, WebOrderLookupResult } from './web-rental.contracts';
+import { RentalNotFoundError } from './rental.errors';
 
 @Injectable()
 export class WebRentalLookupService {
@@ -12,13 +13,13 @@ export class WebRentalLookupService {
     try {
       normalizedPhone = normalizeCustomerPhone(req.phone);
     } catch {
-      throw new NotFoundException('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
+      throw new RentalNotFoundError('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
     }
 
     const order = await this.orderReader.lookupStorefrontOrder(shopId, req.orderCode);
 
     if (!order || order.customerNormalizedPhone !== normalizedPhone) {
-      throw new NotFoundException('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
+      throw new RentalNotFoundError('Không tìm thấy đơn thuê với thông tin đã cung cấp.');
     }
 
     const rawPhone = order.customerPhone;

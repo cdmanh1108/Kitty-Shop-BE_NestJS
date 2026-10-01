@@ -1,6 +1,12 @@
 import { currentRequestMetadata } from '@common/request-context/request-context';
+import {
+  APPLICATION_LOGGER,
+  silentApplicationLog,
+  type ApplicationLog,
+  type ApplicationLoggerFactory,
+} from '@common/logging/application-logger.port';
 import type { AuditPort, AuditEntry } from '../domain/audit.port';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import {
   AUDIT_REPOSITORY,
   type AuditRepository,
@@ -21,9 +27,14 @@ export type AuditContext = Pick<
 
 @Injectable()
 export class AuditService implements AuditPort {
-  private readonly logger = new Logger(AuditService.name);
+  private readonly logger: ApplicationLog;
 
-  constructor(@Inject(AUDIT_REPOSITORY) private readonly repository: AuditRepository) {}
+  constructor(
+    @Inject(AUDIT_REPOSITORY) private readonly repository: AuditRepository,
+    @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+  ) {
+    this.logger = loggerFactory?.create(AuditService.name) ?? silentApplicationLog;
+  }
 
   /**
    * Audit logging is deliberately best-effort at the application boundary.

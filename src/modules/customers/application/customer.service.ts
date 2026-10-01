@@ -1,13 +1,7 @@
 import { CUSTOMER_STATUS } from '../domain/customer-status';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import {
-  BadRequestException,
-  ConflictException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { CUSTOMER_REPOSITORY, type CustomerRepository } from '../domain/customer.repository';
 import { CustomerPhoneAlreadyExistsError } from '../domain/customer-errors';
@@ -21,6 +15,7 @@ import type {
   UpdateCustomerAddressInput,
   UpdateCustomerInput,
 } from './customer.contracts';
+import { CustomerAddressNotFoundError, CustomerNotFoundError } from './customer.errors';
 
 @Injectable()
 export class CustomerService {
@@ -39,7 +34,7 @@ export class CustomerService {
 
   async get(user: CurrentUser, id: string) {
     const customer = await this.repository.findById(user.shopId, id);
-    if (!customer) throw new NotFoundException('Không tìm thấy khách hàng.');
+    if (!customer) throw new CustomerNotFoundError();
     return customer;
   }
 
@@ -103,7 +98,7 @@ export class CustomerService {
         ...(input.status !== undefined ? { status: input.status } : {}),
       }),
     );
-    if (!updated) throw new NotFoundException('Không tìm thấy khách hàng.');
+    if (!updated) throw new CustomerNotFoundError();
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -128,7 +123,7 @@ export class CustomerService {
   }
   async addAddress(user: CurrentUser, customerId: string, input: CustomerAddressInput) {
     const address = await this.repository.addAddress({ shopId: user.shopId, customerId, ...input });
-    if (!address) throw new NotFoundException('Không tìm thấy khách hàng.');
+    if (!address) throw new CustomerNotFoundError();
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -152,7 +147,7 @@ export class CustomerService {
       addressId,
       data: input,
     });
-    if (!address) throw new NotFoundException('Không tìm thấy địa chỉ khách hàng.');
+    if (!address) throw new CustomerAddressNotFoundError();
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -167,7 +162,7 @@ export class CustomerService {
 
   async deleteAddress(user: CurrentUser, customerId: string, addressId: string) {
     const deleted = await this.repository.deleteAddress(user.shopId, customerId, addressId);
-    if (!deleted) throw new NotFoundException('Không tìm thấy địa chỉ khách hàng.');
+    if (!deleted) throw new CustomerAddressNotFoundError();
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -184,18 +179,14 @@ export class CustomerService {
       return normalizeCustomerPhone(phone);
     } catch (error) {
       if (error instanceof InvalidCustomerPhoneError) {
-        throw new BadRequestException({ code: error.code, message: error.message });
+        throw error;
       }
       throw error;
     }
   }
 
   private throwPhoneConflict(existingCustomerId?: string): never {
-    throw new ConflictException({
-      code: 'CUSTOMER_PHONE_ALREADY_EXISTS',
-      message: 'Số điện thoại khách hàng đã tồn tại.',
-      existingCustomerId,
-    });
+    throw new CustomerPhoneAlreadyExistsError(existingCustomerId);
   }
 
   private async withPhoneConflict<T>(action: () => Promise<T>): Promise<T> {

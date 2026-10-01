@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   STOREFRONT_CATALOG_REPOSITORY,
   type StorefrontCatalogRepository,
@@ -11,6 +11,7 @@ import type {
   StorefrontSelectionResolution,
   WebProductListFilterInput,
 } from './web-catalog.contracts';
+import { CatalogResourceNotFoundError } from './catalog-application.errors';
 
 @Injectable()
 export class WebCatalogService {
@@ -45,7 +46,7 @@ export class WebCatalogService {
   async getProduct(shopId: string, slug: string): Promise<StorefrontProductDetails> {
     const product = await this.repository.findStorefrontProductBySlug(shopId, slug);
     if (!product) {
-      throw new NotFoundException('Không tìm thấy sản phẩm.');
+      throw new CatalogResourceNotFoundError('Không tìm thấy sản phẩm.');
     }
 
     return product;

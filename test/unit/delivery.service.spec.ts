@@ -1,5 +1,10 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { DeliveryService } from '../../src/modules/deliveries/application/delivery.service';
+import {
+  DeliveryChangedConcurrentlyError,
+  DeliveryNotFoundError,
+  DeliveryTransitionNotAllowedError,
+  InvalidDeliveryStatusError,
+} from '../../src/modules/deliveries/application/delivery.errors';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { DeliveryRepository } from '../../src/modules/deliveries/domain/delivery.repository';
 import type { DeliveryJobRecord } from '../../src/modules/deliveries/domain/deliveries.records';
@@ -91,9 +96,13 @@ describe('DeliveryService status transitions', () => {
   });
 
   it.each([
-    ['NOT_FOUND', NotFoundException, undefined],
-    ['INVALID_TRANSITION', ConflictException, 'DELIVERY_INVALID_TRANSITION'],
-    ['CONCURRENT_MODIFICATION', ConflictException, 'DELIVERY_CONCURRENT_MODIFICATION'],
+    ['NOT_FOUND', DeliveryNotFoundError, undefined],
+    ['INVALID_TRANSITION', DeliveryTransitionNotAllowedError, 'DELIVERY_INVALID_TRANSITION'],
+    [
+      'CONCURRENT_MODIFICATION',
+      DeliveryChangedConcurrentlyError,
+      'DELIVERY_CONCURRENT_MODIFICATION',
+    ],
   ] as const)('maps %s without emitting a success audit', async (kind, exception, code) => {
     const deliveries = repository();
     deliveries.updateStatus.mockResolvedValue({ kind });
@@ -106,8 +115,8 @@ describe('DeliveryService status transitions', () => {
       fail('Expected delivery status update to fail.');
     } catch (error) {
       expect(error).toBeInstanceOf(exception);
-      if (code && error instanceof ConflictException) {
-        expect(error.getResponse()).toMatchObject({ code });
+      if (code && error instanceof Error) {
+        expect((error as Error & { code?: string }).code).toBe(code);
       }
     }
     expect(audits.log).not.toHaveBeenCalled();
@@ -119,7 +128,7 @@ describe('DeliveryService status transitions', () => {
       new DeliveryService(deliveries.port, audit().port).updateStatus(user, delivery.id, {
         status: 'UNKNOWN' as never,
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+    ).rejects.toBeInstanceOf(InvalidDeliveryStatusError);
     expect(deliveries.updateStatus).not.toHaveBeenCalled();
   });
 });

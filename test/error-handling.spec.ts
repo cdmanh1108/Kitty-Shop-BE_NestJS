@@ -24,6 +24,13 @@ import {
   CatalogInvariantError,
 } from '../src/modules/catalog/domain/catalog.repository';
 import { BookingCustomerUnavailableError } from '../src/modules/customers/domain/customer-errors';
+import {
+  InvalidRentalInputError,
+  RentalAccessDeniedError,
+  RentalNotFoundError,
+} from '../src/modules/rentals/application/rental.errors';
+import { DeliveryTransitionNotAllowedError } from '../src/modules/deliveries/application/delivery.errors';
+import { WebAuthApplicationError } from '../src/modules/web-auth/domain/web-auth.errors';
 
 interface MockResponsePayload {
   statusCode: number;
@@ -204,6 +211,36 @@ describe('AllExceptionsFilter', () => {
       expect(sentPayload).toMatchObject({
         statusCode: HttpStatus.CONFLICT,
         code: 'BOOKING_CUSTOMER_UNAVAILABLE',
+      });
+      expect(sentPayload.details).toBeUndefined();
+    });
+
+    it.each([
+      [new InvalidRentalInputError('Invalid rental dates.'), 400, 'HTTP_400'],
+      [new WebAuthApplicationError('INVALID_CREDENTIALS'), 401, 'INVALID_CREDENTIALS'],
+      [new RentalAccessDeniedError('You cannot settle this order.'), 403, 'HTTP_403'],
+      [new RentalNotFoundError('Rental not found.'), 404, 'HTTP_404'],
+      [new DeliveryTransitionNotAllowedError(), 409, 'DELIVERY_INVALID_TRANSITION'],
+    ])('maps application error to its existing HTTP contract (%s)', (error, status, code) => {
+      filter.catch(error, mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(status);
+      expect(sentPayload).toMatchObject({ statusCode: status, code, message: error.message });
+      if (error.code) {
+        expect(sentPayload.details).toEqual({ code: error.code, message: error.message });
+      } else {
+        expect(sentPayload.details).toBeUndefined();
+      }
+    });
+
+    it('keeps verification delivery failures as public 503 application errors', () => {
+      filter.catch(new WebAuthApplicationError('VERIFICATION_DELIVERY_FAILED'), mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.SERVICE_UNAVAILABLE);
+      expect(sentPayload).toMatchObject({
+        statusCode: 503,
+        code: 'VERIFICATION_DELIVERY_FAILED',
+        message: 'Không thể gửi mã xác thực lúc này. Vui lòng thử lại sau.',
       });
       expect(sentPayload.details).toBeUndefined();
     });

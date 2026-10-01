@@ -1,6 +1,6 @@
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   CATALOG_CATEGORY_REPOSITORY,
   type CatalogCategoryRepository,
@@ -10,7 +10,8 @@ import type {
   CreateCategoryInput,
   UpdateCategoryInput,
 } from './catalog.contracts';
-import { withCatalogInvariant } from './catalog-invariant';
+import { CatalogInvariantError } from '../domain/catalog.repository';
+import { CategoryInUseError } from './catalog-application.errors';
 
 @Injectable()
 export class CategoryService {
@@ -39,16 +40,14 @@ export class CategoryService {
         .replace(/[^a-zA-Z0-9]+/g, '_')
         .replace(/^_+|_+$/g, '')
     ).toUpperCase();
-    const created = await withCatalogInvariant(() =>
-      this.repository.createCategory(user.shopId, {
-        parentId: input.parentId || null,
-        code,
-        name,
-        description: input.description?.trim() || undefined,
-        status: input.status ?? 'ACTIVE',
-        sortOrder: input.sortOrder ?? 0,
-      }),
-    );
+    const created = await this.repository.createCategory(user.shopId, {
+      parentId: input.parentId || null,
+      code,
+      name,
+      description: input.description?.trim() || undefined,
+      status: input.status ?? 'ACTIVE',
+      sortOrder: input.sortOrder ?? 0,
+    });
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -70,20 +69,14 @@ export class CategoryService {
   async updateCategory(user: CurrentUser, id: string, input: UpdateCategoryInput) {
     const code = input.code?.trim() ? input.code.trim().toUpperCase() : undefined;
     const parentId = input.parentId === undefined ? undefined : input.parentId || null;
-    const updated = await withCatalogInvariant(() =>
-      this.repository.updateCategory(user.shopId, id, {
-        ...input,
-        parentId,
-        code,
-        name: input.name?.trim(),
-        description: input.description === null ? null : input.description?.trim() || undefined,
-      }),
-    );
-    if (!updated)
-      throw new NotFoundException({
-        code: 'CATEGORY_NOT_FOUND',
-        message: 'Không tìm thấy danh mục.',
-      });
+    const updated = await this.repository.updateCategory(user.shopId, id, {
+      ...input,
+      parentId,
+      code,
+      name: input.name?.trim(),
+      description: input.description === null ? null : input.description?.trim() || undefined,
+    });
+    if (!updated) throw new CatalogInvariantError('CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -99,15 +92,8 @@ export class CategoryService {
   async deleteCategory(user: CurrentUser, id: string) {
     const result = await this.repository.deleteCategory(user.shopId, id);
     if (result === 'not-found')
-      throw new NotFoundException({
-        code: 'CATEGORY_NOT_FOUND',
-        message: 'Không tìm thấy danh mục.',
-      });
-    if (result === 'in-use')
-      throw new ConflictException({
-        code: 'CATEGORY_IN_USE',
-        message: 'Danh mục đang được sử dụng bởi sản phẩm.',
-      });
+      throw new CatalogInvariantError('CATEGORY_NOT_FOUND', 'Không tìm thấy danh mục.');
+    if (result === 'in-use') throw new CategoryInUseError();
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,

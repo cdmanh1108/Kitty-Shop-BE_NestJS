@@ -2,7 +2,7 @@ import type { InventoryHistoryCriteria } from '../domain/catalog.read-models';
 import { INVENTORY_STATUS } from '../domain/catalog-status';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   CATALOG_INVENTORY_REPOSITORY,
   type CatalogInventoryRepository,
@@ -13,7 +13,10 @@ import type {
   InventoryListQuery,
   UpdateInventoryStatusInput,
 } from './catalog.contracts';
-import { withCatalogInvariant } from './catalog-invariant';
+import {
+  CatalogResourceNotFoundError,
+  InvalidCatalogInputError,
+} from './catalog-application.errors';
 
 @Injectable()
 export class InventoryService {
@@ -31,13 +34,11 @@ export class InventoryService {
   }
 
   async addInventory(user: CurrentUser, input: AddInventoryInput) {
-    const item = await withCatalogInvariant(() =>
-      this.repository.addInventoryItem(user.shopId, {
-        ...input,
-        purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : undefined,
-      }),
-    );
-    if (!item) throw new NotFoundException('Không tìm thấy biến thể sản phẩm.');
+    const item = await this.repository.addInventoryItem(user.shopId, {
+      ...input,
+      purchaseDate: input.purchaseDate ? new Date(input.purchaseDate) : undefined,
+    });
+    if (!item) throw new CatalogResourceNotFoundError('Không tìm thấy biến thể sản phẩm.');
     return item;
   }
 
@@ -47,26 +48,25 @@ export class InventoryService {
 
   async getInventory(user: CurrentUser, id: string) {
     const item = await this.repository.findInventoryItem(user.shopId, id);
-    if (!item) throw new NotFoundException('Không tìm thấy món đồ trong kho.');
+    if (!item) throw new CatalogResourceNotFoundError('Không tìm thấy món đồ trong kho.');
     return item;
   }
 
   async updateInventoryStatus(user: CurrentUser, id: string, input: UpdateInventoryStatusInput) {
     const allowed: ReadonlySet<string> = new Set(Object.values(INVENTORY_STATUS));
-    if (!allowed.has(input.status)) throw new BadRequestException('Trạng thái kho không hợp lệ.');
-    const item = await withCatalogInvariant(() =>
-      this.repository.updateInventoryStatus({
-        shopId: user.shopId,
-        id,
-        status: input.status,
-        expectedFromStatus: input.expectedFromStatus,
-        condition: input.condition,
-        reason: input.reason,
-        notes: input.notes,
-        changedBy: user.memberId,
-      }),
-    );
-    if (!item) throw new NotFoundException('Không tìm thấy món đồ trong kho.');
+    if (!allowed.has(input.status))
+      throw new InvalidCatalogInputError('Trạng thái kho không hợp lệ.');
+    const item = await this.repository.updateInventoryStatus({
+      shopId: user.shopId,
+      id,
+      status: input.status,
+      expectedFromStatus: input.expectedFromStatus,
+      condition: input.condition,
+      reason: input.reason,
+      notes: input.notes,
+      changedBy: user.memberId,
+    });
+    if (!item) throw new CatalogResourceNotFoundError('Không tìm thấy món đồ trong kho.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -80,10 +80,13 @@ export class InventoryService {
   }
 
   async archiveInventoryItem(user: CurrentUser, id: string, reason?: string) {
-    const archived = await withCatalogInvariant(() =>
-      this.repository.archiveInventoryItem(user.shopId, id, reason, user.memberId),
+    const archived = await this.repository.archiveInventoryItem(
+      user.shopId,
+      id,
+      reason,
+      user.memberId,
     );
-    if (!archived) throw new NotFoundException('Không tìm thấy món đồ trong kho.');
+    if (!archived) throw new CatalogResourceNotFoundError('Không tìm thấy món đồ trong kho.');
     await this.audit.log({
       shopId: user.shopId,
       actorUserId: user.userId,
@@ -100,7 +103,7 @@ export class InventoryService {
     const from = new Date(query.from);
     const until = new Date(query.until);
     if (from >= until)
-      throw new BadRequestException('Thời gian bắt đầu phải trước thời gian kết thúc.');
+      throw new InvalidCatalogInputError('Thời gian bắt đầu phải trước thời gian kết thúc.');
     return this.repository.findAvailableInventory({
       shopId: user.shopId,
       variantId: query.variantId,

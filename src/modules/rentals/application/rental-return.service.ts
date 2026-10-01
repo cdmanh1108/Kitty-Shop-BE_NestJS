@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
@@ -16,6 +10,11 @@ import {
   type RentalOrderReader,
 } from '../domain/rental.repository';
 import type { ReturnRentalOrderInput } from './rental.contracts';
+import {
+  RentalAccessDeniedError,
+  RentalNotFoundError,
+  RentalOperationNotAllowedError,
+} from './rental.errors';
 
 @Injectable()
 export class RentalReturnService {
@@ -28,7 +27,7 @@ export class RentalReturnService {
   async getReturnPreview(user: CurrentUser, id: string, returnedAt?: Date) {
     this.authorizeReturn(user);
     const order = await this.orderReader.get(user.shopId, id);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     const preview = await this.orderReader.getReturnPreview(user.shopId, id, returnedAt);
     const items = order.items.flatMap((item) =>
       item.allocations.map((alloc) => ({
@@ -52,9 +51,11 @@ export class RentalReturnService {
   async receiveReturn(user: CurrentUser, id: string, input: ReturnRentalOrderInput) {
     this.authorizeReturn(user);
     const order = await this.orderReader.get(user.shopId, id);
-    if (!order) throw new NotFoundException('Không tìm thấy đơn thuê.');
+    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
     if (order.status !== RENTAL_STATUS.ACTIVE) {
-      throw new BadRequestException('Chỉ có thể nhận trả cho đơn thuê đang hoạt động (ACTIVE).');
+      throw new RentalOperationNotAllowedError(
+        'Chỉ có thể nhận trả cho đơn thuê đang hoạt động (ACTIVE).',
+      );
     }
     const result = await this.lifecycle.receiveReturn({
       shopId: user.shopId,
@@ -89,7 +90,7 @@ export class RentalReturnService {
 
   private authorizeReturn(user: CurrentUser) {
     if (!user.permissions?.includes(PERMISSIONS.RENTALS_RETURN)) {
-      throw new ForbiddenException('Bạn không có quyền nhận trả đồ.');
+      throw new RentalAccessDeniedError('Bạn không có quyền nhận trả đồ.');
     }
   }
 }
