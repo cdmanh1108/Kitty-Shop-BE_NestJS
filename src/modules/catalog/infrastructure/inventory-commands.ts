@@ -1,4 +1,4 @@
-import { activeOccupyingAllocationWhere } from '@database/prisma/inventory-availability';
+import { activeOccupyingAllocationWhere } from './catalog-rental-allocation.query';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import type { AddInventoryData } from '../domain/catalog-inventory.inputs';

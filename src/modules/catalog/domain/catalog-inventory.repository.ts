@@ -3,15 +3,9 @@ import type {
   InventoryHistoryPage,
   InventorySummary,
 } from './catalog.read-models';
-import type {
-  AddInventoryItemResult,
-  FindAvailableInventoryResult,
-  InventoryDetails,
-  InventoryPage,
-} from './catalog.models';
+import type { AddInventoryItemResult, InventoryDetails, InventoryPage } from './catalog.models';
 import type {
   AddInventoryData,
-  CatalogFindAvailableInventoryCriteria,
   CatalogListInventoryCriteria,
   CatalogUpdateInventoryStatusData,
 } from './catalog-inventory.inputs';
@@ -32,7 +26,4 @@ export interface CatalogInventoryRepository {
   ): Promise<boolean>;
   listInventory(input: CatalogListInventoryCriteria): Promise<InventoryPage>;
   findInventoryItem(shopId: string, id: string): Promise<InventoryDetails>;
-  findAvailableInventory(
-    input: CatalogFindAvailableInventoryCriteria,
-  ): Promise<FindAvailableInventoryResult>;
 }

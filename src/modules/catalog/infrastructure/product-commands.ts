@@ -2,7 +2,7 @@ import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { serializableTransaction } from '@database/prisma/transaction';
-import { activeOccupyingAllocationWhere } from '@database/prisma/inventory-availability';
+import { activeOccupyingAllocationWhere } from './catalog-rental-allocation.query';
 import type {
   CreateProductData,
   ProductMediaData,

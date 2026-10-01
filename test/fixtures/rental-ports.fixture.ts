@@ -9,6 +9,7 @@ import type { WebAccountRentalOrdersReader } from '../../src/modules/rentals/dom
 
 export function rentalAvailabilityReaderMock(): jest.Mocked<RentalAvailabilityReader> {
   const reader: jest.Mocked<RentalAvailabilityReader> = {
+    findAvailableInventory: jest.fn(),
     getBookableVariant: jest.fn(),
     getBookableVariants: jest.fn(),
     findActiveVariantIdsByProduct: jest.fn(),

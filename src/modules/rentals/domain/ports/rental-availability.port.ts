@@ -1,3 +1,5 @@
+import type { JsonValue } from '@common/types/json';
+
 export interface BookableVariant {
   id: string;
   variantCode: string;
@@ -10,9 +12,38 @@ export interface BookableVariant {
   availableInventory: Array<{ id: string; sku: string }>;
 }
 
+/** Stable read contract for the Catalog admin inventory-availability endpoint. */
+export interface RentalAvailableInventoryItem {
+  id: string;
+  shopId: string;
+  variantId: string;
+  locationId: string | null;
+  sku: string;
+  barcode: string | null;
+  currentStatus: string;
+  condition: string;
+  purchasePrice: string | null;
+  purchaseDate: Date | null;
+  acquiredFrom: string | null;
+  totalRentalCount: number;
+  lastRentedAt: Date | null;
+  notes: string | null;
+  metadata: JsonValue | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  archivedAt: Date | null;
+}
+
 export const RENTAL_AVAILABILITY_READER = Symbol('RENTAL_AVAILABILITY_READER');
 
 export interface RentalAvailabilityReader {
+  findAvailableInventory(input: {
+    shopId: string;
+    variantId: string;
+    from: Date;
+    until: Date;
+  }): Promise<RentalAvailableInventoryItem[]>;
   getBookableVariant(input: RentalGetBookableVariantData): Promise<BookableVariant | null>;
   getBookableVariants(input: RentalGetBookableVariantsData): Promise<BookableVariant[]>;
   findActiveVariantIdsByProduct(

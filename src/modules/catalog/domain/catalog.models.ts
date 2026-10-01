@@ -172,8 +172,6 @@ export type InventoryDetails =
       statusHistory: Array<InventoryStatusHistoryRecord>;
     });
 
-export type FindAvailableInventoryResult = Array<InventoryItemRecord>;
-
 export interface StorefrontCategory {
   id: string;
   code: string;

@@ -2,6 +2,25 @@ import { toBookableVariant, bookableVariantInclude } from './rental-prisma.mappe
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { RentalAvailabilityReader } from '../domain/ports/rental-availability.port';
 import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
+import { availableInventoryWhere } from './rental-availability.query';
+
+export async function findAvailableInventory(
+  prisma: PrismaService,
+  input: Parameters<RentalAvailabilityReader['findAvailableInventory']>[0],
+): ReturnType<RentalAvailabilityReader['findAvailableInventory']> {
+  const items = await prisma.inventoryItem.findMany({
+    where: {
+      shopId: input.shopId,
+      variantId: input.variantId,
+      ...availableInventoryWhere(input),
+    },
+    orderBy: [{ totalRentalCount: 'asc' }, { sku: 'asc' }],
+  });
+  return items.map((item) => ({
+    ...item,
+    purchasePrice: item.purchasePrice?.toString() ?? null,
+  }));
+}
 
 export async function getBookableVariant(
   prisma: PrismaService,

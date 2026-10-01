@@ -3,6 +3,7 @@ import type { CatalogInventoryRepository } from '@modules/catalog/domain/catalog
 import { CATALOG_ERROR_CODE, CatalogInvariantError } from '@modules/catalog/domain/catalog-errors';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
+import type { RentalAvailabilityReader } from '@modules/rentals/domain/ports/rental-availability.port';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
 import {
   CatalogResourceNotFoundError,
@@ -13,6 +14,7 @@ describe('InventoryService', () => {
   let service: InventoryService;
   let repository: CatalogInventoryRepository;
   let audit: AuditPort;
+  let rentalAvailability: RentalAvailabilityReader;
 
   let listInventoryMock: jest.Mock;
   let findInventoryItemMock: jest.Mock;
@@ -46,12 +48,18 @@ describe('InventoryService', () => {
       archiveInventoryItem: archiveInventoryItemMock,
       listInventory: listInventoryMock,
       findInventoryItem: findInventoryItemMock,
+    };
+    rentalAvailability = {
       findAvailableInventory: jest.fn(),
+      getBookableVariant: jest.fn(),
+      getBookableVariants: jest.fn(),
+      findActiveVariantIdsByProduct: jest.fn(),
+      findActiveVariantIdsByProducts: jest.fn(),
     };
     audit = {
       log: auditLogMock,
     };
-    service = new InventoryService(repository, audit);
+    service = new InventoryService(repository, audit, rentalAvailability);
   });
 
   describe('listInventory', () => {
@@ -433,6 +441,38 @@ describe('InventoryService', () => {
           status: INVENTORY_STATUS.CLEANING,
         }),
       ).rejects.toThrow(CatalogResourceNotFoundError);
+    });
+  });
+
+  describe('availability', () => {
+    it('delegates the tenant-scoped range to the Rental reader', async () => {
+      const findAvailableInventory = jest
+        .spyOn(rentalAvailability, 'findAvailableInventory')
+        .mockResolvedValue([]);
+      const from = '2026-09-12T03:00:00.000Z';
+      const until = '2026-09-13T03:00:00.000Z';
+
+      const result = await service.availability(user, { variantId: 'variant', from, until });
+
+      expect(result).toEqual([]);
+      expect(findAvailableInventory).toHaveBeenCalledWith({
+        shopId: user.shopId,
+        variantId: 'variant',
+        from: new Date(from),
+        until: new Date(until),
+      });
+    });
+
+    it('rejects an invalid date range before calling the Rental reader', () => {
+      const findAvailableInventory = jest.spyOn(rentalAvailability, 'findAvailableInventory');
+      expect(() =>
+        service.availability(user, {
+          variantId: 'variant',
+          from: '2026-09-13T03:00:00.000Z',
+          until: '2026-09-12T03:00:00.000Z',
+        }),
+      ).toThrow(InvalidCatalogInputError);
+      expect(findAvailableInventory).not.toHaveBeenCalled();
     });
   });
 

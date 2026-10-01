@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client';
 import {
   operationallyRentableInventoryWhere,
   unreleasedRentalWhere,
-} from '@database/prisma/inventory-availability';
+} from './rental-availability.query';
 import { RentalInventoryUnavailableError } from '../domain/rental-errors';
 
 /** Run in the owning Serializable transaction, never against the root client.

@@ -50,5 +50,6 @@ import { PrismaRentalRepository } from './infrastructure/prisma-rental.repositor
     { provide: RENTAL_LIFECYCLE_REPOSITORY, useExisting: PrismaRentalRepository },
     { provide: WEB_ACCOUNT_RENTAL_ORDERS_READER, useExisting: PrismaRentalRepository },
   ],
+  exports: [RENTAL_AVAILABILITY_READER],
 })
 export class RentalsModule {}

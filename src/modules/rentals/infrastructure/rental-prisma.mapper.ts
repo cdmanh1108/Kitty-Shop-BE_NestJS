@@ -5,7 +5,7 @@ import type {
   RentalGetBookableVariantData,
 } from '../domain/ports/rental-availability.port';
 import { resolveRentalPricing } from '../domain/rental-pricing';
-import { availableInventoryWhere } from '@database/prisma/inventory-availability';
+import { availableInventoryWhere } from './rental-availability.query';
 
 export function bookableVariantInclude(
   input: Pick<RentalGetBookableVariantData, 'from' | 'until'>,

@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
+import { recomputeRentalOrderPaymentState } from './rental-order-payment-state';
 import { rentalLedger, recordRentalReceipt } from './rental-ledger';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
@@ -9,7 +9,7 @@ import { assertManualConfirmation, type ConfirmRentalData } from '../domain/rent
 import { RentalInvariantError } from '../domain/rental-errors';
 import { getWithTx } from './rental-admin.queries';
 import { assertInventoryRentable } from './rental-inventory';
-import { lockRentalOrder } from '@database/prisma/rental-order-lock';
+import { lockRentalOrder } from './rental-order-lock';
 
 export function confirmOrder(
   prisma: PrismaService,
@@ -109,7 +109,7 @@ export function confirmOrder(
       direction: 'IN',
       amount: actualDeposit.minus(ledger.depositHeld),
     });
-    await recomputeOrderPaymentState(tx, order.id);
+    await recomputeRentalOrderPaymentState(tx, order.id);
     await tx.rentalOrderItem.updateMany({
       where: { orderId: order.id, shopId: input.shopId },
       data: { status: 'CONFIRMED' },

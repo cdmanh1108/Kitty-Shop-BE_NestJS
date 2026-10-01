@@ -7,7 +7,6 @@ import {
   inventoryHistory,
   listInventory,
   findInventoryItem,
-  findAvailableInventory,
 } from './inventory-queries';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Inject, Injectable } from '@nestjs/common';
@@ -334,11 +333,5 @@ export class PrismaCatalogRepository
     ...args: Parameters<CatalogRepository['findInventoryItem']>
   ): ReturnType<CatalogRepository['findInventoryItem']> {
     return findInventoryItem(this.prisma, ...args);
-  }
-
-  findAvailableInventory(
-    ...args: Parameters<CatalogRepository['findAvailableInventory']>
-  ): ReturnType<CatalogRepository['findAvailableInventory']> {
-    return findAvailableInventory(this.prisma, ...args);
   }
 }

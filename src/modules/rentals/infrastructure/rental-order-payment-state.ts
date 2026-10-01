@@ -1,14 +1,9 @@
-import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { Prisma } from '@prisma/client';
-import { calculateOrderPaymentState } from '@modules/finance/domain/payment-state';
+import { calculateOrderPaymentState } from '@modules/finance/public/payment-state';
 
-/**
- * Recompute derived payment/deposit state from immutable-ish order totals and
- * non-voided payment transactions. Keep this helper inside the DB adapter
- * layer so every mutation that changes money can reuse the same semantics.
- */
-export async function recomputeOrderPaymentState(
+/** Recompute the order's Finance projection inside the Rental transaction. */
+export async function recomputeRentalOrderPaymentState(
   tx: Prisma.TransactionClient,
   orderId: string,
 ): Promise<void> {
@@ -17,7 +12,7 @@ export async function recomputeOrderPaymentState(
     include: { confirmation: true },
   });
   const transactions = await tx.paymentTransaction.findMany({
-    where: { orderId, status: TRANSACTION_STATUS.COMPLETED, voidedAt: null },
+    where: { orderId, status: 'COMPLETED', voidedAt: null },
     select: { amount: true, direction: true, purpose: true },
   });
 

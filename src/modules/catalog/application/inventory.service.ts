@@ -4,6 +4,10 @@ import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  RENTAL_AVAILABILITY_READER,
+  type RentalAvailabilityReader,
+} from '@modules/rentals/domain/ports/rental-availability.port';
+import {
   CATALOG_INVENTORY_REPOSITORY,
   type CatalogInventoryRepository,
 } from '../domain/catalog-inventory.repository';
@@ -23,6 +27,8 @@ export class InventoryService {
   constructor(
     @Inject(CATALOG_INVENTORY_REPOSITORY) private readonly repository: CatalogInventoryRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(RENTAL_AVAILABILITY_READER)
+    private readonly rentalAvailability: RentalAvailabilityReader,
   ) {}
 
   inventorySummary(user: CurrentUser) {
@@ -104,7 +110,7 @@ export class InventoryService {
     const until = new Date(query.until);
     if (from >= until)
       throw new InvalidCatalogInputError('Thời gian bắt đầu phải trước thời gian kết thúc.');
-    return this.repository.findAvailableInventory({
+    return this.rentalAvailability.findAvailableInventory({
       shopId: user.shopId,
       variantId: query.variantId,
       from,

@@ -6,14 +6,14 @@ import { rewardForCompletedRental } from '../domain/rental-settlement';
 import { RentalInvariantError } from '../domain/rental-errors';
 import { assertSettlementAllowed } from '../domain/rental-monetary.policy';
 import type { Clock } from '@common/clock/clock';
-import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
+import { recomputeRentalOrderPaymentState } from './rental-order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { Prisma } from '@prisma/client';
 import type { SettleRentalOrderData } from '../domain/ports/rental-lifecycle.port';
 import type { RentalOrderDetails } from '../domain/rental.models';
 import { getWithTx } from './rental-admin.queries';
-import { lockRentalOrder } from '@database/prisma/rental-order-lock';
+import { lockRentalOrder } from './rental-order-lock';
 
 export async function settleOrder(
   prisma: PrismaService,
@@ -118,7 +118,7 @@ export async function settleOrder(
       direction: 'IN',
       amount: amountDue,
     });
-    await recomputeOrderPaymentState(tx, order.id);
+    await recomputeRentalOrderPaymentState(tx, order.id);
 
     await tx.rentalSettlement.create({
       data: {

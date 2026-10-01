@@ -14,7 +14,7 @@ import { serializableTransaction } from '@database/prisma/transaction';
 import type { Prisma } from '@prisma/client';
 import type { RentalLifecycleRepository } from '../domain/ports/rental-lifecycle.port';
 import { getWithTx } from './rental-admin.queries';
-import { lockRentalOrder } from '@database/prisma/rental-order-lock';
+import { lockRentalOrder } from './rental-order-lock';
 import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
 import { canTransitionDelivery, DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 

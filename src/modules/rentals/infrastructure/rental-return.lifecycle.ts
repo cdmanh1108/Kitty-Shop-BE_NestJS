@@ -8,7 +8,7 @@ import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { calculateLateCharges } from '../domain/rental-settlement';
 import { RentalInvariantError } from '../domain/rental-errors';
 import type { Clock } from '@common/clock/clock';
-import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
+import { recomputeRentalOrderPaymentState } from './rental-order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { Prisma } from '@prisma/client';
@@ -221,7 +221,7 @@ export async function receiveReturn(
         updatedBy: input.actorMemberId,
       },
     });
-    if (extraChargesTotal.greaterThan(0)) await recomputeOrderPaymentState(tx, order.id);
+    if (extraChargesTotal.greaterThan(0)) await recomputeRentalOrderPaymentState(tx, order.id);
     await tx.rentalOrderStatusHistory.create({
       data: {
         shopId: input.shopId,

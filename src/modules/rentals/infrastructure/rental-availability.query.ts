@@ -1,34 +1,16 @@
-import { INVENTORY_STATUS, PRODUCT_STATUS } from '@modules/catalog/domain/catalog-status';
-import {
-  ALLOCATION_STATUS,
-  BLOCKING_ALLOCATION_STATUSES,
-} from '@modules/rentals/domain/rental-status';
 import type { Prisma } from '@prisma/client';
+import { ALLOCATION_STATUS, BLOCKING_ALLOCATION_STATUSES } from '../domain/rental-status';
 
-/**
- * Allocation criteria that actively occupies an inventory item.
- * An allocation blocks manual operational transitions and marks an item occupied if:
- * 1. It is unreleased ACTIVE (even if overdue, it is still physically with the customer).
- * 2. It is HELD or CONFIRMED. Dates never implicitly release a reservation.
- */
-export function activeOccupyingAllocationWhere() {
-  return {
-    status: {
-      in: [...BLOCKING_ALLOCATION_STATUSES],
-    },
-    releasedAt: null,
-  } satisfies Prisma.RentalItemAllocationWhereInput;
-}
-
+/** Rental booking eligibility expressed as a Prisma persistence query. */
 export function operationallyRentableInventoryWhere() {
   return {
     isActive: true,
     archivedAt: null,
-    currentStatus: INVENTORY_STATUS.AVAILABLE,
+    currentStatus: 'AVAILABLE',
     variant: {
       archivedAt: null,
-      status: PRODUCT_STATUS.ACTIVE,
-      product: { archivedAt: null, status: PRODUCT_STATUS.ACTIVE, isRentable: true },
+      status: 'ACTIVE',
+      product: { archivedAt: null, status: 'ACTIVE', isRentable: true },
     },
   } satisfies Prisma.InventoryItemWhereInput;
 }
@@ -55,9 +37,7 @@ export function availableInventoryWhere(input: { from: Date; until: Date }) {
       none: {
         OR: [
           {
-            status: {
-              in: [...BLOCKING_ALLOCATION_STATUSES],
-            },
+            status: { in: [...BLOCKING_ALLOCATION_STATUSES] },
             reservedFrom: { lt: input.until },
             reservedUntil: { gt: input.from },
           },

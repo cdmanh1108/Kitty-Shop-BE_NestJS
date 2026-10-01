@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { RentalsModule } from '@modules/rentals/rentals.module';
 import { AdminCategoryController } from './api/admin/admin-category.controller';
 import { AdminCatalogReferenceController } from './api/admin/admin-catalog-reference.controller';
 import { AdminColorController } from './api/admin/admin-color.controller';
@@ -23,6 +24,7 @@ import { STOREFRONT_CATALOG_REPOSITORY } from './domain/storefront-catalog.repos
 import { PrismaCatalogRepository } from './infrastructure/prisma-catalog.repository';
 
 @Module({
+  imports: [RentalsModule],
   controllers: [
     AdminCategoryController,
     AdminCatalogReferenceController,

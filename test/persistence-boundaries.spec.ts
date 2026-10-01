@@ -8,7 +8,7 @@ import {
   toBookableVariant,
   bookableVariantInclude,
 } from '../src/modules/rentals/infrastructure/rental-prisma.mapper';
-import { availableInventoryWhere } from '../src/database/prisma/inventory-availability';
+import { availableInventoryWhere } from '../src/modules/rentals/infrastructure/rental-availability.query';
 import { RentalOverlapError } from '../src/modules/rentals/domain/rental-errors';
 import { CatalogInvariantError } from '../src/modules/catalog/domain/catalog-errors';
 

@@ -3,9 +3,9 @@ import { CLOCK, type Clock } from '@common/clock/clock';
 import { DELIVERY_STATUS, canTransitionDelivery } from '@modules/deliveries/domain/delivery-status';
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
+import { recomputeDeliveryOrderPaymentState } from './delivery-order-payment-state';
 import { serializableTransaction } from '@database/prisma/transaction';
-import { lockRentalOrder } from '@database/prisma/rental-order-lock';
+import { lockRentalOrder } from '@modules/rentals/public/rental-order-lock';
 import { assertChargeMutationAllowed } from '@modules/rentals/domain/rental-monetary.policy';
 import type { DeliveryRepository } from '../domain/delivery.repository';
 
@@ -75,7 +75,7 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
             updatedBy: input.createdBy,
           },
         });
-        await recomputeOrderPaymentState(tx, input.orderId);
+        await recomputeDeliveryOrderPaymentState(tx, input.orderId);
       }
       await tx.outboxEvent.create({
         data: {

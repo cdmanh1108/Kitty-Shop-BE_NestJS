@@ -1,6 +1,6 @@
 import { fixedClock } from './fixtures/rental.fixture';
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { plainToInstance } from 'class-transformer';
 import * as ts from 'typescript';
@@ -234,6 +234,53 @@ describe('inner-layer import guard', () => {
       }
     }
     scan(join(process.cwd(), 'src/modules'));
+    expect(violations).toEqual([]);
+  });
+});
+
+describe('shared database boundary', () => {
+  it('prevents shared database code from importing business modules', () => {
+    const violations: string[] = [];
+    const roots = ['src/database', 'src/common/database'].filter(existsSync);
+    const moduleImport = /(?:@modules\/|(?:^|\/)modules\/)/;
+
+    function scan(dir: string) {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const file = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scan(file);
+          continue;
+        }
+        if (!file.endsWith('.ts')) continue;
+
+        const source = readFileSync(file, 'utf8');
+        const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+        function visit(node: ts.Node) {
+          if (
+            (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+            node.moduleSpecifier &&
+            ts.isStringLiteral(node.moduleSpecifier) &&
+            moduleImport.test(node.moduleSpecifier.text)
+          ) {
+            violations.push(`${file}: ${node.moduleSpecifier.text}`);
+          }
+          if (
+            ts.isCallExpression(node) &&
+            (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+              (ts.isIdentifier(node.expression) && node.expression.text === 'require')) &&
+            node.arguments[0] &&
+            ts.isStringLiteral(node.arguments[0]) &&
+            moduleImport.test(node.arguments[0].text)
+          ) {
+            violations.push(`${file}: ${node.arguments[0].text}`);
+          }
+          ts.forEachChild(node, visit);
+        }
+        visit(ast);
+      }
+    }
+
+    roots.forEach(scan);
     expect(violations).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 import { assertInventoryRentable } from './rental-inventory';
 import { getWithTx } from './rental-admin.queries';
 import { isOverlapError } from './rental-errors';
-import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
+import { recomputeRentalOrderPaymentState } from './rental-order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { ALLOCATION_STATUS } from '../domain/rental-status';
@@ -10,7 +10,7 @@ import { RentalOverlapError } from '../domain/rental-errors';
 import type { RentalLifecycleRepository } from '../domain/ports/rental-lifecycle.port';
 import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
 import { assertChargeMutationAllowed } from '../domain/rental-monetary.policy';
-import { lockRentalOrder } from '@database/prisma/rental-order-lock';
+import { lockRentalOrder } from './rental-order-lock';
 
 export async function reschedule(
   prisma: PrismaService,
@@ -106,7 +106,7 @@ export async function addCharge(
       where: { id: input.orderId },
       data: { chargesTotal: { increment }, grandTotal: { increment }, updatedBy: input.createdBy },
     });
-    await recomputeOrderPaymentState(tx, input.orderId);
+    await recomputeRentalOrderPaymentState(tx, input.orderId);
     return getWithTx(tx, input.shopId, input.orderId);
   });
 }

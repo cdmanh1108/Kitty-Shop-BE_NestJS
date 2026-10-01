@@ -2,7 +2,7 @@ import type { PaymentRecordedEvent } from '../domain/finance.events';
 import { TRANSACTION_STATUS, EXPENSE_STATUS } from '../domain/payment-status';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { paginateMeta } from '@common/types/pagination';
-import { recomputeOrderPaymentState } from '@database/prisma/order-payment-state';
+import { recomputeOrderPaymentState } from './order-payment-state';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import {
@@ -11,7 +11,7 @@ import {
   lockIdempotencyClaim,
   releaseIdempotencyClaim,
 } from '@database/prisma/idempotency';
-import { lockRentalOrder } from '@database/prisma/rental-order-lock';
+import { lockRentalOrder } from '@modules/rentals/public/rental-order-lock';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { CLOCK, type Clock } from '@common/clock/clock';

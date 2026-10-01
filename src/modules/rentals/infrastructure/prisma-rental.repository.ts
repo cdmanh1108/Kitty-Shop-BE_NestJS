@@ -17,15 +17,17 @@ import type { WebAccountRentalOrdersReader } from '../domain/ports/web-account-r
 import { customerExists, locationExists } from './rental-creation-validation.queries';
 import { list, get, getStatus, getSchedule } from './rental-admin.queries';
 import {
+  findAvailableInventory,
   findActiveVariantIdsByProduct,
   findActiveVariantIdsByProducts,
+  getBookableVariant,
+  getBookableVariants,
 } from './rental-availability';
 import {
   lookupStorefrontOrder,
   listWebAccountOrders,
   getWebAccountOrder,
 } from './rental-web-order.queries';
-import { getBookableVariant, getBookableVariants } from './rental-availability';
 import { createOrder } from './rental-booking';
 import { receiveReturn } from './rental-return.lifecycle';
 import { settleOrder } from './rental-settlement.lifecycle';
@@ -74,6 +76,12 @@ export class PrismaRentalRepository
     ...args: Parameters<RentalAvailabilityReader['getBookableVariant']>
   ): ReturnType<RentalAvailabilityReader['getBookableVariant']> {
     return getBookableVariant(this.prisma, ...args);
+  }
+
+  findAvailableInventory(
+    ...args: Parameters<RentalAvailabilityReader['findAvailableInventory']>
+  ): ReturnType<RentalAvailabilityReader['findAvailableInventory']> {
+    return findAvailableInventory(this.prisma, ...args);
   }
 
   getBookableVariants(

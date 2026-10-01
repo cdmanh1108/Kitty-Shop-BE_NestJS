@@ -1,7 +1,4 @@
-import {
-  availableInventoryWhere,
-  activeOccupyingAllocationWhere,
-} from '@database/prisma/inventory-availability';
+import { activeOccupyingAllocationWhere } from './catalog-rental-allocation.query';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { CatalogInventoryRepository } from '../domain/catalog-inventory.repository';
@@ -203,20 +200,6 @@ export async function findInventoryItem(
     allowedManualTransitions,
     currentRental,
   };
-}
-
-export function findAvailableInventory(
-  prisma: PrismaService,
-  input: Parameters<CatalogInventoryRepository['findAvailableInventory']>[0],
-): ReturnType<CatalogInventoryRepository['findAvailableInventory']> {
-  return prisma.inventoryItem.findMany({
-    where: {
-      shopId: input.shopId,
-      variantId: input.variantId,
-      ...availableInventoryWhere(input),
-    },
-    orderBy: [{ totalRentalCount: 'asc' }, { sku: 'asc' }],
-  });
 }
 
 export async function inventorySummary(

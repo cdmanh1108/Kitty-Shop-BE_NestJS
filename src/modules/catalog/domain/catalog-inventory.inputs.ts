@@ -32,10 +32,3 @@ export interface CatalogListInventoryCriteria {
   page: number;
   limit: number;
 }
-
-export interface CatalogFindAvailableInventoryCriteria {
-  shopId: string;
-  variantId: string;
-  from: Date;
-  until: Date;
-}
