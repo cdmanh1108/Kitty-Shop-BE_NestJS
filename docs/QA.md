@@ -32,5 +32,5 @@ See [TESTING.md](TESTING.md) for suite boundaries, explicit TEST_DATABASE_URL, g
 - deposits do not count as rental revenue;
 - refresh tokens are one-time consumable during rotation;
 - order status changes are compare-and-update safe under concurrency;
-- all tenant-facing lookups are scoped by authenticated `shopId`;
+- all shop-scoped lookups are scoped by authenticated `shopId`;
 - completed financial history is voided/reversed instead of silently deleted.

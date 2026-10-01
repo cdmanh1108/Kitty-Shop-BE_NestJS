@@ -64,9 +64,9 @@ src/
 ├── common/
 │   ├── swagger/
 │   │   └── openapi.ts          # Admin & Web Swagger document generation & isolation
-│   └── tenant/
+│   └── shop-context/
 │       ├── shop-resolver.ts    # Canonical single-shop resolver for application requests
-│       └── tenant.module.ts
+│       └── shop-context.module.ts
 │
 ├── modules/
 │   ├── catalog/       # Catalog, categories, inventory and reference data

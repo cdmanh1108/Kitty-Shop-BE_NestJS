@@ -50,7 +50,7 @@ describe('Admin Color management persistence', () => {
     });
   }
 
-  it('lists all statuses by default with search, pagination, stable order, and tenant scope', async () => {
+  it('lists all statuses by default with search, pagination, stable order, and shop scope', async () => {
     const f = await rentalScenario(prisma);
     const otherShop = await createTestShop(prisma);
     const zulu = await makeColor(f.shop.id, { code: 'BLUE_Z', name: 'Zulu blue' });

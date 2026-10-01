@@ -14,7 +14,7 @@ import * as request from 'supertest';
 import { CurrentUser } from '../src/common/decorators/current-user.decorator';
 import { Permissions } from '../src/common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../src/common/guards/jwt-auth.guard';
-import { ShopResolver } from '../src/common/tenant/shop-resolver';
+import { ShopResolver } from '../src/common/shop-context/shop-resolver';
 import { PermissionsGuard } from '../src/common/guards/permissions.guard';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 import type { CurrentUser as Principal } from '../src/common/types/current-user';
@@ -398,7 +398,7 @@ describe('Authentication HTTP security (in-memory repository, real guards/JWT/bc
     await request(server).get('/probe').set('Authorization', `Bearer ${bearer()}`).expect(200);
   });
 
-  it('uses verified membership tenant; rejects spoofed body fields and mismatched signed tenant', async () => {
+  it('uses the verified membership shop; rejects spoofed body fields and mismatched signed shop', async () => {
     const response = await request(server)
       .get('/admin/auth/me?shopId=other')
       .set('X-Shop-Id', 'other')

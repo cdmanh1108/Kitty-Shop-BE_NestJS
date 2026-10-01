@@ -38,6 +38,6 @@ Rental DTO mapping uses spread plus nested copies to preserve property order and
 
 Endpoint paths, HTTP methods, permissions, request validation, response fields, date/money semantics, database schema and transaction behavior are preserved. Settings' transport `value` type now names JSON while keeping the same validator/Swagger metadata. OpenAPI export is compared with the committed snapshot.
 
-`test/application-boundaries.spec.ts` covers DTO defaults/nested copies, idempotency bytes/replay, query timezone/tenant mapping, report response preservation, errors and pagination. A TypeScript AST test prevents API/Prisma/decorator imports and untyped contracts in application/domain modules.
+`test/application-boundaries.spec.ts` covers DTO defaults/nested copies, idempotency bytes/replay, query timezone/shop mapping, report response preservation, errors and pagination. A TypeScript AST test prevents API/Prisma/decorator imports and untyped contracts in application/domain modules.
 
 Current repository decomposition, domain vocabularies and PostgreSQL integration/E2E coverage are documented in ARCHITECTURE.md, BUSINESS_TYPES.md and TESTING.md. Money precision redesign and versioned idempotency replay schemas remain separate work.

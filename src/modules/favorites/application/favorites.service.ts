@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { paginateMeta } from '@common/types/pagination';
-import { ShopResolver } from '@common/tenant/shop-resolver';
+import { ShopResolver } from '@common/shop-context/shop-resolver';
 import {
   STOREFRONT_CATALOG_REPOSITORY,
   type StorefrontCatalogRepository,

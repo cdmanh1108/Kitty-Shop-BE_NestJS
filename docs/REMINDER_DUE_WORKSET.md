@@ -30,7 +30,7 @@ The event deliberately excludes customer, phone, order number and reminder conte
 
 ## PostgreSQL regression and query-plan status
 
-`test/integration/reminder-due-workset.integration.spec.ts` seeds 300 irrelevant completed/paid historical orders, seven due candidates, and a due order in another shop. It verifies that four cursor pages return only the seven tenant candidates, with no skip or duplicate.
+`test/integration/reminder-due-workset.integration.spec.ts` seeds 300 irrelevant completed/paid historical orders, seven due candidates, and a due order in another shop. It verifies that four cursor pages return only the seven shop candidates, with no skip or duplicate.
 
 Migration: none for C39. The existing `RentalOrder` indexes are retained. A disposable PostgreSQL 17 database applied all 21 migrations with `prisma migrate deploy`, then ran the 300-history/7-candidate regression successfully. The matching read-only `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` captured for the same fixture returned seven rows, removed 301 rows by filter, used a sequential scan with 12 shared-hit blocks, and completed in 0.151 ms. A sequential scan is expected for this small representative fixture; this evidence does not justify a new production index.
 

@@ -58,7 +58,7 @@ Rental confirmation and settlement evidence cleanup uses `OBJECT_STORAGE_CLEANUP
 
 Existing keys remain `shops/<normalized-shop-code>/products/<normalized-product-code>/<sha256>.<extension>`. Content hashes make retries stable, with HEAD-before-PUT and immutable caching. Keys contain neither provider hostname nor bucket nor credentials. Public URL resolution encodes each path segment independently, preserving slash separators.
 
-The existing key scheme assumes normalized shop codes are distinct. Operators must preserve that invariant across tenant codes; this cleanup does not rename existing keys. Public Product objects must contain no identity documents or secrets.
+The existing key scheme assumes normalized shop codes are distinct. Operators must preserve that invariant across shops; this cleanup does not rename existing keys. Public Product objects must contain no identity documents or secrets.
 
 Product media uses public/CDN-safe access. Future identity/collateral documents require private objects, authorized/signed access and retention controls. None of that private-document infrastructure is implemented here.
 

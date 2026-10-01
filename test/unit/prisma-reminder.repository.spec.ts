@@ -82,7 +82,7 @@ describe('PrismaReminderRepository lifecycle persistence', () => {
     expect(received.data.processedAt).toBeInstanceOf(Date);
   });
 
-  it('reads a narrow, tenant-scoped and bounded due-workset page with an ID keyset cursor', async () => {
+  it('reads a narrow, shop-scoped and bounded due-workset page with an ID keyset cursor', async () => {
     interface CandidateQuery {
       where: { shopId: string; id?: { gt: string }; OR: unknown[] };
       select: Record<string, unknown>;

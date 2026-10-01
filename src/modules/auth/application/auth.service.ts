@@ -3,7 +3,7 @@ import type { AppConfiguration } from '@config/configuration';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { ShopResolver } from '@common/tenant/shop-resolver';
+import { ShopResolver } from '@common/shop-context/shop-resolver';
 import { compare, hash } from 'bcryptjs';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { AUTH_REPOSITORY, type AuthIdentity, type AuthRepository } from '../domain/auth.repository';

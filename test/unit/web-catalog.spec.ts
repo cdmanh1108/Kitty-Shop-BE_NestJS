@@ -17,7 +17,7 @@ import type {
   StorefrontProductPage,
   StorefrontSelectionResolution,
 } from '../../src/modules/catalog/domain/catalog.models';
-import type { ShopResolver } from '@common/tenant/shop-resolver';
+import type { ShopResolver } from '@common/shop-context/shop-resolver';
 
 describe('Web Catalog Presenters, Service and Controller', () => {
   describe('WebCatalogMapper.toCategory & toCategoryList', () => {

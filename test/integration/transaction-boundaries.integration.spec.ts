@@ -187,7 +187,7 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
     );
   });
 
-  it('revenue SQL excludes deposits and voided payments with fixed period and tenant', async () => {
+  it('revenue SQL excludes deposits and voided payments with fixed period and shop', async () => {
     const f = await rentalScenario(prisma);
     const order = await rentals.createOrder(f.data);
     if (!order) throw new Error('Missing order');

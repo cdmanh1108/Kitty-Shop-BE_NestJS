@@ -1,5 +1,5 @@
 import { ServiceUnavailableException } from '@nestjs/common';
-import { ShopResolver } from '../../src/common/tenant/shop-resolver';
+import { ShopResolver } from '../../src/common/shop-context/shop-resolver';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 
 describe('ShopResolver single-shop invariant', () => {

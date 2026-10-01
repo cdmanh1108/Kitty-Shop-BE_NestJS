@@ -3,7 +3,7 @@ import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { ShopResolver } from '@common/tenant/shop-resolver';
+import { ShopResolver } from '@common/shop-context/shop-resolver';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { isVerifiedAccessPayload } from '../types/verified-access-payload';
 import type { JwtAccessPayload } from '../types/current-user';

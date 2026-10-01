@@ -162,7 +162,7 @@ describe('Idempotency Integration with PostgreSQL', () => {
     );
   });
 
-  it('isolates idempotency keys across different tenant shops', async () => {
+  it('isolates idempotency keys across different shops', async () => {
     const shopA = await createTestShop(prisma);
     const shopB = await createTestShop(prisma);
 

@@ -64,7 +64,7 @@ describe('transport to application contracts', () => {
     expect(input.delivery?.shippingFee).toBe(0);
   });
 
-  it('preserves validated query defaults, offset timestamps and tenant scope', async () => {
+  it('preserves validated query defaults, offset timestamps and shop scope', async () => {
     const ports = rentalServicePorts();
     const result = { items: [], meta: paginateMeta(2, 20, 0) };
     ports.orderReader.list.mockResolvedValue(result);

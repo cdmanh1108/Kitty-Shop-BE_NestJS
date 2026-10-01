@@ -1,7 +1,7 @@
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
-import { ShopResolver } from '@common/tenant/shop-resolver';
+import { ShopResolver } from '@common/shop-context/shop-resolver';
 import {
   Body,
   Controller,

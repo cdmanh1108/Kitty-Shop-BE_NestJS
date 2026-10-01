@@ -7,7 +7,7 @@ import {
 import { createTestShop, createTestUserAndMember, TEST_PASSWORD } from '../fixtures/test-factories';
 import { PrismaAuthRepository } from '../../src/modules/auth/infrastructure/prisma-auth.repository';
 import { AuthService } from '../../src/modules/auth/application/auth.service';
-import { ShopResolver } from '../../src/common/tenant/shop-resolver';
+import { ShopResolver } from '../../src/common/shop-context/shop-resolver';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';

@@ -1,4 +1,4 @@
-import { ShopResolver } from '@common/tenant/shop-resolver';
+import { ShopResolver } from '@common/shop-context/shop-resolver';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
 import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
 import { Inject, Injectable } from '@nestjs/common';

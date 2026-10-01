@@ -1,6 +1,6 @@
 # Reminder lifecycle
 
-A reminder row represents one logical occurrence identified by its tenant-scoped `dedupeKey`. The current reminder policy builds that key from reminder type, order id and the shop-local day:
+A reminder row represents one logical occurrence identified by its shop-scoped `dedupeKey`. The current reminder policy builds that key from reminder type, order id and the shop-local day:
 
 ```text
 <type>:<order-id>:<shop-local-day>

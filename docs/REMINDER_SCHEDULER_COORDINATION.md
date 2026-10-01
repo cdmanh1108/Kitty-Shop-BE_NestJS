@@ -12,7 +12,7 @@ The source therefore implements the multi-worker-safe path rather than claiming 
 
 ## Coordination model
 
-`SchedulerJobLease` is a narrow scheduler-owned table. It has no tenant relation and uses a primary key only:
+`SchedulerJobLease` is a narrow scheduler-owned table. It has no shop relation and uses a primary key only:
 
 ```text
 jobKey      = reminders.refresh:<shopId>

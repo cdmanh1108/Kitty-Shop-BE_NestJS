@@ -445,7 +445,7 @@ describe('InventoryService', () => {
   });
 
   describe('availability', () => {
-    it('delegates the tenant-scoped range to the Rental reader', async () => {
+    it('delegates the shop-scoped range to the Rental reader', async () => {
       const findAvailableInventory = jest
         .spyOn(rentalAvailability, 'findAvailableInventory')
         .mockResolvedValue([]);

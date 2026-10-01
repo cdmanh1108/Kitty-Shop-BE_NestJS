@@ -4464,7 +4464,7 @@
   },
   "info": {
     "title": "Kitty Shop API - Admin API",
-    "description": "Rental shop admin API for staff & operations (kitty-admin-fe). Tenant scope comes from the authenticated shop membership. Monetary values are decimal-safe values.",
+    "description": "Rental shop admin API for staff & operations (kitty-admin-fe). Shop scope comes from the authenticated shop membership. Monetary values are decimal-safe values.",
     "version": "1.0.0",
     "contact": {}
   },

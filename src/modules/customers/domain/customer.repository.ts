@@ -16,7 +16,7 @@ export interface CustomerRepository {
     shopId: string,
     normalizedPhone: string,
   ): Promise<CustomerLookupRecord | null>;
-  /** Tenant-scoped exact-phone capability for guest booking only. */
+  /** Shop-scoped exact-phone capability for guest booking only. */
   resolveForBooking(input: BookingCustomerResolutionInput): Promise<BookingCustomerResolution>;
   findById(shopId: string, id: string): Promise<CustomerDetails>;
   create(

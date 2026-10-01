@@ -16,7 +16,7 @@ The logger redacts sensitive object keys recursively, bounds depth/array/string 
 - an optional stable configuration `reason` for known startup failures;
 - at most one Error cause as `causeCategory`, `causeType` and optional `causeCode`—never its message or stack;
 - at most four normalized application frames, limited to `src/`, `dist/`, `test/`, `scripts/` or `prisma/` paths plus a line number; absolute paths, URLs, query/hash fragments, Node internals, `node_modules`, eval/opaque frames and source snippets are omitted; and
-- `fingerprint` in `v1:<24 hex characters>` form: SHA-256 truncated to 96 bits over the safe type/code/cause/frame fields. It deliberately excludes messages, request IDs, tenant/entity identifiers, URLs and timestamps. Including line numbers gives release-local grouping and may change after a line-moving refactor.
+- `fingerprint` in `v1:<24 hex characters>` form: SHA-256 truncated to 96 bits over the safe type/code/cause/frame fields. It deliberately excludes messages, request IDs, shop/entity identifiers, URLs and timestamps. Including line numbers gives release-local grouping and may change after a line-moving refactor.
 
 The raw Nest stack channel remains suppressed. These diagnostic fields exist only in internal structured logs; public HTTP responses never contain diagnostics, and error paths remove query strings from their `path`. Free text redaction cannot detect arbitrary secrets: use fixed event names and explicitly selected fields; never log a request, DTO, token, environment or raw exception string.
 

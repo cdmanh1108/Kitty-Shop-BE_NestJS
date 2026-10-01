@@ -8,7 +8,7 @@ export class InvalidCustomerPhoneError extends ApplicationError {
   }
 }
 
-/** Canonical Vietnamese phone key used for tenant-scoped lookup and uniqueness. */
+/** Canonical Vietnamese phone key used for shop-scoped lookup and uniqueness. */
 export function normalizeCustomerPhone(value: string): string {
   const compact = value.trim().replace(/[\s().-]/g, '');
   if (!/^\+?\d+$/.test(compact)) throw new InvalidCustomerPhoneError();

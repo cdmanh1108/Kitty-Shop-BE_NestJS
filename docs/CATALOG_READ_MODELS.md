@@ -79,7 +79,7 @@ The real Product list uses a small list mapper; editor queries preserve raw gene
 - `application/category.service.ts`, `product.service.ts`, `inventory.service.ts`, `api/admin/*`: use cases, validated routes and resource-owned Swagger DTOs.
 - `infrastructure/product-queries.ts`, `catalog-lookups.ts`, `inventory-commands.ts`, `inventory-queries.ts`, `prisma-catalog.repository.ts`: selects, aggregation and scoped persistence.
 - `test/integration/catalog-read-models.integration.spec.ts`: >200 counts, pagination, nullable/zero prices, bounds, shop isolation, history order, combined filters, one batch price query and summary without inventory-list reads.
-- `test/e2e/catalog-reads.e2e.spec.ts`: static routing, authentication, permissions, pagination validation and rejected tenant injection.
+- `test/e2e/catalog-reads.e2e.spec.ts`: static routing, authentication, permissions, pagination validation and rejected shop injection.
 - Existing catalog unit fixtures updated for the explicit port additions.
 - Frontend product/inventory API wrappers, keys, query hooks, mappers and screens consume the corresponding projections. `app/query/invalidation.ts` owns fan-out; `api/services.ts` isolates remaining mock compatibility.
 - Frontend `read-models.test.tsx` covers modal lazy loading/cache reuse/search/preselection, backend category counts, paginated product requests, summary/history rendering, normalized request snapshots and targeted invalidation. Task 3 regression tests remain enabled.

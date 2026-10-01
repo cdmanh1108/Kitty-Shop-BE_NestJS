@@ -36,7 +36,7 @@ The Audit controller still uses its own application service. No event bus is int
 
 Middleware initializes native AsyncLocalStorage around next(). Immutable context contains
 only the existing request ID, validated Express request.ip and optional bounded User-Agent.
-It never stores actor/tenant, requests, services or permissions. Audit preserves the
+It never stores actor/shop, requests, services or permissions. Audit preserves the
 explicit authenticated shop/user/member supplied by the application. Background calls
 work without context. Request IDs retain the existing 1-100 ASCII letter/digit/\_/- policy
 and response header; they are correlation labels, not authenticated identities.
@@ -78,7 +78,7 @@ payloads conflict before replay or stale recovery.
   time. Clock is injected into each owning Prisma adapter for deterministic expiry/stale
   decisions. Rental-specific replay serialization remains in Rentals infrastructure.
 - CLAIMED returns internal claimId, the existing row UUID. Recovery conditionally updates
-  old ID, tenant/scope/key, hash, incompletion and createdAt <= now - lease. The winner
+  old ID, shop/scope/key, hash, incompletion and createdAt <= now - lease. The winner
   rotates UUID and acquisition time and uses the retry's retention deadline. No relation
   references this row ID; no idempotency schema field is needed.
 - Before any order write, the Serializable transaction conditionally UPDATEs the matching
@@ -100,7 +100,7 @@ assumption that an old lease proves a process dead. Lock waits retain existing D
 settings. Helpers consume an infrastructure-local projection of the four required Prisma
 operations, supplied by the existing client or transaction, without owning connections.
 
-The tenant-scoped Rental Order `FOR UPDATE` primitive lives in
+The shop-scoped Rental Order `FOR UPDATE` primitive lives in
 `src/database/prisma/rental-order-lock.ts`. Rental, Finance and Delivery repositories pass
 their existing transaction client into it. It owns row locking only; Rental monetary
 invariants remain in the pure Rentals domain policy.
@@ -135,7 +135,7 @@ documented in [Manual receipt idempotency](MANUAL_RECEIPT_IDEMPOTENCY.md).
 
 The Finance manual-payment flow claims the key before opening its business transaction.
 Inside one Serializable transaction it conditionally updates the claim row first, locks
-the tenant-scoped Rental Order row next, reads order/settlement/payment state, creates the
+the shop-scoped Rental Order row next, reads order/settlement/payment state, creates the
 payment, recomputes payment/deposit state, inserts the required outbox event and durable
 audit row, then completes the replay snapshot. Claim completion shares the same Prisma
 transaction client as the payment and audit writes. Any failure rolls those writes back;
@@ -154,7 +154,7 @@ do not terminate unrelated processes automatically.
 
 ## Verification limits
 
-Tests cover audit enrichment/isolation/failure, typed AuditPort, same-key/tenant/hash/replay,
+Tests cover audit enrichment/isolation/failure, typed AuditPort, same-key/shop/hash/replay,
 atomic compare-and-swap claim races, old-token fencing, and transaction ordering/error
 propagation. The small in-memory claim model is not PostgreSQL: it does not prove lock
 waits, unique-index arbitration, real rollback or cross-process execution. The repository

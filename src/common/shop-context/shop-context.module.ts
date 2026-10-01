@@ -8,4 +8,4 @@ import { ShopResolver } from './shop-resolver';
   providers: [ShopResolver],
   exports: [ShopResolver],
 })
-export class TenantModule {}
+export class ShopContextModule {}

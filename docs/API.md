@@ -13,7 +13,7 @@ Browser refresh/logout calls must include credentials. They are protected by the
 
 ## Main endpoint groups
 
-- `/dashboard/summary`: page-shaped, tenant-scoped real admin read model; see [Dashboard](DASHBOARD.md).
+- `/dashboard/summary`: page-shaped, shop-scoped real admin read model; see [Dashboard](DASHBOARD.md).
 - `/customers`
 - `/catalog/lookups`
 - `/products` (including product media management)

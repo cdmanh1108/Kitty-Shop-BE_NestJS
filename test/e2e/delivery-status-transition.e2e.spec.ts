@@ -73,7 +73,7 @@ describe('Delivery status transition HTTP contract', () => {
       .send(body);
   }
 
-  it('keeps invalid enum, valid transition, invalid transition, tenant, and permission semantics distinct', async () => {
+  it('keeps invalid enum, valid transition, invalid transition, shop, and permission semantics distinct', async () => {
     const data = await fixture();
     await patch(server, data.managerToken, data.delivery.id, { status: 'UNKNOWN' }).expect(400);
 

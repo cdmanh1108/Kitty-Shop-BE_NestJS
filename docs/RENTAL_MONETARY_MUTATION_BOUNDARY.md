@@ -2,7 +2,7 @@
 
 `lockRentalMonetaryOrder(tx, { shopId, orderId })` is the infrastructure
 boundary for mutations that can change an order's monetary state. It locks the
-tenant-scoped order row with `FOR UPDATE` inside the caller's serializable
+shop-scoped order row with `FOR UPDATE` inside the caller's serializable
 transaction. The required lock order is `shopId`, then `orderId`.
 
 | Caller                        | Boundary                                                                               | Protected re-read and policy                                                                    | Atomic writes                                                                                             | Error / rollback                                                                         |
@@ -12,7 +12,7 @@ transaction. The required lock order is `shopId`, then `orderId`.
 | Rental `settleOrder`          | `serializableTransaction` + `lockRentalMonetaryOrder`                                  | Order, charges, payments and settlement; `assertSettlementAllowed`                              | Receipts, payment state, settlement snapshot, completed state, loyalty, history, audit and outbox         | Invariant failures roll back; `P2034` uses the existing bounded retry only.              |
 | Delivery paid shipping create | `serializableTransaction` + `lockRentalMonetaryOrder`                                  | Order and settlement; `assertChargeMutationAllowed`                                             | Delivery job, one shipping charge, totals, payment state and `DELIVERY_CREATED` outbox in one transaction | `ORDER_LOCKED` / `ORDER_ALREADY_SETTLED`; the whole transaction rolls back.              |
 | Finance payment create        | `serializableTransaction` + `lockRentalMonetaryOrder`                                  | Order and settlement; `assertPaymentCreationAllowed`; refund ceiling                            | Payment, derived state and `PAYMENT_RECORDED` outbox                                                      | `PAYMENT_RECORD_LOCKED` or refund invariant; the whole transaction rolls back.           |
-| Finance payment void          | Tenant-scoped route lookup, then `serializableTransaction` + `lockRentalMonetaryOrder` | Re-read order, settlement, payment provenance and refundable ledger; `assertPaymentVoidAllowed` | Void fields and derived payment state                                                                     | `PAYMENT_VOID_PROTECTED` / refund invariant; stale or foreign payment remains not-found. |
+| Finance payment void          | Shop-scoped route lookup, then `serializableTransaction` + `lockRentalMonetaryOrder` | Re-read order, settlement, payment provenance and refundable ledger; `assertPaymentVoidAllowed` | Void fields and derived payment state                                                                     | `PAYMENT_VOID_PROTECTED` / refund invariant; stale or foreign payment remains not-found. |
 
 Application pre-checks are UX only; they are not monetary authority. No nested
 transaction may be opened after obtaining the context, and all protected reads

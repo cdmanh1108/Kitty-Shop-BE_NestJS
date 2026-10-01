@@ -2,7 +2,7 @@
 
 - URL prefix: `/api/v1`.
 - nouns/resources use kebab-case only when multiple words are needed.
-- authenticated tenant comes from `@CurrentUser()`.
+- authenticated shop identity is available as `@CurrentUser().shopId`.
 - mutations require explicit permissions.
 - create-order retries should use `Idempotency-Key`.
 - list endpoints use `page` + `limit`; date ranges use ISO `from`/`until` with end-exclusive semantics.

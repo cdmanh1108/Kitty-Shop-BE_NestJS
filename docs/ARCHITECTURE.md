@@ -30,6 +30,10 @@ Repository ports expose explicit domain-owned records and read models. Prisma pa
 
 Application services consume plain `application/*.contracts.ts` inputs mapped by the API, never transport DTOs. Repository ports expose independent records/read models from `domain/*.records.ts` and `*.models.ts`. Generic pagination is transport-independent. See [Application contracts](APPLICATION_CONTRACTS.md) for ownership, JSON/Decimal compatibility and idempotency replay semantics.
 
+## Shop model
+
+The current application and deployment model manages exactly one active Shop. Business data and repository queries remain scoped by `shopId` for ownership and data integrity; this does not make Kitty a multi-shop SaaS product.
+
 ## Modules
 
 - `auth`: login, access JWT, refresh token rotation/revocation.
@@ -58,7 +62,7 @@ Refresh tokens are random opaque values; only SHA-256 hashes are stored. Refresh
 
 Controllers declare permission requirements through `@Permissions(...)`. `PermissionsGuard` compares them against the current membership's resolved permission set.
 
-Do not trust a `shopId` sent by the client. The active tenant comes from `CurrentUser.shopId`.
+Do not trust a `shopId` sent by the client. The active shop comes from `CurrentUser.shopId`.
 
 ### Validation / errors
 

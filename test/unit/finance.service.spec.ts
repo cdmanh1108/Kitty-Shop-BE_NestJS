@@ -230,7 +230,7 @@ describe('FinanceService Unit Tests', () => {
       );
     });
 
-    it('throws Error if order does not exist or belongs to another tenant', async () => {
+    it('throws Error if order does not exist or belongs to another shop', async () => {
       repo.createPayment.mockResolvedValueOnce(null);
 
       await expect(
@@ -274,7 +274,7 @@ describe('FinanceService Unit Tests', () => {
   });
 
   describe('voidPayment', () => {
-    it('throws Error if payment not found or belongs to another tenant', async () => {
+    it('throws Error if payment not found or belongs to another shop', async () => {
       voidPaymentMock.mockResolvedValueOnce(null);
 
       await expect(service.voidPayment(currentUser, 'non-existent')).rejects.toThrow(
@@ -338,7 +338,7 @@ describe('FinanceService Unit Tests', () => {
   });
 
   describe('voidExpense', () => {
-    it('throws Error if expense not found or belongs to another tenant', async () => {
+    it('throws Error if expense not found or belongs to another shop', async () => {
       voidExpenseMock.mockResolvedValueOnce(null);
 
       await expect(service.voidExpense(currentUser, 'non-existent')).rejects.toThrow(

@@ -18,7 +18,7 @@ import { PAYMENT_DIRECTION, PAYMENT_PURPOSE } from '../../src/modules/finance/do
 import { RENTAL_STATUS } from '../../src/modules/rentals/domain/rental-status';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 
-describe('Cross-Tenant Data Isolation & Query Filtering Integration', () => {
+describe('Cross-Shop Data Isolation & Query Filtering Integration', () => {
   let prisma: PrismaService;
   let rentalRepo: PrismaRentalRepository;
   let financeRepo: PrismaFinanceRepository;

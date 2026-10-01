@@ -96,9 +96,9 @@ Order monetary columns are immutable-ish snapshots used for operational speed an
 - payment/expense: void, never silently delete.
 - audit history: append-only.
 
-## Multi-tenancy
+## Single-shop application and shop-scoped data
 
-Each tenant-owned aggregate stores `shop_id`; application repositories scope queries using authenticated `shopId`. Cross-shop IDs from request bodies must be validated in the same shop. Before exposing this as a public multi-tenant SaaS, add PostgreSQL RLS or composite tenant foreign keys as a second isolation layer.
+Shop-owned aggregates store `shop_id`; application repositories scope queries using the authenticated `shopId`. Cross-shop IDs from request bodies must be validated in the same shop. The current application manages one shop; if Kitty later serves multiple shops from a shared SaaS deployment, add PostgreSQL RLS or composite shop foreign keys as a second isolation layer.
 
 Audit request IDs use VARCHAR(100), matching middleware correlation IDs, through
 202609110001_audit_request_id_text. Rental idempotency reuses row UUID as an ownership
@@ -111,7 +111,7 @@ Migration `202609120001_customer_phone_uniqueness` backfills from the display ph
 invalid or duplicate legacy rows for manual reconciliation without merging customer history.
 
 Storefront identities use `web_accounts` and remain separate from staff `users`/memberships
-and tenant CRM customers. Their phone is globally unique in canonical E.164 form, enforced
+and shop CRM customers. Their phone is globally unique in canonical E.164 form, enforced
 by a unique index and a format CHECK. `phone_verified_at` is the sole activation source.
 `web_otp_challenges` stores HMAC hashes, expiry, attempts, consumption and resend timing;
 its partial index permits one pending challenge per account. `web_refresh_tokens` stores only

@@ -327,7 +327,7 @@ describe('Atomic manual rental confirmation', () => {
     },
   );
 
-  it('rejects invalid cash, invalid evidence, permissions, tenant and state before mutation', async () => {
+  it('rejects invalid cash, invalid evidence, permissions, shop and state before mutation', async () => {
     const f = await fixture();
     await expect(
       f.service.confirm({ ...f.user, permissions: ['rentals.update'] }, f.order.id, {

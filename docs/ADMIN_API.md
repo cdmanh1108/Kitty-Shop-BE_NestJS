@@ -9,7 +9,7 @@ The **Admin API** serves back-office management interfaces (`kitty-admin-fe`) an
 ## 2. Authentication & Authorization Boundary
 
 - **Authentication**: Bearer JWT tokens in the `Authorization: Bearer <token>` header.
-- **Tenant Scope**: Tenant context (`shopId`) is resolved strictly from the authenticated member's active shop membership (`CurrentUser`).
+- **Shop Scope**: Shop context (`shopId`) is resolved strictly from the authenticated member's active shop membership (`CurrentUser`).
 - **Authorization & RBAC**: Every endpoint enforces fine-grained permissions via `@Permissions(PERMISSIONS.*)`.
 - **Audit Logging**: Sensitive administrative actions (order creation, status transitions, settlements, fee adjustments) automatically log audit trails with `actorUserId` and `actorMemberId`.
 

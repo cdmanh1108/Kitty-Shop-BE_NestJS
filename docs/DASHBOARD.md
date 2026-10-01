@@ -19,7 +19,7 @@ physically overdue. Recent rows had no deterministic timestamp tie-breaker.
 
 `GET /api/v1/dashboard/summary` now serves the actual page in one request. This is
 a coordinated BE/FE contract replacement; deploy matching builds. Authorization
-remains `dashboard.view`, with tenant scope from authenticated membership. No
+remains `dashboard.view`, with shop scope from authenticated membership. No
 customer, rental, or finance permission is needed to read this aggregate. Links to
 order/report pages are rendered only when their destination permission is granted.
 
@@ -81,7 +81,7 @@ processes the shop's relevant records inside PostgreSQL.
 Existing indexes cover orders(shop_id,status), scheduled pickup ranges,
 payments(shop_id,paid_at,status), payments(order_id,paid_at), item(order_id) and
 customer PK lookup. New migration `202609150001_dashboard_allocation_count` adds
-allocations(shop_id,status,released_at), needed for tenant-scoped active occupancy
+allocations(shop_id,status,released_at), needed for shop-scoped active occupancy
 counts; the old allocation indexes start with order/inventory IDs. No duplicate
 index is added. Deploy using migrate deploy; index creation may briefly block
 writers on a large allocation table. No data rewrite or old migration edit.
@@ -104,7 +104,7 @@ page outside this migration; the existing report link is permission-gated.
 
 ## Verification
 
-Real PostgreSQL tests cover empty data, tenant isolation including revenue,
+Real PostgreSQL tests cover empty data, shop isolation including revenue,
 local day/month boundaries, signed ledger/deposit/refund/void semantics, status
 classification, preview limit/tie ordering, quantity summation and constant data
 query count. HTTP tests cover 401/403 and dashboard.view-only access. Existing

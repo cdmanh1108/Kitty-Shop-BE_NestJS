@@ -255,7 +255,7 @@ describe('audit port and request enrichment', () => {
     create: jest.fn().mockResolvedValue(undefined),
     list: jest.fn(),
   });
-  it('keeps interleaved request metadata isolated and explicit actor/tenant authoritative', async () => {
+  it('keeps interleaved request metadata isolated and explicit actor/shop authoritative', async () => {
     const persistence = repository();
     const audit: AuditPort = new AuditService(persistence);
     await Promise.all(

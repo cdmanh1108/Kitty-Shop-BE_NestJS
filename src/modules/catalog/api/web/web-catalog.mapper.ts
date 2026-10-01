@@ -20,7 +20,7 @@ import type { WebStorefrontSelectionResolveResDto } from './dto/web-storefront-s
 export const WebCatalogMapper = {
   /**
    * Maps a single StorefrontCategory into WebCategoryDto.
-   * Strips all internal tenant and audit metadata.
+   * Strips all internal shop and audit metadata.
    */
   toCategory(category: StorefrontCategory): WebCategoryDto {
     return {

@@ -10,7 +10,7 @@ During coding:
 - add/modify DTO validation and Swagger metadata.
 - keep controller thin.
 - update domain port before infrastructure adapter when new persistence capability is required.
-- keep tenant scope on every repository lookup.
+- keep shop scope on every repository lookup.
 - use a transaction for multi-row consistency.
 - audit sensitive business mutations.
 

@@ -6,7 +6,7 @@ export interface RequestMetadata {
   readonly userAgent?: string;
 }
 
-// One context per asynchronous request chain; never stores tenant, actor or services.
+// One context per asynchronous request chain; never stores shop, actor or services.
 const storage = new AsyncLocalStorage<Readonly<RequestMetadata>>();
 export function withRequestContext<T>(metadata: RequestMetadata, operation: () => T): T {
   return storage.run(Object.freeze({ ...metadata }), operation);

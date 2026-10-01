@@ -30,7 +30,7 @@ describe('Catalog purpose-specific reads', () => {
   });
   afterAll(disconnectTestDatabase);
 
-  it('counts more than 200 products, paginates projected lists and bounds tenant-scoped searchable lookups', async () => {
+  it('counts more than 200 products, paginates projected lists and bounds shop-scoped searchable lookups', async () => {
     const shop = await createTestShop(prisma);
     const other = await createTestShop(prisma);
     const category = await createTestCategory(prisma, shop.id);
@@ -175,7 +175,7 @@ describe('Catalog purpose-specific reads', () => {
     ).toBe(0);
   });
 
-  it('returns ordered real history including archived items, with product/item filters and tenant isolation', async () => {
+  it('returns ordered real history including archived items, with product/item filters and shop isolation', async () => {
     const shop = await createTestShop(prisma);
     const other = await createTestShop(prisma);
     const { product, inventoryItems } = await createTestProductWithVariant(prisma, shop.id);

@@ -193,7 +193,7 @@ export function createAdminOpenApiDocument(
     meta: {
       title: `${options.appName} - Admin API`,
       description:
-        'Rental shop admin API for staff & operations (kitty-admin-fe). Tenant scope comes from the authenticated shop membership. Monetary values are decimal-safe values.',
+        'Rental shop admin API for staff & operations (kitty-admin-fe). Shop scope comes from the authenticated shop membership. Monetary values are decimal-safe values.',
     },
     includeAuth: true,
   });

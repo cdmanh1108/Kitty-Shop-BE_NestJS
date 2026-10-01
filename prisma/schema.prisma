@@ -20,7 +20,7 @@ enum WebOtpDeliveryStatus {
   @@map("web_otp_delivery_status")
 }
 
-// Storefront identity is separate from staff membership and tenant CRM records.
+// Storefront identity is separate from staff membership and shop CRM records.
 model WebAccount {
   id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   // Nullable while pre-email accounts are retained without inventing addresses.
@@ -1160,7 +1160,7 @@ model Reminder {
   @@map("reminders")
 }
 
-/// Narrow scheduler-owned lease rows. They are not business reminders and have no tenant relation.
+/// Narrow scheduler-owned lease rows. They are not business reminders and have no shop relation.
 model SchedulerJobLease {
   jobKey     String   @id @map("job_key") @db.VarChar(200)
   ownerToken String   @map("owner_token") @db.VarChar(64)

@@ -163,7 +163,7 @@ describe('Delivery status lifecycle persistence', () => {
     ).resolves.toEqual(failedBefore);
   });
 
-  it('scopes status writes to the tenant and does not expose another shop delivery', async () => {
+  it('scopes status writes to the shop and does not expose another shop delivery', async () => {
     const { delivery } = await fixture();
     const otherShop = await prisma.shop.create({
       data: { code: uniqueCode('shop'), name: 'Other shop', timezone: 'Asia/Ho_Chi_Minh' },

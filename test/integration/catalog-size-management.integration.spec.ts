@@ -80,7 +80,7 @@ describe('Admin Size management persistence', () => {
     );
   });
 
-  it('lists active and inactive sizes with search, status, pagination, ordering, and tenant scope', async () => {
+  it('lists active and inactive sizes with search, status, pagination, ordering, and shop scope', async () => {
     const f = await rentalScenario(prisma);
     const otherShop = await createTestShop(prisma);
     const xs = await makeSize(f.shop.id, { code: 'XS', name: 'Extra small', sortOrder: 10 });
@@ -92,7 +92,7 @@ describe('Admin Size management persistence', () => {
       sortOrder: 50,
       isActive: false,
     });
-    await makeSize(otherShop.id, { code: 'OTHER', name: 'Other tenant', sortOrder: 1 });
+    await makeSize(otherShop.id, { code: 'OTHER', name: 'Other shop', sortOrder: 1 });
 
     const all = await sizes.listSizes(f.principal, { page: 1, limit: 2 });
     expect(all.items.map(({ id }) => id)).toEqual([xs.id, s.id]);

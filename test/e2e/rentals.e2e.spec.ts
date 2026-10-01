@@ -11,7 +11,7 @@ import { createTestApp } from '../helpers/test-app';
 import { generateTestAccessToken } from '../helpers/auth-helper';
 import { rentalScenario } from '../fixtures/rental.fixture';
 
-describe('Rental HTTP command and tenant boundaries', () => {
+describe('Rental HTTP command and shop boundaries', () => {
   let app: INestApplication;
   let server: Server;
   let prisma: PrismaService;
@@ -28,7 +28,7 @@ describe('Rental HTTP command and tenant boundaries', () => {
     await disconnectTestDatabase();
   });
 
-  it('creates/replays one rental, denies overlapping booking and isolates cross-tenant reads and updates', async () => {
+  it('creates/replays one rental, denies overlapping booking and isolates cross-shop reads and updates', async () => {
     const a = await rentalScenario(prisma);
     const b = await rentalScenario(prisma);
     const tokenA = generateTestAccessToken(a.principal);

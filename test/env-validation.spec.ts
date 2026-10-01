@@ -28,7 +28,7 @@ describe('environment validation and configuration', () => {
       expect(() => validateEnvironment(baseConfig)).not.toThrow();
     });
 
-    it.each(['DEFAULT_SHOP_CODE', 'SHOP_CODE'])('rejects deprecated tenant setting %s', (key) => {
+    it.each(['DEFAULT_SHOP_CODE', 'SHOP_CODE'])('rejects deprecated shop selector %s', (key) => {
       expect(() => validateEnvironment({ ...baseConfig, [key]: 'MAIN' })).toThrow(key);
     });
 

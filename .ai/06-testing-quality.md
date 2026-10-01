@@ -11,4 +11,4 @@ npm run openapi:export
 
 Prefer unit tests for application state/transition rules and integration tests for PostgreSQL-specific behavior such as exclusion constraints and transaction races.
 
-When a bug involves money, booking overlap, tenant scope or authorization, add a regression test before/with the fix.
+When a bug involves money, booking overlap, shop scope or authorization, add a regression test before/with the fix.

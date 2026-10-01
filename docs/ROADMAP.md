@@ -14,9 +14,9 @@ Use `outbox_events` + a retrying dispatcher for Zalo, SMS, Messenger, email, web
 
 If bookkeeping/accounting requirements become formal, add a double-entry ledger rather than overloading `payment_transactions` and `expenses`.
 
-## Multi-tenant SaaS hardening
+## Future multi-shop SaaS readiness
 
-Before selling the platform to unrelated shops: PostgreSQL RLS/composite tenant FKs, per-tenant quotas, plan/billing domain, tenant-aware background workers and security review.
+Before offering Kitty as a shared SaaS for unrelated shops: PostgreSQL RLS or composite shop foreign keys, per-shop quotas, plan/billing domain, shop-aware background workers and a security review.
 
 ## Storage
 

@@ -55,9 +55,9 @@ E2E uses AppModule and the shared `configureApplication` bootstrap for middlewar
 | Concurrency          | Conflicting booking has one winner; concurrent confirmation/completion has one winner and one rental-count increment                                |
 | Transactions/outbox  | Allocation failure rolls back rental writes; forced outbox failure rolls back rental + idempotency completion or payment + payment state            |
 | Payments             | Partial/full/void state, deposit held/refund ceiling; revenue SQL excludes deposits and voided records                                              |
-| Idempotency          | Replay, payload mismatch, tenant-separated keys, concurrent same-key one mutation, fresh/stale lease and stale owner's release fencing              |
+| Idempotency          | Replay, payload mismatch, shop-separated keys, concurrent same-key one mutation, fresh/stale lease and stale owner's release fencing              |
 | Auth                 | Real login/rotation/logout; concurrent refresh one winner, hash-only storage, expired token rejection and rollback on replacement insertion failure |
-| Tenant               | Rental/payment/catalog/customer reads/lists/writes scoped; HTTP cross-shop read/update denied and injected shopId rejected                          |
+| Shop                 | Rental/payment/catalog/customer reads/lists/writes scoped; HTTP cross-shop read/update denied and injected shopId rejected                          |
 | Audit                | Persisted actor/shop/request correlation, one audit on replay; existing best-effort failure and sanitization regression tests retained              |
 | HTTP security        | 400/401/403/429, valid permissions, token response hygiene, health public, rental create/replay/overlap                                             |
 | Configuration/errors | Existing invalid config and production unknown-error sanitization tests retained                                                                    |
@@ -68,7 +68,7 @@ Outbox has no dispatcher/consumer, so there are no invented delivery/exactly-onc
 
 Retained Gemini's useful application and PostgreSQL test cases. Fixed unsafe implicit database selection, weak name matching, unowned-client cleanup, developer-config/secret inheritance, scheduler activation, unused permission options and timestamp-based fixture codes. Replaced broad untyped mock declarations with typed port functions. Added missing real rollback/concurrency/persistence/HTTP cases.
 
-Small production testability changes: RentalCreationService receives the existing Clock explicitly for idempotency expiry; HTTP bootstrap is shared; test-mode config skips `.env`. A real regression test exposed customer name search matching every phone when the normalized query was empty. The repository now adds the phone predicate only for a nonempty digit query; name/code search and tenant filters remain intact. No endpoints, migrations or dependencies changed. Existing formatting cleanup from the unfinished working tree was preserved.
+Small production testability changes: RentalCreationService receives the existing Clock explicitly for idempotency expiry; HTTP bootstrap is shared; test-mode config skips `.env`. A real regression test exposed customer name search matching every phone when the normalized query was empty. The repository now adds the phone predicate only for a nonempty digit query; name/code search and shop filters remain intact. No endpoints, migrations or dependencies changed. Existing formatting cleanup from the unfinished working tree was preserved.
 
 ## Quality gates for Task 8
 
@@ -158,5 +158,5 @@ Metadata-only OpenAPI export still validates application configuration. Without 
 
 Dashboard regression suites (2026-09-15): `dashboard.integration.spec.ts` and
 `dashboard.e2e.spec.ts` cover the real read model, ledger/date/status semantics,
-tenant isolation, bounded previews, query count and dashboard-only permissions.
+shop isolation, bounded previews, query count and dashboard-only permissions.
 See [Dashboard](DASHBOARD.md).

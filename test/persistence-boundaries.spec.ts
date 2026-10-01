@@ -156,7 +156,7 @@ describe('repository persistence boundaries', () => {
     jest.restoreAllMocks();
   });
 
-  it('preserves tenant-scoped missing product and rental reads', async () => {
+  it('preserves shop-scoped missing product and rental reads', async () => {
     const product = jest.spyOn(prisma.product, 'findFirst').mockResolvedValue(null);
     const order = jest.spyOn(prisma.rentalOrder, 'findFirst').mockResolvedValue(null);
     expect(

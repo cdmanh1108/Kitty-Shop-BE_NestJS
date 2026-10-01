@@ -89,14 +89,14 @@ TRUST_PROXY=false is the default. Enabling it trusts one proxy hop; deployment m
 ensure the app cannot be reached by a shorter/untrusted path and the proxy handles
 forwarded headers correctly. Application code does not parse X-Forwarded-For itself.
 
-## Tenant, permissions and public inventory
+## Shop, permissions and public inventory
 
 The global JWT guard is default-deny, with existing method-over-class Public metadata.
 It resolves the single shop, reloads the membership/user and permissions, and matches JWT sub/mid/sid against DB.
-Inactive users/members fail 401; permission failures remain 403. Authenticated tenant
+Inactive users/members fail 401; permission failures remain 403. Authenticated shop
 and actor come from CurrentUser. DTO validation rejects unknown fields, so callers
 cannot inject shopId/userId/permissions into login or override authenticated scope.
-Business controllers retain their existing tenant-aware services/repository filters.
+Business controllers retain their existing shop-aware services/repository filters.
 The canonical resolver requires that exactly one persisted shop exists and that it is active;
 zero, multiple, or inactive shops fail safely before authentication can use their context.
 
@@ -140,7 +140,7 @@ changes reject malformed/other-algorithm JWTs, invalid TTL config, cross-member 
 revocation, and excessive authentication requests.
 
 Tests: auth-security.spec.ts exercises HTTP routing, validation, real bcrypt/JWT,
-global guard order, 401/403, tenant spoofing, public health, distinct token types,
+global guard order, 401/403, shop spoofing, public health, distinct token types,
 throttling, cookie issuance, Origin rejection, refresh concurrency and logout with an
 in-memory repository. The
 Prisma adapter tests exercise conditional consume and transactional call ordering,
