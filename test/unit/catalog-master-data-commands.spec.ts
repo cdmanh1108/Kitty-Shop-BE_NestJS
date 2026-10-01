@@ -6,7 +6,7 @@ import {
   deleteColor,
   updateColor,
 } from '@modules/catalog/infrastructure/color-commands';
-import { createSize, deleteSize } from '@modules/catalog/infrastructure/size-commands';
+import { createSize, deleteSize, updateSize } from '@modules/catalog/infrastructure/size-commands';
 
 function prismaError(code: 'P2002' | 'P2003'): Prisma.PrismaClientKnownRequestError {
   return new Prisma.PrismaClientKnownRequestError('Constraint failed.', {
@@ -44,6 +44,16 @@ describe('Color and Size persistence error mapping', () => {
     await expect(
       createSize(prisma, 'shop-1', { code: 'M', name: 'Medium', sortOrder: 0 }),
     ).rejects.toMatchObject({ code: CATALOG_ERROR_CODE.SIZE_CODE_ALREADY_EXISTS });
+  });
+
+  it('maps a Size update unique-constraint race to SIZE_CODE_ALREADY_EXISTS', async () => {
+    const prisma = {
+      size: { updateMany: jest.fn().mockRejectedValue(prismaError('P2002')) },
+    } as unknown as PrismaService;
+
+    await expect(updateSize(prisma, 'shop-1', 'size-1', { code: 'M' })).rejects.toMatchObject({
+      code: CATALOG_ERROR_CODE.SIZE_CODE_ALREADY_EXISTS,
+    });
   });
 
   it('maps a Color foreign-key race to COLOR_IN_USE', async () => {

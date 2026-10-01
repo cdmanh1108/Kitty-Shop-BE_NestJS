@@ -494,7 +494,281 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizeManagementResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Size fields."
+          },
+          "409": {
+            "description": "SIZE_CODE_ALREADY_EXISTS."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      },
+      "get": {
+        "operationId": "CatalogController_listSizes",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm kiếm theo mã hoặc tên kích thước.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "ALL",
+              "type": "string",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "INACTIVE"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizeManagementPageResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid list filters or pagination."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/catalog/sizes/{id}": {
+      "get": {
+        "operationId": "CatalogController_getSize",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizeManagementResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SIZE_NOT_FOUND."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      },
+      "patch": {
+        "operationId": "CatalogController_updateSize",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSizeReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizeManagementResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Size fields."
+          },
+          "404": {
+            "description": "SIZE_NOT_FOUND."
+          },
+          "409": {
+            "description": "SIZE_CODE_ALREADY_EXISTS."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      },
+      "delete": {
+        "operationId": "CatalogController_deleteSize",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SIZE_NOT_FOUND."
+          },
+          "409": {
+            "description": "SIZE_IN_USE."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/catalog/sizes/{id}/status": {
+      "patch": {
+        "operationId": "CatalogController_updateSizeStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSizeStatusReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizeManagementResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Size status."
+          },
+          "404": {
+            "description": "SIZE_NOT_FOUND."
           }
         },
         "security": [
@@ -4563,6 +4837,90 @@
         "required": [
           "code",
           "name"
+        ]
+      },
+      "SizeManagementResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "sortOrder",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SizeManagementPageResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SizeManagementResDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "UpdateSizeReqDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": " xl "
+          },
+          "name": {
+            "type": "string",
+            "example": " Cỡ lớn "
+          },
+          "sortOrder": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      },
+      "UpdateSizeStatusReqDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "description": "Bật hoặc ngừng sử dụng kích thước."
+          }
+        },
+        "required": [
+          "isActive"
         ]
       },
       "CreateColorReqDto": {

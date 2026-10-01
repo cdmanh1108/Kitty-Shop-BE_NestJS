@@ -80,6 +80,17 @@ export interface CreateSizeInput {
   sortOrder?: number;
 }
 
+export interface SizeListQuery extends PaginationParams {
+  q?: string;
+  status?: 'ALL' | 'ACTIVE' | 'INACTIVE';
+}
+
+export interface UpdateSizeInput {
+  code?: string;
+  name?: string;
+  sortOrder?: number;
+}
+
 export interface InventoryListQuery extends PaginationParams {
   variantId?: string;
   productId?: string;

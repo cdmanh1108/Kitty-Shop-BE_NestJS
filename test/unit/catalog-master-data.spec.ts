@@ -19,7 +19,7 @@ import {
   normalizeSizeName,
   normalizeSizeSortOrder,
 } from '@modules/catalog/domain/catalog-master-data.rules';
-import { CreateSizeReqDto } from '@modules/catalog/api/admin/dto/size.dto';
+import { CreateSizeReqDto, UpdateSizeReqDto } from '@modules/catalog/api/admin/dto/size.dto';
 
 const user: CurrentUser = {
   userId: 'user-1',
@@ -111,6 +111,22 @@ describe('CreateSizeReqDto', () => {
   });
 });
 
+describe('UpdateSizeReqDto', () => {
+  it('accepts omitted fields and integer sortOrder, and rejects invalid sortOrder values', () => {
+    const omitted = plainToInstance(UpdateSizeReqDto, {});
+    expect(validateSync(omitted)).toHaveLength(0);
+
+    const valid = plainToInstance(UpdateSizeReqDto, { sortOrder: '25' });
+    expect(valid.sortOrder).toBe(25);
+    expect(validateSync(valid)).toHaveLength(0);
+
+    for (const sortOrder of [-1, 1.5, '1.5', null, '']) {
+      const dto = plainToInstance(UpdateSizeReqDto, { sortOrder });
+      expect(validateSync(dto).length).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe('ColorService and SizeService', () => {
   const colorRecord = {
     id: 'color-1',
@@ -144,8 +160,11 @@ describe('ColorService and SizeService', () => {
   let updateColorMock: jest.MockedFunction<CatalogColorRepository['updateColor']>;
   let updateColorStatusMock: jest.MockedFunction<CatalogColorRepository['updateColorStatus']>;
   let createSizeMock: jest.MockedFunction<CatalogSizeRepository['createSize']>;
+  let listSizesMock: jest.MockedFunction<CatalogSizeRepository['listSizes']>;
   let findSizeByIdMock: jest.MockedFunction<CatalogSizeRepository['findSizeById']>;
   let findSizeByCodeMock: jest.MockedFunction<CatalogSizeRepository['findSizeByCode']>;
+  let updateSizeMock: jest.MockedFunction<CatalogSizeRepository['updateSize']>;
+  let updateSizeStatusMock: jest.MockedFunction<CatalogSizeRepository['updateSizeStatus']>;
   let isSizeInUseMock: jest.MockedFunction<CatalogSizeRepository['isSizeInUse']>;
   let deleteSizeMock: jest.MockedFunction<CatalogSizeRepository['deleteSize']>;
 
@@ -169,14 +188,20 @@ describe('ColorService and SizeService', () => {
       deleteColor: deleteColorMock,
     };
     createSizeMock = jest.fn().mockResolvedValue(sizeRecord);
+    listSizesMock = jest.fn();
     findSizeByIdMock = jest.fn();
     findSizeByCodeMock = jest.fn().mockResolvedValue(null);
+    updateSizeMock = jest.fn();
+    updateSizeStatusMock = jest.fn();
     isSizeInUseMock = jest.fn();
     deleteSizeMock = jest.fn();
     sizeRepository = {
+      listSizes: listSizesMock,
       createSize: createSizeMock,
       findSizeById: findSizeByIdMock,
       findSizeByCode: findSizeByCodeMock,
+      updateSize: updateSizeMock,
+      updateSizeStatus: updateSizeStatusMock,
       isSizeInUse: isSizeInUseMock,
       deleteSize: deleteSizeMock,
     };
@@ -381,6 +406,135 @@ describe('ColorService and SizeService', () => {
       code: CATALOG_ERROR_CODE.SIZE_CODE_ALREADY_EXISTS,
     });
     expect(createSizeMock).not.toHaveBeenCalled();
+  });
+
+  it('trims Size management search, defaults status to all, and scopes list criteria', async () => {
+    listSizesMock.mockResolvedValue({
+      items: [],
+      meta: { page: 2, limit: 10, total: 0, totalPages: 0 },
+    });
+    const service = new SizeService(sizeRepository, { log: auditLog });
+
+    await service.listSizes(user, { page: 2, limit: 10, q: ' XL ' });
+
+    expect(listSizesMock).toHaveBeenCalledWith({
+      shopId: user.shopId,
+      page: 2,
+      limit: 10,
+      q: 'XL',
+      status: 'ALL',
+    });
+  });
+
+  it('returns inactive Size details normally and scopes lookup to the current shop', async () => {
+    const inactive = { ...sizeRecord, isActive: false };
+    findSizeByIdMock.mockResolvedValue(inactive);
+    const service = new SizeService(sizeRepository, { log: auditLog });
+
+    await expect(service.getSize(user, sizeRecord.id)).resolves.toBe(inactive);
+    expect(findSizeByIdMock).toHaveBeenCalledWith(user.shopId, sizeRecord.id);
+  });
+
+  it('updates only requested fields on inactive Size and audits full snapshots', async () => {
+    const inactive = { ...sizeRecord, isActive: false, sortOrder: 40 };
+    const updated = { ...inactive, name: 'Extra large' };
+    findSizeByIdMock.mockResolvedValue(inactive);
+    updateSizeMock.mockResolvedValue(updated);
+    const service = new SizeService(sizeRepository, { log: auditLog });
+
+    await expect(service.updateSize(user, sizeRecord.id, { name: ' Extra large ' })).resolves.toBe(
+      updated,
+    );
+    expect(updateSizeMock).toHaveBeenCalledWith(user.shopId, sizeRecord.id, {
+      name: 'Extra large',
+    });
+    expect(auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'UPDATE',
+        entityType: 'size',
+        entityId: sizeRecord.id,
+        oldValues: {
+          id: sizeRecord.id,
+          code: 'XL',
+          name: 'Cỡ lớn',
+          sortOrder: 40,
+          isActive: false,
+        },
+        newValues: {
+          id: sizeRecord.id,
+          code: 'XL',
+          name: 'Extra large',
+          sortOrder: 40,
+          isActive: false,
+        },
+      }),
+    );
+
+    auditLog.mockClear();
+    updateSizeMock.mockClear();
+    await expect(service.updateSize(user, sizeRecord.id, {})).resolves.toBe(inactive);
+    expect(updateSizeMock).not.toHaveBeenCalled();
+    expect(auditLog).not.toHaveBeenCalled();
+  });
+
+  it('normalizes update codes, permits the same code, and rejects a duplicate record', async () => {
+    findSizeByIdMock.mockResolvedValue(sizeRecord);
+    findSizeByCodeMock.mockResolvedValue(sizeRecord);
+    updateSizeMock.mockResolvedValue(sizeRecord);
+    const service = new SizeService(sizeRepository, { log: auditLog });
+
+    await expect(service.updateSize(user, sizeRecord.id, { code: ' xl ' })).resolves.toBe(
+      sizeRecord,
+    );
+    expect(updateSizeMock).toHaveBeenCalledWith(user.shopId, sizeRecord.id, { code: 'XL' });
+
+    findSizeByCodeMock.mockResolvedValue({ ...sizeRecord, id: 'size-2' });
+    await expect(service.updateSize(user, sizeRecord.id, { code: ' l ' })).rejects.toMatchObject({
+      code: CATALOG_ERROR_CODE.SIZE_CODE_ALREADY_EXISTS,
+    });
+  });
+
+  it('updates only the requested sortOrder without resetting other fields', async () => {
+    const updated = { ...sizeRecord, sortOrder: 25 };
+    findSizeByIdMock.mockResolvedValue(sizeRecord);
+    updateSizeMock.mockResolvedValue(updated);
+    const service = new SizeService(sizeRepository, { log: auditLog });
+
+    await expect(service.updateSize(user, sizeRecord.id, { sortOrder: 25 })).resolves.toBe(updated);
+    expect(updateSizeMock).toHaveBeenCalledWith(user.shopId, sizeRecord.id, { sortOrder: 25 });
+  });
+
+  it('audits actual Size status transitions and skips redundant audit', async () => {
+    updateSizeStatusMock.mockResolvedValue({ size: sizeRecord, changed: false });
+    const service = new SizeService(sizeRepository, { log: auditLog });
+
+    await service.updateSizeStatus(user, sizeRecord.id, true);
+    expect(auditLog).not.toHaveBeenCalled();
+
+    updateSizeStatusMock.mockResolvedValue({
+      size: { ...sizeRecord, isActive: false },
+      changed: true,
+    });
+    await service.updateSizeStatus(user, sizeRecord.id, false);
+    expect(auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'STATUS_CHANGE',
+        oldValues: {
+          id: sizeRecord.id,
+          code: sizeRecord.code,
+          name: sizeRecord.name,
+          sortOrder: sizeRecord.sortOrder,
+          isActive: true,
+        },
+        newValues: {
+          id: sizeRecord.id,
+          code: sizeRecord.code,
+          name: sizeRecord.name,
+          sortOrder: sizeRecord.sortOrder,
+          isActive: false,
+        },
+      }),
+    );
   });
 
   it('checks usage before deleting Color and Size', async () => {

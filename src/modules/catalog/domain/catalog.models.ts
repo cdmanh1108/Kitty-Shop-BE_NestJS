@@ -39,6 +39,11 @@ export type ColorManagementItem = Pick<
   'id' | 'code' | 'name' | 'hexColor' | 'isActive' | 'createdAt' | 'updatedAt'
 >;
 export type ColorPage = PaginatedResult<ColorManagementItem>;
+export type SizeManagementItem = Pick<
+  SizeRecord,
+  'id' | 'code' | 'name' | 'sortOrder' | 'isActive' | 'createdAt' | 'updatedAt'
+>;
+export type SizePage = PaginatedResult<SizeManagementItem>;
 export type CategoryOption = Pick<CategoryRecord, 'id' | 'parentId' | 'code' | 'name'> & {
   status: 'ACTIVE' | 'INACTIVE';
 };

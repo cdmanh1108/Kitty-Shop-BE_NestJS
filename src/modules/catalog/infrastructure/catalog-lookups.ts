@@ -21,7 +21,7 @@ export async function listLookups(
     prisma.size.findMany({
       where: { shopId, isActive: true },
       select: { id: true, code: true, name: true, sortOrder: true },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { code: 'asc' }],
     }),
     prisma.color.findMany({
       where: { shopId, isActive: true },

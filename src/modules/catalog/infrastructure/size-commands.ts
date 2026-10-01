@@ -34,6 +34,42 @@ export function findSizeByCode(
   return prisma.size.findFirst({ where: { shopId, code } });
 }
 
+export async function updateSize(
+  prisma: PrismaService,
+  shopId: string,
+  id: string,
+  input: { code?: string; name?: string; sortOrder?: number },
+): ReturnType<CatalogSizeRepository['updateSize']> {
+  if (Object.values(input).every((value) => value === undefined)) {
+    return findSizeById(prisma, shopId, id);
+  }
+  try {
+    const result = await prisma.size.updateMany({ where: { id, shopId }, data: input });
+    if (!result.count) return null;
+    return findSizeById(prisma, shopId, id);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new CatalogSizeError(CATALOG_ERROR_CODE.SIZE_CODE_ALREADY_EXISTS);
+    }
+    throw error;
+  }
+}
+
+export async function updateSizeStatus(
+  prisma: PrismaService,
+  shopId: string,
+  id: string,
+  isActive: boolean,
+): ReturnType<CatalogSizeRepository['updateSizeStatus']> {
+  const result = await prisma.size.updateMany({
+    where: { id, shopId, isActive: { not: isActive } },
+    data: { isActive },
+  });
+  const size = await findSizeById(prisma, shopId, id);
+  if (!size) return null;
+  return { size, changed: result.count > 0 };
+}
+
 export async function isSizeInUse(prisma: PrismaService, id: string): Promise<boolean> {
   return (await prisma.productVariant.count({ where: { sizeId: id } })) > 0;
 }

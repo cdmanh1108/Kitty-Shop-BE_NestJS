@@ -29,7 +29,16 @@ type CatalogRepository = CatalogPersistenceAdapter;
 import { listLookups } from './catalog-lookups';
 import { listCategories, categoryOptions } from './category-queries';
 import { createCategory, updateCategory, deleteCategory } from './category-commands';
-import { createSize, deleteSize, findSizeByCode, findSizeById, isSizeInUse } from './size-commands';
+import {
+  createSize,
+  deleteSize,
+  findSizeByCode,
+  findSizeById,
+  isSizeInUse,
+  updateSize,
+  updateSizeStatus,
+} from './size-commands';
+import { listSizes } from './size-queries';
 import {
   createColor,
   deleteColor,
@@ -166,6 +175,11 @@ export class PrismaCatalogRepository
   ): ReturnType<CatalogRepository['createSize']> {
     return createSize(this.prisma, ...args);
   }
+  listSizes(
+    ...args: Parameters<CatalogRepository['listSizes']>
+  ): ReturnType<CatalogRepository['listSizes']> {
+    return listSizes(this.prisma, ...args);
+  }
   findSizeById(
     ...args: Parameters<CatalogRepository['findSizeById']>
   ): ReturnType<CatalogRepository['findSizeById']> {
@@ -175,6 +189,16 @@ export class PrismaCatalogRepository
     ...args: Parameters<CatalogRepository['findSizeByCode']>
   ): ReturnType<CatalogRepository['findSizeByCode']> {
     return findSizeByCode(this.prisma, ...args);
+  }
+  updateSize(
+    ...args: Parameters<CatalogRepository['updateSize']>
+  ): ReturnType<CatalogRepository['updateSize']> {
+    return updateSize(this.prisma, ...args);
+  }
+  updateSizeStatus(
+    ...args: Parameters<CatalogRepository['updateSizeStatus']>
+  ): ReturnType<CatalogRepository['updateSizeStatus']> {
+    return updateSizeStatus(this.prisma, ...args);
   }
   isSizeInUse(
     ...args: Parameters<CatalogRepository['isSizeInUse']>

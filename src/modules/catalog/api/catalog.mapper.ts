@@ -15,8 +15,10 @@ import type {
   ProductMediaInput,
   ProductVariantInput,
   RentalRateInput,
+  SizeListQuery,
   UpdateInventoryStatusInput,
   UpdateProductInput,
+  UpdateSizeInput,
   UpsertRentalRateInput,
 } from '../application/catalog.contracts';
 import type {
@@ -27,7 +29,8 @@ import type {
 import type { CreateColorReqDto } from './admin/dto/color.dto';
 import type { UpdateColorReqDto } from './admin/dto/color.dto';
 import type { ColorListQueryDto } from './admin/dto/color-query.dto';
-import type { CreateSizeReqDto } from './admin/dto/size.dto';
+import type { CreateSizeReqDto, UpdateSizeReqDto } from './admin/dto/size.dto';
+import type { SizeListQueryDto } from './admin/dto/size-query.dto';
 import type {
   AddVariantReqDto,
   CreateProductReqDto,
@@ -45,7 +48,8 @@ import type {
 } from './admin/dto/inventory.dto';
 import type { ProductListQueryDto } from './admin/dto/product-query.dto';
 import type { ColorRecord } from '../domain/catalog.records';
-import type { ColorManagementItem } from '../domain/catalog.models';
+import type { SizeRecord } from '../domain/catalog.records';
+import type { ColorManagementItem, SizeManagementItem } from '../domain/catalog.models';
 
 export function toAddInventoryInput(dto: AddInventoryReqDto): AddInventoryInput {
   return { ...dto };
@@ -113,6 +117,23 @@ export function toProductMediaInput(dto: ProductMediaReqDto): ProductMediaInput 
 }
 export function toCreateSizeInput(dto: CreateSizeReqDto): CreateSizeInput {
   return { ...dto };
+}
+export function toSizeListQuery(dto: SizeListQueryDto): SizeListQuery {
+  return { ...dto };
+}
+export function toUpdateSizeInput(dto: UpdateSizeReqDto): UpdateSizeInput {
+  return { ...dto };
+}
+export function toSizeResponse(size: SizeRecord): SizeManagementItem {
+  return {
+    id: size.id,
+    code: size.code,
+    name: size.name,
+    sortOrder: size.sortOrder,
+    isActive: size.isActive,
+    createdAt: size.createdAt,
+    updatedAt: size.updatedAt,
+  };
 }
 export function toInventoryListQuery(dto: InventoryListQueryDto): InventoryListQuery {
   return { ...dto };

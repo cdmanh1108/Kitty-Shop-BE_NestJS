@@ -82,17 +82,25 @@ describe('Catalog Color and Size persistence invariants', () => {
     expect(historical.color?.isActive).toBe(false);
   });
 
-  it('orders active Size lookup values by sortOrder then name', async () => {
+  it('orders active Size lookup values by sortOrder, name and code', async () => {
     const f = await rentalScenario(prisma);
     await prisma.size.createMany({
       data: [
         { shopId: f.shop.id, code: 'SIZE_Z', name: 'Zulu', sortOrder: 10 },
         { shopId: f.shop.id, code: 'SIZE_B', name: 'Beta', sortOrder: 5 },
         { shopId: f.shop.id, code: 'SIZE_A', name: 'Alpha', sortOrder: 5 },
+        { shopId: f.shop.id, code: 'SIZE_SHARED_Z', name: 'Shared', sortOrder: 7 },
+        { shopId: f.shop.id, code: 'SIZE_SHARED_A', name: 'Shared', sortOrder: 7 },
       ],
     });
     const lookups = await catalog.listLookups(f.shop.id);
-    expect(lookups.sizes.map(({ code }) => code)).toEqual(['SIZE_A', 'SIZE_B', 'SIZE_Z']);
+    expect(lookups.sizes.map(({ code }) => code)).toEqual([
+      'SIZE_A',
+      'SIZE_B',
+      'SIZE_SHARED_A',
+      'SIZE_SHARED_Z',
+      'SIZE_Z',
+    ]);
   });
 
   it('allows assignment to active Color and Size and rejects inactive assignments', async () => {
