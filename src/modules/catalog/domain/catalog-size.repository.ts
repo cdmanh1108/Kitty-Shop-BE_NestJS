@@ -7,4 +7,8 @@ export interface CatalogSizeRepository {
     shopId: string,
     input: { code: string; name: string; sortOrder: number },
   ): Promise<SizeRecord>;
+  findSizeById(shopId: string, id: string): Promise<SizeRecord | null>;
+  findSizeByCode(shopId: string, code: string): Promise<SizeRecord | null>;
+  isSizeInUse(id: string): Promise<boolean>;
+  deleteSize(shopId: string, id: string): Promise<boolean>;
 }

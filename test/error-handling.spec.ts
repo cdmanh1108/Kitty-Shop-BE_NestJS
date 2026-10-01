@@ -177,15 +177,15 @@ describe('AllExceptionsFilter', () => {
 
     it('maps CatalogInvariantError by code regardless of message wording', () => {
       const error = new CatalogInvariantError(
-        CATALOG_ERROR_CODE.SIZE_NOT_IN_SHOP,
+        CATALOG_ERROR_CODE.SIZE_NOT_FOUND,
         'Any future localized wording remains safe for HTTP classification.',
       );
       filter.catch(error, mockHost);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
       expect(sentPayload).toMatchObject({
-        statusCode: 400,
-        code: CATALOG_ERROR_CODE.SIZE_NOT_IN_SHOP,
+        statusCode: 404,
+        code: CATALOG_ERROR_CODE.SIZE_NOT_FOUND,
         message: 'Any future localized wording remains safe for HTTP classification.',
       });
     });

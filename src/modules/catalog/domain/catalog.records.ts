@@ -21,7 +21,9 @@ export interface SizeRecord {
   code: string;
   name: string;
   sortOrder: number;
+  isActive: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ColorRecord {
@@ -30,7 +32,9 @@ export interface ColorRecord {
   code: string;
   name: string;
   hexColor: string | null;
+  isActive: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ProductRecord {

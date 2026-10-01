@@ -12,8 +12,10 @@ import type { CatalogProductRepository } from '../domain/catalog-product.reposit
 import {
   CATALOG_ERROR_CODE,
   CatalogCategoryError,
+  CatalogColorError,
   CatalogInvariantError,
   CatalogProductSlugAlreadyExistsError,
+  CatalogSizeError,
 } from '../domain/catalog-errors';
 import { generateProductSlug, normalizeProductSlug } from '../domain/product-slug';
 
@@ -338,20 +340,20 @@ async function assertVariantReferences(
   variant: CreateProductData['variants'][number],
 ): Promise<void> {
   if (variant.sizeId) {
-    const size = await tx.size.count({ where: { id: variant.sizeId, shopId } });
-    if (!size)
-      throw new CatalogInvariantError(
-        CATALOG_ERROR_CODE.SIZE_NOT_IN_SHOP,
-        'Kích thước không thuộc cửa hàng này.',
-      );
+    const size = await tx.size.findFirst({
+      where: { id: variant.sizeId, shopId },
+      select: { isActive: true },
+    });
+    if (!size) throw new CatalogSizeError(CATALOG_ERROR_CODE.SIZE_NOT_FOUND);
+    if (!size.isActive) throw new CatalogSizeError(CATALOG_ERROR_CODE.SIZE_INACTIVE);
   }
   if (variant.colorId) {
-    const color = await tx.color.count({ where: { id: variant.colorId, shopId } });
-    if (!color)
-      throw new CatalogInvariantError(
-        CATALOG_ERROR_CODE.COLOR_NOT_IN_SHOP,
-        'Màu sắc không thuộc cửa hàng này.',
-      );
+    const color = await tx.color.findFirst({
+      where: { id: variant.colorId, shopId },
+      select: { isActive: true },
+    });
+    if (!color) throw new CatalogColorError(CATALOG_ERROR_CODE.COLOR_NOT_FOUND);
+    if (!color.isActive) throw new CatalogColorError(CATALOG_ERROR_CODE.COLOR_INACTIVE);
   }
 }
 

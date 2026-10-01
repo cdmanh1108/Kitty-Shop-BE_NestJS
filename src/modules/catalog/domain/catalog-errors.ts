@@ -10,8 +10,20 @@ export const CATALOG_ERROR_CODE = {
   RENTAL_RATE_DURATION_DUPLICATE: 'RENTAL_RATE_DURATION_DUPLICATE',
   PRODUCT_MULTIPLE_PRIMARY_MEDIA: 'PRODUCT_MULTIPLE_PRIMARY_MEDIA',
   PRODUCT_ACTIVE_RENTAL: 'PRODUCT_ACTIVE_RENTAL',
-  SIZE_NOT_IN_SHOP: 'SIZE_NOT_IN_SHOP',
-  COLOR_NOT_IN_SHOP: 'COLOR_NOT_IN_SHOP',
+  COLOR_NOT_FOUND: 'COLOR_NOT_FOUND',
+  COLOR_CODE_ALREADY_EXISTS: 'COLOR_CODE_ALREADY_EXISTS',
+  COLOR_IN_USE: 'COLOR_IN_USE',
+  COLOR_INACTIVE: 'COLOR_INACTIVE',
+  COLOR_CODE_INVALID: 'COLOR_CODE_INVALID',
+  COLOR_NAME_INVALID: 'COLOR_NAME_INVALID',
+  COLOR_HEX_INVALID: 'COLOR_HEX_INVALID',
+  SIZE_NOT_FOUND: 'SIZE_NOT_FOUND',
+  SIZE_CODE_ALREADY_EXISTS: 'SIZE_CODE_ALREADY_EXISTS',
+  SIZE_IN_USE: 'SIZE_IN_USE',
+  SIZE_INACTIVE: 'SIZE_INACTIVE',
+  SIZE_CODE_INVALID: 'SIZE_CODE_INVALID',
+  SIZE_NAME_INVALID: 'SIZE_NAME_INVALID',
+  SIZE_SORT_ORDER_INVALID: 'SIZE_SORT_ORDER_INVALID',
   INVENTORY_LOCATION_INVALID: 'INVENTORY_LOCATION_INVALID',
   INVENTORY_SKU_ALREADY_EXISTS: 'INVENTORY_SKU_ALREADY_EXISTS',
   INVENTORY_BARCODE_ALREADY_EXISTS: 'INVENTORY_BARCODE_ALREADY_EXISTS',
@@ -68,5 +80,56 @@ export class CatalogProductSlugAlreadyExistsError extends CatalogInvariantError 
       CATALOG_ERROR_CODE.PRODUCT_SLUG_ALREADY_EXISTS,
       'Slug sản phẩm đã tồn tại trong cửa hàng.',
     );
+  }
+}
+
+type CatalogColorErrorCode =
+  | typeof CATALOG_ERROR_CODE.COLOR_NOT_FOUND
+  | typeof CATALOG_ERROR_CODE.COLOR_CODE_ALREADY_EXISTS
+  | typeof CATALOG_ERROR_CODE.COLOR_IN_USE
+  | typeof CATALOG_ERROR_CODE.COLOR_INACTIVE
+  | typeof CATALOG_ERROR_CODE.COLOR_CODE_INVALID
+  | typeof CATALOG_ERROR_CODE.COLOR_NAME_INVALID
+  | typeof CATALOG_ERROR_CODE.COLOR_HEX_INVALID;
+
+const COLOR_ERROR_MESSAGES: Record<CatalogColorErrorCode, string> = {
+  COLOR_NOT_FOUND: 'Không tìm thấy màu sắc.',
+  COLOR_CODE_ALREADY_EXISTS: 'Mã màu đã tồn tại trong cửa hàng.',
+  COLOR_IN_USE: 'Màu sắc đang được phân loại sản phẩm sử dụng.',
+  COLOR_INACTIVE: 'Màu sắc đã ngừng hoạt động.',
+  COLOR_CODE_INVALID: 'Mã màu chỉ được chứa chữ in hoa, chữ số và dấu gạch dưới; tối đa 50 ký tự.',
+  COLOR_NAME_INVALID: 'Tên màu không được để trống và tối đa 100 ký tự.',
+  COLOR_HEX_INVALID: 'Mã màu phải có định dạng #RRGGBB.',
+};
+
+export class CatalogColorError extends CatalogInvariantError {
+  constructor(code: CatalogColorErrorCode) {
+    super(code, COLOR_ERROR_MESSAGES[code]);
+  }
+}
+
+type CatalogSizeErrorCode =
+  | typeof CATALOG_ERROR_CODE.SIZE_NOT_FOUND
+  | typeof CATALOG_ERROR_CODE.SIZE_CODE_ALREADY_EXISTS
+  | typeof CATALOG_ERROR_CODE.SIZE_IN_USE
+  | typeof CATALOG_ERROR_CODE.SIZE_INACTIVE
+  | typeof CATALOG_ERROR_CODE.SIZE_CODE_INVALID
+  | typeof CATALOG_ERROR_CODE.SIZE_NAME_INVALID
+  | typeof CATALOG_ERROR_CODE.SIZE_SORT_ORDER_INVALID;
+
+const SIZE_ERROR_MESSAGES: Record<CatalogSizeErrorCode, string> = {
+  SIZE_NOT_FOUND: 'Không tìm thấy kích thước.',
+  SIZE_CODE_ALREADY_EXISTS: 'Mã kích thước đã tồn tại trong cửa hàng.',
+  SIZE_IN_USE: 'Kích thước đang được phân loại sản phẩm sử dụng.',
+  SIZE_INACTIVE: 'Kích thước đã ngừng hoạt động.',
+  SIZE_CODE_INVALID:
+    'Mã kích thước chỉ được chứa chữ in hoa, chữ số và dấu gạch dưới; tối đa 50 ký tự.',
+  SIZE_NAME_INVALID: 'Tên kích thước không được để trống và tối đa 100 ký tự.',
+  SIZE_SORT_ORDER_INVALID: 'Thứ tự hiển thị phải là số nguyên không âm.',
+};
+
+export class CatalogSizeError extends CatalogInvariantError {
+  constructor(code: CatalogSizeErrorCode) {
+    super(code, SIZE_ERROR_MESSAGES[code]);
   }
 }

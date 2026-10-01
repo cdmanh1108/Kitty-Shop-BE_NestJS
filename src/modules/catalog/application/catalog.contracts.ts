@@ -66,7 +66,7 @@ export type ProductMediaInput = ProductMediaData;
 export interface CreateSizeInput {
   code: string;
   name: string;
-  sortOrder: number;
+  sortOrder?: number;
 }
 
 export interface InventoryListQuery extends PaginationParams {

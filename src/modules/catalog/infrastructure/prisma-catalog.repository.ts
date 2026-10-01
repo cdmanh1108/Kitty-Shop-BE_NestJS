@@ -29,8 +29,14 @@ type CatalogRepository = CatalogPersistenceAdapter;
 import { listLookups } from './catalog-lookups';
 import { listCategories, categoryOptions } from './category-queries';
 import { createCategory, updateCategory, deleteCategory } from './category-commands';
-import { createSize } from './size-commands';
-import { createColor } from './color-commands';
+import { createSize, deleteSize, findSizeByCode, findSizeById, isSizeInUse } from './size-commands';
+import {
+  createColor,
+  deleteColor,
+  findColorByCode,
+  findColorById,
+  isColorInUse,
+} from './color-commands';
 import { listProducts, findProduct, lookupProducts } from './product-queries';
 import {
   createProduct,
@@ -157,11 +163,51 @@ export class PrismaCatalogRepository
   ): ReturnType<CatalogRepository['createSize']> {
     return createSize(this.prisma, ...args);
   }
+  findSizeById(
+    ...args: Parameters<CatalogRepository['findSizeById']>
+  ): ReturnType<CatalogRepository['findSizeById']> {
+    return findSizeById(this.prisma, ...args);
+  }
+  findSizeByCode(
+    ...args: Parameters<CatalogRepository['findSizeByCode']>
+  ): ReturnType<CatalogRepository['findSizeByCode']> {
+    return findSizeByCode(this.prisma, ...args);
+  }
+  isSizeInUse(
+    ...args: Parameters<CatalogRepository['isSizeInUse']>
+  ): ReturnType<CatalogRepository['isSizeInUse']> {
+    return isSizeInUse(this.prisma, ...args);
+  }
+  deleteSize(
+    ...args: Parameters<CatalogRepository['deleteSize']>
+  ): ReturnType<CatalogRepository['deleteSize']> {
+    return deleteSize(this.prisma, ...args);
+  }
 
   createColor(
     ...args: Parameters<CatalogRepository['createColor']>
   ): ReturnType<CatalogRepository['createColor']> {
     return createColor(this.prisma, ...args);
+  }
+  findColorById(
+    ...args: Parameters<CatalogRepository['findColorById']>
+  ): ReturnType<CatalogRepository['findColorById']> {
+    return findColorById(this.prisma, ...args);
+  }
+  findColorByCode(
+    ...args: Parameters<CatalogRepository['findColorByCode']>
+  ): ReturnType<CatalogRepository['findColorByCode']> {
+    return findColorByCode(this.prisma, ...args);
+  }
+  isColorInUse(
+    ...args: Parameters<CatalogRepository['isColorInUse']>
+  ): ReturnType<CatalogRepository['isColorInUse']> {
+    return isColorInUse(this.prisma, ...args);
+  }
+  deleteColor(
+    ...args: Parameters<CatalogRepository['deleteColor']>
+  ): ReturnType<CatalogRepository['deleteColor']> {
+    return deleteColor(this.prisma, ...args);
   }
 
   listProducts(
