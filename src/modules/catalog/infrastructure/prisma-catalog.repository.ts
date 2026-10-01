@@ -12,26 +12,25 @@ import {
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Inject, Injectable } from '@nestjs/common';
 import type { CatalogCategoryRepository } from '../domain/catalog-category.repository';
+import type { CatalogColorRepository } from '../domain/catalog-color.repository';
 import type { CatalogInventoryRepository } from '../domain/catalog-inventory.repository';
 import type { CatalogProductRepository } from '../domain/catalog-product.repository';
 import type { CatalogReferenceDataRepository } from '../domain/catalog-reference-data.repository';
+import type { CatalogSizeRepository } from '../domain/catalog-size.repository';
 import type { StorefrontCatalogRepository } from '../domain/storefront-catalog.repository';
 type CatalogPersistenceAdapter = CatalogCategoryRepository &
+  CatalogColorRepository &
   CatalogReferenceDataRepository &
+  CatalogSizeRepository &
   CatalogProductRepository &
   CatalogInventoryRepository &
   StorefrontCatalogRepository;
 type CatalogRepository = CatalogPersistenceAdapter;
-import {
-  listLookups,
-  listCategories,
-  categoryOptions,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-  createSize,
-  createColor,
-} from './catalog-lookups';
+import { listLookups } from './catalog-lookups';
+import { listCategories, categoryOptions } from './category-queries';
+import { createCategory, updateCategory, deleteCategory } from './category-commands';
+import { createSize } from './size-commands';
+import { createColor } from './color-commands';
 import { listProducts, findProduct, lookupProducts } from './product-queries';
 import {
   createProduct,
@@ -59,7 +58,9 @@ import {
 export class PrismaCatalogRepository
   implements
     CatalogCategoryRepository,
+    CatalogColorRepository,
     CatalogReferenceDataRepository,
+    CatalogSizeRepository,
     CatalogProductRepository,
     CatalogInventoryRepository,
     StorefrontCatalogRepository

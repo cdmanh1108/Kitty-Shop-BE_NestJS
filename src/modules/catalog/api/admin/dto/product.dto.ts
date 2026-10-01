@@ -18,7 +18,8 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { ColorSummaryResDto, SizeSummaryResDto } from './category.dto';
+import { ColorSummaryResDto } from './color.dto';
+import { SizeSummaryResDto } from './size.dto';
 
 export class RentalRateReqDto {
   @ApiProperty({ example: 1 })

@@ -13,7 +13,9 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { ColorSummaryResDto, ShopLocationSummaryResDto, SizeSummaryResDto } from './category.dto';
+import { ColorSummaryResDto } from './color.dto';
+import { ShopLocationSummaryResDto } from './category.dto';
+import { SizeSummaryResDto } from './size.dto';
 import { RentalRateResDto } from './product.dto';
 
 export class AddInventoryReqDto {

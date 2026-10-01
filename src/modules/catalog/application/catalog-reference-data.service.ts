@@ -4,7 +4,6 @@ import {
   CATALOG_REFERENCE_DATA_REPOSITORY,
   type CatalogReferenceDataRepository,
 } from '../domain/catalog-reference-data.repository';
-import type { CreateColorInput, CreateSizeInput } from './catalog.contracts';
 
 @Injectable()
 export class CatalogReferenceDataService {
@@ -15,13 +14,5 @@ export class CatalogReferenceDataService {
 
   lookups(user: CurrentUser) {
     return this.repository.listLookups(user.shopId);
-  }
-
-  createSize(user: CurrentUser, input: CreateSizeInput) {
-    return this.repository.createSize(user.shopId, input);
-  }
-
-  createColor(user: CurrentUser, input: CreateColorInput) {
-    return this.repository.createColor(user.shopId, input);
   }
 }

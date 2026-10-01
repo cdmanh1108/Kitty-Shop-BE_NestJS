@@ -2,6 +2,8 @@ import { PaginationMetaResDto } from '@common/dto/response.dto';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type, type TransformFnParams } from 'class-transformer';
+import { ColorSummaryResDto } from './color.dto';
+import { SizeSummaryResDto } from './size.dto';
 import {
   IsBoolean,
   IsIn,
@@ -117,24 +119,6 @@ export class CategoryListQueryDto extends PaginationQueryDto {
   status?: 'ACTIVE' | 'INACTIVE';
 }
 
-export class CreateSizeReqDto {
-  @ApiProperty() @IsString({ message: 'Mã phải là chuỗi ký tự.' }) code!: string;
-  @ApiProperty() @IsString({ message: 'Tên phải là chuỗi ký tự.' }) name!: string;
-  @ApiPropertyOptional({ type: Number, default: 0 })
-  @Type(() => Number)
-  @IsInt({ message: 'Thứ tự hiển thị phải là số nguyên.' })
-  @IsOptional()
-  sortOrder = 0;
-}
-
-export class CreateColorReqDto {
-  @ApiProperty() @IsString({ message: 'Mã phải là chuỗi ký tự.' }) code!: string;
-  @ApiProperty() @IsString({ message: 'Tên phải là chuỗi ký tự.' }) name!: string;
-  @ApiPropertyOptional({ example: '#000000' })
-  @IsString({ message: 'Mã màu phải là chuỗi ký tự.' })
-  @IsOptional()
-  hexColor?: string;
-}
 export class CategorySummaryResDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
@@ -143,19 +127,6 @@ export class CategorySummaryResDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
 }
 
-export class SizeSummaryResDto {
-  @ApiProperty() id!: string;
-  @ApiProperty() code!: string;
-  @ApiProperty() name!: string;
-  @ApiProperty() sortOrder!: number;
-}
-
-export class ColorSummaryResDto {
-  @ApiProperty() id!: string;
-  @ApiProperty() code!: string;
-  @ApiProperty() name!: string;
-  @ApiPropertyOptional({ type: String, nullable: true }) hexColor!: string | null;
-}
 export class ShopLocationSummaryResDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;

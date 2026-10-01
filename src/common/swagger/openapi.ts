@@ -172,6 +172,8 @@ export function createBaseOpenApiDocument(
       const normalizedController = controllerKey
         .replace(/^AdminCategoryController$/, 'CatalogController')
         .replace(/^AdminCatalogReferenceController$/, 'CatalogController')
+        .replace(/^AdminColorController$/, 'CatalogController')
+        .replace(/^AdminSizeController$/, 'CatalogController')
         .replace(/^AdminProductController$/, 'CatalogController')
         .replace(/^AdminInventoryController$/, 'CatalogController')
         .replace(/^AdminRentalController$/, 'RentalController');

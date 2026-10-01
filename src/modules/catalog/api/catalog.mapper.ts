@@ -20,10 +20,10 @@ import type {
 import type {
   CreateCategoryReqDto,
   CategoryListQueryDto,
-  CreateColorReqDto,
-  CreateSizeReqDto,
   UpdateCategoryReqDto,
 } from './admin/dto/category.dto';
+import type { CreateColorReqDto } from './admin/dto/color.dto';
+import type { CreateSizeReqDto } from './admin/dto/size.dto';
 import type {
   AddVariantReqDto,
   CreateProductReqDto,

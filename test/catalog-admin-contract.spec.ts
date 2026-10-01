@@ -5,6 +5,8 @@ import { PERMISSIONS } from '@common/constants/permissions';
 import { PERMISSIONS_KEY } from '@common/decorators/permissions.decorator';
 import { AdminCategoryController } from '@modules/catalog/api/admin/admin-category.controller';
 import { AdminCatalogReferenceController } from '@modules/catalog/api/admin/admin-catalog-reference.controller';
+import { AdminColorController } from '@modules/catalog/api/admin/admin-color.controller';
+import { AdminSizeController } from '@modules/catalog/api/admin/admin-size.controller';
 import { AdminInventoryController } from '@modules/catalog/api/admin/admin-inventory.controller';
 import { AdminProductController } from '@modules/catalog/api/admin/admin-product.controller';
 
@@ -63,14 +65,14 @@ const routeContracts: RouteContract[] = [
   {
     path: '/admin/catalog/sizes',
     method: 'post',
-    controller: AdminCatalogReferenceController,
+    controller: AdminSizeController,
     handler: 'createSize',
     permission: PERMISSIONS.CATALOG_MANAGE,
   },
   {
     path: '/admin/catalog/colors',
     method: 'post',
-    controller: AdminCatalogReferenceController,
+    controller: AdminColorController,
     handler: 'createColor',
     permission: PERMISSIONS.CATALOG_MANAGE,
   },
