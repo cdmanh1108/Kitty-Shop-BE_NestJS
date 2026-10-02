@@ -12,13 +12,14 @@ import {
   releaseIdempotencyClaim,
 } from '@database/prisma/idempotency';
 import { lockRentalOrder } from '@modules/rentals/public/rental-order-lock';
+import { writeTransactionalAuditLog } from '@modules/audit/public/transactional-audit';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import {
   assertPaymentCreationAllowed,
   assertPaymentVoidAllowed,
-} from '@modules/rentals/domain/rental-monetary.policy';
+} from '@modules/rentals/public/rental-monetary-policy';
 import { FinanceInvariantError, type FinanceRepository } from '../domain/finance.repository';
 import {
   FinancePaymentClaimLostError,
@@ -113,20 +114,18 @@ export class PrismaFinanceRepository implements FinanceRepository {
       if (input.idempotency) {
         if (!input.audit)
           throw new FinanceInvariantError('Thiếu dữ liệu kiểm toán cho giao dịch thủ công.');
-        await tx.auditLog.create({
-          data: {
-            shopId: input.shopId,
-            actorUserId: input.audit.actorUserId,
-            actorMemberId: input.audit.actorMemberId,
-            action: 'CREATE',
-            entityType: 'payment_transaction',
-            entityId: payment.id,
-            newValues: {
-              orderId: payment.orderId,
-              direction: payment.direction,
-              purpose: payment.purpose,
-              amount: payment.amount.toString(),
-            },
+        await writeTransactionalAuditLog(tx, {
+          shopId: input.shopId,
+          actorUserId: input.audit.actorUserId,
+          actorMemberId: input.audit.actorMemberId,
+          action: 'CREATE',
+          entityType: 'payment_transaction',
+          entityId: payment.id,
+          newValues: {
+            orderId: payment.orderId,
+            direction: payment.direction,
+            purpose: payment.purpose,
+            amount: payment.amount.toString(),
           },
         });
         const completed = await completeIdempotencyClaim(tx, {

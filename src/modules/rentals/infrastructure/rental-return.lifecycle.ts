@@ -4,11 +4,13 @@ import {
   RENTAL_ITEM_STATUS,
   RENTAL_STATUS,
 } from '@modules/rentals/domain/rental-status';
-import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { calculateLateCharges } from '../domain/rental-settlement';
 import { RentalInvariantError } from '../domain/rental-errors';
 import type { Clock } from '@common/clock/clock';
-import { recomputeRentalOrderPaymentState } from './rental-order-payment-state';
+import { recomputeOrderPaymentState } from '@modules/finance/public/order-payment-state-transaction';
+import { recordRentalReturnInspection } from '@modules/catalog/public/rental-inventory-transaction';
+import { writeTransactionalAuditLog } from '@modules/audit/public/transactional-audit';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { Prisma } from '@prisma/client';
@@ -109,28 +111,15 @@ export async function receiveReturn(
       });
       const targetStatus =
         INSPECTION_TO_INVENTORY_STATUS[item.condition as ItemInspectionCondition];
-      const inventory = await tx.inventoryItem.findUniqueOrThrow({
-        where: { id: item.inventoryItemId },
-      });
-      await tx.inventoryItem.update({
-        where: { id: inventory.id },
-        data: {
-          currentStatus: targetStatus,
-          totalRentalCount: { increment: 1 },
-          lastRentedAt: returnedAt,
-        },
-      });
-      await tx.inventoryStatusHistory.create({
-        data: {
-          shopId: input.shopId,
-          inventoryItemId: inventory.id,
-          fromStatus: inventory.currentStatus,
-          toStatus: targetStatus,
-          orderId: order.id,
-          changedBy: input.actorMemberId,
-          reason: `ORDER_RETURNED_${item.condition}`,
-          notes: item.note?.trim() || null,
-        },
+      await recordRentalReturnInspection(tx, {
+        shopId: input.shopId,
+        orderId: order.id,
+        inventoryItemId: item.inventoryItemId,
+        status: targetStatus,
+        returnedAt,
+        changedBy: input.actorMemberId,
+        reason: `ORDER_RETURNED_${item.condition}`,
+        notes: item.note?.trim() || null,
       });
       if (item.charge && item.charge.amount > 0) {
         const matchingOrderItem = order.items.find((orderItem) =>
@@ -221,7 +210,7 @@ export async function receiveReturn(
         updatedBy: input.actorMemberId,
       },
     });
-    if (extraChargesTotal.greaterThan(0)) await recomputeRentalOrderPaymentState(tx, order.id);
+    if (extraChargesTotal.greaterThan(0)) await recomputeOrderPaymentState(tx, order.id);
     await tx.rentalOrderStatusHistory.create({
       data: {
         shopId: input.shopId,
@@ -233,22 +222,20 @@ export async function receiveReturn(
         changedBy: input.actorMemberId,
       },
     });
-    await tx.auditLog.create({
-      data: {
-        shopId: input.shopId,
-        actorUserId: input.actorUserId,
-        actorMemberId: input.actorMemberId,
-        action: 'RENTAL_ORDER_RETURNED',
-        entityType: 'rental_order',
-        entityId: order.id,
-        oldValues: { status: order.status },
-        newValues: {
-          status: RENTAL_STATUS.RETURNED,
-          returnedAt: returnedAt.toISOString(),
-          lateDays: late.lateDays,
-          itemCount,
-          extraChargesTotal: extraChargesTotal.toString(),
-        },
+    await writeTransactionalAuditLog(tx, {
+      shopId: input.shopId,
+      actorUserId: input.actorUserId,
+      actorMemberId: input.actorMemberId,
+      action: 'RENTAL_ORDER_RETURNED',
+      entityType: 'rental_order',
+      entityId: order.id,
+      oldValues: { status: order.status },
+      newValues: {
+        status: RENTAL_STATUS.RETURNED,
+        returnedAt: returnedAt.toISOString(),
+        lateDays: late.lateDays,
+        itemCount,
+        extraChargesTotal: extraChargesTotal.toString(),
       },
     });
     await tx.outboxEvent.create({

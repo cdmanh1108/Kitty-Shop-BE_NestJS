@@ -1,4 +1,4 @@
-import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
+import { TRANSACTION_STATUS } from '@modules/finance/public/payment-status';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { Prisma, PrismaClient } from '@prisma/client';

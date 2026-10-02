@@ -5,7 +5,7 @@ import type { AddInventoryData } from '../domain/catalog-inventory.inputs';
 import { CATALOG_ERROR_CODE, CatalogInvariantError } from '../domain/catalog-errors';
 import type { CatalogInventoryRepository } from '../domain/catalog-inventory.repository';
 import { validateInventoryStatusTransition } from '../domain/inventory-status.policy';
-import { ALLOCATION_STATUS } from '@modules/rentals/domain/rental-status';
+import { ALLOCATION_STATUS } from '@modules/rentals/public/rental-status';
 
 export async function addInventoryItem(
   prisma: PrismaService,

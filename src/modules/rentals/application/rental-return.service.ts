@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser } from '@common/types/current-user';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { RENTAL_STATUS } from '../domain/rental-status';
 import {
   RENTAL_LIFECYCLE_REPOSITORY,

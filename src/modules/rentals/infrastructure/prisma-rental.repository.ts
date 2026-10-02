@@ -2,11 +2,12 @@ import { CLOCK, type Clock } from '@common/clock/clock';
 import {
   RENTAL_POLICY_PROVIDER,
   type RentalPolicyProvider,
-} from '@modules/settings/domain/rental-policy';
+} from '@modules/settings/public/rental-policy';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { claimIdempotencyRecord, releaseIdempotencyClaim } from '@database/prisma/idempotency';
 import { Injectable, Inject } from '@nestjs/common';
 import type { RentalAvailabilityReader } from '../domain/ports/rental-availability.port';
+import type { RentalAvailableInventoryReader } from '../public/available-inventory-reader';
 import type {
   RentalCreationRepository,
   RentalCreationValidator,
@@ -40,6 +41,7 @@ import { confirmOrder } from './rental-confirmation';
 export class PrismaRentalRepository
   implements
     RentalAvailabilityReader,
+    RentalAvailableInventoryReader,
     RentalCreationRepository,
     RentalCreationValidator,
     RentalLifecycleRepository,
@@ -79,8 +81,8 @@ export class PrismaRentalRepository
   }
 
   findAvailableInventory(
-    ...args: Parameters<RentalAvailabilityReader['findAvailableInventory']>
-  ): ReturnType<RentalAvailabilityReader['findAvailableInventory']> {
+    ...args: Parameters<RentalAvailableInventoryReader['findAvailableInventory']>
+  ): ReturnType<RentalAvailableInventoryReader['findAvailableInventory']> {
     return findAvailableInventory(this.prisma, ...args);
   }
 

@@ -1,6 +1,6 @@
 import { CUSTOMER_STATUS } from '../domain/customer-status';
 import type { CurrentUser } from '@common/types/current-user';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { CUSTOMER_REPOSITORY, type CustomerRepository } from '../domain/customer.repository';

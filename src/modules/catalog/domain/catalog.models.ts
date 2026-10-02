@@ -1,5 +1,6 @@
 import type { ProductListItem } from './catalog.read-models';
 import type { PaginatedResult } from '@common/types/pagination';
+import type { DecimalValue } from '@common/types/decimal';
 import type {
   CategoryRecord,
   ColorRecord,
@@ -11,8 +12,49 @@ import type {
   RentalRateRecord,
   SizeRecord,
 } from '@modules/catalog/domain/catalog.records';
-import type { RentalItemAllocationRecord } from '@modules/rentals/domain/rentals.records';
-import type { ShopLocationRecord } from '@modules/settings/domain/settings.records';
+
+export type CatalogLocationOption = Pick<
+  ShopLocationDetails,
+  'id' | 'code' | 'name' | 'isPrimary'
+>;
+
+/** Snapshot shape returned with Catalog inventory; it is intentionally read-only. */
+export interface ShopLocationDetails {
+  id: string;
+  shopId: string;
+  code: string;
+  name: string;
+  phone: string | null;
+  addressLine: string | null;
+  ward: string | null;
+  district: string | null;
+  city: string | null;
+  province: string | null;
+  country: string;
+  latitude: DecimalValue | null;
+  longitude: DecimalValue | null;
+  isPrimary: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Rental allocation fields included in Catalog's inventory detail response. */
+export interface InventoryAllocationDetails {
+  id: string;
+  shopId: string;
+  orderId: string;
+  orderItemId: string;
+  inventoryItemId: string;
+  reservedFrom: Date;
+  reservedUntil: Date;
+  status: string;
+  allocatedAt: Date;
+  releasedAt: Date | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export type CatalogLookups = {
   categories: Array<
@@ -22,7 +64,7 @@ export type CatalogLookups = {
   >;
   sizes: Array<Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder' | 'isActive'>>;
   colors: Array<Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor' | 'isActive'>>;
-  locations: Array<Pick<ShopLocationRecord, 'id' | 'code' | 'name' | 'isPrimary'>>;
+  locations: CatalogLocationOption[];
 };
 
 export type CategoryListItem = Pick<
@@ -152,12 +194,12 @@ export type InventoryDetails =
         product: ProductRecord;
         rentalRates: Array<RentalRateRecord>;
       };
-      location: null | ShopLocationRecord;
+      location: null | ShopLocationDetails;
       occupancyStatus: InventoryOccupancyStatus;
       allowedManualTransitions: Array<string>;
       currentRental: null | InventoryCurrentRentalSummary;
       allocations: Array<
-        RentalItemAllocationRecord & {
+        InventoryAllocationDetails & {
           order: {
             id: string;
             status: string;

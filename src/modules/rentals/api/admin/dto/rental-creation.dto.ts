@@ -1,5 +1,5 @@
 import { CHARGE_TYPE } from '@modules/rentals/domain/charge-type';
-import { DELIVERY_DIRECTION, DELIVERY_METHOD } from '@modules/deliveries/domain/delivery-status';
+import { DELIVERY_DIRECTION, DELIVERY_METHOD } from '@modules/deliveries/public/delivery-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {

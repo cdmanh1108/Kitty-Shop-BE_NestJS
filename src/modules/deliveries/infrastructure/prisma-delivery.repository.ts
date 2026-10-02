@@ -3,10 +3,9 @@ import { CLOCK, type Clock } from '@common/clock/clock';
 import { DELIVERY_STATUS, canTransitionDelivery } from '@modules/deliveries/domain/delivery-status';
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { recomputeDeliveryOrderPaymentState } from './delivery-order-payment-state';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { lockRentalOrder } from '@modules/rentals/public/rental-order-lock';
-import { assertChargeMutationAllowed } from '@modules/rentals/domain/rental-monetary.policy';
+import { addDeliveryShippingCharge } from '@modules/rentals/public/delivery-shipping-charge-transaction';
 import type { DeliveryRepository } from '../domain/delivery.repository';
 
 @Injectable()
@@ -41,42 +40,16 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
         return null;
       }
 
-      const order = await tx.rentalOrder.findFirst({
-        where: { id: input.orderId, shopId: input.shopId },
+      const orderExists = await addDeliveryShippingCharge(tx, {
+        shopId: input.shopId,
+        orderId: input.orderId,
+        shippingFee: input.shippingFee,
+        direction: input.direction,
+        createdBy: input.createdBy,
       });
-      if (!order) return null;
-
-      if (changesMonetaryState) {
-        const settlement = await tx.rentalSettlement.findFirst({
-          where: { shopId: input.shopId, orderId: input.orderId },
-          select: { orderId: true },
-        });
-        assertChargeMutationAllowed({ status: order.status, hasSettlement: Boolean(settlement) });
-      }
+      if (!orderExists) return null;
 
       const delivery = await tx.deliveryJob.create({ data: input });
-      if (changesMonetaryState) {
-        await tx.rentalOrderCharge.create({
-          data: {
-            shopId: input.shopId,
-            orderId: input.orderId,
-            chargeType: 'SHIPPING',
-            description: `Shipping fee (${input.direction})`,
-            amount: input.shippingFee,
-            quantity: 1,
-            createdBy: input.createdBy,
-          },
-        });
-        await tx.rentalOrder.update({
-          where: { id: input.orderId },
-          data: {
-            chargesTotal: { increment: input.shippingFee },
-            grandTotal: { increment: input.shippingFee },
-            updatedBy: input.createdBy,
-          },
-        });
-        await recomputeDeliveryOrderPaymentState(tx, input.orderId);
-      }
       await tx.outboxEvent.create({
         data: {
           shopId: input.shopId,

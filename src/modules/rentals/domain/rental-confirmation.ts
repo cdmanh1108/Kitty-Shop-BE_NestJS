@@ -2,7 +2,7 @@ import type {
   DepositDocumentType,
   DepositMethod,
   RentalPolicy,
-} from '@modules/settings/domain/rental-policy';
+} from '@modules/settings/public/rental-policy';
 import type { DecimalValue } from '@common/types/decimal';
 import { RentalInvariantError } from './rental-errors';
 

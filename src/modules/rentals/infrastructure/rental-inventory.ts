@@ -5,7 +5,8 @@ import {
 } from './rental-availability.query';
 import { RentalInventoryUnavailableError } from '../domain/rental-errors';
 
-/** Run in the owning Serializable transaction, never against the root client.
+/** Rental-owned availability read over Catalog inventory and Rental allocations.
+ * Run in the owning Serializable transaction, never against the root client.
  * Overlaps remain enforced on allocation writes by rental_item_no_overlap.
  */
 export async function assertInventoryRentable(

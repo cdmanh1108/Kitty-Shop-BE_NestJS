@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { normalizeCustomerPhone } from '@modules/customers/domain/customer-phone';
+import { normalizeCustomerPhone } from '@modules/customers/public/booking-customer';
 import {
   RENTAL_ORDER_READER,
   type RentalOrderReader,

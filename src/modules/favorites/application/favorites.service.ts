@@ -4,8 +4,8 @@ import { ShopResolver } from '@common/shop-context/shop-resolver';
 import {
   STOREFRONT_CATALOG_REPOSITORY,
   type StorefrontCatalogRepository,
-} from '@modules/catalog/domain/storefront-catalog.repository';
-import type { StorefrontProductPage } from '@modules/catalog/domain/catalog.models';
+} from '@modules/catalog/public/storefront-catalog';
+import type { StorefrontProductPage } from '@modules/catalog/public/storefront-catalog';
 import {
   FAVORITE_REPOSITORY,
   type FavoriteMutation,

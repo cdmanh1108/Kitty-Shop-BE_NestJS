@@ -1,6 +1,6 @@
 import type { CurrentUser } from '@common/types/current-user';
-import type { AuditSnapshot } from '@modules/audit/domain/audit.repository';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import type { AuditSnapshot } from '@modules/audit/public/audit-contracts';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   DEFAULT_RENTAL_POLICY,

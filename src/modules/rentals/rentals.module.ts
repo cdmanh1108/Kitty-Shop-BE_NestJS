@@ -18,6 +18,7 @@ import { RentalConfirmationService } from './application/rental-confirmation.ser
 import { RentalSettlementService } from './application/rental-settlement.service';
 import { RentalReadPresenter } from './application/rental-read.presenter';
 import { RENTAL_AVAILABILITY_READER } from './domain/ports/rental-availability.port';
+import { RENTAL_AVAILABLE_INVENTORY_READER } from './public/available-inventory-reader';
 import {
   RENTAL_CREATION_VALIDATOR,
   RENTAL_CREATION_REPOSITORY,
@@ -44,12 +45,13 @@ import { PrismaRentalRepository } from './infrastructure/prisma-rental.repositor
     WebAccountRentalOrdersService,
     PrismaRentalRepository,
     { provide: RENTAL_AVAILABILITY_READER, useExisting: PrismaRentalRepository },
+    { provide: RENTAL_AVAILABLE_INVENTORY_READER, useExisting: PrismaRentalRepository },
     { provide: RENTAL_CREATION_VALIDATOR, useExisting: PrismaRentalRepository },
     { provide: RENTAL_CREATION_REPOSITORY, useExisting: PrismaRentalRepository },
     { provide: RENTAL_ORDER_READER, useExisting: PrismaRentalRepository },
     { provide: RENTAL_LIFECYCLE_REPOSITORY, useExisting: PrismaRentalRepository },
     { provide: WEB_ACCOUNT_RENTAL_ORDERS_READER, useExisting: PrismaRentalRepository },
   ],
-  exports: [RENTAL_AVAILABILITY_READER],
+  exports: [RENTAL_AVAILABILITY_READER, RENTAL_AVAILABLE_INVENTORY_READER],
 })
 export class RentalsModule {}

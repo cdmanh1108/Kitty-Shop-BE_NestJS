@@ -10,7 +10,7 @@ import {
 } from '@common/logging/application-logger.port';
 
 import type { CurrentUser } from '@common/types/current-user';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {

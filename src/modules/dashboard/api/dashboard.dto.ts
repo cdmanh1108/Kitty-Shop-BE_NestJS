@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { RENTAL_STATUS, type RentalStatus } from '@modules/rentals/domain/rental-status';
+import { RENTAL_STATUS, type RentalStatus } from '@modules/rentals/public/rental-status';
 export class DashboardRentalResDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty() code!: string;

@@ -3,7 +3,7 @@ import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { CatalogInventoryRepository } from '../domain/catalog-inventory.repository';
 import { getAllowedOperationalTransitions } from '../domain/inventory-status.policy';
-import { ALLOCATION_STATUS } from '@modules/rentals/domain/rental-status';
+import { ALLOCATION_STATUS } from '@modules/rentals/public/rental-status';
 import type {
   InventoryOccupancyStatus,
   InventoryCurrentRentalSummary,
@@ -55,6 +55,8 @@ export async function listInventory(
   prisma: PrismaService,
   input: Parameters<CatalogInventoryRepository['listInventory']>[0],
 ) {
+  // Catalog's occupancy projection intentionally joins Rental allocations and a
+  // small order summary so the admin inventory list remains one read model.
   const where = {
     shopId: input.shopId,
     archivedAt: null,
@@ -153,6 +155,8 @@ export async function findInventoryItem(
   shopId: string,
   id: string,
 ): Promise<InventoryDetails> {
+  // This Catalog-owned detail projection includes Rental allocations and their
+  // order/customer summary; it does not mutate Rental-owned tables.
   const item = await prisma.inventoryItem.findFirst({
     where: { id, shopId, archivedAt: null },
     include: {

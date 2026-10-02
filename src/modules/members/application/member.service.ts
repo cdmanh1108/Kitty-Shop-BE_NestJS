@@ -1,6 +1,6 @@
 import type { CurrentUser } from '@common/types/current-user';
-import { prepareAuditLogData } from '@modules/audit/application/audit-entry-preparer';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { prepareAuditLogData } from '@modules/audit/public/audit-entry';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { hash } from 'bcryptjs';
 import {

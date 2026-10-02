@@ -1,10 +1,13 @@
 import { Prisma } from '@prisma/client';
-import { recomputeRentalOrderPaymentState } from './rental-order-payment-state';
-import { rentalLedger, recordRentalReceipt } from './rental-ledger';
+import { recomputeOrderPaymentState } from '@modules/finance/public/order-payment-state-transaction';
+import { recordRentalReceipt } from '@modules/finance/public/rental-receipt-transaction';
+import { listCompletedPaymentLines } from '@modules/finance/public/completed-payment-reader';
+import { writeTransactionalAuditLog } from '@modules/audit/public/transactional-audit';
+import { rentalLedger } from './rental-ledger';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import type { Clock } from '@common/clock/clock';
-import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { assertManualConfirmation, type ConfirmRentalData } from '../domain/rental-confirmation';
 import { RentalInvariantError } from '../domain/rental-errors';
 import { getWithTx } from './rental-admin.queries';
@@ -74,9 +77,7 @@ export function confirmOrder(
         evidenceSize: input.evidence?.size,
       },
     });
-    const existing = await tx.paymentTransaction.findMany({
-      where: { orderId: order.id, status: 'COMPLETED', voidedAt: null },
-    });
+    const existing = await listCompletedPaymentLines(tx, order.id);
     const ledger = rentalLedger(existing);
     const actualDeposit = new Prisma.Decimal(
       input.collateralMethod === 'CASH' ? (input.collateralAmount ?? 0) : 0,
@@ -109,7 +110,7 @@ export function confirmOrder(
       direction: 'IN',
       amount: actualDeposit.minus(ledger.depositHeld),
     });
-    await recomputeRentalOrderPaymentState(tx, order.id);
+    await recomputeOrderPaymentState(tx, order.id);
     await tx.rentalOrderItem.updateMany({
       where: { orderId: order.id, shopId: input.shopId },
       data: { status: 'CONFIRMED' },
@@ -130,26 +131,24 @@ export function confirmOrder(
         note: input.note,
       },
     });
-    await tx.auditLog.create({
-      data: {
-        shopId: input.shopId,
-        actorUserId: input.actorUserId,
-        actorMemberId: input.actorMemberId,
-        requestId: input.requestId,
-        action: 'RENTAL_ORDER_CONFIRMED',
-        entityType: 'rental_order',
-        entityId: order.id,
-        oldValues: { status: order.status },
-        newValues: {
-          status: 'CONFIRMED',
-          source: 'ADMIN_MANUAL',
-          collateralMethod: input.collateralMethod,
-          documentType: input.documentType ?? null,
-          collateralAmount: input.collateralAmount?.toString() ?? null,
-          rentalAmount: order.grandTotal.toString(),
-          hasEvidence: Boolean(input.evidence),
-          confirmedAt: now.toISOString(),
-        },
+    await writeTransactionalAuditLog(tx, {
+      shopId: input.shopId,
+      actorUserId: input.actorUserId,
+      actorMemberId: input.actorMemberId,
+      requestId: input.requestId,
+      action: 'RENTAL_ORDER_CONFIRMED',
+      entityType: 'rental_order',
+      entityId: order.id,
+      oldValues: { status: order.status },
+      newValues: {
+        status: 'CONFIRMED',
+        source: 'ADMIN_MANUAL',
+        collateralMethod: input.collateralMethod,
+        documentType: input.documentType ?? null,
+        collateralAmount: input.collateralAmount?.toString() ?? null,
+        rentalAmount: order.grandTotal.toString(),
+        hasEvidence: Boolean(input.evidence),
+        confirmedAt: now.toISOString(),
       },
     });
     await tx.outboxEvent.create({

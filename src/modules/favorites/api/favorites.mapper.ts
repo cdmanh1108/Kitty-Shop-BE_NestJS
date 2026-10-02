@@ -1,4 +1,4 @@
-import type { StorefrontProductPage } from '@modules/catalog/domain/catalog.models';
+import type { StorefrontProductPage } from '@modules/catalog/public/storefront-catalog';
 import type {
   FavoriteProductListItemDto,
   FavoriteProductListResDto,

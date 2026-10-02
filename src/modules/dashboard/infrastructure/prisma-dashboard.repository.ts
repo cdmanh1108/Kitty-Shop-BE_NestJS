@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { RENTAL_STATUS, ALLOCATION_STATUS } from '@modules/rentals/domain/rental-status';
+import { RENTAL_STATUS, ALLOCATION_STATUS } from '@modules/rentals/public/rental-status';
 import type { DashboardRepository, DashboardSummaryData } from '../domain/dashboard.repository';
 import type { DashboardSummary } from '../domain/dashboard.models';
 

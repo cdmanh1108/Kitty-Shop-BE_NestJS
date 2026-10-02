@@ -10,7 +10,7 @@ import {
   RENTAL_STATUS,
 } from '@modules/rentals/domain/rental-status';
 
-import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
+import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/public/payment-status';
 
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
@@ -22,9 +22,10 @@ import type {
 } from '../domain/ports/rental-creation.port';
 import { getWithTx } from './rental-admin.queries';
 import { isOverlapError } from './rental-errors';
-import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { RentalInventoryUnavailableError, RentalInvariantError } from '../domain/rental-errors';
-import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
+import { storefrontProductEligibility } from '@modules/catalog/public/storefront-eligibility';
+import { createRentalDeliveryJob } from '@modules/deliveries/public/rental-delivery-transaction';
 
 export async function createOrder(
   prisma: PrismaService,
@@ -158,23 +159,11 @@ export async function createOrder(
       }
 
       if (data.delivery) {
-        await tx.deliveryJob.create({
-          data: {
-            shopId: data.shopId,
-            orderId: order.id,
-            direction: data.delivery.direction,
-            method: data.delivery.method,
-            scheduledAt: data.delivery.scheduledAt,
-            recipientName: data.delivery.recipientName,
-            recipientPhone: data.delivery.recipientPhone,
-            addressLine: data.delivery.addressLine,
-            ward: data.delivery.ward,
-            district: data.delivery.district,
-            city: data.delivery.city,
-            province: data.delivery.province,
-            shippingFee: data.delivery.shippingFee,
-            createdBy: data.createdBy,
-          },
+        await createRentalDeliveryJob(tx, {
+          shopId: data.shopId,
+          orderId: order.id,
+          ...data.delivery,
+          createdBy: data.createdBy,
         });
         if (data.delivery.shippingFee > 0) {
           await tx.rentalOrderCharge.create({
@@ -224,6 +213,8 @@ async function assertStorefrontEligibleLines(
   tx: Prisma.TransactionClient,
   data: CreateRentalOrderData,
 ): Promise<void> {
+  // Revalidate Catalog-owned eligibility in the serializable booking transaction
+  // so stale storefront selections cannot create a Rental allocation.
   const expectedProductByVariant = new Map<string, string>();
   for (const line of data.lines) {
     const existingProductId = expectedProductByVariant.get(line.variantId);

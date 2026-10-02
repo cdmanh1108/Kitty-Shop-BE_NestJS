@@ -8,7 +8,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import { CHARGE_TYPE } from '../domain/charge-type';
 import { RENTAL_STATUS } from '../domain/rental-status';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { OBJECT_STORAGE_PORT, type ObjectStoragePort } from '@common/storage/object-storage.port';
 import { validateAndHashImage } from '@common/storage/storage-key.builder';
 import { PERMISSIONS } from '@common/constants/permissions';

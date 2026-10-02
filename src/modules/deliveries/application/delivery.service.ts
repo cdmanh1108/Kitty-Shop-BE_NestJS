@@ -1,6 +1,6 @@
 import { DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
 import type { CurrentUser } from '@common/types/current-user';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { DELIVERY_REPOSITORY, type DeliveryRepository } from '../domain/delivery.repository';
 import type { CreateDeliveryInput, UpdateDeliveryStatusInput } from './delivery.contracts';

@@ -28,6 +28,68 @@ Allowed dependency direction:
 
 Repository ports expose explicit domain-owned records and read models. Prisma payload types remain inside infrastructure; application contracts do not depend on generated Prisma models. See [Application contracts](APPLICATION_CONTRACTS.md).
 
+Cross-context imports use the provider's `public/` contracts; importing another
+module's private `api`, `application`, `domain` or `infrastructure` layer is not
+allowed. Transaction-aware persistence capabilities stay in provider infrastructure
+and may be called only by infrastructure adapters with the caller's existing
+transaction client. Domain and application ports never expose Prisma clients. Keep
+cross-table read projections with the owning use case and document their intent;
+write another context's tables through that context's capability. Nest module
+imports are for composition, and `forwardRef()` is not a boundary mechanism.
+
+### Cross-context dependency audit
+
+The baseline source audit found these private-layer edges before CL27:
+
+| Consumer | Providers reached through private layers |
+|---|---|
+| Catalog | Audit, Rentals, Settings |
+| Customers | Audit |
+| Dashboard | Rentals |
+| Deliveries | Audit, Rentals |
+| Favorites | Catalog |
+| Finance | Audit, Rentals |
+| Members | Audit |
+| Reminders | Finance, Rentals |
+| Rentals | Audit, Catalog, Customers, Deliveries, Finance, Settings |
+| Settings | Audit |
+
+The resulting source-level contract graph is:
+
+| Consumer | Provider | Contract |
+|---|---|---|
+| Catalog | Audit | `AuditPort` |
+| Catalog | Rentals | availability reader, rental status values |
+| Customers | Audit | `AuditPort` |
+| Dashboard | Rentals | rental and allocation status values |
+| Deliveries | Audit | `AuditPort` |
+| Deliveries | Rentals | order lock and shipping-charge capability |
+| Favorites | Catalog | storefront catalog and eligibility contracts |
+| Finance | Audit | `AuditPort`, transactional audit capability |
+| Finance | Rentals | monetary policy and order lock |
+| Members | Audit | audit port, entry data, transactional audit capability |
+| Reminders | Finance | payment status values |
+| Reminders | Rentals | rental status and rescheduling policy |
+| Rentals | Audit | `AuditPort`, transactional audit capability |
+| Rentals | Catalog | eligibility, status, inventory transaction capabilities |
+| Rentals | Customers | booking customer and loyalty transaction capabilities |
+| Rentals | Deliveries | delivery contract and transaction capabilities |
+| Rentals | Finance | payment statuses/readers/receipt and payment-state capabilities |
+| Rentals | Settings | rental policy |
+| Settings | Audit | audit snapshot and `AuditPort` |
+
+The public transaction helpers are infrastructure-only integration capabilities;
+they receive the caller's transaction so existing atomic workflows stay intact.
+Application/domain contracts do not expose Prisma. Catalog inventory projections
+join Rental allocations and minimal order/customer details for display; Rental
+queries also read payment and Catalog data for order views and availability. These
+are intentional read models. Catalog owns inventory writes, Finance owns payment
+writes, Deliveries owns delivery writes, Customers owns customer-loyalty entries,
+and Rentals owns rental orders/charges and the settlement reward calculation.
+Finance's `recomputeOrderPaymentState` is the explicit exception for denormalized
+payment/deposit fields on `RentalOrder`: Finance owns that projection and updates it
+through a named transaction capability after payment changes.
+
 Application services consume plain `application/*.contracts.ts` inputs mapped by the API, never transport DTOs. Repository ports expose independent records/read models from `domain/*.records.ts` and `*.models.ts`. Generic pagination is transport-independent. See [Application contracts](APPLICATION_CONTRACTS.md) for ownership, JSON/Decimal compatibility and idempotency replay semantics.
 
 ## Shop model
@@ -126,11 +188,20 @@ or providers are created.
 - Catalog: `product-queries` owns admin product reads; `product-commands` owns product,
   variant/rate and media aggregate writes. Its variant creation helper receives the
   caller's transaction. `inventory-commands` owns inventory mutations; `inventory-queries`
-  owns inventory lists, details, availability, summary and history;
+  owns inventory lists, details, summary and history. Time-window availability is
+  provided by the focused Rental reader;
   `catalog-lookups` owns catalog reference data.
-- `database/prisma/inventory-availability` owns the shared inventory filter
-  used by Catalog and Rentals infrastructure. Intervals remain half-open, and the
-  database exclusion constraint remains the final protection against overlaps.
+- Catalog exposes Rental-only inventory mutation capabilities for rental start and
+  return inspection. Rental booking and lifecycle retain their existing transaction
+  while Catalog owns the inventory writes. Catalog inventory detail/list reads join
+  Rental allocation and order/customer data as an intentional read projection.
+- Rental booking and lifecycle call Delivery-owned transactional capabilities for
+  delivery creation/cancellation. Delivery calls a Rental-owned capability for
+  shipping-charge changes. Finance owns receipt persistence and payment-state
+  projection helpers used by Rental in the same transaction.
+- Rental availability owns the rentable-inventory filter. Intervals remain
+  half-open, and the database exclusion constraint remains the final protection
+  against overlaps.
 
 Creation/rescheduling retain the existing Serializable transaction/retry helper and
 overlap error translation. Lifecycle and warehouse mutations also use Serializable transactions. Charge and product/media operations retain their original transaction boundaries. Rental detail loading, outbox writes

@@ -1,4 +1,4 @@
-import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
+import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/public/catalog-status';
 import { RentalInvariantError } from './rental-errors';
 
 export const ITEM_INSPECTION_CONDITION = {

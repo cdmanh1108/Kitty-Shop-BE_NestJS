@@ -1,6 +1,6 @@
 import { ShopResolver } from '@common/shop-context/shop-resolver';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
-import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
+import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/public/payment-status';
 import { Inject, Injectable } from '@nestjs/common';
 import {
   RENTAL_LIFECYCLE_REPOSITORY,

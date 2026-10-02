@@ -2,15 +2,15 @@ import { Inject, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { generateDatedReference } from '@common/utils/reference-number';
 import { CLOCK, type Clock } from '@common/clock/clock';
-import { InvalidCustomerPhoneError } from '@modules/customers/domain/customer-phone';
 import {
-  CUSTOMER_REPOSITORY,
-  type CustomerRepository,
-} from '@modules/customers/domain/customer.repository';
+  BOOKING_CUSTOMER_RESOLVER,
+  InvalidCustomerPhoneError,
+  type BookingCustomerResolver,
+} from '@modules/customers/public/booking-customer';
 import {
   RENTAL_POLICY_PROVIDER,
   type RentalPolicyProvider,
-} from '@modules/settings/domain/rental-policy';
+} from '@modules/settings/public/rental-policy';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
   RENTAL_AVAILABILITY_READER,
@@ -79,7 +79,8 @@ export class WebRentalOrderService {
     @Inject(RENTAL_CREATION_REPOSITORY) private readonly creation: RentalCreationRepository,
     @Inject(RENTAL_AVAILABILITY_READER) private readonly availability: RentalAvailabilityReader,
     @Inject(RENTAL_POLICY_PROVIDER) private readonly policyProvider: RentalPolicyProvider,
-    @Inject(CUSTOMER_REPOSITORY) private readonly customerRepository: CustomerRepository,
+    @Inject(BOOKING_CUSTOMER_RESOLVER)
+    private readonly customerRepository: BookingCustomerResolver,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 

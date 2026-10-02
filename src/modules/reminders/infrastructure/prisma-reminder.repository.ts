@@ -1,8 +1,8 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
-import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
+import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/public/payment-status';
+import { RENTAL_STATUS } from '@modules/rentals/public/rental-status';
 import type { ReminderRepository } from '../domain/reminder.repository';
 
 @Injectable()

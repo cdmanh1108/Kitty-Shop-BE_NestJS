@@ -1,6 +1,6 @@
-import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
-import { canRescheduleRental } from '@modules/rentals/domain/rental-policy';
-import { ORDER_PAYMENT_STATUS, DEPOSIT_STATUS } from '@modules/finance/domain/payment-status';
+import { RENTAL_STATUS } from '@modules/rentals/public/rental-status';
+import { canRescheduleRental } from '@modules/rentals/public/rental-policy';
+import { ORDER_PAYMENT_STATUS, DEPOSIT_STATUS } from '@modules/finance/public/payment-status';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import {
   APPLICATION_LOGGER,

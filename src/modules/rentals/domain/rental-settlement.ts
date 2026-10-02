@@ -146,5 +146,5 @@ export function calculateRentalSettlement(input: {
     settlementStatus,
   };
 }
-import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { RentalInvariantError } from './rental-errors';

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
-import type { Prisma } from '@prisma/client';
+import { writeTransactionalAuditLog } from '@modules/audit/public/transactional-audit';
 import {
   MemberRoleNotFoundError,
   MemberRoleCodesEmptyError,
@@ -112,13 +112,7 @@ export class PrismaMemberRepository implements MemberRepository {
           data: roles.map((role) => ({ memberId: member.id, roleId: role.id })),
         });
       }
-      await tx.auditLog.create({
-        data: {
-          ...input.audit,
-          oldValues: input.audit.oldValues as Prisma.InputJsonValue | undefined,
-          newValues: input.audit.newValues as Prisma.InputJsonValue | undefined,
-        },
-      });
+      await writeTransactionalAuditLog(tx, input.audit);
       return tx.shopMember.findUnique({
         where: { id: member.id },
         include: {

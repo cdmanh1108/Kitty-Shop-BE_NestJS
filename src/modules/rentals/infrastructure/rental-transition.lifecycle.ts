@@ -6,7 +6,7 @@ import {
   RENTAL_STATUS,
 } from '@modules/rentals/domain/rental-status';
 import { canTransitionRental } from '../domain/rental-policy';
-import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { RentalInvariantError } from '../domain/rental-errors';
 import type { Clock } from '@common/clock/clock';
 import type { PrismaService } from '@database/prisma/prisma.service';
@@ -15,8 +15,12 @@ import type { Prisma } from '@prisma/client';
 import type { RentalLifecycleRepository } from '../domain/ports/rental-lifecycle.port';
 import { getWithTx } from './rental-admin.queries';
 import { lockRentalOrder } from './rental-order-lock';
-import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
-import { canTransitionDelivery, DELIVERY_STATUS } from '@modules/deliveries/domain/delivery-status';
+import { countCompletedPayments } from '@modules/finance/public/completed-payment-reader';
+import {
+  canCancelRentalDeliveries,
+  cancelPendingRentalDeliveries,
+} from '@modules/deliveries/public/rental-delivery-transaction';
+import { markInventoryRented } from '@modules/catalog/public/rental-inventory-transaction';
 
 export async function transition(
   prisma: PrismaService,
@@ -40,13 +44,7 @@ export async function transition(
     });
     if (!order || !input.fromStatuses.some((status) => status === order.status)) return null;
     if (input.requireNoCompletedPayments) {
-      const paymentCount = await tx.paymentTransaction.count({
-        where: {
-          orderId: order.id,
-          status: TRANSACTION_STATUS.COMPLETED,
-          voidedAt: null,
-        },
-      });
+      const paymentCount = await countCompletedPayments(tx, order.id);
       if (paymentCount > 0) {
         throw new RentalInvariantError(
           'WEB_ORDER_PAYMENT_PREVENTS_CANCELLATION',
@@ -69,17 +67,11 @@ export async function transition(
     if (!canTransitionRental(order.status, input.toStatus)) return null;
 
     if (input.toStatus === RENTAL_STATUS.CANCELLED) {
-      const deliveries = await tx.deliveryJob.findMany({
-        where: { orderId: order.id, shopId: input.shopId },
-        select: { status: true },
+      const deliveriesCanBeCancelled = await canCancelRentalDeliveries(tx, {
+        shopId: input.shopId,
+        orderId: order.id,
       });
-      if (
-        deliveries.some(
-          (delivery) =>
-            delivery.status !== DELIVERY_STATUS.CANCELLED &&
-            !canTransitionDelivery(delivery.status, DELIVERY_STATUS.CANCELLED),
-        )
-      ) {
+      if (!deliveriesCanBeCancelled) {
         return null;
       }
     }
@@ -137,12 +129,10 @@ export async function transition(
         where: { orderId: order.id },
         select: { inventoryItemId: true },
       });
-      for (const allocation of allocations) {
-        await tx.inventoryItem.update({
-          where: { id: allocation.inventoryItemId },
-          data: { lastRentedAt: now },
-        });
-      }
+      await markInventoryRented(tx, {
+        inventoryItemIds: allocations.map((allocation) => allocation.inventoryItemId),
+        rentedAt: now,
+      });
     } else if (input.toStatus === RENTAL_STATUS.CANCELLED) {
       await tx.rentalItemAllocation.updateMany({
         where: {
@@ -155,13 +145,9 @@ export async function transition(
         where: { orderId: order.id },
         data: { status: RENTAL_ITEM_STATUS.CANCELLED },
       });
-      await tx.deliveryJob.updateMany({
-        where: {
-          orderId: order.id,
-          shopId: input.shopId,
-          status: { in: [DELIVERY_STATUS.PENDING, DELIVERY_STATUS.READY] },
-        },
-        data: { status: DELIVERY_STATUS.CANCELLED },
+      await cancelPendingRentalDeliveries(tx, {
+        shopId: input.shopId,
+        orderId: order.id,
       });
     }
 

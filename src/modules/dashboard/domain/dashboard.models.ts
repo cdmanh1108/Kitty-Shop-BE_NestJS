@@ -1,4 +1,4 @@
-import type { RentalStatus } from '@modules/rentals/domain/rental-status';
+import type { RentalStatus } from '@modules/rentals/public/rental-status';
 export type DashboardRental = {
   id: string;
   code: string;

@@ -1,12 +1,19 @@
-import { rentalLedger, recordRentalReceipt } from './rental-ledger';
+import { rentalLedger } from './rental-ledger';
+import { recordRentalReceipt } from '@modules/finance/public/rental-receipt-transaction';
+import { recomputeOrderPaymentState } from '@modules/finance/public/order-payment-state-transaction';
+import { listCompletedPaymentLines } from '@modules/finance/public/completed-payment-reader';
+import {
+  countQualifiedRentalLoyaltyEntries,
+  createRentalLoyaltyEntry,
+} from '@modules/customers/public/rental-loyalty-transaction';
+import { writeTransactionalAuditLog } from '@modules/audit/public/transactional-audit';
 import type { RentalOutboxEvent } from '../domain/rental.events';
 import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
-import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { rewardForCompletedRental } from '../domain/rental-settlement';
 import { RentalInvariantError } from '../domain/rental-errors';
 import { assertSettlementAllowed } from '../domain/rental-monetary.policy';
 import type { Clock } from '@common/clock/clock';
-import { recomputeRentalOrderPaymentState } from './rental-order-payment-state';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { Prisma } from '@prisma/client';
@@ -28,7 +35,6 @@ export async function settleOrder(
       include: {
         confirmation: true,
         charges: { where: { voidedAt: null } },
-        payments: { where: { status: 'COMPLETED', voidedAt: null } },
       },
     });
     if (!order) return null;
@@ -37,7 +43,8 @@ export async function settleOrder(
     });
     assertSettlementAllowed({ status: order.status, hasSettlement: Boolean(existingSettlement) });
 
-    const ledger = rentalLedger(order.payments);
+    const payments = await listCompletedPaymentLines(tx, order.id);
+    const ledger = rentalLedger(payments);
     const depositAmount = ledger.depositHeld;
     const totalCharges = order.chargesTotal;
     const remaining = Prisma.Decimal.max(0, order.grandTotal.minus(ledger.paidRental));
@@ -118,7 +125,7 @@ export async function settleOrder(
       direction: 'IN',
       amount: amountDue,
     });
-    await recomputeRentalOrderPaymentState(tx, order.id);
+    await recomputeOrderPaymentState(tx, order.id);
 
     await tx.rentalSettlement.create({
       data: {
@@ -153,18 +160,16 @@ export async function settleOrder(
     });
 
     if (policy.loyalty.enabled) {
-      const completedCount = await tx.customerLoyaltyEntry.count({
-        where: { shopId: input.shopId, customerId: order.customerId, entryType: 'QUALIFIED' },
+      const completedCount = await countQualifiedRentalLoyaltyEntries(tx, {
+        shopId: input.shopId,
+        customerId: order.customerId,
       });
       const rewardValue = rewardForCompletedRental(completedCount, policy);
-      await tx.customerLoyaltyEntry.create({
-        data: {
-          shopId: input.shopId,
-          customerId: order.customerId,
-          orderId: order.id,
-          entryType: 'QUALIFIED',
-          rewardValue,
-        },
+      await createRentalLoyaltyEntry(tx, {
+        shopId: input.shopId,
+        customerId: order.customerId,
+        orderId: order.id,
+        rewardValue,
       });
       if (rewardValue > 0) {
         await tx.outboxEvent.create({
@@ -190,25 +195,23 @@ export async function settleOrder(
         changedBy: input.actorMemberId,
       },
     });
-    await tx.auditLog.create({
-      data: {
-        shopId: input.shopId,
-        actorUserId: input.actorUserId,
-        actorMemberId: input.actorMemberId,
-        action: 'RENTAL_ORDER_SETTLED',
-        entityType: 'rental_order',
-        entityId: order.id,
-        oldValues: { status: order.status },
-        newValues: {
-          status: RENTAL_STATUS.COMPLETED,
-          settlementType,
-          amount: settledMoney.toString(),
-          depositAmount: depositAmount.toString(),
-          totalCharges: totalCharges.toString(),
-          refundAmount: refundAmount.toString(),
-          amountDue: amountDue.toString(),
-          settledAt: now.toISOString(),
-        },
+    await writeTransactionalAuditLog(tx, {
+      shopId: input.shopId,
+      actorUserId: input.actorUserId,
+      actorMemberId: input.actorMemberId,
+      action: 'RENTAL_ORDER_SETTLED',
+      entityType: 'rental_order',
+      entityId: order.id,
+      oldValues: { status: order.status },
+      newValues: {
+        status: RENTAL_STATUS.COMPLETED,
+        settlementType,
+        amount: settledMoney.toString(),
+        depositAmount: depositAmount.toString(),
+        totalCharges: totalCharges.toString(),
+        refundAmount: refundAmount.toString(),
+        amountDue: amountDue.toString(),
+        settledAt: now.toISOString(),
       },
     });
     await tx.outboxEvent.create({

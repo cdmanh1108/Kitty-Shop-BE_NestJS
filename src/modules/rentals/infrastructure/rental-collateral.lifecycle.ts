@@ -1,7 +1,7 @@
 import type { Clock } from '@common/clock/clock';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
-import type { RentalPolicy } from '@modules/settings/domain/rental-policy';
+import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { RENTAL_STATUS } from '../domain/rental-status';
 import { calculateLateCharges } from '../domain/rental-settlement';
 import { RentalInvariantError } from '../domain/rental-errors';

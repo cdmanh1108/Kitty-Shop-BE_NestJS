@@ -1,6 +1,6 @@
 import { RentalConfirmationResDto } from '../../rental-confirmation.dto';
 import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
-import { ORDER_PAYMENT_STATUS } from '@modules/finance/domain/payment-status';
+import { ORDER_PAYMENT_STATUS } from '@modules/finance/public/payment-status';
 import { WEB_PAYMENT_PREFERENCES } from '@modules/rentals/domain/web-payment-preference';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateString, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';

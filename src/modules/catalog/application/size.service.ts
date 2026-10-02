@@ -1,6 +1,6 @@
 import type { CurrentUser } from '@common/types/current-user';
 import { Inject, Injectable } from '@nestjs/common';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import {
   CATALOG_SIZE_REPOSITORY,
   type CatalogSizeRepository,

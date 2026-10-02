@@ -1,7 +1,7 @@
 import { fixedClock } from './fixtures/rental.fixture';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { plainToInstance } from 'class-transformer';
 import * as ts from 'typescript';
 import type { AuditPort } from '../src/modules/audit/domain/audit.port';
@@ -234,6 +234,90 @@ describe('inner-layer import guard', () => {
       }
     }
     scan(join(process.cwd(), 'src/modules'));
+    expect(violations).toEqual([]);
+  });
+});
+
+describe('cross-context module contracts', () => {
+  it('allows foreign public contracts and module composition, not private layer imports', () => {
+    const violations: string[] = [];
+    const modulesRoot = join(process.cwd(), 'src/modules');
+
+    function modulePath(file: string): { name: string; path: string } | null {
+      const normalized = file.replace(/\\/g, '/');
+      const match = normalized.match(/(?:^|\/)src\/modules\/([^/]+)\/(.*)$/);
+      return match ? { name: match[1]!, path: match[2]! } : null;
+    }
+
+    function importedModule(file: string, target: string): { name: string; path: string } | null {
+      if (target.startsWith('@modules/')) {
+        const [, name, ...pathParts] = target.split('/');
+        return name ? { name, path: pathParts.join('/') } : null;
+      }
+      if (target.startsWith('.')) return modulePath(resolve(dirname(file), target));
+      return null;
+    }
+
+    function scan(dir: string) {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const file = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scan(file);
+          continue;
+        }
+        if (!file.endsWith('.ts')) continue;
+
+        const source = readFileSync(file, 'utf8');
+        const sourceContext = modulePath(file);
+        if (!sourceContext) continue;
+        const sourceModuleName = sourceContext.name;
+        const sourcePath = sourceContext.path;
+        const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+
+        function checkTarget(target: string) {
+          const targetContext = importedModule(file, target);
+          if (!targetContext || targetContext.name === sourceModuleName) return;
+          const isPublicContract =
+            targetContext.path === 'public' || targetContext.path.startsWith('public/');
+          const isModuleComposition =
+            targetContext.path === `${targetContext.name}.module` ||
+            targetContext.path === `${targetContext.name}.module.ts`;
+          if (!isPublicContract && !isModuleComposition) {
+            violations.push(`${file}: ${target}`);
+          }
+          const isTransactionalCapability =
+            /transaction|rental-order-lock|completed-payment-reader/.test(targetContext.path);
+          const isInfrastructureAdapter = sourcePath.startsWith('infrastructure/');
+          if (isTransactionalCapability && !isInfrastructureAdapter) {
+            violations.push(`${file}: transaction capability outside infrastructure: ${target}`);
+          }
+        }
+
+        function visit(node: ts.Node) {
+          if (
+            (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+            node.moduleSpecifier &&
+            ts.isStringLiteral(node.moduleSpecifier)
+          ) {
+            checkTarget(node.moduleSpecifier.text);
+          }
+          if (
+            ts.isCallExpression(node) &&
+            (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+              (ts.isIdentifier(node.expression) && node.expression.text === 'require')) &&
+            node.arguments[0] &&
+            ts.isStringLiteral(node.arguments[0])
+          ) {
+            checkTarget(node.arguments[0].text);
+          }
+          ts.forEachChild(node, visit);
+        }
+
+        visit(ast);
+      }
+    }
+
+    scan(modulesRoot);
     expect(violations).toEqual([]);
   });
 });

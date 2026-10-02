@@ -10,7 +10,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import type { DepositDocumentType, DepositMethod } from '@modules/settings/domain/rental-policy';
+import type { DepositDocumentType, DepositMethod } from '@modules/settings/public/rental-policy';
 
 export class ConfirmRentalReqDto {
   @ApiPropertyOptional({ enum: ['CASH', 'BANK_TRANSFER'] })

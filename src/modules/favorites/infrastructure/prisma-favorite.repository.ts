@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { storefrontProductEligibility } from '@modules/catalog/domain/storefront-eligibility';
+import { storefrontProductEligibility } from '@modules/catalog/public/storefront-eligibility';
 import type {
   FavoriteAddResult,
   FavoriteMutation,

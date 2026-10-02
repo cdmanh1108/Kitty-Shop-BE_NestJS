@@ -1,12 +1,12 @@
 import type { InventoryHistoryCriteria } from '../domain/catalog.read-models';
 import { INVENTORY_STATUS } from '../domain/catalog-status';
 import type { CurrentUser } from '@common/types/current-user';
-import { AUDIT_PORT, type AuditPort } from '@modules/audit/domain/audit.port';
+import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  RENTAL_AVAILABILITY_READER,
-  type RentalAvailabilityReader,
-} from '@modules/rentals/domain/ports/rental-availability.port';
+  RENTAL_AVAILABLE_INVENTORY_READER,
+  type RentalAvailableInventoryReader,
+} from '@modules/rentals/public/available-inventory-reader';
 import {
   CATALOG_INVENTORY_REPOSITORY,
   type CatalogInventoryRepository,
@@ -27,8 +27,8 @@ export class InventoryService {
   constructor(
     @Inject(CATALOG_INVENTORY_REPOSITORY) private readonly repository: CatalogInventoryRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
-    @Inject(RENTAL_AVAILABILITY_READER)
-    private readonly rentalAvailability: RentalAvailabilityReader,
+    @Inject(RENTAL_AVAILABLE_INVENTORY_READER)
+    private readonly rentalAvailability: RentalAvailableInventoryReader,
   ) {}
 
   inventorySummary(user: CurrentUser) {

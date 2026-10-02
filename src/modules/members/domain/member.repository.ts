@@ -1,5 +1,5 @@
 import type { MemberDetails, MemberList } from './member.models';
-import type { CreateAuditLogData } from '@modules/audit/domain/audit.repository';
+import type { CreateAuditLogData } from '@modules/audit/public/audit-contracts';
 export const MEMBER_REPOSITORY = Symbol('MEMBER_REPOSITORY');
 
 export class MemberRoleNotFoundError extends Error {

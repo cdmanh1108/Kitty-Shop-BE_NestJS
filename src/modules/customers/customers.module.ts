@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CustomerController } from './api/customer.controller';
 import { CustomerService } from './application/customer.service';
 import { CUSTOMER_REPOSITORY } from './domain/customer.repository';
+import { BOOKING_CUSTOMER_RESOLVER } from './public/booking-customer';
 import { PrismaCustomerRepository } from './infrastructure/prisma-customer.repository';
 
 @Module({
@@ -10,7 +11,8 @@ import { PrismaCustomerRepository } from './infrastructure/prisma-customer.repos
     CustomerService,
     PrismaCustomerRepository,
     { provide: CUSTOMER_REPOSITORY, useExisting: PrismaCustomerRepository },
+    { provide: BOOKING_CUSTOMER_RESOLVER, useExisting: PrismaCustomerRepository },
   ],
-  exports: [CustomerService, CUSTOMER_REPOSITORY],
+  exports: [CustomerService, CUSTOMER_REPOSITORY, BOOKING_CUSTOMER_RESOLVER],
 })
 export class CustomersModule {}

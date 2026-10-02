@@ -6,7 +6,7 @@ import {
 import {
   RENTAL_POLICY_PROVIDER,
   type RentalPolicyProvider,
-} from '@modules/settings/domain/rental-policy';
+} from '@modules/settings/public/rental-policy';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import type {
   WebAvailabilityQueryInput,

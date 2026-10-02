@@ -3,7 +3,7 @@ import type { CatalogInventoryRepository } from '@modules/catalog/domain/catalog
 import { CATALOG_ERROR_CODE, CatalogInvariantError } from '@modules/catalog/domain/catalog-errors';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
-import type { RentalAvailabilityReader } from '@modules/rentals/domain/ports/rental-availability.port';
+import type { RentalAvailableInventoryReader } from '@modules/rentals/public/available-inventory-reader';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
 import {
   CatalogResourceNotFoundError,
@@ -14,7 +14,7 @@ describe('InventoryService', () => {
   let service: InventoryService;
   let repository: CatalogInventoryRepository;
   let audit: AuditPort;
-  let rentalAvailability: RentalAvailabilityReader;
+  let rentalAvailability: RentalAvailableInventoryReader;
 
   let listInventoryMock: jest.Mock;
   let findInventoryItemMock: jest.Mock;
@@ -51,10 +51,6 @@ describe('InventoryService', () => {
     };
     rentalAvailability = {
       findAvailableInventory: jest.fn(),
-      getBookableVariant: jest.fn(),
-      getBookableVariants: jest.fn(),
-      findActiveVariantIdsByProduct: jest.fn(),
-      findActiveVariantIdsByProducts: jest.fn(),
     };
     audit = {
       log: auditLogMock,

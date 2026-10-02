@@ -17,7 +17,7 @@ import { currentRequestMetadata } from '@common/request-context/request-context'
 import {
   RENTAL_POLICY_PROVIDER,
   type RentalPolicyProvider,
-} from '@modules/settings/domain/rental-policy';
+} from '@modules/settings/public/rental-policy';
 import {
   RENTAL_LIFECYCLE_REPOSITORY,
   type RentalLifecycleRepository,

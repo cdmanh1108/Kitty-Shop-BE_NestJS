@@ -1,5 +1,5 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
-import { TRANSACTION_STATUS } from '@modules/finance/domain/payment-status';
+import { TRANSACTION_STATUS } from '@modules/finance/public/payment-status';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { StorefrontOrderLookupRecord } from '../domain/ports/rental-order-reader.port';
