@@ -4,6 +4,8 @@ import type { CurrentUser } from '@common/types/current-user';
 import type { ObjectStoragePort } from '@common/storage/object-storage.port';
 import type {
   CreateProductResult,
+  ProductVariantDetails,
+  ProductVariantMutationResult,
   UpdateProductResult,
 } from '../../src/modules/catalog/domain/catalog.models';
 import {
@@ -13,6 +15,7 @@ import {
   CatalogProductSlugAlreadyExistsError,
 } from '../../src/modules/catalog/domain/catalog-errors';
 import type { CatalogProductRepository } from '../../src/modules/catalog/domain/catalog-product.repository';
+import type { ProductVariantRecord } from '../../src/modules/catalog/domain/catalog.records';
 import { ProductService } from '../../src/modules/catalog/application/product.service';
 import {
   CatalogResourceNotFoundError,
@@ -29,6 +32,15 @@ describe('ProductService', () => {
   let createProductMock: jest.MockedFunction<CatalogProductRepository['createProduct']>;
   let updateProductMock: jest.MockedFunction<CatalogProductRepository['updateProduct']>;
   let archiveProductMock: jest.MockedFunction<CatalogProductRepository['archiveProduct']>;
+  let updateProductVariantMock: jest.MockedFunction<
+    CatalogProductRepository['updateProductVariant']
+  >;
+  let setProductVariantArchivedMock: jest.MockedFunction<
+    CatalogProductRepository['setProductVariantArchived']
+  >;
+  let deleteProductVariantMock: jest.MockedFunction<
+    CatalogProductRepository['deleteProductVariant']
+  >;
   let auditLogMock: jest.MockedFunction<AuditPort['log']>;
 
   const mockUser: CurrentUser = {
@@ -44,6 +56,9 @@ describe('ProductService', () => {
     createProductMock = jest.fn();
     updateProductMock = jest.fn();
     archiveProductMock = jest.fn();
+    updateProductVariantMock = jest.fn();
+    setProductVariantArchivedMock = jest.fn();
+    deleteProductVariantMock = jest.fn();
     auditLogMock = jest.fn().mockResolvedValue(undefined);
 
     repository = {
@@ -52,6 +67,9 @@ describe('ProductService', () => {
       findProduct: jest.fn(),
       createProduct: createProductMock,
       addVariant: jest.fn(),
+      updateProductVariant: updateProductVariantMock,
+      setProductVariantArchived: setProductVariantArchivedMock,
+      deleteProductVariant: deleteProductVariantMock,
       upsertRentalRate: jest.fn(),
       updateProduct: updateProductMock,
       archiveProduct: archiveProductMock,
@@ -393,6 +411,170 @@ describe('ProductService', () => {
       await expect(service.archiveProduct(mockUser, 'prod-1')).rejects.toThrow(
         CatalogInvariantError,
       );
+    });
+  });
+
+  describe('ProductVariant lifecycle', () => {
+    const originalVariant: ProductVariantRecord = {
+      id: 'variant-1',
+      shopId: mockUser.shopId,
+      productId: 'prod-1',
+      variantCode: 'DRESS-S-RED',
+      sizeId: 'size-s',
+      colorId: 'color-red',
+      depositAmountOverride: new Prisma.Decimal(100000),
+      status: 'ACTIVE',
+      metadata: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      archivedAt: null,
+    };
+
+    const variantDetails = (variant: ProductVariantRecord): ProductVariantDetails => ({
+      id: variant.id,
+      variantCode: variant.variantCode,
+      sizeId: variant.sizeId,
+      colorId: variant.colorId,
+      depositAmountOverride: variant.depositAmountOverride,
+      status: variant.status,
+      archivedAt: variant.archivedAt,
+      size: null,
+      color: null,
+      _count: { inventoryItems: 0 },
+      rentalRates: [],
+    });
+
+    it('keeps omitted fields unchanged and allows explicit nulls in a partial update', async () => {
+      const saved: ProductVariantRecord = {
+        ...originalVariant,
+        variantCode: 'DRESS-S-BLUE',
+        colorId: null,
+        depositAmountOverride: null,
+      };
+      const mutation: ProductVariantMutationResult = {
+        before: originalVariant,
+        variant: saved,
+        details: variantDetails(saved),
+        changed: true,
+      };
+      updateProductVariantMock.mockResolvedValue(mutation);
+
+      const result = await service.updateProductVariant(mockUser, 'prod-1', 'variant-1', {
+        variantCode: ' DRESS-S-BLUE ',
+        colorId: null,
+        depositAmountOverride: null,
+      });
+
+      expect(updateProductVariantMock).toHaveBeenCalledWith(
+        mockUser.shopId,
+        'prod-1',
+        'variant-1',
+        {
+          variantCode: 'DRESS-S-BLUE',
+          colorId: null,
+          depositAmountOverride: null,
+        },
+      );
+      expect(result).toMatchObject({
+        variantCode: 'DRESS-S-BLUE',
+        sizeId: 'size-s',
+        colorId: null,
+        depositAmountOverride: null,
+        archivedAt: null,
+      });
+      const auditEntry = auditLogMock.mock.calls[0]?.[0];
+      expect(auditEntry).toMatchObject({ action: 'UPDATE', entityType: 'product_variant' });
+      expect(auditEntry?.oldValues).toMatchObject({ sizeId: 'size-s', colorId: 'color-red' });
+      expect(auditEntry?.newValues).toMatchObject({ sizeId: 'size-s', colorId: null });
+    });
+
+    it('does not emit a second audit event for an idempotent archive request', async () => {
+      setProductVariantArchivedMock.mockResolvedValue({
+        before: originalVariant,
+        variant: originalVariant,
+        details: variantDetails(originalVariant),
+        changed: false,
+      });
+
+      await service.setProductVariantArchived(mockUser, 'prod-1', 'variant-1', false);
+
+      expect(setProductVariantArchivedMock).toHaveBeenCalledWith(
+        mockUser.shopId,
+        'prod-1',
+        'variant-1',
+        false,
+      );
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it('audits successful archive and reactivation transitions', async () => {
+      const archivedVariant = {
+        ...originalVariant,
+        archivedAt: new Date('2026-03-01T00:00:00.000Z'),
+      };
+      setProductVariantArchivedMock
+        .mockResolvedValueOnce({
+          before: originalVariant,
+          variant: archivedVariant,
+          details: variantDetails(archivedVariant),
+          changed: true,
+        })
+        .mockResolvedValueOnce({
+          before: archivedVariant,
+          variant: originalVariant,
+          details: variantDetails(originalVariant),
+          changed: true,
+        });
+
+      await service.setProductVariantArchived(mockUser, 'prod-1', 'variant-1', true);
+      expect(auditLogMock.mock.calls[0]?.[0]).toMatchObject({
+        action: 'ARCHIVE',
+        entityType: 'product_variant',
+        oldValues: { archivedAt: null },
+        newValues: { archivedAt: archivedVariant.archivedAt.toISOString() },
+      });
+
+      await service.setProductVariantArchived(mockUser, 'prod-1', 'variant-1', false);
+      expect(auditLogMock.mock.calls[1]?.[0]).toMatchObject({
+        action: 'REACTIVATE',
+        entityType: 'product_variant',
+        oldValues: { archivedAt: archivedVariant.archivedAt.toISOString() },
+        newValues: { archivedAt: null },
+      });
+    });
+
+    it('audits a successful hard delete with the last variant snapshot', async () => {
+      deleteProductVariantMock.mockResolvedValue({ kind: 'DELETED', variant: originalVariant });
+
+      await expect(service.deleteProductVariant(mockUser, 'prod-1', 'variant-1')).resolves.toEqual({
+        success: true,
+      });
+      expect(auditLogMock.mock.calls[0]?.[0]).toMatchObject({
+        action: 'DELETE',
+        entityType: 'product_variant',
+        oldValues: {
+          id: 'variant-1',
+          variantId: 'variant-1',
+          productId: 'prod-1',
+          variantCode: 'DRESS-S-RED',
+          sizeId: 'size-s',
+          colorId: 'color-red',
+          archivedAt: null,
+        },
+        newValues: { productId: 'prod-1', deleted: true },
+      });
+    });
+
+    it('reports a used variant without emitting a delete audit', async () => {
+      deleteProductVariantMock.mockResolvedValue({ kind: 'IN_USE', variant: originalVariant });
+
+      await expect(
+        service.deleteProductVariant(mockUser, 'prod-1', 'variant-1'),
+      ).rejects.toMatchObject({
+        code: CATALOG_ERROR_CODE.PRODUCT_VARIANT_IN_USE,
+        kind: 'CONFLICT',
+      });
+      expect(auditLogMock).not.toHaveBeenCalled();
     });
   });
 });

@@ -13,10 +13,16 @@ export async function addInventoryItem(
   input: AddInventoryData,
 ): ReturnType<CatalogInventoryRepository['addInventoryItem']> {
   const variant = await prisma.productVariant.findFirst({
-    where: { id: input.variantId, shopId, archivedAt: null },
+    where: { id: input.variantId, shopId },
     include: { product: true },
   });
   if (!variant) return null;
+  if (variant.archivedAt) {
+    throw new CatalogInvariantError(
+      CATALOG_ERROR_CODE.PRODUCT_VARIANT_ARCHIVED,
+      'Không thể tạo món đồ tồn kho cho biến thể đã lưu trữ.',
+    );
+  }
 
   if (input.locationId) {
     const location = await prisma.shopLocation.count({

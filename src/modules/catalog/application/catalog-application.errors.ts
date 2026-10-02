@@ -2,6 +2,10 @@ import { ApplicationError } from '@common/errors/application-error';
 
 export class CatalogResourceNotFoundError extends ApplicationError {
   readonly kind = 'NOT_FOUND' as const;
+
+  constructor(message: string, code?: string) {
+    super(message, code);
+  }
 }
 
 export class InvalidCatalogInputError extends ApplicationError {
@@ -10,6 +14,10 @@ export class InvalidCatalogInputError extends ApplicationError {
 
 export class DuplicateProductVariantCombinationError extends ApplicationError {
   readonly kind = 'CONFLICT' as const;
+
+  constructor(message: string) {
+    super(message, 'PRODUCT_VARIANT_COMBINATION_DUPLICATE');
+  }
 }
 
 export class CategoryInUseError extends ApplicationError {

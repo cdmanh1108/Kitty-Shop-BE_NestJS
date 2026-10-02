@@ -8,12 +8,14 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   IsUUID,
   Max,
+  MaxLength,
   Min,
   ValidateIf,
   ValidateNested,
@@ -233,6 +235,39 @@ export class UpdateProductReqDto {
 }
 export class AddVariantReqDto extends ProductVariantReqDto {}
 
+export class UpdateProductVariantReqDto {
+  @ApiPropertyOptional({ example: 'AURORA-S-RED', maxLength: 100 })
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString({ message: 'Mã biến thể phải là chuỗi ký tự.' })
+  @IsNotEmpty({ message: 'Mã biến thể không được để trống.' })
+  @MaxLength(100, { message: 'Mã biến thể không được vượt quá 100 ký tự.' })
+  @ValidateIf((_object: UpdateProductVariantReqDto, value: unknown) => value !== undefined)
+  variantCode?: string;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  @IsUUID(undefined, { message: 'Mã kích thước phải là UUID hợp lệ.' })
+  @IsOptional()
+  sizeId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: String })
+  @IsUUID(undefined, { message: 'Mã màu sắc phải là UUID hợp lệ.' })
+  @IsOptional()
+  colorId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true, type: Number, minimum: 0 })
+  @Type(() => Number)
+  @IsNumber(undefined, { message: 'Tiền cọc riêng của biến thể phải là số hợp lệ.' })
+  @Min(0, { message: 'Tiền cọc riêng của biến thể phải lớn hơn hoặc bằng $constraint1.' })
+  @IsOptional()
+  depositAmountOverride?: number | null;
+}
+
+export class SetProductVariantArchivedReqDto {
+  @ApiProperty({ description: 'true để lưu trữ, false để kích hoạt lại.' })
+  @IsBoolean({ message: 'Trạng thái lưu trữ phải là giá trị đúng hoặc sai.' })
+  archived!: boolean;
+}
+
 export class UpsertRentalRateReqDto extends RentalRateReqDto {}
 export class RentalRateResDto {
   @ApiProperty() id!: string;
@@ -271,6 +306,7 @@ export class ProductVariantResDto {
   color!: ColorSummaryResDto | null;
   @ApiPropertyOptional({ nullable: true, type: String }) depositAmountOverride!: string | null;
   @ApiProperty() status!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) archivedAt!: string | null;
   @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
   @ApiPropertyOptional({ type: VariantInventoryCountDto }) _count?: VariantInventoryCountDto;
   @ApiPropertyOptional({ type: [ProductVariantInventoryResDto] })

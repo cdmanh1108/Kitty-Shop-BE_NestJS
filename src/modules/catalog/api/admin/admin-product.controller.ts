@@ -26,6 +26,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiPayloadTooLargeResponse,
+  ApiConflictResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ProductService } from '../../application/product.service';
@@ -40,6 +41,8 @@ import {
   ProductVariantResDto,
   RentalRateResDto,
   UpdateProductReqDto,
+  UpdateProductVariantReqDto,
+  SetProductVariantArchivedReqDto,
   UpsertRentalRateReqDto,
 } from './dto/product.dto';
 import { ProductListQueryDto, ProductLookupQueryDto } from './dto/product-query.dto';
@@ -50,6 +53,7 @@ import {
   toProductMediaInput,
   toProductMediaUploadInput,
   toUpdateProductInput,
+  toUpdateProductVariantInput,
   toUpsertRentalRateInput,
 } from '../catalog.mapper';
 import { ProductMediaUploadInterceptor } from './product-media-upload.interceptor';
@@ -104,6 +108,62 @@ export class AdminProductController {
     @Body() body: AddVariantReqDto,
   ) {
     return this.service.addVariant(user, id, toAddVariantInput(body));
+  }
+
+  @Patch('products/:productId/variants/:variantId')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ type: ProductVariantResDto })
+  @ApiNotFoundResponse({
+    description: 'Không tìm thấy biến thể trong sản phẩm thuộc cửa hàng đã xác thực.',
+  })
+  @ApiConflictResponse({ description: 'Mã biến thể hoặc tổ hợp kích thước, màu sắc đã tồn tại.' })
+  updateProductVariant(
+    @CurrentUser() user: CurrentUserType,
+    @Param('productId') productId: string,
+    @Param('variantId') variantId: string,
+    @Body() body: UpdateProductVariantReqDto,
+  ) {
+    return this.service.updateProductVariant(
+      user,
+      productId,
+      variantId,
+      toUpdateProductVariantInput(body),
+    );
+  }
+
+  @Patch('products/:productId/variants/:variantId/status')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ type: ProductVariantResDto })
+  @ApiNotFoundResponse({
+    description: 'Không tìm thấy biến thể trong sản phẩm thuộc cửa hàng đã xác thực.',
+  })
+  @ApiConflictResponse({
+    description: 'Không thể kích hoạt lại do dữ liệu tham chiếu không còn hợp lệ hoặc bị trùng.',
+  })
+  setProductVariantArchived(
+    @CurrentUser() user: CurrentUserType,
+    @Param('productId') productId: string,
+    @Param('variantId') variantId: string,
+    @Body() body: SetProductVariantArchivedReqDto,
+  ) {
+    return this.service.setProductVariantArchived(user, productId, variantId, body.archived);
+  }
+
+  @Delete('products/:productId/variants/:variantId')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOkResponse({ schema: { example: { success: true } } })
+  @ApiNotFoundResponse({
+    description: 'Không tìm thấy biến thể trong sản phẩm thuộc cửa hàng đã xác thực.',
+  })
+  @ApiConflictResponse({
+    description: 'Biến thể đang được dữ liệu tồn kho hoặc lịch sử đơn thuê sử dụng.',
+  })
+  deleteProductVariant(
+    @CurrentUser() user: CurrentUserType,
+    @Param('productId') productId: string,
+    @Param('variantId') variantId: string,
+  ) {
+    return this.service.deleteProductVariant(user, productId, variantId);
   }
 
   @Post('variants/:id/rental-rates')

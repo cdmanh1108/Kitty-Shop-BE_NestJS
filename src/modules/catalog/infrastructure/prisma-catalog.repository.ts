@@ -65,6 +65,11 @@ import {
   setPrimaryProductMedia,
   removeProductMedia,
 } from './product-commands';
+import {
+  updateProductVariant,
+  setProductVariantArchived,
+  deleteProductVariant,
+} from './product-variant-commands';
 import { listStorefrontCategories } from './storefront-category.queries';
 import { listStorefrontProducts } from './storefront-product-list.queries';
 import {
@@ -280,6 +285,24 @@ export class PrismaCatalogRepository
     ...args: Parameters<CatalogRepository['addVariant']>
   ): ReturnType<CatalogRepository['addVariant']> {
     return addVariant(this.prisma, ...args);
+  }
+
+  updateProductVariant(
+    ...args: Parameters<CatalogRepository['updateProductVariant']>
+  ): ReturnType<CatalogRepository['updateProductVariant']> {
+    return updateProductVariant(this.prisma, ...args);
+  }
+
+  setProductVariantArchived(
+    ...args: Parameters<CatalogRepository['setProductVariantArchived']>
+  ): ReturnType<CatalogRepository['setProductVariantArchived']> {
+    return setProductVariantArchived(this.prisma, ...args);
+  }
+
+  deleteProductVariant(
+    ...args: Parameters<CatalogRepository['deleteProductVariant']>
+  ): ReturnType<CatalogRepository['deleteProductVariant']> {
+    return deleteProductVariant(this.prisma, ...args);
   }
 
   upsertRentalRate(

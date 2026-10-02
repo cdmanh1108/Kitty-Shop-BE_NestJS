@@ -9,7 +9,11 @@ import {
   resetTestDatabase,
 } from '../helpers/test-database';
 import { rentalScenario, fixedClock, payRentalForConfirmation } from '../fixtures/rental.fixture';
-import { createTestShop, uniqueCode } from '../fixtures/test-factories';
+import {
+  createTestProductWithVariant,
+  createTestShop,
+  uniqueCode,
+} from '../fixtures/test-factories';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { CatalogInvariantError } from '../../src/modules/catalog/domain/catalog-errors';
@@ -207,6 +211,197 @@ describe('Catalog persistence invariants', () => {
       expect([100000, 120000]).toContain(Number(rates[0]?.price));
     },
   );
+
+  describe('ProductVariant update, archive and deletion lifecycle', () => {
+    async function createSize(shopId: string, name: string, isActive = true) {
+      return prisma.size.create({
+        data: { shopId, code: uniqueCode('SIZE'), name, isActive },
+      });
+    }
+
+    async function createColor(shopId: string, name: string, isActive = true) {
+      return prisma.color.create({
+        data: { shopId, code: uniqueCode('COLOR'), name, isActive },
+      });
+    }
+
+    it('preserves omitted fields, clears explicit nulls and enforces nullable combination uniqueness', async () => {
+      const f = await rentalScenario(prisma);
+      const size = await createSize(f.shop.id, 'Medium');
+      const otherSize = await createSize(f.shop.id, 'Large');
+      const color = await createColor(f.shop.id, 'Red');
+      const otherColor = await createColor(f.shop.id, 'Blue');
+      await prisma.productVariant.update({
+        where: { id: f.variant.id },
+        data: { sizeId: size.id, colorId: color.id, depositAmountOverride: 200000 },
+      });
+      const second = await catalog.addVariant(f.shop.id, f.product.id, {
+        variantCode: uniqueCode('VAR'),
+        sizeId: otherSize.id,
+        colorId: otherColor.id,
+        inventoryCount: 0,
+        rentalRates: [{ durationDays: 1, price: 100000 }],
+      });
+      if (!second) throw new Error('Expected second variant');
+
+      await expect(
+        catalog.updateProductVariant(f.shop.id, f.product.id, second.id, { sizeId: size.id }),
+      ).resolves.toMatchObject({ variant: { sizeId: size.id, colorId: otherColor.id } });
+      await expect(
+        catalog.updateProductVariant(f.shop.id, f.product.id, second.id, {
+          variantCode: f.variant.variantCode,
+        }),
+      ).rejects.toMatchObject({ code: 'PRODUCT_VARIANT_CODE_ALREADY_EXISTS' });
+      await expect(
+        catalog.updateProductVariant(f.shop.id, f.product.id, second.id, {
+          colorId: color.id,
+        }),
+      ).rejects.toMatchObject({ code: 'PRODUCT_VARIANT_COMBINATION_DUPLICATE' });
+
+      const updated = await catalog.updateProductVariant(f.shop.id, f.product.id, f.variant.id, {
+        depositAmountOverride: 350000,
+      });
+      expect(updated?.variant).toMatchObject({
+        sizeId: size.id,
+        colorId: color.id,
+      });
+      expect(updated?.variant.depositAmountOverride?.toString()).toBe('350000');
+
+      await catalog.updateProductVariant(f.shop.id, f.product.id, f.variant.id, { colorId: null });
+      await expect(
+        catalog.updateProductVariant(f.shop.id, f.product.id, second.id, {
+          sizeId: size.id,
+          colorId: null,
+        }),
+      ).rejects.toMatchObject({ code: 'PRODUCT_VARIANT_COMBINATION_DUPLICATE' });
+      expect(
+        await catalog.updateProductVariant(f.shop.id, f.product.id, f.variant.id, {}),
+      ).toMatchObject({
+        variant: { variantCode: f.variant.variantCode, sizeId: size.id, colorId: null },
+      });
+
+      const otherShop = await createTestShop(prisma);
+      const otherProduct = await createTestProductWithVariant(prisma, f.shop.id, {
+        inventoryCount: 0,
+      });
+      expect(
+        await catalog.updateProductVariant(otherShop.id, f.product.id, f.variant.id, {
+          variantCode: 'CROSS-SHOP',
+        }),
+      ).toBeNull();
+      expect(
+        await catalog.updateProductVariant(f.shop.id, otherProduct.product.id, second.id, {
+          variantCode: 'WRONG-PRODUCT',
+        }),
+      ).toBeNull();
+    });
+
+    it('allows unrelated updates with inactive existing references but rejects new inactive assignments and reactivation', async () => {
+      const f = await rentalScenario(prisma);
+      const inactiveSize = await createSize(f.shop.id, 'Old size', false);
+      const inactiveColor = await createColor(f.shop.id, 'Old color', false);
+      await prisma.productVariant.update({
+        where: { id: f.variant.id },
+        data: { sizeId: inactiveSize.id, colorId: inactiveColor.id },
+      });
+
+      await expect(
+        catalog.updateProductVariant(f.shop.id, f.product.id, f.variant.id, {
+          variantCode: 'UPDATED-CODE',
+        }),
+      ).resolves.toMatchObject({ variant: { variantCode: 'UPDATED-CODE' } });
+      await expect(
+        catalog.updateProductVariant(f.shop.id, f.product.id, f.variant.id, {
+          sizeId: inactiveSize.id,
+        }),
+      ).resolves.toMatchObject({ variant: { sizeId: inactiveSize.id } });
+
+      const anotherInactiveSize = await createSize(f.shop.id, 'Inactive target', false);
+      const anotherInactiveColor = await createColor(f.shop.id, 'Inactive target', false);
+      await expect(
+        catalog.updateProductVariant(f.shop.id, f.product.id, f.variant.id, {
+          sizeId: anotherInactiveSize.id,
+        }),
+      ).rejects.toMatchObject({ code: 'SIZE_INACTIVE' });
+      await expect(
+        catalog.updateProductVariant(f.shop.id, f.product.id, f.variant.id, {
+          colorId: anotherInactiveColor.id,
+        }),
+      ).rejects.toMatchObject({ code: 'COLOR_INACTIVE' });
+
+      await catalog.setProductVariantArchived(f.shop.id, f.product.id, f.variant.id, true);
+      await expect(
+        catalog.setProductVariantArchived(f.shop.id, f.product.id, f.variant.id, false),
+      ).rejects.toMatchObject({ code: 'SIZE_INACTIVE' });
+    });
+
+    it('archives idempotently without changing inventory/rates and keeps archived variants in Admin detail', async () => {
+      const f = await rentalScenario(prisma);
+      const ratesBefore = await prisma.rentalRate.count({ where: { variantId: f.variant.id } });
+      const inventoryBefore = await prisma.inventoryItem.count({
+        where: { variantId: f.variant.id },
+      });
+
+      const archived = await catalog.setProductVariantArchived(
+        f.shop.id,
+        f.product.id,
+        f.variant.id,
+        true,
+      );
+      expect(archived?.changed).toBe(true);
+      expect(archived?.variant.archivedAt).not.toBeNull();
+      const adminProduct = await catalog.findProduct(f.shop.id, f.product.id);
+      expect(adminProduct?.variants[0]?.id).toBe(f.variant.id);
+      expect(adminProduct?.variants[0]?.archivedAt).toBeInstanceOf(Date);
+      expect(await prisma.rentalRate.count({ where: { variantId: f.variant.id } })).toBe(
+        ratesBefore,
+      );
+      expect(await prisma.inventoryItem.count({ where: { variantId: f.variant.id } })).toBe(
+        inventoryBefore,
+      );
+      expect(
+        (await catalog.setProductVariantArchived(f.shop.id, f.product.id, f.variant.id, true))
+          ?.changed,
+      ).toBe(false);
+      const conflictingActiveVariant = await prisma.productVariant.create({
+        data: {
+          shopId: f.shop.id,
+          productId: f.product.id,
+          variantCode: uniqueCode('ACTIVE'),
+        },
+      });
+      await expect(
+        catalog.setProductVariantArchived(f.shop.id, f.product.id, f.variant.id, false),
+      ).rejects.toMatchObject({ code: 'PRODUCT_VARIANT_COMBINATION_DUPLICATE' });
+      await prisma.productVariant.delete({ where: { id: conflictingActiveVariant.id } });
+      expect(
+        (await catalog.setProductVariantArchived(f.shop.id, f.product.id, f.variant.id, false))
+          ?.variant.archivedAt,
+      ).toBeNull();
+    });
+
+    it('hard deletes an unused variant with owned rates, but historical inventory blocks deletion', async () => {
+      const shop = await createTestShop(prisma);
+      const unused = await createTestProductWithVariant(prisma, shop.id, { inventoryCount: 0 });
+      expect(await prisma.rentalRate.count({ where: { variantId: unused.variant.id } })).toBe(5);
+      expect(
+        await catalog.deleteProductVariant(shop.id, unused.product.id, unused.variant.id),
+      ).toMatchObject({ kind: 'DELETED', variant: { id: unused.variant.id } });
+      expect(
+        await prisma.productVariant.findUnique({ where: { id: unused.variant.id } }),
+      ).toBeNull();
+      expect(await prisma.rentalRate.count({ where: { variantId: unused.variant.id } })).toBe(0);
+
+      const used = await rentalScenario(prisma);
+      await prisma.inventoryItem.update({
+        where: { id: used.inventory.id },
+        data: { archivedAt: new Date(), isActive: false },
+      });
+      expect(
+        await catalog.deleteProductVariant(used.shop.id, used.product.id, used.variant.id),
+      ).toMatchObject({ kind: 'IN_USE', variant: { id: used.variant.id } });
+    });
+  });
 
   it('DB admits only one concurrent product-level active rate with a NULL variant', async () => {
     const f = await rentalScenario(prisma);

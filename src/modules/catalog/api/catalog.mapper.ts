@@ -19,6 +19,7 @@ import type {
   SizeListQuery,
   UpdateInventoryStatusInput,
   UpdateProductInput,
+  UpdateProductVariantInput,
   UpdateSizeInput,
   UpsertRentalRateInput,
 } from '../application/catalog.contracts';
@@ -40,6 +41,7 @@ import type {
   ProductVariantReqDto,
   RentalRateReqDto,
   UpdateProductReqDto,
+  UpdateProductVariantReqDto,
   UpsertRentalRateReqDto,
 } from './admin/dto/product.dto';
 import type {
@@ -160,6 +162,11 @@ export function toUpdateInventoryStatusInput(
   return { ...dto };
 }
 export function toUpdateProductInput(dto: UpdateProductReqDto): UpdateProductInput {
+  return { ...dto };
+}
+export function toUpdateProductVariantInput(
+  dto: UpdateProductVariantReqDto,
+): UpdateProductVariantInput {
   return { ...dto };
 }
 export function toUpsertRentalRateInput(dto: UpsertRentalRateReqDto): UpsertRentalRateInput {

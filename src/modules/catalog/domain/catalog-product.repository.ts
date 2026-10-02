@@ -3,9 +3,11 @@ import type {
   AddProductMediaResult,
   AddVariantResult,
   CreateProductResult,
+  DeleteProductVariantResult,
   ProductDetails,
   ProductPage,
   ProductMediaUploadTarget,
+  ProductVariantMutationResult,
   RemovedProductMedia,
   SetPrimaryProductMediaResult,
   UpdateProductResult,
@@ -16,6 +18,7 @@ import type {
   CreateProductData,
   ProductMediaData,
   UpdateProductData,
+  UpdateProductVariantData,
 } from './catalog-product.inputs';
 
 export const CATALOG_PRODUCT_REPOSITORY = Symbol('CATALOG_PRODUCT_REPOSITORY');
@@ -33,6 +36,23 @@ export interface CatalogProductRepository {
     productId: string,
     input: CreateProductData['variants'][number],
   ): Promise<AddVariantResult>;
+  updateProductVariant(
+    shopId: string,
+    productId: string,
+    variantId: string,
+    input: UpdateProductVariantData,
+  ): Promise<ProductVariantMutationResult | null>;
+  setProductVariantArchived(
+    shopId: string,
+    productId: string,
+    variantId: string,
+    archived: boolean,
+  ): Promise<ProductVariantMutationResult | null>;
+  deleteProductVariant(
+    shopId: string,
+    productId: string,
+    variantId: string,
+  ): Promise<DeleteProductVariantResult>;
   upsertRentalRate(
     shopId: string,
     variantId: string,

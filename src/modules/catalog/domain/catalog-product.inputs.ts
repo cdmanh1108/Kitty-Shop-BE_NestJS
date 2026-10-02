@@ -33,6 +33,13 @@ export interface UpdateProductData {
   status?: string;
 }
 
+export interface UpdateProductVariantData {
+  variantCode?: string;
+  sizeId?: string | null;
+  colorId?: string | null;
+  depositAmountOverride?: number | null;
+}
+
 export interface ProductMediaData {
   url: string;
   storageKey?: string | null;

@@ -89,6 +89,18 @@ export type CategoryOption = Pick<CategoryRecord, 'id' | 'parentId' | 'code' | '
 
 export type ProductPage = PaginatedResult<ProductListItem>;
 
+export type ProductVariantDetails = Pick<
+  ProductVariantRecord,
+  'id' | 'variantCode' | 'sizeId' | 'colorId' | 'depositAmountOverride' | 'status' | 'archivedAt'
+> & {
+  size: null | Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder' | 'isActive'>;
+  color: null | Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor' | 'isActive'>;
+  _count: { inventoryItems: number };
+  rentalRates: Array<
+    Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>
+  >;
+};
+
 export type ProductDetails =
   | null
   | (Pick<
@@ -110,19 +122,7 @@ export type ProductDetails =
       category: Pick<CategoryRecord, 'id' | 'code' | 'name'> & {
         status: 'ACTIVE' | 'INACTIVE';
       };
-      variants: Array<
-        Pick<
-          ProductVariantRecord,
-          'id' | 'variantCode' | 'sizeId' | 'colorId' | 'depositAmountOverride' | 'status'
-        > & {
-          size: null | Pick<SizeRecord, 'name'>;
-          color: null | Pick<ColorRecord, 'name' | 'hexColor'>;
-          _count: { inventoryItems: number };
-          rentalRates: Array<
-            Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>
-          >;
-        }
-      >;
+      variants: ProductVariantDetails[];
       media: Array<Pick<ProductMediaRecord, 'id' | 'url' | 'altText' | 'isPrimary' | 'sortOrder'>>;
       rentalRates: Array<
         Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>
@@ -147,6 +147,18 @@ export type AddVariantResult =
       inventoryItems: Array<InventoryItemRecord>;
       rentalRates: Array<RentalRateRecord>;
     });
+
+export interface ProductVariantMutationResult {
+  before: ProductVariantRecord;
+  variant: ProductVariantRecord;
+  details: ProductVariantDetails;
+  changed: boolean;
+}
+
+export type DeleteProductVariantResult =
+  | { kind: 'NOT_FOUND' }
+  | { kind: 'IN_USE'; variant: ProductVariantRecord }
+  | { kind: 'DELETED'; variant: ProductVariantRecord };
 
 export type UpsertRentalRateResult = null | RentalRateRecord;
 

@@ -32,6 +32,24 @@ function handleProductUniqueViolation(error: unknown): never {
     if (targetStr.includes('slug') || targetStr.includes('products_shop_id_slug_key')) {
       throw new CatalogProductSlugAlreadyExistsError();
     }
+    if (
+      targetStr.includes('variant_code') ||
+      targetStr.includes('product_variants_shop_id_variant_code')
+    ) {
+      throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.PRODUCT_VARIANT_CODE_ALREADY_EXISTS,
+        'Mã biến thể đã tồn tại trong cửa hàng.',
+      );
+    }
+    if (
+      targetStr.includes('product_variants_unarchived_combination_unique') ||
+      (targetStr.includes('size_id') && targetStr.includes('color_id'))
+    ) {
+      throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.PRODUCT_VARIANT_COMBINATION_DUPLICATE,
+        'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
+      );
+    }
     if (targetStr.includes('code') || targetStr.includes('products_shop_id_code_key')) {
       throw new CatalogInvariantError(
         CATALOG_ERROR_CODE.PRODUCT_CODE_ALREADY_EXISTS,
@@ -128,30 +146,34 @@ export async function addVariant(
   productId: string,
   input: CreateProductData['variants'][number],
 ): ReturnType<CatalogProductRepository['addVariant']> {
-  return serializableTransaction(prisma, async (tx) => {
-    const product = await tx.product.findFirst({
-      where: { id: productId, shopId, archivedAt: null, status: { not: 'ARCHIVED' } },
-    });
-    if (!product) return null;
-    const existingVariants = await tx.productVariant.findMany({
-      where: { productId, shopId, archivedAt: null },
-    });
-    const key = `${input.sizeId ?? 'null'}::${input.colorId ?? 'null'}`;
-    for (const v of existingVariants) {
-      if (`${v.sizeId ?? 'null'}::${v.colorId ?? 'null'}` === key) {
-        throw new CatalogInvariantError(
-          CATALOG_ERROR_CODE.PRODUCT_VARIANT_COMBINATION_DUPLICATE,
-          'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
-        );
+  try {
+    return await serializableTransaction(prisma, async (tx) => {
+      const product = await tx.product.findFirst({
+        where: { id: productId, shopId, archivedAt: null, status: { not: 'ARCHIVED' } },
+      });
+      if (!product) return null;
+      const existingVariants = await tx.productVariant.findMany({
+        where: { productId, shopId, archivedAt: null },
+      });
+      const key = `${input.sizeId ?? 'null'}::${input.colorId ?? 'null'}`;
+      for (const v of existingVariants) {
+        if (`${v.sizeId ?? 'null'}::${v.colorId ?? 'null'}` === key) {
+          throw new CatalogInvariantError(
+            CATALOG_ERROR_CODE.PRODUCT_VARIANT_COMBINATION_DUPLICATE,
+            'Biến thể có cùng kích thước và màu sắc đã tồn tại trong sản phẩm.',
+          );
+        }
       }
-    }
-    await assertVariantReferences(tx, shopId, input);
-    const variant = await createVariantWithInventory(tx, shopId, productId, input);
-    return tx.productVariant.findUnique({
-      where: { id: variant.id },
-      include: { rentalRates: true, inventoryItems: true, size: true, color: true },
+      await assertVariantReferences(tx, shopId, input);
+      const variant = await createVariantWithInventory(tx, shopId, productId, input);
+      return tx.productVariant.findUnique({
+        where: { id: variant.id },
+        include: { rentalRates: true, inventoryItems: true, size: true, color: true },
+      });
     });
-  });
+  } catch (error) {
+    handleProductUniqueViolation(error);
+  }
 }
 export async function upsertRentalRate(
   prisma: PrismaService,
@@ -164,12 +186,17 @@ export async function upsertRentalRate(
       where: {
         id: variantId,
         shopId,
-        archivedAt: null,
         product: { shopId, archivedAt: null, status: { not: 'ARCHIVED' } },
       },
-      select: { productId: true },
+      select: { productId: true, archivedAt: true },
     });
     if (!variant) return null;
+    if (variant.archivedAt) {
+      throw new CatalogInvariantError(
+        CATALOG_ERROR_CODE.PRODUCT_VARIANT_ARCHIVED,
+        'Không thể thiết lập giá thuê cho biến thể đã lưu trữ.',
+      );
+    }
     // Partial uniqueness is SQL-owned: ON CONFLICT atomically inserts or updates
     // the single active price without touching inactive historical rows.
     const [saved] = await tx.$queryRaw<{ id: string }[]>`

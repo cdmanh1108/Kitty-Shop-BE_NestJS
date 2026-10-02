@@ -4,6 +4,7 @@ import type {
   CreateProductData,
   ProductMediaData,
   UpdateProductData,
+  UpdateProductVariantData,
 } from '../domain/catalog-product.inputs';
 export interface AddInventoryInput {
   variantId: string;
@@ -71,6 +72,8 @@ export interface UpdateColorInput {
 export type CreateProductInput = CreateProductData;
 
 export type ProductVariantInput = CreateProductData['variants'][number];
+
+export type UpdateProductVariantInput = UpdateProductVariantData;
 
 export type ProductMediaInput = ProductMediaData;
 
