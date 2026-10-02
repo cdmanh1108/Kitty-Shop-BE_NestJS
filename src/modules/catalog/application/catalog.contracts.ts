@@ -74,6 +74,16 @@ export type ProductVariantInput = CreateProductData['variants'][number];
 
 export type ProductMediaInput = ProductMediaData;
 
+export interface ProductMediaUploadInput {
+  file?: {
+    buffer: Buffer;
+    mimetype: string;
+  };
+  altText?: string;
+  isPrimary?: boolean;
+  sortOrder?: number;
+}
+
 export interface CreateSizeInput {
   code: string;
   name: string;

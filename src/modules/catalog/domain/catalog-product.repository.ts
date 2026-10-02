@@ -5,6 +5,8 @@ import type {
   CreateProductResult,
   ProductDetails,
   ProductPage,
+  ProductMediaUploadTarget,
+  RemovedProductMedia,
   UpdateProductResult,
   UpsertRentalRateResult,
 } from './catalog.models';
@@ -42,5 +44,14 @@ export interface CatalogProductRepository {
     productId: string,
     input: ProductMediaData,
   ): Promise<AddProductMediaResult>;
-  removeProductMedia(shopId: string, productId: string, mediaId: string): Promise<boolean>;
+  findProductMediaUploadTarget(
+    shopId: string,
+    productId: string,
+  ): Promise<ProductMediaUploadTarget | null>;
+  countProductMediaByStorageKey(storageKey: string): Promise<number>;
+  removeProductMedia(
+    shopId: string,
+    productId: string,
+    mediaId: string,
+  ): Promise<RemovedProductMedia | null>;
 }

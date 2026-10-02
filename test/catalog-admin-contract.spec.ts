@@ -203,10 +203,17 @@ const routeContracts: RouteContract[] = [
     permission: PERMISSIONS.CATALOG_MANAGE,
   },
   {
-    path: '/admin/inventory',
+    path: '/admin/products/{id}/media',
     method: 'post',
     controller: AdminProductController,
     handler: 'addProductMedia',
+    permission: PERMISSIONS.CATALOG_MANAGE,
+  },
+  {
+    path: '/admin/products/{id}/media/upload',
+    method: 'post',
+    controller: AdminProductController,
+    handler: 'uploadProductMedia',
     permission: PERMISSIONS.CATALOG_MANAGE,
   },
   {

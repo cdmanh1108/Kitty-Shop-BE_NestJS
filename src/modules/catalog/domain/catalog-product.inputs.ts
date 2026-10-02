@@ -35,6 +35,7 @@ export interface UpdateProductData {
 
 export interface ProductMediaData {
   url: string;
+  storageKey?: string | null;
   altText?: string;
   isPrimary: boolean;
   sortOrder: number;

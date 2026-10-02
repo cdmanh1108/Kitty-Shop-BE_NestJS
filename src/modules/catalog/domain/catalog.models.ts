@@ -157,6 +157,15 @@ export type UpdateProductResult = null | ProductRecord;
 
 export type AddProductMediaResult = null | ProductMediaRecord;
 
+export interface ProductMediaUploadTarget {
+  shopCode: string;
+  productCode: string;
+}
+
+export interface RemovedProductMedia {
+  storageKey: string | null;
+}
+
 export type AddInventoryItemResult = null | InventoryItemRecord;
 
 export type InventoryOccupancyStatus = 'FREE' | 'RESERVED' | 'RENTED';

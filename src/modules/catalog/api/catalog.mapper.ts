@@ -13,6 +13,7 @@ import type {
   InventoryListQuery,
   ProductListQuery,
   ProductMediaInput,
+  ProductMediaUploadInput,
   ProductVariantInput,
   RentalRateInput,
   SizeListQuery,
@@ -35,6 +36,7 @@ import type {
   AddVariantReqDto,
   CreateProductReqDto,
   ProductMediaReqDto,
+  ProductMediaUploadReqDto,
   ProductVariantReqDto,
   RentalRateReqDto,
   UpdateProductReqDto,
@@ -114,6 +116,17 @@ export function toProductVariantInput(dto: ProductVariantReqDto): ProductVariant
 }
 export function toProductMediaInput(dto: ProductMediaReqDto): ProductMediaInput {
   return { ...dto };
+}
+export function toProductMediaUploadInput(
+  dto: ProductMediaUploadReqDto,
+  file?: ProductMediaUploadInput['file'],
+): ProductMediaUploadInput {
+  return {
+    file,
+    altText: dto.altText,
+    isPrimary: dto.isPrimary,
+    sortOrder: dto.sortOrder,
+  };
 }
 export function toCreateSizeInput(dto: CreateSizeReqDto): CreateSizeInput {
   return { ...dto };

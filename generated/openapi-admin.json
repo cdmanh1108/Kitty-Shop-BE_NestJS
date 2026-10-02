@@ -1531,6 +1531,83 @@
         "x-api-surface": "admin"
       }
     },
+    "/admin/products/{id}/media/upload": {
+      "post": {
+        "operationId": "CatalogController_uploadProductMedia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "JPEG, PNG, GIF or WEBP; max 15 MiB."
+                  },
+                  "altText": {
+                    "type": "string"
+                  },
+                  "isPrimary": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "default": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductMediaResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Thiếu tệp hoặc dữ liệu ảnh/form không hợp lệ."
+          },
+          "404": {
+            "description": "Không tìm thấy sản phẩm trong cửa hàng đã xác thực."
+          },
+          "413": {
+            "description": "Ảnh sản phẩm vượt quá 15 MiB."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Upload one managed product image; setting primary clears the previous primary image",
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
     "/admin/products/{id}/media/{mediaId}": {
       "delete": {
         "operationId": "CatalogController_removeProductMedia",

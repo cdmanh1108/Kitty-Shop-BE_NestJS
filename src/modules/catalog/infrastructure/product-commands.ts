@@ -9,6 +9,7 @@ import type {
   UpdateProductData,
 } from '../domain/catalog-product.inputs';
 import type { CatalogProductRepository } from '../domain/catalog-product.repository';
+import type { RemovedProductMedia } from '../domain/catalog.models';
 import {
   CATALOG_ERROR_CODE,
   CatalogCategoryError,
@@ -293,7 +294,9 @@ export async function addProductMedia(
         data: { isPrimary: false },
       });
     }
-    return tx.productMedia.create({ data: { shopId, productId, ...input } });
+    return tx.productMedia.create({
+      data: { shopId, productId, ...input, storageKey: input.storageKey ?? null },
+    });
   });
   if (!created) return null;
 
@@ -307,11 +310,20 @@ export async function removeProductMedia(
   shopId: string,
   productId: string,
   mediaId: string,
-): ReturnType<CatalogProductRepository['removeProductMedia']> {
-  const deleted = await prisma.productMedia.deleteMany({
-    where: { id: mediaId, shopId, productId },
+): Promise<RemovedProductMedia | null> {
+  return serializableTransaction(prisma, async (tx) => {
+    const media = await tx.productMedia.findFirst({
+      where: { id: mediaId, shopId, productId },
+      select: { storageKey: true },
+    });
+    if (!media) return null;
+
+    const deleted = await tx.productMedia.deleteMany({
+      where: { id: mediaId, shopId, productId },
+    });
+    if (deleted.count !== 1) return null;
+    return { storageKey: media.storageKey };
   });
-  return deleted.count === 1;
 }
 async function assertCatalogReferences(
   tx: Prisma.TransactionClient,

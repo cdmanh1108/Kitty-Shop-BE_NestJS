@@ -17,9 +17,9 @@ Business code does not know buckets, public domains or SDKs. Catalog repositorie
 
 The schema deliberately retains `storageKey String?` and `url String` during legacy migration:
 
-- With `storageKey`, the key is the canonical identity. API `url` is derived from configured publicBaseUrl. The stored `url` remains original external provenance for retry/force migration; it is not a serving fallback when a key exists.
+- With `storageKey`, the key is the canonical identity and API `url` is derived from configured publicBaseUrl. The stored `url` is retained as provenance, not as a serving fallback; it remains the original external URL for migrated records and is the canonical public URL returned by storage for direct uploads.
 - Without `storageKey`, `url` is an external/legacy source and is returned unchanged.
-- Normal Product create/add-media currently accepts external URLs, not uploaded keys. There is no runtime upload endpoint in this task. The media migration uploads first and updates only the key plus migration metadata; it never persists the generated public URL.
+- Product create and the existing add-media endpoint continue to accept external URLs. `POST /api/v1/admin/products/:id/media/upload` accepts one multipart image and stores a managed object. Upload writes the canonical public URL as the provenance value in `url` and the canonical object identity in `storageKey`; responses resolve `url` from the configured publicBaseUrl whenever a key exists. The media migration uploads first and updates only the key plus migration metadata; it never persists the generated public URL.
 
 No schema migration or data rewrite is needed. Existing rows are preserved. Historical full provider URLs without a key remain legacy external URLs until explicitly migrated.
 
@@ -61,6 +61,14 @@ Existing keys remain `shops/<normalized-shop-code>/products/<normalized-product-
 The existing key scheme assumes normalized shop codes are distinct. Operators must preserve that invariant across shops; this cleanup does not rename existing keys. Public Product objects must contain no identity documents or secrets.
 
 Product media uses public/CDN-safe access. Future identity/collateral documents require private objects, authorized/signed access and retention controls. None of that private-document infrastructure is implemented here.
+
+## Managed product image upload
+
+Admins with `catalog.manage` can upload one file through `POST /api/v1/admin/products/:id/media/upload` using `multipart/form-data`. The required file field is `file`; optional fields are `altText`, `isPrimary` (defaults to `false`) and `sortOrder` (defaults to `0`). The API accepts JPEG, PNG, GIF and WEBP after checking image signatures, rejects a declared MIME type that does not match the bytes, and caps uploads at 15 MiB. Product ownership is checked in the active shop before storage is written, and the existing serializable media command rechecks ownership before persisting the row.
+
+Object keys are content-addressed using the existing `shops/<shop>/products/<product>/<sha256>.<extension>` scheme. If persistence fails after storage succeeds, the service checks whether the key has any media references and attempts bounded best-effort cleanup only when none remain. Removing managed media performs the same reference check; external URL rows have no storage key and never trigger object deletion. Cleanup failures do not undo a successful database write and are logged without provider error details. Upload audit metadata records the key and media options, not file bytes or credentials.
+
+No schema migration is needed: `ProductMedia.storageKey` already supports managed objects and is nullable for external legacy media.
 
 ## Maintenance commands
 

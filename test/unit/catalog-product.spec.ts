@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
+import type { ObjectStoragePort } from '@common/storage/object-storage.port';
 import type {
   CreateProductResult,
   UpdateProductResult,
@@ -22,6 +23,7 @@ import {
 describe('ProductService', () => {
   let repository: CatalogProductRepository;
   let audit: AuditPort;
+  let storage: ObjectStoragePort;
   let service: ProductService;
 
   let createProductMock: jest.MockedFunction<CatalogProductRepository['createProduct']>;
@@ -54,12 +56,21 @@ describe('ProductService', () => {
       updateProduct: updateProductMock,
       archiveProduct: archiveProductMock,
       addProductMedia: jest.fn(),
+      findProductMediaUploadTarget: jest.fn(),
+      countProductMediaByStorageKey: jest.fn(),
       removeProductMedia: jest.fn(),
     };
     audit = {
       log: auditLogMock,
     };
-    service = new ProductService(repository, audit);
+    storage = {
+      getObject: jest.fn(),
+      putObject: jest.fn(),
+      headObject: jest.fn(),
+      deleteObject: jest.fn(),
+      getPublicUrl: jest.fn(),
+    };
+    service = new ProductService(repository, audit, storage);
   });
 
   describe('createProduct', () => {

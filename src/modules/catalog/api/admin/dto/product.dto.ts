@@ -90,6 +90,27 @@ export class ProductMediaReqDto {
   sortOrder = 0;
 }
 
+export class ProductMediaUploadReqDto {
+  @ApiPropertyOptional()
+  @IsString({ message: 'Mô tả hình ảnh phải là chuỗi ký tự.' })
+  @IsOptional()
+  altText?: string;
+
+  @ApiPropertyOptional({ type: Boolean, default: false })
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean({ message: 'Tùy chọn ảnh đại diện phải là giá trị đúng hoặc sai.' })
+  @IsOptional()
+  isPrimary = false;
+
+  @ApiPropertyOptional({ type: Number, default: 0 })
+  @Type(() => Number)
+  @IsInt({ message: 'Thứ tự hiển thị phải là số nguyên.' })
+  @IsOptional()
+  sortOrder = 0;
+}
+
 export class CreateProductReqDto {
   @ApiProperty({ example: 'DRESS-AURORA' })
   @IsString({ message: 'Mã phải là chuỗi ký tự.' })

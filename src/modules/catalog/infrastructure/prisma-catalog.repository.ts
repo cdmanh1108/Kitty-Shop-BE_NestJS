@@ -48,7 +48,13 @@ import {
   updateColorStatus,
 } from './color-commands';
 import { listColors } from './color-queries';
-import { listProducts, findProduct, lookupProducts } from './product-queries';
+import {
+  listProducts,
+  findProduct,
+  findProductMediaUploadTarget,
+  countProductMediaByStorageKey,
+  lookupProducts,
+} from './product-queries';
 import {
   createProduct,
   addVariant,
@@ -297,6 +303,18 @@ export class PrismaCatalogRepository
     ...args: Parameters<CatalogRepository['addProductMedia']>
   ): ReturnType<CatalogRepository['addProductMedia']> {
     return addProductMedia(this.prisma, this.mediaUrls, ...args);
+  }
+
+  findProductMediaUploadTarget(
+    ...args: Parameters<CatalogRepository['findProductMediaUploadTarget']>
+  ): ReturnType<CatalogRepository['findProductMediaUploadTarget']> {
+    return findProductMediaUploadTarget(this.prisma, ...args);
+  }
+
+  countProductMediaByStorageKey(
+    ...args: Parameters<CatalogRepository['countProductMediaByStorageKey']>
+  ): ReturnType<CatalogRepository['countProductMediaByStorageKey']> {
+    return countProductMediaByStorageKey(this.prisma, ...args);
   }
 
   removeProductMedia(

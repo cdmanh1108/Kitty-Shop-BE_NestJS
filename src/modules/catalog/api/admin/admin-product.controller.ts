@@ -4,12 +4,28 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import {
+  ApiBadRequestResponse,
+  ApiBody,
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiConsumes,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiPayloadTooLargeResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ProductService } from '../../application/product.service';
@@ -18,6 +34,7 @@ import {
   CreateProductReqDto,
   ProductMediaReqDto,
   ProductMediaResDto,
+  ProductMediaUploadReqDto,
   ProductPageResDto,
   ProductResDto,
   ProductVariantResDto,
@@ -31,9 +48,11 @@ import {
   toCreateProductInput,
   toProductListQuery,
   toProductMediaInput,
+  toProductMediaUploadInput,
   toUpdateProductInput,
   toUpsertRentalRateInput,
 } from '../catalog.mapper';
+import { ProductMediaUploadInterceptor } from './product-media-upload.interceptor';
 
 @ApiTags('Admin - Catalog')
 @ApiSurface('admin')
@@ -128,6 +147,46 @@ export class AdminProductController {
     @Body() body: ProductMediaReqDto,
   ) {
     return this.service.addProductMedia(user, id, toProductMediaInput(body));
+  }
+
+  @Post('products/:id/media/upload')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @UseInterceptors(ProductMediaUploadInterceptor)
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Upload one managed product image; setting primary clears the previous primary image',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'JPEG, PNG, GIF or WEBP; max 15 MiB.',
+        },
+        altText: { type: 'string' },
+        isPrimary: { type: 'boolean', default: false },
+        sortOrder: { type: 'integer', default: 0 },
+      },
+    },
+  })
+  @ApiCreatedResponse({ type: ProductMediaResDto })
+  @ApiBadRequestResponse({ description: 'Thiếu tệp hoặc dữ liệu ảnh/form không hợp lệ.' })
+  @ApiNotFoundResponse({ description: 'Không tìm thấy sản phẩm trong cửa hàng đã xác thực.' })
+  @ApiPayloadTooLargeResponse({ description: 'Ảnh sản phẩm vượt quá 15 MiB.' })
+  uploadProductMedia(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @UploadedFile() file: { buffer: Buffer; mimetype: string } | undefined,
+    @Body() body: ProductMediaUploadReqDto,
+  ) {
+    return this.service.uploadProductMedia(
+      user,
+      id,
+      toProductMediaUploadInput(body, file && { buffer: file.buffer, mimetype: file.mimetype }),
+    );
   }
 
   @Delete('products/:id/media/:mediaId')

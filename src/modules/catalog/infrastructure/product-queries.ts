@@ -3,6 +3,7 @@ import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { CatalogProductRepository } from '../domain/catalog-product.repository';
+import type { ProductMediaUploadTarget } from '../domain/catalog.models';
 
 export async function listProducts(
   prisma: PrismaService,
@@ -244,4 +245,24 @@ export async function findProduct(
       sortOrder: m.sortOrder,
     })),
   };
+}
+
+export async function findProductMediaUploadTarget(
+  prisma: PrismaService,
+  shopId: string,
+  productId: string,
+): Promise<ProductMediaUploadTarget | null> {
+  const product = await prisma.product.findFirst({
+    where: { id: productId, shopId, archivedAt: null },
+    select: { code: true, shop: { select: { code: true } } },
+  });
+  if (!product) return null;
+  return { productCode: product.code, shopCode: product.shop.code };
+}
+
+export function countProductMediaByStorageKey(
+  prisma: PrismaService,
+  storageKey: string,
+): ReturnType<CatalogProductRepository['countProductMediaByStorageKey']> {
+  return prisma.productMedia.count({ where: { storageKey } });
 }
