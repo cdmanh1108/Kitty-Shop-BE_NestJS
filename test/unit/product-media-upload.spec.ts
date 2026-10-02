@@ -62,6 +62,7 @@ describe('ProductService managed product media', () => {
       updateProduct: jest.fn(),
       archiveProduct: jest.fn(),
       addProductMedia: addMedia,
+      setPrimaryProductMedia: jest.fn(),
       findProductMediaUploadTarget: findTarget,
       countProductMediaByStorageKey: countByKey,
       removeProductMedia: removeMedia,

@@ -171,6 +171,21 @@ export class ProductService {
     return media;
   }
 
+  async setPrimaryProductMedia(user: CurrentUser, productId: string, mediaId: string) {
+    const media = await this.repository.setPrimaryProductMedia(user.shopId, productId, mediaId);
+    if (!media) throw new CatalogResourceNotFoundError('Không tìm thấy hình ảnh sản phẩm.');
+    await this.audit.log({
+      shopId: user.shopId,
+      actorUserId: user.userId,
+      actorMemberId: user.memberId,
+      action: 'UPDATE',
+      entityType: 'product_media',
+      entityId: media.id,
+      newValues: { productId, isPrimary: true },
+    });
+    return media;
+  }
+
   async uploadProductMedia(user: CurrentUser, productId: string, input: ProductMediaUploadInput) {
     const file = input.file;
     if (!file) throw new InvalidCatalogInputError('Cần tải lên tệp ảnh sản phẩm.');

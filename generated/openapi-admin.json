@@ -1646,6 +1646,54 @@
         "x-api-surface": "admin"
       }
     },
+    "/admin/products/{id}/media/{mediaId}/primary": {
+      "patch": {
+        "operationId": "CatalogController_setPrimaryProductMedia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductMediaResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy hình ảnh sản phẩm."
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Set an existing product image as the primary image",
+        "tags": [
+          "Admin - Catalog"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
     "/admin/inventory": {
       "get": {
         "operationId": "CatalogController_listInventory",

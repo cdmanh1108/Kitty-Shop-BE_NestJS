@@ -305,6 +305,43 @@ export async function addProductMedia(
     url: mediaUrls.resolve(created),
   };
 }
+
+export async function setPrimaryProductMedia(
+  prisma: PrismaService,
+  mediaUrls: PublicMediaUrlResolver,
+  shopId: string,
+  productId: string,
+  mediaId: string,
+): ReturnType<CatalogProductRepository['setPrimaryProductMedia']> {
+  const updated = await serializableTransaction(prisma, async (tx) => {
+    const product = await tx.product.findFirst({
+      where: { id: productId, shopId, archivedAt: null },
+      select: { id: true },
+    });
+    if (!product) return null;
+
+    const media = await tx.productMedia.findFirst({
+      where: { id: mediaId, shopId, productId },
+      select: { id: true },
+    });
+    if (!media) return null;
+
+    await tx.productMedia.updateMany({
+      where: { shopId, productId, isPrimary: true },
+      data: { isPrimary: false },
+    });
+    await tx.productMedia.updateMany({
+      where: { id: mediaId, shopId, productId },
+      data: { isPrimary: true },
+    });
+
+    return tx.productMedia.findFirst({ where: { id: mediaId, shopId, productId } });
+  });
+  if (!updated) return null;
+
+  return { ...updated, url: mediaUrls.resolve(updated) };
+}
+
 export async function removeProductMedia(
   prisma: PrismaService,
   shopId: string,

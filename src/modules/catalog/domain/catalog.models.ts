@@ -13,10 +13,7 @@ import type {
   SizeRecord,
 } from '@modules/catalog/domain/catalog.records';
 
-export type CatalogLocationOption = Pick<
-  ShopLocationDetails,
-  'id' | 'code' | 'name' | 'isPrimary'
->;
+export type CatalogLocationOption = Pick<ShopLocationDetails, 'id' | 'code' | 'name' | 'isPrimary'>;
 
 /** Snapshot shape returned with Catalog inventory; it is intentionally read-only. */
 export interface ShopLocationDetails {
@@ -156,6 +153,8 @@ export type UpsertRentalRateResult = null | RentalRateRecord;
 export type UpdateProductResult = null | ProductRecord;
 
 export type AddProductMediaResult = null | ProductMediaRecord;
+
+export type SetPrimaryProductMediaResult = null | ProductMediaRecord;
 
 export interface ProductMediaUploadTarget {
   shopCode: string;

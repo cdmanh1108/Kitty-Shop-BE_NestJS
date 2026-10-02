@@ -199,4 +199,17 @@ export class AdminProductController {
   ) {
     return this.service.removeProductMedia(user, id, mediaId);
   }
+
+  @Patch('products/:id/media/:mediaId/primary')
+  @Permissions(PERMISSIONS.CATALOG_MANAGE)
+  @ApiOperation({ summary: 'Set an existing product image as the primary image' })
+  @ApiOkResponse({ type: ProductMediaResDto })
+  @ApiNotFoundResponse({ description: 'Không tìm thấy hình ảnh sản phẩm.' })
+  setPrimaryProductMedia(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Param('mediaId') mediaId: string,
+  ) {
+    return this.service.setPrimaryProductMedia(user, id, mediaId);
+  }
 }

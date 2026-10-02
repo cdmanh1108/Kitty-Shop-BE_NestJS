@@ -7,6 +7,7 @@ import type {
   ProductPage,
   ProductMediaUploadTarget,
   RemovedProductMedia,
+  SetPrimaryProductMediaResult,
   UpdateProductResult,
   UpsertRentalRateResult,
 } from './catalog.models';
@@ -44,6 +45,11 @@ export interface CatalogProductRepository {
     productId: string,
     input: ProductMediaData,
   ): Promise<AddProductMediaResult>;
+  setPrimaryProductMedia(
+    shopId: string,
+    productId: string,
+    mediaId: string,
+  ): Promise<SetPrimaryProductMediaResult>;
   findProductMediaUploadTarget(
     shopId: string,
     productId: string,

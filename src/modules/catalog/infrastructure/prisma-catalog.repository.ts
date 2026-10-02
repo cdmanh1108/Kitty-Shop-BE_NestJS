@@ -62,6 +62,7 @@ import {
   updateProduct,
   archiveProduct,
   addProductMedia,
+  setPrimaryProductMedia,
   removeProductMedia,
 } from './product-commands';
 import { listStorefrontCategories } from './storefront-category.queries';
@@ -303,6 +304,12 @@ export class PrismaCatalogRepository
     ...args: Parameters<CatalogRepository['addProductMedia']>
   ): ReturnType<CatalogRepository['addProductMedia']> {
     return addProductMedia(this.prisma, this.mediaUrls, ...args);
+  }
+
+  setPrimaryProductMedia(
+    ...args: Parameters<CatalogRepository['setPrimaryProductMedia']>
+  ): ReturnType<CatalogRepository['setPrimaryProductMedia']> {
+    return setPrimaryProductMedia(this.prisma, this.mediaUrls, ...args);
   }
 
   findProductMediaUploadTarget(
