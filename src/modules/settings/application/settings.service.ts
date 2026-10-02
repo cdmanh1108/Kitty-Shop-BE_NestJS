@@ -1,243 +1,23 @@
 import type { CurrentUser } from '@common/types/current-user';
-import type { AuditSnapshot } from '@modules/audit/public/audit-contracts';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import {
-  DEFAULT_RENTAL_POLICY,
+  buildEffectiveRentalPolicy,
+  mergeRentalPolicy,
   RENTAL_POLICY_SETTING_KEY,
   type RentalPolicy,
   type RentalPolicyProvider,
+  validateRentalPolicy,
 } from '../domain/rental-policy';
+import { InvalidShopSettingsError } from '../domain/rental-policy.errors';
 import { SETTINGS_REPOSITORY, type SettingsRepository } from '../domain/settings.repository';
 import type {
   UpdateRentalPolicyInput,
   UpdateShopInput,
   UpsertSettingInput,
 } from './settings.contracts';
-import { InvalidShopSettingsError, ShopNotFoundError } from './settings.errors';
-
-function buildEffectivePolicy(saved?: RentalPolicy | null): RentalPolicy {
-  return {
-    rentalPricing: {
-      defaultRentalPrice:
-        saved?.rentalPricing?.defaultRentalPrice ??
-        DEFAULT_RENTAL_POLICY.rentalPricing.defaultRentalPrice,
-    },
-    deposit: {
-      allowedMethods: saved?.deposit?.allowedMethods
-        ? [...saved.deposit.allowedMethods]
-        : [...DEFAULT_RENTAL_POLICY.deposit.allowedMethods],
-      allowedDocumentTypes: saved?.deposit?.allowedDocumentTypes
-        ? [...saved.deposit.allowedDocumentTypes]
-        : [...DEFAULT_RENTAL_POLICY.deposit.allowedDocumentTypes],
-      defaultCashDeposit:
-        saved?.deposit?.defaultCashDeposit ?? DEFAULT_RENTAL_POLICY.deposit.defaultCashDeposit,
-      categoryOverrides: saved?.deposit?.categoryOverrides
-        ? saved.deposit.categoryOverrides.map((item) => ({ ...item }))
-        : [...DEFAULT_RENTAL_POLICY.deposit.categoryOverrides],
-    },
-    reschedule: {
-      maxDaysFromBooking:
-        saved?.reschedule?.maxDaysFromBooking ??
-        DEFAULT_RENTAL_POLICY.reschedule.maxDaysFromBooking,
-    },
-    lateReturn: {
-      feePerItemPerDay:
-        saved?.lateReturn?.feePerItemPerDay ?? DEFAULT_RENTAL_POLICY.lateReturn.feePerItemPerDay,
-      newRentalChargeFromLateDay:
-        saved?.lateReturn?.newRentalChargeFromLateDay ??
-        DEFAULT_RENTAL_POLICY.lateReturn.newRentalChargeFromLateDay,
-    },
-    specialCleaning: {
-      feeMin: saved?.specialCleaning?.feeMin ?? DEFAULT_RENTAL_POLICY.specialCleaning.feeMin,
-      feeMax: saved?.specialCleaning?.feeMax ?? DEFAULT_RENTAL_POLICY.specialCleaning.feeMax,
-    },
-    loyalty: {
-      enabled: saved?.loyalty?.enabled ?? DEFAULT_RENTAL_POLICY.loyalty.enabled,
-      rentalsRequired:
-        saved?.loyalty?.rentalsRequired ?? DEFAULT_RENTAL_POLICY.loyalty.rentalsRequired,
-      rewardRentalValue:
-        saved?.loyalty?.rewardRentalValue ?? DEFAULT_RENTAL_POLICY.loyalty.rewardRentalValue,
-      stackableWithPromotions:
-        saved?.loyalty?.stackableWithPromotions ??
-        DEFAULT_RENTAL_POLICY.loyalty.stackableWithPromotions,
-    },
-    delivery: {
-      standardShippingFee:
-        saved?.delivery?.standardShippingFee ?? DEFAULT_RENTAL_POLICY.delivery.standardShippingFee,
-    },
-  };
-}
-
-function mergePolicyInput(base: RentalPolicy, input: UpdateRentalPolicyInput): RentalPolicy {
-  return {
-    rentalPricing: {
-      defaultRentalPrice:
-        input.rentalPricing?.defaultRentalPrice ?? base.rentalPricing.defaultRentalPrice,
-    },
-    deposit: {
-      allowedMethods: input.deposit?.allowedMethods
-        ? [...input.deposit.allowedMethods]
-        : [...base.deposit.allowedMethods],
-      allowedDocumentTypes: input.deposit?.allowedDocumentTypes
-        ? [...input.deposit.allowedDocumentTypes]
-        : [...base.deposit.allowedDocumentTypes],
-      defaultCashDeposit: input.deposit?.defaultCashDeposit ?? base.deposit.defaultCashDeposit,
-      categoryOverrides: input.deposit?.categoryOverrides
-        ? input.deposit.categoryOverrides.map((item) => ({ ...item }))
-        : [...base.deposit.categoryOverrides],
-    },
-    delivery: {
-      standardShippingFee: input.delivery?.standardShippingFee ?? base.delivery.standardShippingFee,
-    },
-    reschedule: {
-      maxDaysFromBooking:
-        input.reschedule?.maxDaysFromBooking ?? base.reschedule.maxDaysFromBooking,
-    },
-    lateReturn: {
-      feePerItemPerDay: input.lateReturn?.feePerItemPerDay ?? base.lateReturn.feePerItemPerDay,
-      newRentalChargeFromLateDay:
-        input.lateReturn?.newRentalChargeFromLateDay ?? base.lateReturn.newRentalChargeFromLateDay,
-    },
-    specialCleaning: {
-      feeMin: input.specialCleaning?.feeMin ?? base.specialCleaning.feeMin,
-      feeMax: input.specialCleaning?.feeMax ?? base.specialCleaning.feeMax,
-    },
-    loyalty: {
-      enabled: input.loyalty?.enabled ?? base.loyalty.enabled,
-      rentalsRequired: input.loyalty?.rentalsRequired ?? base.loyalty.rentalsRequired,
-      rewardRentalValue: input.loyalty?.rewardRentalValue ?? base.loyalty.rewardRentalValue,
-      stackableWithPromotions:
-        input.loyalty?.stackableWithPromotions ?? base.loyalty.stackableWithPromotions,
-    },
-  };
-}
-
-function validateResultingPolicy(policy: RentalPolicy): void {
-  if (
-    !Number.isInteger(policy.rentalPricing.defaultRentalPrice) ||
-    policy.rentalPricing.defaultRentalPrice < 0
-  ) {
-    throw new InvalidShopSettingsError('Giá thuê mặc định phải là số nguyên không âm.');
-  }
-
-  if (
-    !Number.isInteger(policy.deposit.defaultCashDeposit) ||
-    policy.deposit.defaultCashDeposit < 0
-  ) {
-    throw new InvalidShopSettingsError('Tiền cọc mặc định phải là số nguyên không âm.');
-  }
-
-  if (
-    !Array.isArray(policy.deposit.allowedMethods) ||
-    policy.deposit.allowedMethods.length === 0 ||
-    policy.deposit.allowedMethods.some((m) => !['CASH', 'DOCUMENT'].includes(m))
-  ) {
-    throw new InvalidShopSettingsError('Phương thức đặt cọc phải gồm tiền mặt hoặc giấy tờ.');
-  }
-
-  if (
-    !Array.isArray(policy.deposit.allowedDocumentTypes) ||
-    policy.deposit.allowedDocumentTypes.some((d) => !['CCCD', 'GPLX'].includes(d))
-  ) {
-    throw new InvalidShopSettingsError(
-      'Loại giấy tờ đặt cọc phải là căn cước công dân hoặc giấy phép lái xe.',
-    );
-  }
-
-  if (policy.deposit.categoryOverrides) {
-    const seen = new Set<string>();
-    for (const override of policy.deposit.categoryOverrides) {
-      if (seen.has(override.categoryId)) {
-        throw new InvalidShopSettingsError(
-          `Cấu hình tiền cọc bị trùng cho danh mục: ${override.categoryId}.`,
-        );
-      }
-      seen.add(override.categoryId);
-      if (!Number.isInteger(override.cashAmount) || override.cashAmount < 0) {
-        throw new InvalidShopSettingsError(
-          'Tiền cọc riêng của danh mục phải là số nguyên không âm.',
-        );
-      }
-    }
-  }
-
-  if (
-    !Number.isInteger(policy.reschedule.maxDaysFromBooking) ||
-    policy.reschedule.maxDaysFromBooking < 1
-  ) {
-    throw new InvalidShopSettingsError(
-      'Số ngày tối đa được đổi lịch kể từ khi đặt thuê phải ít nhất là 1.',
-    );
-  }
-
-  if (
-    !Number.isInteger(policy.lateReturn.feePerItemPerDay) ||
-    policy.lateReturn.feePerItemPerDay < 0
-  ) {
-    throw new InvalidShopSettingsError('Phí trả trễ mỗi món mỗi ngày phải là số nguyên không âm.');
-  }
-
-  if (
-    !Number.isInteger(policy.lateReturn.newRentalChargeFromLateDay) ||
-    policy.lateReturn.newRentalChargeFromLateDay < 1
-  ) {
-    throw new InvalidShopSettingsError(
-      'Ngày trả trễ bắt đầu tính lượt thuê mới phải ít nhất là 1.',
-    );
-  }
-
-  if (!Number.isInteger(policy.specialCleaning.feeMin) || policy.specialCleaning.feeMin < 0) {
-    throw new InvalidShopSettingsError(
-      'Phí vệ sinh đặc biệt tối thiểu phải là số nguyên không âm.',
-    );
-  }
-
-  if (!Number.isInteger(policy.specialCleaning.feeMax) || policy.specialCleaning.feeMax < 0) {
-    throw new InvalidShopSettingsError('Phí vệ sinh đặc biệt tối đa phải là số nguyên không âm.');
-  }
-
-  if (policy.specialCleaning.feeMax < policy.specialCleaning.feeMin) {
-    throw new InvalidShopSettingsError(
-      'Phí vệ sinh đặc biệt tối đa không được nhỏ hơn phí tối thiểu.',
-    );
-  }
-
-  if (typeof policy.loyalty.enabled !== 'boolean') {
-    throw new InvalidShopSettingsError('Trạng thái bật tích điểm phải là giá trị đúng hoặc sai.');
-  }
-
-  if (!Number.isInteger(policy.loyalty.rentalsRequired) || policy.loyalty.rentalsRequired < 1) {
-    throw new InvalidShopSettingsError('Số lượt thuê cần để nhận thưởng phải ít nhất là 1.');
-  }
-
-  if (!Number.isInteger(policy.loyalty.rewardRentalValue) || policy.loyalty.rewardRentalValue < 0) {
-    throw new InvalidShopSettingsError('Giá trị thưởng thuê phải là số nguyên không âm.');
-  }
-
-  if (typeof policy.loyalty.stackableWithPromotions !== 'boolean') {
-    throw new InvalidShopSettingsError(
-      'Tùy chọn kết hợp tích điểm với khuyến mãi phải là giá trị đúng hoặc sai.',
-    );
-  }
-}
-
-function policyToAuditSnapshot(policy: RentalPolicy): AuditSnapshot {
-  return {
-    defaultRentalPrice: policy.rentalPricing.defaultRentalPrice,
-    defaultCashDeposit: policy.deposit.defaultCashDeposit,
-    allowedDepositMethods: [...policy.deposit.allowedMethods],
-    allowedDocumentTypes: [...policy.deposit.allowedDocumentTypes],
-    maxRescheduleDaysFromBooking: policy.reschedule.maxDaysFromBooking,
-    lateFeePerItemPerDay: policy.lateReturn.feePerItemPerDay,
-    newRentalChargeFromLateDay: policy.lateReturn.newRentalChargeFromLateDay,
-    cleaningFeeMin: policy.specialCleaning.feeMin,
-    cleaningFeeMax: policy.specialCleaning.feeMax,
-    loyaltyEnabled: policy.loyalty.enabled,
-    loyaltyRentalsRequired: policy.loyalty.rentalsRequired,
-    loyaltyRewardRentalValue: policy.loyalty.rewardRentalValue,
-  };
-}
+import { toRentalPolicyAuditSnapshot } from './settings-audit.mapper';
+import { ShopNotFoundError } from './settings.errors';
 
 @Injectable()
 export class SettingsService implements RentalPolicyProvider {
@@ -301,14 +81,14 @@ export class SettingsService implements RentalPolicyProvider {
 
   async getPolicy(shopId: string): Promise<RentalPolicy> {
     const saved = await this.repository.getRentalPolicy(shopId);
-    const policy = buildEffectivePolicy(saved?.policy);
-    validateResultingPolicy(policy);
+    const policy = buildEffectiveRentalPolicy(saved?.policy);
+    validateRentalPolicy(policy);
     return policy;
   }
 
   async getRentalPolicy(user: CurrentUser): Promise<RentalPolicy> {
     const saved = await this.repository.getRentalPolicy(user.shopId);
-    const effective = buildEffectivePolicy(saved?.policy);
+    const effective = buildEffectiveRentalPolicy(saved?.policy);
     return {
       ...effective,
       updatedAt: saved?.updatedAt?.toISOString(),
@@ -320,10 +100,10 @@ export class SettingsService implements RentalPolicyProvider {
     input: UpdateRentalPolicyInput,
   ): Promise<RentalPolicy> {
     const current = await this.getPolicy(user.shopId);
-    const merged = mergePolicyInput(current, input);
-    validateResultingPolicy(merged);
+    const next = mergeRentalPolicy(current, input);
+    validateRentalPolicy(next);
 
-    const saved = await this.repository.saveRentalPolicy(user.shopId, merged, user.memberId);
+    const saved = await this.repository.saveRentalPolicy(user.shopId, next, user.memberId);
 
     await this.audit.log({
       shopId: user.shopId,
@@ -332,8 +112,8 @@ export class SettingsService implements RentalPolicyProvider {
       action: 'UPDATE',
       entityType: 'rental_policy',
       entityId: user.shopId,
-      oldValues: policyToAuditSnapshot(current),
-      newValues: policyToAuditSnapshot(saved.policy),
+      oldValues: toRentalPolicyAuditSnapshot(current),
+      newValues: toRentalPolicyAuditSnapshot(saved.policy),
     });
 
     return {

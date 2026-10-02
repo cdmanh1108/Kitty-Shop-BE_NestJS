@@ -2,7 +2,7 @@ import type { ShopRecord } from '@modules/settings/domain/settings.records';
 import type { AppSettingRecord } from '@modules/settings/domain/settings.records';
 import type { JsonValue } from '@common/types/json';
 import type { SettingList, ShopDetails } from './settings.models';
-import type { RentalPolicy } from './rental-policy';
+import type { PersistedRentalPolicy, RentalPolicy } from './rental-policy';
 
 export const SETTINGS_REPOSITORY = Symbol('SETTINGS_REPOSITORY');
 
@@ -11,7 +11,9 @@ export interface SettingsRepository {
   upsert(input: SettingsUpsertData): Promise<AppSettingRecord>;
   getShop(shopId: string): Promise<ShopDetails>;
   updateShop(input: SettingsUpdateShopData): Promise<ShopRecord>;
-  getRentalPolicy(shopId: string): Promise<{ policy: RentalPolicy; updatedAt: Date } | null>;
+  getRentalPolicy(
+    shopId: string,
+  ): Promise<{ policy: PersistedRentalPolicy; updatedAt: Date } | null>;
   saveRentalPolicy(
     shopId: string,
     policy: RentalPolicy,

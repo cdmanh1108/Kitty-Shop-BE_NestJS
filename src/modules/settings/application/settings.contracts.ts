@@ -1,13 +1,5 @@
 import type { JsonValue } from '@common/types/json';
-import type {
-  DeliveryPolicy,
-  DepositPolicy,
-  LateReturnPolicy,
-  LoyaltyPolicy,
-  RentalPricingPolicy,
-  ReschedulePolicy,
-  SpecialCleaningPolicy,
-} from '../domain/rental-policy';
+import type { RentalPolicyPatch } from '../domain/rental-policy';
 
 export interface UpdateShopInput {
   name?: string;
@@ -24,12 +16,4 @@ export interface UpsertSettingInput {
   description?: string;
 }
 
-export interface UpdateRentalPolicyInput {
-  rentalPricing?: Partial<RentalPricingPolicy>;
-  deposit?: Partial<DepositPolicy>;
-  delivery?: Partial<DeliveryPolicy>;
-  reschedule?: Partial<ReschedulePolicy>;
-  lateReturn?: Partial<LateReturnPolicy>;
-  specialCleaning?: Partial<SpecialCleaningPolicy>;
-  loyalty?: Partial<LoyaltyPolicy>;
-}
+export type UpdateRentalPolicyInput = RentalPolicyPatch;
