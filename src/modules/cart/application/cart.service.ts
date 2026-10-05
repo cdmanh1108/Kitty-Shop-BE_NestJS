@@ -67,20 +67,6 @@ export class CartService {
     return result.cart;
   }
 
-  /** Reconciles a guest draft after authentication without trusting cart prices or availability. */
-  async mergeGuest(accountId: string, guest: CartDraft): Promise<CartSnapshot> {
-    this.assertDraft(guest);
-    const shopId = await this.shopResolver.resolveShopId();
-    let remote = await this.repository.find(accountId, shopId);
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const merged = merge(remote, guest);
-      const result = await this.repository.replace(accountId, shopId, remote?.version ?? 0, merged);
-      if (result.kind === 'updated') return result.cart;
-      remote = result.cart;
-    }
-    throw new CartVersionConflictError();
-  }
-
   private assertDraft(draft: CartDraft): void {
     if (
       !isDate(draft.pickupDate) ||
@@ -110,35 +96,6 @@ export class CartService {
       if (total > CART_MAX_TOTAL_QUANTITY) throw new CartInputError('INVALID_CART_SELECTION');
     }
   }
-}
-
-function merge(remote: CartSnapshot | null, guest: CartDraft): CartDraft {
-  if (!remote || remote.items.length === 0) return guest;
-  const items = remote.items.map((item) => ({ ...item }));
-  const positions = new Map(
-    items.map((item, index) => [`${item.productId}:${item.variantId}`, index]),
-  );
-  let total = items.reduce((sum, item) => sum + item.quantity, 0);
-  for (const guestItem of guest.items) {
-    const key = `${guestItem.productId}:${guestItem.variantId}`;
-    const existingIndex = positions.get(key);
-    if (existingIndex !== undefined) {
-      const existing = items[existingIndex]!;
-      const room = Math.min(
-        CART_MAX_QUANTITY_PER_ITEM - existing.quantity,
-        CART_MAX_TOTAL_QUANTITY - total,
-      );
-      const added = Math.min(room, guestItem.quantity);
-      existing.quantity += added;
-      total += added;
-    } else if (items.length < CART_MAX_ITEM_COUNT && total < CART_MAX_TOTAL_QUANTITY) {
-      const quantity = Math.min(guestItem.quantity, CART_MAX_TOTAL_QUANTITY - total);
-      items.push({ ...guestItem, quantity });
-      positions.set(key, items.length - 1);
-      total += quantity;
-    }
-  }
-  return { pickupDate: remote.pickupDate, returnDate: remote.returnDate, items };
 }
 
 function isDate(value: string): boolean {

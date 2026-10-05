@@ -18,7 +18,7 @@ import {
   type WebAuthPrincipal,
 } from '@modules/web-auth/public';
 import { CartService } from '../application/cart.service';
-import { CartDraftDto, CartDto, CartGetResDto, CartReplaceReqDto } from './dto/cart.dto';
+import { CartDto, CartGetResDto, CartReplaceReqDto } from './dto/cart.dto';
 
 @Public()
 @ApiTags('Web - Cart')
@@ -56,23 +56,5 @@ export class CartController {
     @Body() body: CartReplaceReqDto,
   ): Promise<CartDto> {
     return this.carts.replace(user.id, body.version, body);
-  }
-
-  @Put('merge-guest')
-  @HttpCode(HttpStatus.OK)
-  @ApiCookieAuth('web-access')
-  @ApiOperation({
-    operationId: 'mergeGuestCart',
-    summary: 'Nhập giỏ khách vào giỏ của tài khoản đang đăng nhập',
-  })
-  @ApiOkResponse({ type: CartDto })
-  @ApiBadRequestResponse({ type: ErrorResDto })
-  @ApiConflictResponse({ type: ErrorResDto })
-  @ApiUnauthorizedResponse({ type: ErrorResDto })
-  mergeGuest(
-    @CurrentWebUser() user: WebAuthPrincipal,
-    @Body() body: CartDraftDto,
-  ): Promise<CartDto> {
-    return this.carts.mergeGuest(user.id, body);
   }
 }

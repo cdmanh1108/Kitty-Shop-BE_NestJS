@@ -604,74 +604,6 @@
         "x-api-surface": "web"
       }
     },
-    "/web/cart/merge-guest": {
-      "put": {
-        "operationId": "mergeGuestCart",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CartDraftDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CartDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResDto"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "web-access": []
-          }
-        ],
-        "summary": "Nhập giỏ khách vào giỏ của tài khoản đang đăng nhập",
-        "tags": [
-          "Web - Cart"
-        ],
-        "x-api-surface": "web"
-      }
-    },
     "/web/favorites/summary": {
       "get": {
         "operationId": "getFavoriteSummary",
@@ -2015,33 +1947,6 @@
           "returnDate",
           "items",
           "version"
-        ]
-      },
-      "CartDraftDto": {
-        "type": "object",
-        "properties": {
-          "pickupDate": {
-            "type": "string",
-            "example": "2026-10-01",
-            "format": "date"
-          },
-          "returnDate": {
-            "type": "string",
-            "example": "2026-10-03",
-            "format": "date"
-          },
-          "items": {
-            "maxItems": 20,
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CartItemDto"
-            }
-          }
-        },
-        "required": [
-          "pickupDate",
-          "returnDate",
-          "items"
         ]
       },
       "FavoriteSummaryResDto": {

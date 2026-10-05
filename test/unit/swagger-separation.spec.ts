@@ -212,7 +212,6 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
 
       expect(webDoc.paths['/web/cart']?.get?.operationId).toBe('getCart');
       expect(webDoc.paths['/web/cart']?.put?.operationId).toBe('replaceCart');
-      expect(webDoc.paths['/web/cart/merge-guest']?.put?.operationId).toBe('mergeGuestCart');
       expect(webDoc.paths['/web/favorites']?.get?.operationId).toBe('listFavorites');
       expect(webDoc.paths['/web/favorites/summary']?.get?.operationId).toBe('getFavoriteSummary');
       expect(webDoc.paths['/web/favorites/status']?.get?.operationId).toBe('getFavoriteStatus');

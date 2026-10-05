@@ -70,13 +70,5 @@ describe('Account cart end-to-end', () => {
       .send({ ...draft, version: 0 })
       .expect(200)
       .expect({ ...draft, version: 1 });
-
-    await request(server)
-      .put('/api/v1/web/cart/merge-guest')
-      .set('Cookie', cookie)
-      .set('Content-Type', 'application/json')
-      .send({ ...draft, items: [{ ...draft.items[0], quantity: 2 }] })
-      .expect(200)
-      .expect({ ...draft, items: [{ ...draft.items[0], quantity: 3 }], version: 2 });
   });
 });

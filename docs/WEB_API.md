@@ -8,7 +8,7 @@ The **Web Sale API** serves the public customer storefront (`kitty-web-nextjs`).
 
 ## 2. Security & Public Boundary
 
-- **Public Access**: Endpoints are decorated with `@Public()` and do not require Bearer JWT authentication.
+- **Public Access**: Catalog, availability, quote and guest booking/lookup do not require a storefront session. Account endpoints use the web JWT cookie and dedicated guards; `@Public()` bypasses only the staff authentication layer.
 - **Shop Scope**: `ShopResolver` resolves the deployment's one persisted active shop. Browser-controlled headers and shop-code configuration cannot select a shop; downstream services continue to use the resolved internal `shopId`.
 - **Isolated Read Models**: DTOs expose only customer-safe data. Internal cost prices, physical inventory item IDs, warehouse bin locations, staff audit trails, and internal operator notes are strictly excluded.
 - **Authoritative Server Calculations**:
@@ -45,6 +45,15 @@ Rental selection is variant-first: `variantId` is the canonical storefront selec
 ### 3.4 Policies
 
 - **`GET /api/v1/web/policies`**: Returns public store terms, accepted deposit collateral types (e.g. cash, citizen ID), daily late fees, and standard delivery fees.
+
+### 3.5 Account Cart and Favorites
+
+- **`GET /api/v1/web/cart`**: Reads the signed-in account's separate saved cart; `{ cart: null }` means an empty account cart.
+- **`PUT /api/v1/web/cart`**: Replaces that account's snapshot with optimistic version validation. Guest selections are not imported at login. Guest cart use stays local to the browser; no guest-import endpoint is exposed.
+- **`GET /api/v1/web/favorites`**, **`GET /api/v1/web/favorites/summary`** and **`GET /api/v1/web/favorites/status`**: Read only the authenticated account's favorites.
+- **`PUT` / `DELETE /api/v1/web/favorites/:productId`**: Change account favorites idempotently. No guest favorites or login import are supported; see [Favorites](FAVORITES.md).
+
+Cart and Favorites derive account identity from the authenticated web principal. Cart snapshot writes and Favorite mutations also require the origin guard. Existing account data is retained.
 
 ---
 
