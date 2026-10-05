@@ -7,10 +7,24 @@ import {
   storefrontVariantEligibility,
 } from '../domain/storefront-eligibility';
 
-export function storefrontProductBaseWhere(shopId: string): Prisma.ProductWhereInput {
+export function storefrontProductBaseWhere(
+  shopId: string,
+  category?: string,
+): Prisma.ProductWhereInput {
+  const value = category?.trim();
+  const categoryFilters: Prisma.CategoryWhereInput[] = value
+    ? [
+        { code: { equals: value, mode: 'insensitive' } },
+        { slug: { equals: value, mode: 'insensitive' } },
+      ]
+    : [];
+  if (value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    categoryFilters.push({ id: value });
+  }
   return {
     shopId,
     ...storefrontProductEligibility,
+    ...(categoryFilters.length ? { category: { OR: categoryFilters } } : {}),
   };
 }
 

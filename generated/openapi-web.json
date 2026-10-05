@@ -978,8 +978,9 @@
             "name": "size",
             "required": false,
             "in": "query",
-            "description": "Lọc theo kích cỡ",
+            "description": "Lọc theo tên kích cỡ",
             "schema": {
+              "maxLength": 100,
               "example": "S",
               "type": "string"
             }
@@ -988,8 +989,9 @@
             "name": "color",
             "required": false,
             "in": "query",
-            "description": "Lọc theo màu sắc",
+            "description": "Lọc theo tên màu sắc",
             "schema": {
+              "maxLength": 100,
               "example": "Trắng",
               "type": "string"
             }
@@ -1055,6 +1057,50 @@
           }
         },
         "summary": "Danh sách sản phẩm công khai cho storefront có phân trang",
+        "tags": [
+          "Web - Catalog"
+        ],
+        "x-api-surface": "web"
+      }
+    },
+    "/web/catalog/filters": {
+      "get": {
+        "operationId": "getWebCatalogFilters",
+        "parameters": [
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Giới hạn lựa chọn theo slug, mã hoặc id danh mục",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lựa chọn đầy đủ theo danh mục, độc lập với trang sản phẩm",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebCatalogFiltersResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Danh mục lọc không hợp lệ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lựa chọn kích thước và màu cho bộ lọc storefront",
         "tags": [
           "Web - Catalog"
         ],
@@ -2113,6 +2159,29 @@
           "sortOrder"
         ]
       },
+      "WebCatalogFiltersResDto": {
+        "type": "object",
+        "properties": {
+          "sizes": {
+            "description": "Kích thước hoạt động có dùng trên phân loại công khai đang cho thuê",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebSizeFilterOptionDto"
+            }
+          },
+          "colors": {
+            "description": "Màu hoạt động có dùng trên phân loại công khai đang cho thuê",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebColorFilterOptionDto"
+            }
+          }
+        },
+        "required": [
+          "sizes",
+          "colors"
+        ]
+      },
       "WebStorefrontSelectionResolveReqDto": {
         "type": "object",
         "properties": {
@@ -2861,6 +2930,61 @@
           "limit",
           "total",
           "totalPages"
+        ]
+      },
+      "WebSizeFilterOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "M"
+          },
+          "name": {
+            "type": "string",
+            "example": "M"
+          },
+          "sortOrder": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "sortOrder"
+        ]
+      },
+      "WebColorFilterOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "example": "TRANG"
+          },
+          "name": {
+            "type": "string",
+            "example": "Trắng"
+          },
+          "hexColor": {
+            "type": "string",
+            "nullable": true,
+            "example": "#FFFFFF"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "hexColor"
         ]
       },
       "WebStorefrontSelectionInputDto": {

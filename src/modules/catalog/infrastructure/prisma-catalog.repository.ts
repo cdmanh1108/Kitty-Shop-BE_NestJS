@@ -71,6 +71,7 @@ import {
   deleteProductVariant,
 } from './product-variant-commands';
 import { listStorefrontCategories } from './storefront-category.queries';
+import { listStorefrontFilters } from './storefront-filter.queries';
 import { listStorefrontProducts } from './storefront-product-list.queries';
 import {
   listStorefrontProductsByIds,
@@ -109,6 +110,12 @@ export class PrismaCatalogRepository
     input: Parameters<CatalogPersistenceAdapter['listStorefrontProducts']>[0],
   ): ReturnType<CatalogPersistenceAdapter['listStorefrontProducts']> {
     return listStorefrontProducts(this.prisma, this.mediaUrls, input);
+  }
+
+  listStorefrontFilters(
+    input: Parameters<CatalogPersistenceAdapter['listStorefrontFilters']>[0],
+  ): ReturnType<CatalogPersistenceAdapter['listStorefrontFilters']> {
+    return listStorefrontFilters(this.prisma, input);
   }
 
   listStorefrontProductsByIds(

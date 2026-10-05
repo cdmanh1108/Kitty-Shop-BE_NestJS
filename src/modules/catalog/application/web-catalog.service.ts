@@ -5,11 +5,13 @@ import {
 } from '../domain/storefront-catalog.repository';
 import type {
   StorefrontCategory,
+  StorefrontCatalogFilters,
   StorefrontProductDetails,
   StorefrontProductPage,
   StorefrontSelectionInput,
   StorefrontSelectionResolution,
   WebProductListFilterInput,
+  WebCatalogFiltersInput,
 } from './web-catalog.contracts';
 import { CatalogResourceNotFoundError } from './catalog-application.errors';
 
@@ -22,6 +24,13 @@ export class WebCatalogService {
 
   async listCategories(shopId: string): Promise<StorefrontCategory[]> {
     return this.repository.listStorefrontCategories(shopId);
+  }
+
+  async listFilters(
+    shopId: string,
+    query: WebCatalogFiltersInput,
+  ): Promise<StorefrontCatalogFilters> {
+    return this.repository.listStorefrontFilters({ shopId, category: query.category });
   }
 
   async listProducts(

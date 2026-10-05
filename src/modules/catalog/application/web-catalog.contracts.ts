@@ -1,5 +1,6 @@
 import type {
   StorefrontCategory,
+  StorefrontCatalogFilters,
   StorefrontProductDetails,
   StorefrontProductItem,
   StorefrontProductPage,
@@ -17,8 +18,13 @@ export interface WebProductListFilterInput {
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
 }
 
+export interface WebCatalogFiltersInput {
+  category?: string;
+}
+
 export type {
   StorefrontCategory,
+  StorefrontCatalogFilters,
   StorefrontProductDetails,
   StorefrontProductItem,
   StorefrontProductPage,

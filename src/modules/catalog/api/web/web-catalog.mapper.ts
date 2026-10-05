@@ -1,5 +1,6 @@
 import type {
   StorefrontCategory,
+  StorefrontCatalogFilters,
   StorefrontProductDetails,
   StorefrontProductItem,
   StorefrontProductPage,
@@ -12,12 +13,19 @@ import type {
   WebProductListResDto,
 } from './dto/web-product.dto';
 import type { WebStorefrontSelectionResolveResDto } from './dto/web-storefront-selection.dto';
+import type { WebCatalogFiltersResDto } from './dto/web-catalog-filters.dto';
 
 /**
  * Authoritative Web DTO mapper for the public storefront catalog API surface.
  * Converts internal storefront projections into explicitly whitelisted response DTOs.
  */
 export const WebCatalogMapper = {
+  toFilters(filters: StorefrontCatalogFilters): WebCatalogFiltersResDto {
+    return {
+      sizes: filters.sizes.map(({ id, code, name, sortOrder }) => ({ id, code, name, sortOrder })),
+      colors: filters.colors.map(({ id, code, name, hexColor }) => ({ id, code, name, hexColor })),
+    };
+  },
   /**
    * Maps a single StorefrontCategory into WebCategoryDto.
    * Strips all internal shop and audit metadata.

@@ -244,6 +244,30 @@ export interface StorefrontCategory {
   description?: string | null;
 }
 
+export interface StorefrontSizeOption {
+  id: string;
+  code: string;
+  name: string;
+  sortOrder: number;
+}
+
+export interface StorefrontColorOption {
+  id: string;
+  code: string;
+  name: string;
+  hexColor: string | null;
+}
+
+export interface StorefrontCatalogFilters {
+  sizes: StorefrontSizeOption[];
+  colors: StorefrontColorOption[];
+}
+
+export interface StorefrontCatalogFiltersCriteria {
+  shopId: string;
+  category?: string;
+}
+
 export interface StorefrontRentalPrice {
   days: number;
   amount: number;

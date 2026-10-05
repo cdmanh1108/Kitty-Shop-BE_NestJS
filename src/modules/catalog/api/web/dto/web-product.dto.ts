@@ -179,18 +179,18 @@ export class WebProductListQueryDto {
   @MaxLength(100)
   category?: string;
 
-  @ApiPropertyOptional({ example: 'S', description: 'Lọc theo kích cỡ' })
+  @ApiPropertyOptional({ example: 'S', description: 'Lọc theo tên kích cỡ', maxLength: 100 })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString()
-  @MaxLength(50)
+  @IsString({ message: 'Kích thước phải là chuỗi ký tự.' })
+  @MaxLength(100, { message: 'Tên kích thước không được dài quá 100 ký tự.' })
   size?: string;
 
-  @ApiPropertyOptional({ example: 'Trắng', description: 'Lọc theo màu sắc' })
+  @ApiPropertyOptional({ example: 'Trắng', description: 'Lọc theo tên màu sắc', maxLength: 100 })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString()
-  @MaxLength(50)
+  @IsString({ message: 'Màu sắc phải là chuỗi ký tự.' })
+  @MaxLength(100, { message: 'Tên màu sắc không được dài quá 100 ký tự.' })
   color?: string;
 
   @ApiPropertyOptional({

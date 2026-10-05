@@ -1,5 +1,7 @@
 import type {
   StorefrontCategory,
+  StorefrontCatalogFilters,
+  StorefrontCatalogFiltersCriteria,
   StorefrontProductDetails,
   StorefrontProductItem,
   StorefrontProductListCriteria,
@@ -13,6 +15,7 @@ export const STOREFRONT_CATALOG_REPOSITORY = Symbol('STOREFRONT_CATALOG_REPOSITO
 /** Public read model; it deliberately exposes no admin or inventory operations. */
 export interface StorefrontCatalogRepository {
   listStorefrontCategories(shopId: string): Promise<StorefrontCategory[]>;
+  listStorefrontFilters(input: StorefrontCatalogFiltersCriteria): Promise<StorefrontCatalogFilters>;
   listStorefrontProducts(input: StorefrontProductListCriteria): Promise<StorefrontProductPage>;
   listStorefrontProductsByIds(
     shopId: string,

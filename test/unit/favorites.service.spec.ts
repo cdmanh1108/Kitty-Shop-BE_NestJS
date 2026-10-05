@@ -35,6 +35,7 @@ function catalog(
 ): StorefrontCatalogRepository {
   return {
     listStorefrontCategories: jest.fn(),
+    listStorefrontFilters: jest.fn(),
     listStorefrontProducts: jest.fn(),
     listStorefrontProductsByIds: jest.fn(),
     findStorefrontProductBySlug: jest.fn(),

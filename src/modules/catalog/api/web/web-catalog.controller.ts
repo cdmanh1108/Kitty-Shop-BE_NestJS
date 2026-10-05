@@ -23,6 +23,7 @@ import { ErrorResDto } from '@common/dto/response.dto';
 import { ShopResolver } from '@common/shop-context/shop-resolver';
 import { WebCatalogService } from '../../application/web-catalog.service';
 import { WebCatalogMapper } from './web-catalog.mapper';
+import { WebCatalogFiltersQueryDto, WebCatalogFiltersResDto } from './dto/web-catalog-filters.dto';
 import {
   WebCategoryDto,
   WebProductDetailDto,
@@ -81,6 +82,22 @@ export class WebCatalogController {
     const shopId = await this.shopResolver.resolveShopId();
     const result = await this.catalogService.listProducts(shopId, query);
     return WebCatalogMapper.toProductListResponse(result);
+  }
+
+  @Get('catalog/filters')
+  @ApiOperation({
+    operationId: 'getWebCatalogFilters',
+    summary: 'Lựa chọn kích thước và màu cho bộ lọc storefront',
+  })
+  @ApiOkResponse({
+    type: WebCatalogFiltersResDto,
+    description: 'Lựa chọn đầy đủ theo danh mục, độc lập với trang sản phẩm',
+  })
+  @ApiBadRequestResponse({ type: ErrorResDto, description: 'Danh mục lọc không hợp lệ' })
+  async listFilters(@Query() query: WebCatalogFiltersQueryDto): Promise<WebCatalogFiltersResDto> {
+    const shopId = await this.shopResolver.resolveShopId();
+    const filters = await this.catalogService.listFilters(shopId, { category: query.category });
+    return WebCatalogMapper.toFilters(filters);
   }
 
   @Post('products/resolve')

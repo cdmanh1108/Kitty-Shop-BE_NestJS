@@ -28,21 +28,8 @@ export async function listStorefrontProducts(
 
   // Build Prisma where clause enforcing shop tenancy and public visibility
   const where: Prisma.ProductWhereInput = {
-    ...storefrontProductBaseWhere(input.shopId),
+    ...storefrontProductBaseWhere(input.shopId, input.category),
   };
-
-  if (input.category) {
-    const cat = input.category.trim();
-    const isCatUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cat);
-    const catOr: Prisma.CategoryWhereInput[] = [
-      { code: { equals: cat, mode: 'insensitive' } },
-      { slug: { equals: cat, mode: 'insensitive' } },
-    ];
-    if (isCatUuid) {
-      catOr.push({ id: cat });
-    }
-    where.category = { OR: catOr };
-  }
 
   if (input.q?.trim()) {
     const search = input.q.trim();

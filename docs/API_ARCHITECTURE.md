@@ -9,6 +9,8 @@
 
 ### Fundamental Rule: Shared Business Logic, Separate API Surfaces
 
+`GET /web/catalog/filters?category=...` returns active size/color choices used by eligible public product variants in the resolved shop. It is independent of product pagination and accepts the same category code/slug/id as the product list. Sizes retain their configured ordering; colors include nullable `hexColor` for swatches. Selection names are submitted through the existing `size` and `color` product filters (up to 100 characters). An unknown category returns empty choices. This is a public read model; it does not expose staff lookup data, storage locations, inventory occupancy or quantities.
+
 > **Admin API and Web Sale API share Domain/Application business logic but have separate API contracts, DTOs and OpenAPI documents.**
 
 We **NEVER** duplicate domain or application business logic (no duplicate availability algorithms, pricing engines, deposit calculation, or inventory allocation).
