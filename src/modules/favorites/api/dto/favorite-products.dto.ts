@@ -1,4 +1,5 @@
-import { ApiProperty, ApiSchema } from '@nestjs/swagger';
+import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/public/product-kind';
+import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 
 // Keep the existing OpenAPI component names while Favorites owns these DTOs.
 @ApiSchema({ name: 'WebRentalPriceDto' })
@@ -12,6 +13,9 @@ export class FavoriteRentalPriceDto {
 
 @ApiSchema({ name: 'WebProductListItemDto' })
 export class FavoriteProductListItemDto {
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_KIND) })
+  kind?: ProductKind;
+
   @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   id!: string;
 

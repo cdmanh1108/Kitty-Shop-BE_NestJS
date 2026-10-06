@@ -1,9 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
   IsInt,
+  IsIn,
+  IsOptional,
   IsUUID,
   Matches,
   Max,
@@ -11,13 +13,22 @@ import {
   ValidateNested,
 } from 'class-validator';
 import {
-  CART_MAX_ITEM_COUNT,
-  CART_MAX_QUANTITY_PER_ITEM,
-} from '../../application/cart.service';
+  RENTAL_BILLING_ROLE,
+  type RentalBillingRole,
+} from '@modules/rentals/public/rental-billing-role';
+import { CART_MAX_ITEM_COUNT, CART_MAX_QUANTITY_PER_ITEM } from '../../application/cart.service';
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 export class CartItemDto {
+  @ApiPropertyOptional({
+    enum: Object.values(RENTAL_BILLING_ROLE),
+    description: 'Bỏ qua để thuê có phí; FREE_ACCESSORY là phụ kiện thuê kèm miễn phí.',
+  })
+  @IsOptional()
+  @IsIn(Object.values(RENTAL_BILLING_ROLE))
+  billingRole?: RentalBillingRole;
+
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   productId!: string;

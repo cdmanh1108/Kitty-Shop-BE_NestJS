@@ -65,7 +65,8 @@ export class WebProductVariantSummaryDto {
 }
 
 export class WebProductListItemDto {
-  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_KIND) })
+  kind?: ProductKind;
   @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   id!: string;
 

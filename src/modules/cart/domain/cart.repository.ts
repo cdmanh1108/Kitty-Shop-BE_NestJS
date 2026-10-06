@@ -1,9 +1,12 @@
+import type { RentalBillingRole } from '@modules/rentals/public/rental-billing-role';
+
 export const CART_REPOSITORY = Symbol('CART_REPOSITORY');
 
 export interface CartSelection {
   productId: string;
   variantId: string;
   quantity: number;
+  billingRole?: RentalBillingRole;
 }
 
 export interface CartSnapshot {

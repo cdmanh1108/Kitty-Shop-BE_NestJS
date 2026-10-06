@@ -2774,6 +2774,14 @@
       "CartItemDto": {
         "type": "object",
         "properties": {
+          "billingRole": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "FREE_ACCESSORY"
+            ],
+            "description": "Bỏ qua để thuê có phí; FREE_ACCESSORY là phụ kiện thuê kèm miễn phí."
+          },
           "productId": {
             "type": "string",
             "format": "uuid"
@@ -2797,6 +2805,13 @@
       "WebProductListItemDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "id": {
             "type": "string",
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"

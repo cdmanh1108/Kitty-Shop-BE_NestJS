@@ -59,3 +59,11 @@ Apply `202610060002_rental_accessory_billing` after RP06 and regenerate Prisma
 Client before running the updated backend. No live database migration is performed
 by this task. OpenAPI is exported and both frontend schemas are regenerated.
 Admin and Web accessory-selection interfaces are implemented in RP09/RP10.
+
+## Storefront cart integration (RP10)
+
+Account cart items now accept optional `billingRole`, defaulting to paid when absent. The existing JSON cart storage preserves the role and permits the same variant in separate paid/free rows. Version conflict handling and shop/account ownership remain unchanged. No new migration or guest-to-account merge is introduced.
+
+The cart is editable intent, so reducing paid quantity may temporarily exceed the free allowance. Cart persistence keeps that explicit choice; quote and booking continue to enforce canonical accessory kind, entitlement, combined physical demand and booking safety. Web checkout blocks until the customer removes excess accessories or explicitly chooses paid rental.
+
+The Catalog and Favorites DTOs sharing the public product-list schema now both publish `kind`; Favorites also maps the canonical value. The field is optional in the list contract for compatibility, while detail and selection resolution provide canonical kind for accessory eligibility. Regenerate the Web OpenAPI/schema after deployment of this contract change.

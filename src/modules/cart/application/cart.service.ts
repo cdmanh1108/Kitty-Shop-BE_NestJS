@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ApplicationError } from '@common/errors/application-error';
 import { ShopResolver } from '@common/shop-context/shop-resolver';
+import { RENTAL_BILLING_ROLE } from '@modules/rentals/public/rental-billing-role';
 import {
   CART_REPOSITORY,
   type CartDraft,
@@ -84,12 +85,14 @@ export class CartService {
         !item ||
         !isUuid(item.productId) ||
         !isUuid(item.variantId) ||
+        (item.billingRole !== undefined &&
+          !Object.values(RENTAL_BILLING_ROLE).includes(item.billingRole)) ||
         !Number.isSafeInteger(item.quantity) ||
         item.quantity < 1 ||
         item.quantity > CART_MAX_QUANTITY_PER_ITEM
       )
         throw new CartInputError('INVALID_CART_SELECTION');
-      const identity = `${item.productId}:${item.variantId}`;
+      const identity = `${item.productId}:${item.variantId}:${item.billingRole ?? RENTAL_BILLING_ROLE.PAID}`;
       if (identities.has(identity)) throw new CartInputError('INVALID_CART_SELECTION');
       identities.add(identity);
       total += item.quantity;

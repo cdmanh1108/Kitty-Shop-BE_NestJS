@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { RENTAL_BILLING_ROLE } from '@modules/rentals/public/rental-billing-role';
 import type {
   CartDraft,
   CartReplaceResult,
@@ -78,13 +79,17 @@ function parseItems(value: Prisma.JsonValue): CartSelection[] {
       typeof candidate.productId !== 'string' ||
       typeof candidate.variantId !== 'string' ||
       typeof candidate.quantity !== 'number' ||
-      !Number.isSafeInteger(candidate.quantity)
+      !Number.isSafeInteger(candidate.quantity) ||
+      (candidate.billingRole !== undefined &&
+        candidate.billingRole !== RENTAL_BILLING_ROLE.PAID &&
+        candidate.billingRole !== RENTAL_BILLING_ROLE.FREE_ACCESSORY)
     )
       throw new Error('Mục giỏ hàng đã lưu không hợp lệ.');
     items.push({
       productId: candidate.productId,
       variantId: candidate.variantId,
       quantity: candidate.quantity,
+      ...(candidate.billingRole === undefined ? {} : { billingRole: candidate.billingRole }),
     });
   }
   return items;
@@ -103,5 +108,6 @@ function toJsonItems(items: readonly CartSelection[]): Prisma.InputJsonArray {
     productId: item.productId,
     variantId: item.variantId,
     quantity: item.quantity,
+    ...(item.billingRole === undefined ? {} : { billingRole: item.billingRole }),
   }));
 }

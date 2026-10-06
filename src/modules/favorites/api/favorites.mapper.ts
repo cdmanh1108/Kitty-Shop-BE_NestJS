@@ -9,6 +9,7 @@ export const FavoritesMapper = {
     return {
       items: page.items.map(
         (product): FavoriteProductListItemDto => ({
+          kind: product.kind,
           id: product.id,
           code: product.code,
           slug: product.slug,
