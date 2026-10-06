@@ -6,6 +6,7 @@ import {
 } from '@modules/rentals/domain/rental-status';
 import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { calculateLateCharges } from '../domain/rental-settlement';
+import { rentalPaidQuantity } from '../domain/rental-accessories';
 import { RentalInvariantError } from '../domain/rental-errors';
 import type { Clock } from '@common/clock/clock';
 import { recomputeOrderPaymentState } from '@modules/finance/public/order-payment-state-transaction';
@@ -66,7 +67,7 @@ export async function receiveReturn(
       })),
     });
 
-    const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+    const itemCount = rentalPaidQuantity(order.items);
     const late = calculateLateCharges({
       dueAt: order.rentalEndAt,
       returnedAt,

@@ -4,6 +4,7 @@ import { RentalInvariantError } from './rental-errors';
 export const RENTAL_PRICING_VERSION = {
   LEGACY: 'LEGACY_RATE_V1',
   CYCLE: 'CYCLE_V1',
+  FREE_ACCESSORY: 'FREE_ACCESSORY_V1',
 } as const;
 
 export type RentalPricingVersion =
@@ -16,7 +17,11 @@ export function getRentalPricingVersion(snapshot: JsonValue | null): RentalPrici
   }
   const version = snapshot.version;
   if (version === undefined) return RENTAL_PRICING_VERSION.LEGACY;
-  if (version === RENTAL_PRICING_VERSION.LEGACY || version === RENTAL_PRICING_VERSION.CYCLE) {
+  if (
+    version === RENTAL_PRICING_VERSION.LEGACY ||
+    version === RENTAL_PRICING_VERSION.CYCLE ||
+    version === RENTAL_PRICING_VERSION.FREE_ACCESSORY
+  ) {
     return version;
   }
   throw new RentalInvariantError(

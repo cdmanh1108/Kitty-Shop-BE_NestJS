@@ -873,6 +873,8 @@ model RentalOrderItem {
   productId           String   @map("product_id") @db.Uuid
   variantId           String   @map("variant_id") @db.Uuid
   quantity            Int      @default(1)
+  billingRole         String   @default("PAID") @map("billing_role") @db.VarChar(30)
+  productKindSnapshot String   @default("PRODUCT") @map("product_kind_snapshot") @db.VarChar(20)
   rentalStartAt       DateTime @map("rental_start_at") @db.Timestamptz(6)
   rentalEndAt         DateTime @map("rental_end_at") @db.Timestamptz(6)
   productNameSnapshot String   @map("product_name_snapshot") @db.VarChar(255)

@@ -1,4 +1,5 @@
 import type { PaginationParams } from '@common/types/pagination';
+import type { RentalBillingRole } from '../domain/rental-accessories';
 export interface AddRentalChargeInput {
   chargeType: string;
   description?: string;
@@ -25,6 +26,7 @@ export interface CreateRentalOrderInput {
 export interface CreateRentalItemInput {
   variantId: string;
   quantity: number;
+  billingRole?: RentalBillingRole;
   cyclePriceOverride?: number;
   /** Deprecated full-period override, retained for existing Admin clients. */
   unitRentalPrice?: number;

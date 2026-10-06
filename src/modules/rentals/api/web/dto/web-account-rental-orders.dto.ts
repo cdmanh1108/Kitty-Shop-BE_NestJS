@@ -1,6 +1,8 @@
 import { PaginationMetaResDto } from '@common/dto/response.dto';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { RENTAL_BILLING_ROLE } from '../../../domain/rental-accessories';
+import { PRODUCT_KIND } from '@modules/catalog/public/product-kind';
 import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { RENTAL_STATUS, type RentalStatus } from '../../../domain/rental-status';
 
@@ -79,6 +81,8 @@ export class WebAccountRentalOrdersListResDto {
 }
 
 export class WebAccountRentalOrderLineResDto {
+  @ApiPropertyOptional({ enum: Object.values(RENTAL_BILLING_ROLE) }) billingRole?: string;
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_KIND) }) productKindSnapshot?: string;
   @ApiProperty({ format: 'uuid' })
   productId!: string;
 

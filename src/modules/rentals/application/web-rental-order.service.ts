@@ -33,6 +33,7 @@ import type {
   WebCheckoutOwnerContext,
 } from './web-rental.contracts';
 import { resolveWebRentalSelection } from './web-rental-selection';
+import { RENTAL_BILLING_ROLE } from '../domain/rental-accessories';
 import {
   parseWebRentalDateRangeInput,
   assertWebRentalItemsInput,
@@ -168,14 +169,19 @@ export class WebRentalOrderService {
       }
 
       const lines: CreateRentalOrderData['lines'] = [];
-      for (const { variant, quantity } of selection.demands) {
-        if (variant.availableInventory.length < quantity) {
+      const allocatedInventoryIds = new Set<string>();
+      for (const { variant, quantity, billingRole } of selection.demands) {
+        const availableInventory = variant.availableInventory.filter(
+          (inventory) => !allocatedInventoryIds.has(inventory.id),
+        );
+        if (availableInventory.length < quantity) {
           throw new RentalInventoryConflictError(
             `Sản phẩm ${variant.productName} không đủ số lượng có sẵn trong khoảng ngày đã chọn.`,
           );
         }
 
-        const selectedInventory = variant.availableInventory.slice(0, quantity);
+        const selectedInventory = availableInventory.slice(0, quantity);
+        selectedInventory.forEach((inventory) => allocatedInventoryIds.add(inventory.id));
         const variantName = [variant.variantCode, variant.sizeName, variant.colorName]
           .filter(Boolean)
           .join(' / ');
@@ -186,12 +192,14 @@ export class WebRentalOrderService {
           productName: variant.productName,
           variantName,
           quantity,
+          billingRole,
           ...resolveRentalLinePricing({
             durationDays,
             billableQuantity,
             policy: policy.rentalPricing,
             quantity,
             depositPerItem: variant.depositPerItem,
+            billingRole,
           }),
           inventory: selectedInventory,
         });
@@ -317,6 +325,10 @@ export class WebRentalOrderService {
           productId: item.productId ?? null,
           variantId: item.variantId ?? null,
           quantity: item.quantity,
+          // Preserve hashes for old paid-only requests; free/paid intent is never interchangeable.
+          ...(item.billingRole === RENTAL_BILLING_ROLE.FREE_ACCESSORY
+            ? { billingRole: item.billingRole }
+            : {}),
         })),
         delivery: {
           method: req.delivery.method,

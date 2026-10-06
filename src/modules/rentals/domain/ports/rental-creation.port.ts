@@ -3,6 +3,7 @@ import type { RentalOrderDetails } from '../rental.models';
 import type { RentalOrderSource } from '../rental-order-source';
 import type { WebPaymentPreference } from '../web-payment-preference';
 import type { RentalPricingSnapshot } from '../rental-pricing-snapshot';
+import type { RentalBillingRole } from '../rental-accessories';
 
 export type IdempotencyClaim =
   | { state: 'CLAIMED'; claimId: string }
@@ -41,6 +42,7 @@ export interface CreateRentalOrderData {
     productName: string;
     variantName: string;
     quantity: number;
+    billingRole?: RentalBillingRole;
     unitRentalPrice: number;
     depositAmount: number;
     lineTotal: number;

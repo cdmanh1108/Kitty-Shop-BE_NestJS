@@ -51,6 +51,8 @@ function rental(): RentalDetailsResult {
         variantId: 'variant-1',
         productNameSnapshot: 'Dress',
         variantNameSnapshot: 'M / Red',
+        billingRole: 'PAID',
+        productKindSnapshot: 'PRODUCT',
         quantity: 1,
         status: 'RETURNED',
         imageUrl: 'https://assets.example.com/dress.jpg',

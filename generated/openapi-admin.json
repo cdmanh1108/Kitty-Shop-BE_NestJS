@@ -8664,6 +8664,14 @@
             "minimum": 1,
             "maximum": 20
           },
+          "billingRole": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "FREE_ACCESSORY"
+            ],
+            "description": "Bỏ trống là thuê có tính phí (PAID). FREE_ACCESSORY chỉ dành cho phụ kiện đi kèm trong mức một phụ kiện cho mỗi món tính phí."
+          },
           "cyclePriceOverride": {
             "type": "number",
             "minimum": 0,
@@ -8886,6 +8894,20 @@
           "quantity": {
             "type": "number"
           },
+          "billingRole": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "FREE_ACCESSORY"
+            ]
+          },
+          "productKindSnapshot": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "pricing": {
             "description": "Biểu giá được chốt khi tạo đơn. Đơn cũ hoặc giá toàn kỳ tương thích không có trường này.",
             "allOf": [
@@ -8928,6 +8950,8 @@
           "productNameSnapshot",
           "variantNameSnapshot",
           "quantity",
+          "billingRole",
+          "productKindSnapshot",
           "productId",
           "variantId",
           "status",

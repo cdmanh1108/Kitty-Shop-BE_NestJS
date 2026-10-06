@@ -37,6 +37,8 @@ import {
 } from '../domain/rental-pricing-snapshot';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { RENTAL_PRICING_VERSION } from '../domain/rental-pricing-version';
+import { assertFreeAccessoryKind, rentalBillingRole } from '../domain/rental-accessories';
+import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/public/product-kind';
 
 export async function createOrder(
   prisma: PrismaService,
@@ -76,7 +78,7 @@ export async function createOrder(
       const billableQuantity = rentalBillableQuantity(data.lines);
       for (const line of data.lines)
         assertRentalPricingLineSnapshot(line, durationDays, billableQuantity);
-      if (data.storefrontEligibility) await assertStorefrontEligibleLines(tx, data);
+      const productKinds = await assertRentalCatalogLines(tx, data);
 
       for (const line of data.lines) {
         await assertInventoryRentable(tx, {
@@ -127,6 +129,8 @@ export async function createOrder(
 
       for (const line of data.lines) {
         const snapshot = line.pricingSnapshot;
+        const productKindSnapshot = productKinds.get(line.variantId);
+        if (!productKindSnapshot) throw new RentalInventoryUnavailableError();
         const pricingSnapshot =
           snapshot.version === RENTAL_PRICING_VERSION.CYCLE
             ? { ...snapshot, policy: { ...snapshot.policy } }
@@ -138,6 +142,8 @@ export async function createOrder(
             productId: line.productId,
             variantId: line.variantId,
             quantity: line.quantity,
+            billingRole: rentalBillingRole(line.billingRole),
+            productKindSnapshot,
             rentalStartAt: data.rentalStartAt,
             rentalEndAt: data.rentalEndAt,
             productNameSnapshot: line.productName,
@@ -232,10 +238,10 @@ export async function createOrder(
   }
 }
 
-async function assertStorefrontEligibleLines(
+async function assertRentalCatalogLines(
   tx: Prisma.TransactionClient,
   data: CreateRentalOrderData,
-): Promise<void> {
+): Promise<Map<string, ProductKind>> {
   // Revalidate Catalog-owned eligibility in the serializable booking transaction
   // so stale storefront selections cannot create a Rental allocation.
   const expectedProductByVariant = new Map<string, string>();
@@ -253,9 +259,12 @@ async function assertStorefrontEligibleLines(
       shopId: data.shopId,
       status: 'ACTIVE',
       archivedAt: null,
-      product: { shopId: data.shopId, ...storefrontProductEligibility },
+      product: {
+        shopId: data.shopId,
+        ...(data.storefrontEligibility ? storefrontProductEligibility : {}),
+      },
     },
-    select: { id: true, productId: true },
+    select: { id: true, productId: true, product: { select: { kind: true } } },
   });
   if (
     eligibleVariants.length !== expectedProductByVariant.size ||
@@ -265,6 +274,22 @@ async function assertStorefrontEligibleLines(
   ) {
     throw new RentalInventoryUnavailableError();
   }
+  const productKinds = new Map<string, ProductKind>();
+  for (const variant of eligibleVariants) {
+    const kind = variant.product.kind;
+    if (kind !== PRODUCT_KIND.PRODUCT && kind !== PRODUCT_KIND.ACCESSORY)
+      throw new RentalInvariantError(
+        'INVALID_RENTAL_PRODUCT_KIND',
+        'Loại sản phẩm cho thuê không hợp lệ.',
+      );
+    productKinds.set(variant.id, kind);
+  }
+  for (const line of data.lines) {
+    const kind = productKinds.get(line.variantId);
+    if (!kind) throw new RentalInventoryUnavailableError();
+    assertFreeAccessoryKind(rentalBillingRole(line.billingRole), kind);
+  }
+  return productKinds;
 }
 
 /**

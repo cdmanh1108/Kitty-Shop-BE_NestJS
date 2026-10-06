@@ -1,4 +1,5 @@
 import { CHARGE_TYPE } from '@modules/rentals/domain/charge-type';
+import { RENTAL_BILLING_ROLE, type RentalBillingRole } from '../../../domain/rental-accessories';
 import { DELIVERY_DIRECTION, DELIVERY_METHOD } from '@modules/deliveries/public/delivery-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -28,6 +29,16 @@ export class CreateRentalItemReqDto {
   @Min(1, { message: 'Số lượng phải lớn hơn hoặc bằng $constraint1.' })
   @Max(20, { message: 'Số lượng phải nhỏ hơn hoặc bằng $constraint1.' })
   quantity = 1;
+  @ApiPropertyOptional({
+    enum: Object.values(RENTAL_BILLING_ROLE),
+    description:
+      'Bỏ trống là thuê có tính phí (PAID). FREE_ACCESSORY chỉ dành cho phụ kiện đi kèm trong mức một phụ kiện cho mỗi món tính phí.',
+  })
+  @ValidateIf((_: CreateRentalItemReqDto, value: unknown) => value !== undefined)
+  @IsIn(Object.values(RENTAL_BILLING_ROLE), {
+    message: 'Vai trò tính tiền phải là thuê có tính phí hoặc phụ kiện miễn phí.',
+  })
+  billingRole?: RentalBillingRole;
   @ApiPropertyOptional({
     type: Number,
     minimum: 0,

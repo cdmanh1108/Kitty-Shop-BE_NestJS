@@ -54,5 +54,11 @@ export interface StorefrontOrderLookupRecord {
   grandTotal: number;
   depositRequired: number;
   paidAmount: number;
-  items: Array<{ name: string; imageUrl: string; quantity: number }>;
+  items: Array<{
+    name: string;
+    imageUrl: string;
+    quantity: number;
+    billingRole?: string;
+    productKindSnapshot?: string;
+  }>;
 }

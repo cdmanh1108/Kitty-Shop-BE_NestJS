@@ -38,6 +38,11 @@ import { RentalOverlapError } from '../domain/rental-errors';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type { CreateRentalOrderInput } from './rental.contracts';
 import {
+  assertFreeAccessoryKind,
+  rentalBillingRole,
+  rentalSelectionKey,
+} from '../domain/rental-accessories';
+import {
   InvalidRentalIdempotencyKeyError,
   InvalidRentalItemSelectionError,
   InvalidRentalPeriodError,
@@ -82,10 +87,12 @@ export class RentalCreationService {
       throw new RentalNotFoundError('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.');
     }
 
-    const variantIds = input.items.map((item) => item.variantId);
-    if (new Set(variantIds).size !== variantIds.length) {
+    const selections = input.items.map((item) =>
+      rentalSelectionKey(item.variantId, item.billingRole),
+    );
+    if (new Set(selections).size !== selections.length) {
       throw new InvalidRentalItemSelectionError(
-        'Mỗi biến thể sản phẩm chỉ được xuất hiện một lần trong đơn thuê.',
+        'Mỗi phân loại chỉ được xuất hiện một lần cho cùng vai trò tính tiền trong đơn thuê.',
       );
     }
 
@@ -131,6 +138,7 @@ export class RentalCreationService {
     try {
       const policy = await this.policies.getPolicy(user.shopId);
       const lines: CreateRentalOrderData['lines'] = [];
+      const allocatedInventoryIds = new Set<string>();
       for (const item of input.items) {
         const variant = await this.availability.getBookableVariant({
           shopId: user.shopId,
@@ -141,6 +149,8 @@ export class RentalCreationService {
         });
         if (!variant)
           throw new RentalNotFoundError(`Biến thể ${item.variantId} không được phép cho thuê.`);
+        const billingRole = rentalBillingRole(item.billingRole);
+        assertFreeAccessoryKind(billingRole, variant.productKind);
         const pricing = resolveRentalLinePricing({
           durationDays,
           billableQuantity,
@@ -150,11 +160,13 @@ export class RentalCreationService {
           legacyUnitRentalPrice: item.unitRentalPrice,
           quantity: item.quantity,
           depositPerItem: variant.depositPerItem,
+          billingRole,
         });
 
-        const byId = new Map(
-          variant.availableInventory.map((inventory) => [inventory.id, inventory]),
+        const availableInventory = variant.availableInventory.filter(
+          (inventory) => !allocatedInventoryIds.has(inventory.id),
         );
+        const byId = new Map(availableInventory.map((inventory) => [inventory.id, inventory]));
         let selected: Array<{ id: string; sku: string }>;
         if (item.inventoryItemIds?.length) {
           if (item.inventoryItemIds.length !== item.quantity) {
@@ -172,13 +184,18 @@ export class RentalCreationService {
             return inventory;
           });
         } else {
-          selected = variant.availableInventory.slice(0, item.quantity);
+          selected = availableInventory.slice(0, item.quantity);
         }
         if (selected.length < item.quantity) {
           throw new RentalInventoryConflictError(
-            `Biến thể ${variant.variantCode} chỉ còn ${variant.availableInventory.length} món đồ có thể cho thuê.`,
+            `Phân loại ${variant.variantCode} chỉ còn ${availableInventory.length} món đồ chưa được chọn trong khoảng thuê này.`,
           );
         }
+        if (new Set(selected.map((inventory) => inventory.id)).size !== selected.length)
+          throw new InvalidRentalItemSelectionError(
+            'Không được chọn cùng một món đồ nhiều lần trong đơn.',
+          );
+        selected.forEach((inventory) => allocatedInventoryIds.add(inventory.id));
 
         const variantName = [variant.variantCode, variant.sizeName, variant.colorName]
           .filter(Boolean)
@@ -189,6 +206,7 @@ export class RentalCreationService {
           productName: variant.productName,
           variantName,
           quantity: item.quantity,
+          billingRole,
           ...pricing,
           inventory: selected,
         });

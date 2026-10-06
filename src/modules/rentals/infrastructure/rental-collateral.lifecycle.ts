@@ -4,6 +4,7 @@ import { serializableTransaction } from '@database/prisma/transaction';
 import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { RENTAL_STATUS } from '../domain/rental-status';
 import { calculateLateCharges } from '../domain/rental-settlement';
+import { rentalPaidQuantity } from '../domain/rental-accessories';
 import { RentalInvariantError } from '../domain/rental-errors';
 import type { RentalOrderDetails } from '../domain/rental.models';
 import type { ReturnPreviewData } from '../domain/ports/rental-order-reader.port';
@@ -29,7 +30,7 @@ export async function getReturnPreview(
   if (!order) throw new RentalInvariantError('RENTAL_NOT_FOUND', 'Không tìm thấy đơn thuê.');
 
   const effectiveReturnedAt = returnedAt ?? clock.now();
-  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = rentalPaidQuantity(order.items);
   const late = calculateLateCharges({
     dueAt: order.rentalEndAt,
     returnedAt: effectiveReturnedAt,

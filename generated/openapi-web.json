@@ -2309,6 +2309,9 @@
       "WebRentalQuoteResDto": {
         "type": "object",
         "properties": {
+          "accessoryAllowance": {
+            "$ref": "#/components/schemas/RentalAccessoryAllowanceResDto"
+          },
           "durationDays": {
             "type": "number",
             "example": 3,
@@ -2357,7 +2360,7 @@
             "description": "Có thể tiếp tục checkout khi khoảng thuê hợp lệ và mọi dòng đã có tồn kho, giá thuê"
           },
           "items": {
-            "description": "Kết quả theo biến thể, giữ thứ tự yêu cầu; số lượng trùng biến thể được gộp",
+            "description": "Kết quả theo phân loại và vai trò tính tiền, giữ thứ tự yêu cầu. Tồn kho được kiểm tra theo tổng số món của cả hai vai trò.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/WebRentalQuoteItemResDto"
@@ -3123,6 +3126,14 @@
       "WebRentalItemInputDto": {
         "type": "object",
         "properties": {
+          "billingRole": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "FREE_ACCESSORY"
+            ],
+            "description": "Bỏ trống là PAID. FREE_ACCESSORY: phụ kiện khách chọn đi kèm, không có tiền thuê/cọc; mỗi món PAID được kèm một phụ kiện."
+          },
           "variantId": {
             "type": "string",
             "format": "uuid",
@@ -3142,6 +3153,26 @@
         },
         "required": [
           "quantity"
+        ]
+      },
+      "RentalAccessoryAllowanceResDto": {
+        "type": "object",
+        "properties": {
+          "billableQuantity": {
+            "type": "number",
+            "description": "Số món PAID; mỗi món tạo một quyền chọn phụ kiện miễn phí."
+          },
+          "freeAccessoryQuantity": {
+            "type": "number"
+          },
+          "remainingFreeAccessoryQuantity": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "billableQuantity",
+          "freeAccessoryQuantity",
+          "remainingFreeAccessoryQuantity"
         ]
       },
       "RentalCyclePricingResDto": {
@@ -3220,6 +3251,13 @@
       "WebRentalQuoteItemResDto": {
         "type": "object",
         "properties": {
+          "billingRole": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "FREE_ACCESSORY"
+            ]
+          },
           "productId": {
             "type": "string",
             "format": "uuid",
@@ -3233,7 +3271,7 @@
           "requestedQuantity": {
             "type": "number",
             "example": 2,
-            "description": "Số lượng yêu cầu sau khi gộp các dòng cùng biến thể"
+            "description": "Số lượng sau khi gộp các dòng cùng phân loại và vai trò tính tiền"
           },
           "availableQuantity": {
             "type": "number",
@@ -3353,6 +3391,20 @@
       "WebOrderLookupItemDto": {
         "type": "object",
         "properties": {
+          "billingRole": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "FREE_ACCESSORY"
+            ]
+          },
+          "productKindSnapshot": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "name": {
             "type": "string",
             "example": "Đầm dạ hội trắng lụa cao cấp"
@@ -3499,6 +3551,20 @@
       "WebAccountRentalOrderLineResDto": {
         "type": "object",
         "properties": {
+          "billingRole": {
+            "type": "string",
+            "enum": [
+              "PAID",
+              "FREE_ACCESSORY"
+            ]
+          },
+          "productKindSnapshot": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "productId": {
             "type": "string",
             "format": "uuid"

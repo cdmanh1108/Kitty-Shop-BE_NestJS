@@ -8,6 +8,13 @@ import type {
   WebRentalLineIssue,
 } from './web-rental.contracts';
 import { WEB_RENTAL_MAX_TOTAL_QUANTITY } from './web-rental-input-validation';
+import {
+  assertFreeAccessoryKind,
+  rentalAccessoryAllowance,
+  rentalBillingRole,
+  rentalSelectionKey,
+  type RentalBillingRole,
+} from '../domain/rental-accessories';
 
 export type WebRentalSelectionFailure =
   | 'AMBIGUOUS_PRODUCT'
@@ -19,11 +26,12 @@ export type WebRentalSelectionFailure =
 export interface WebRentalDemand {
   variant: BookableVariant;
   quantity: number;
+  billingRole: RentalBillingRole;
 }
 
 export interface WebRentalSelectionEvaluation {
   demands: WebRentalDemand[];
-  /** Items are returned in first-request order; duplicate variants are quantity-merged. */
+  /** First-request order; duplicate variant/role combinations are quantity-merged. */
   items: WebRentalLineAvailability[];
   failure?: WebRentalSelectionFailure;
 }
@@ -37,6 +45,7 @@ interface CandidateLine {
   productId?: string;
   variantId?: string;
   quantity: number;
+  billingRole: RentalBillingRole;
   unresolvedIssue?: 'AMBIGUOUS_PRODUCT' | 'UNAVAILABLE';
 }
 
@@ -45,6 +54,7 @@ interface LineGroup {
   productId?: string;
   variantId?: string;
   requestedQuantity: number;
+  billingRole: RentalBillingRole;
   unresolvedIssue?: 'AMBIGUOUS_PRODUCT' | 'UNAVAILABLE';
 }
 
@@ -84,8 +94,15 @@ export async function evaluateWebRentalSelection(
     }
 
     const productId = item.productId;
+    const billingRole = rentalBillingRole(item.billingRole);
     if (item.variantId) {
-      candidates.push({ index, productId, variantId: item.variantId, quantity: item.quantity });
+      candidates.push({
+        index,
+        productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        billingRole,
+      });
       continue;
     }
     if (!productId) return { demands: [], items: [], failure: 'MISSING_SELECTION' };
@@ -96,6 +113,7 @@ export async function evaluateWebRentalSelection(
       productId,
       ...(variantIds.length === 1 ? { variantId: variantIds[0] } : {}),
       quantity: item.quantity,
+      billingRole,
       ...(variantIds.length === 0
         ? { unresolvedIssue: 'UNAVAILABLE' as const }
         : variantIds.length > 1
@@ -104,6 +122,7 @@ export async function evaluateWebRentalSelection(
     });
   }
 
+  rentalAccessoryAllowance(input.items);
   const variantIds = [
     ...new Set(
       candidates.flatMap((candidate) => (candidate.variantId ? [candidate.variantId] : [])),
@@ -130,13 +149,14 @@ export async function evaluateWebRentalSelection(
     if (!variant) failure ??= 'UNAVAILABLE';
     else if (candidate.productId && candidate.productId !== variant.productId)
       failure ??= 'PRODUCT_VARIANT_MISMATCH';
+    if (variant) assertFreeAccessoryKind(candidate.billingRole, variant.productKind);
   }
 
   const groups = new Map<string, LineGroup>();
   for (const candidate of candidates) {
     const groupKey = candidate.variantId
-      ? `variant:${candidate.variantId}`
-      : `product:${candidate.productId}`;
+      ? rentalSelectionKey(candidate.variantId, candidate.billingRole)
+      : `product:${candidate.productId}:${candidate.billingRole}`;
     const current = groups.get(groupKey);
     if (current) {
       current.requestedQuantity += candidate.quantity;
@@ -148,11 +168,21 @@ export async function evaluateWebRentalSelection(
       ...(candidate.productId ? { productId: candidate.productId } : {}),
       ...(candidate.variantId ? { variantId: candidate.variantId } : {}),
       requestedQuantity: candidate.quantity,
+      billingRole: candidate.billingRole,
       ...(candidate.unresolvedIssue ? { unresolvedIssue: candidate.unresolvedIssue } : {}),
     });
   }
 
   const demands: WebRentalDemand[] = [];
+  // Paid and complimentary lines share the same physical stock pool.
+  const totalDemandByVariant = new Map<string, number>();
+  for (const group of groups.values()) {
+    if (group.variantId)
+      totalDemandByVariant.set(
+        group.variantId,
+        (totalDemandByVariant.get(group.variantId) ?? 0) + group.requestedQuantity,
+      );
+  }
   const orderedItems: Array<{ index: number; result: WebRentalLineAvailability }> = [];
 
   for (const group of groups.values()) {
@@ -165,6 +195,7 @@ export async function evaluateWebRentalSelection(
           ...(group.productId ? { productId: group.productId } : {}),
           ...(group.variantId ? { variantId: group.variantId } : {}),
           requestedQuantity: group.requestedQuantity,
+          billingRole: group.billingRole,
           availableQuantity: 0,
           available: false,
           issue: 'NOT_RENTABLE',
@@ -175,14 +206,17 @@ export async function evaluateWebRentalSelection(
 
     const availableQuantity = variant.availableInventory.length;
     const issue: WebRentalLineIssue | undefined =
-      availableQuantity < group.requestedQuantity ? 'INSUFFICIENT_QUANTITY' : undefined;
-    demands.push({ variant, quantity: group.requestedQuantity });
+      availableQuantity < (totalDemandByVariant.get(variant.id) ?? group.requestedQuantity)
+        ? 'INSUFFICIENT_QUANTITY'
+        : undefined;
+    demands.push({ variant, quantity: group.requestedQuantity, billingRole: group.billingRole });
     orderedItems.push({
       index: group.index,
       result: {
         productId: variant.productId,
         variantId: variant.id,
         requestedQuantity: group.requestedQuantity,
+        billingRole: group.billingRole,
         availableQuantity,
         available: issue === undefined,
         ...(issue ? { issue } : {}),

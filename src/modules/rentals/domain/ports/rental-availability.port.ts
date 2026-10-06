@@ -1,8 +1,11 @@
+import type { ProductKind } from '@modules/catalog/public/product-kind';
+
 export interface BookableVariant {
   id: string;
   variantCode: string;
   productId: string;
   productName: string;
+  productKind: ProductKind;
   sizeName: string | null;
   colorName: string | null;
   depositPerItem: number;

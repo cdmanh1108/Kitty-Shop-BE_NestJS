@@ -11,6 +11,8 @@ import {
 } from '../domain/rental-settlement';
 import { toWebPaymentPreference } from '../domain/web-payment-preference';
 import { readRentalCyclePricing } from '../domain/rental-pricing-snapshot';
+import { rentalBillingRole } from '../domain/rental-accessories';
+import { PRODUCT_KIND } from '@modules/catalog/public/product-kind';
 import type { RentalDetailsResult, RentalOrderSummaryResult } from './rental-read.models';
 
 type SummarySource = RentalOrderPage['items'][number] | NonNullable<RentalOrderDetails>;
@@ -174,6 +176,8 @@ export class RentalReadPresenter {
         productNameSnapshot: item.productNameSnapshot,
         variantNameSnapshot: item.variantNameSnapshot,
         quantity: item.quantity,
+        billingRole: rentalBillingRole(item.billingRole),
+        productKindSnapshot: item.productKindSnapshot ?? PRODUCT_KIND.PRODUCT,
         status: item.status,
         imageUrl: this.resolveItemImage(item),
         unitRentalPrice: money(item.unitRentalPrice),

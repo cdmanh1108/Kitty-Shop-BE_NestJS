@@ -65,6 +65,8 @@ export interface WebAccountRentalOrderDetail extends WebAccountRentalOrderListIt
     variantName: string;
     quantity: number;
     unitRentalPrice: number;
+    billingRole?: string;
+    productKindSnapshot?: string;
     lineTotal: number;
     depositAmount: number;
   }>;

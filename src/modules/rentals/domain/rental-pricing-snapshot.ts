@@ -8,6 +8,12 @@ import {
 } from './rental-cycle-pricing';
 import { RentalInvariantError } from './rental-errors';
 import { getRentalPricingVersion, RENTAL_PRICING_VERSION } from './rental-pricing-version';
+import {
+  rentalAccessoryAllowance,
+  rentalBillingRole,
+  RENTAL_BILLING_ROLE,
+  type RentalBillingRole,
+} from './rental-accessories';
 
 export interface RentalCyclePricingSnapshot extends ResolvedRentalCyclePricing {
   policy: RentalPricingPolicy;
@@ -24,7 +30,17 @@ export interface LegacyRentalPricingSnapshot {
   depositPerItem: number;
 }
 
-export type RentalPricingSnapshot = RentalCyclePricingSnapshot | LegacyRentalPricingSnapshot;
+export interface FreeAccessoryPricingSnapshot {
+  version: typeof RENTAL_PRICING_VERSION.FREE_ACCESSORY;
+  durationDays: number;
+  billableQuantity: number;
+  unitRentalPrice: 0;
+  depositPerItem: 0;
+}
+export type RentalPricingSnapshot =
+  | RentalCyclePricingSnapshot
+  | LegacyRentalPricingSnapshot
+  | FreeAccessoryPricingSnapshot;
 
 const PRICING_FIELDS = [
   'durationDays',
@@ -39,16 +55,10 @@ const PRICING_FIELDS = [
   'priceSource',
 ] as const;
 
-export function rentalBillableQuantity(items: readonly { quantity: number }[]): number {
-  let quantity = 0;
-  for (const item of items) {
-    if (!Number.isSafeInteger(item.quantity) || item.quantity < 1) throw invalidQuantity();
-    quantity += item.quantity;
-    if (!Number.isSafeInteger(quantity)) throw invalidQuantity();
-  }
-  if (quantity < 1) throw invalidQuantity();
-  // Complimentary lines will be excluded by the accessory plan in RP08.
-  return quantity;
+export function rentalBillableQuantity(
+  items: readonly { quantity: number; billingRole?: string }[],
+): number {
+  return rentalAccessoryAllowance(items).billableQuantity;
 }
 
 export function resolveRentalLinePricing(
@@ -56,10 +66,26 @@ export function resolveRentalLinePricing(
     quantity: number;
     depositPerItem: number;
     legacyUnitRentalPrice?: number;
+    billingRole?: RentalBillingRole;
   },
 ) {
   // Resolve even legacy overrides so invalid policies or supplied cycle overrides cannot pass.
   const pricing = resolveRentalCyclePricing(input);
+  if (rentalBillingRole(input.billingRole) === RENTAL_BILLING_ROLE.FREE_ACCESSORY) {
+    if (input.itemCyclePriceOverride !== undefined || input.legacyUnitRentalPrice !== undefined)
+      throw new RentalInvariantError(
+        'FREE_ACCESSORY_PRICE_OVERRIDE_NOT_ALLOWED',
+        'Phụ kiện miễn phí không được nhập giá thuê riêng.',
+      );
+    const pricingSnapshot: FreeAccessoryPricingSnapshot = {
+      version: RENTAL_PRICING_VERSION.FREE_ACCESSORY,
+      durationDays: input.durationDays,
+      billableQuantity: input.billableQuantity,
+      unitRentalPrice: 0,
+      depositPerItem: 0,
+    };
+    return { unitRentalPrice: 0, lineTotal: 0, depositAmount: 0, pricingSnapshot };
+  }
   let pricingSnapshot: RentalPricingSnapshot;
   if (input.legacyUnitRentalPrice != null) {
     if (input.itemCyclePriceOverride != null || input.orderCyclePriceOverride != null) {
@@ -99,11 +125,28 @@ export function assertRentalPricingLineSnapshot(
     lineTotal: number;
     depositAmount: number;
     pricingSnapshot: RentalPricingSnapshot;
+    billingRole?: RentalBillingRole;
   },
   durationDays: number,
   billableQuantity: number,
 ): void {
   const snapshot = line.pricingSnapshot;
+  const free = rentalBillingRole(line.billingRole) === RENTAL_BILLING_ROLE.FREE_ACCESSORY;
+  if (snapshot.version === RENTAL_PRICING_VERSION.FREE_ACCESSORY) {
+    if (
+      !free ||
+      snapshot.durationDays !== durationDays ||
+      snapshot.billableQuantity !== billableQuantity ||
+      snapshot.unitRentalPrice !== 0 ||
+      snapshot.depositPerItem !== 0 ||
+      line.unitRentalPrice !== 0 ||
+      line.lineTotal !== 0 ||
+      line.depositAmount !== 0
+    )
+      throw invalidSnapshot();
+    return;
+  }
+  if (free) throw invalidSnapshot();
   if (snapshot.version === undefined || snapshot.version === RENTAL_PRICING_VERSION.LEGACY) return;
   if (snapshot.version !== RENTAL_PRICING_VERSION.CYCLE) throw invalidSnapshot();
   const pricing = resolveRentalCyclePricing({
@@ -126,7 +169,21 @@ export function assertRentalPricingLineSnapshot(
 export function readRentalCyclePricing(
   snapshot: JsonValue | null,
 ): ResolvedRentalCyclePricing | undefined {
-  if (getRentalPricingVersion(snapshot) === RENTAL_PRICING_VERSION.LEGACY) return undefined;
+  const version = getRentalPricingVersion(snapshot);
+  if (version === RENTAL_PRICING_VERSION.LEGACY) return undefined;
+  if (version === RENTAL_PRICING_VERSION.FREE_ACCESSORY) {
+    const record = objectValue(snapshot);
+    if (
+      !Number.isSafeInteger(record.durationDays) ||
+      numberValue(record.durationDays) < 1 ||
+      !Number.isSafeInteger(record.billableQuantity) ||
+      numberValue(record.billableQuantity) < 1 ||
+      record.unitRentalPrice !== 0 ||
+      record.depositPerItem !== 0
+    )
+      throw invalidSnapshot();
+    return undefined;
+  }
   const record = objectValue(snapshot);
   const savedPolicy = objectValue(record.policy);
   const policy: RentalPricingPolicy = {
@@ -167,12 +224,5 @@ function invalidSnapshot(): RentalInvariantError {
   return new RentalInvariantError(
     'INVALID_RENTAL_PRICING_SNAPSHOT',
     'Thông tin giá thuê đã lưu của đơn không hợp lệ.',
-  );
-}
-
-function invalidQuantity(): RentalInvariantError {
-  return new RentalInvariantError(
-    'INVALID_RENTAL_PRICING_QUANTITY',
-    'Số món thuê phải là số nguyên dương hợp lệ.',
   );
 }

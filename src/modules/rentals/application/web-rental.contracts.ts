@@ -1,5 +1,6 @@
 import type { WebPaymentPreference } from '../domain/web-payment-preference';
 import type { ResolvedRentalCyclePricing } from '../domain/rental-cycle-pricing';
+import type { RentalBillingRole, RentalAccessoryAllowance } from '../domain/rental-accessories';
 
 export interface WebAvailabilityQueryInput {
   productId?: string;
@@ -17,6 +18,7 @@ export interface WebRentalItemInput {
   variantId?: string;
   productId?: string;
   quantity: number;
+  billingRole?: RentalBillingRole;
 }
 
 export interface WebRentalQuoteInput {
@@ -31,6 +33,7 @@ export type WebRentalLineIssue = 'NOT_RENTABLE' | 'INSUFFICIENT_QUANTITY' | 'PRI
 export interface WebRentalLineAvailability {
   productId?: string;
   variantId?: string;
+  billingRole?: RentalBillingRole;
   requestedQuantity: number;
   availableQuantity: number;
   available: boolean;
@@ -43,6 +46,7 @@ export interface WebRentalLineAvailability {
 export interface WebRentalQuoteResult {
   durationDays: number;
   pricing: ResolvedRentalCyclePricing;
+  accessoryAllowance: RentalAccessoryAllowance;
   rentalSubtotal: number;
   depositAmount: number;
   shippingFee: number;
@@ -107,5 +111,7 @@ export interface WebOrderLookupResult {
     name: string;
     imageUrl: string;
     quantity: number;
+    billingRole?: string;
+    productKindSnapshot?: string;
   }>;
 }

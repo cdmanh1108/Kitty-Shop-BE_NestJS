@@ -86,6 +86,8 @@ export function toRentalResponse(row: RentalDetailsResult | null): RentalOrderRe
       productNameSnapshot: item.productNameSnapshot,
       variantNameSnapshot: item.variantNameSnapshot,
       quantity: item.quantity,
+      billingRole: item.billingRole,
+      productKindSnapshot: item.productKindSnapshot,
       status: item.status,
       imageUrl: item.imageUrl,
       unitRentalPrice: item.unitRentalPrice,

@@ -24,6 +24,7 @@ import type {
   WebRentalQuoteResult,
 } from './web-rental.contracts';
 import { evaluateWebRentalSelection, resolveWebRentalSelection } from './web-rental-selection';
+import { rentalAccessoryAllowance, rentalSelectionKey } from '../domain/rental-accessories';
 import {
   parseWebRentalDateRangeInput,
   assertWebRentalItemsInput,
@@ -96,7 +97,7 @@ export class WebRentalEvaluationService {
     let allAvailable = selection.failure === undefined;
 
     if (selection.failure === undefined) {
-      for (const { variant, quantity } of selection.demands) {
+      for (const { variant, quantity, billingRole } of selection.demands) {
         if (variant.availableInventory.length < quantity) allAvailable = false;
         const line = resolveRentalLinePricing({
           durationDays,
@@ -104,11 +105,18 @@ export class WebRentalEvaluationService {
           policy: policy.rentalPricing,
           quantity,
           depositPerItem: variant.depositPerItem,
+          billingRole,
         });
         rentalAmounts.push(line.lineTotal);
         depositAmounts.push(line.depositAmount);
-        const result = selection.items.find((item) => item.variantId === variant.id);
+        const result = selection.items.find(
+          (item) =>
+            item.variantId === variant.id &&
+            rentalSelectionKey(item.variantId, item.billingRole) ===
+              rentalSelectionKey(variant.id, billingRole),
+        );
         if (result) {
+          if (!result.available) allAvailable = false;
           result.unitRentalPrice = line.unitRentalPrice;
           result.lineTotal = line.lineTotal;
           result.depositAmount = line.depositAmount;
@@ -125,6 +133,7 @@ export class WebRentalEvaluationService {
     return {
       durationDays,
       pricing,
+      accessoryAllowance: rentalAccessoryAllowance(req.items),
       rentalSubtotal,
       depositAmount,
       shippingFee,

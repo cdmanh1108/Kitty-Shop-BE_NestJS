@@ -1,4 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { RENTAL_BILLING_ROLE } from '../../../domain/rental-accessories';
+import { PRODUCT_KIND } from '@modules/catalog/public/product-kind';
 import { IsNotEmpty, IsString } from 'class-validator';
 
 export class WebOrderLookupReqDto {
@@ -14,6 +16,8 @@ export class WebOrderLookupReqDto {
 }
 
 export class WebOrderLookupItemDto {
+  @ApiPropertyOptional({ enum: Object.values(RENTAL_BILLING_ROLE) }) billingRole?: string;
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_KIND) }) productKindSnapshot?: string;
   @ApiProperty({ example: 'Đầm dạ hội trắng lụa cao cấp' })
   name!: string;
 

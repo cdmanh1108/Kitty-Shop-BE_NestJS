@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { RentalCyclePricingResDto } from '../../rental-cycle-pricing.dto';
+import { RENTAL_BILLING_ROLE, type RentalBillingRole } from '../../../domain/rental-accessories';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -70,6 +71,16 @@ export class WebAvailabilityResDto {
 }
 
 export class WebRentalItemInputDto {
+  @ApiPropertyOptional({
+    enum: Object.values(RENTAL_BILLING_ROLE),
+    description:
+      'Bỏ trống là PAID. FREE_ACCESSORY: phụ kiện khách chọn đi kèm, không có tiền thuê/cọc; mỗi món PAID được kèm một phụ kiện.',
+  })
+  @ValidateIf((_: WebRentalItemInputDto, value: unknown) => value !== undefined)
+  @IsIn(Object.values(RENTAL_BILLING_ROLE), {
+    message: 'Vai trò tính tiền của món thuê không hợp lệ.',
+  })
+  billingRole?: RentalBillingRole;
   @ApiPropertyOptional({ format: 'uuid', description: 'ID biến thể sản phẩm' })
   @ValidateIf((_: WebRentalItemInputDto, value: unknown) => value !== undefined)
   @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
@@ -115,13 +126,18 @@ export class WebRentalQuoteReqDto {
 }
 
 export class WebRentalQuoteItemResDto {
+  @ApiPropertyOptional({ enum: Object.values(RENTAL_BILLING_ROLE) })
+  billingRole?: RentalBillingRole;
   @ApiPropertyOptional({ format: 'uuid', description: 'ID sản phẩm nếu đã xác định được' })
   productId?: string;
 
   @ApiPropertyOptional({ format: 'uuid', description: 'ID biến thể nếu đã xác định được' })
   variantId?: string;
 
-  @ApiProperty({ example: 2, description: 'Số lượng yêu cầu sau khi gộp các dòng cùng biến thể' })
+  @ApiProperty({
+    example: 2,
+    description: 'Số lượng sau khi gộp các dòng cùng phân loại và vai trò tính tiền',
+  })
   requestedQuantity!: number;
 
   @ApiProperty({ example: 1, description: 'Số lượng vật lý còn trống cho toàn bộ khoảng thuê' })
@@ -152,7 +168,16 @@ export class WebRentalQuoteItemResDto {
   depositAmount?: number;
 }
 
+export class RentalAccessoryAllowanceResDto {
+  @ApiProperty({ description: 'Số món PAID; mỗi món tạo một quyền chọn phụ kiện miễn phí.' })
+  billableQuantity!: number;
+  @ApiProperty() freeAccessoryQuantity!: number;
+  @ApiProperty() remainingFreeAccessoryQuantity!: number;
+}
+
 export class WebRentalQuoteResDto {
+  @ApiPropertyOptional({ type: RentalAccessoryAllowanceResDto })
+  accessoryAllowance?: RentalAccessoryAllowanceResDto;
   @ApiProperty({ example: 3, description: 'Số ngày thuê tính theo lịch' })
   durationDays!: number;
 
@@ -189,7 +214,8 @@ export class WebRentalQuoteResDto {
 
   @ApiPropertyOptional({
     type: [WebRentalQuoteItemResDto],
-    description: 'Kết quả theo biến thể, giữ thứ tự yêu cầu; số lượng trùng biến thể được gộp',
+    description:
+      'Kết quả theo phân loại và vai trò tính tiền, giữ thứ tự yêu cầu. Tồn kho được kiểm tra theo tổng số món của cả hai vai trò.',
   })
   items?: WebRentalQuoteItemResDto[];
 }

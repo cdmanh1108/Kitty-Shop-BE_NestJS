@@ -56,9 +56,30 @@ kind/visibility index supports catalog filtering. Creating a product without
 kind retains the default; updating without kind preserves its current value.
 
 An accessory remains a normally paid, stocked rental item. Catalog kind alone
-does not waive price, deposit, late fees or damage/loss compensation. RP08 will
-introduce the separate complimentary rental-line role and entitlement checks;
+does not waive price, deposit, late fees or damage/loss compensation. RP08
+introduces the separate complimentary rental-line role and entitlement checks;
 changing catalog kind does not rewrite existing order or pricing snapshots.
+
+## Complimentary accessories (RP08)
+
+Migration `202610060002_rental_accessory_billing` adds `billing_role` (default
+`PAID`) and `product_kind_snapshot` (default `PRODUCT`) to rental lines. Existing
+history stays paid; zero prices and current catalog classification never infer a
+historical free entitlement. New bookings capture the canonical Catalog kind in
+their Serializable transaction. Database CHECKs constrain both vocabularies and
+require free accessories to have zero rental, line total, deposit and discount.
+
+Entitlement is one free physical accessory per paid physical unit, pooled within
+the order. Paid standalone accessories count; free lines do not count toward
+either entitlement or the cycle quantity tier. Excess accessories must be sent as
+paid lines. The application and transaction boundary validate entitlement, while
+the existing PostgreSQL allocation exclusion constraint protects both line roles
+against concurrent/overlapping bookings. Duplicate variant/role lines are merged
+on Web; paid/free lines remain distinct and use disjoint physical inventory IDs.
+
+Apply the migration after RP06 and before starting the updated booking writers.
+Prisma Client must be regenerated after the schema change. See
+[Accessory rentals](RENTAL_ACCESSORIES.md) for the API and recovery contract.
 
 ## Rental interval semantics
 
