@@ -1,8 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
+import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/domain/product-kind';
 
 export class WebCatalogFiltersQueryDto {
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_KIND) })
+  @ValidateIf((_object: WebCatalogFiltersQueryDto, value: unknown) => value !== undefined)
+  @IsIn(Object.values(PRODUCT_KIND), { message: 'Loại sản phẩm phải là Sản phẩm hoặc Phụ kiện.' })
+  kind?: ProductKind;
+
   @ApiPropertyOptional({
     description: 'Giới hạn lựa chọn theo slug, mã hoặc id danh mục',
     maxLength: 100,

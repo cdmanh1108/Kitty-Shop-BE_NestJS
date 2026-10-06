@@ -5,6 +5,7 @@ import type { StorefrontCatalogRepository } from '../../src/modules/catalog/doma
 import type { StorefrontProductItem } from '../../src/modules/catalog/domain/catalog.models';
 
 const product: StorefrontProductItem = {
+  kind: 'PRODUCT',
   id: '00000000-0000-4000-8000-000000000001',
   code: 'DRESS-001',
   slug: 'dress-001',

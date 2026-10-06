@@ -4,6 +4,7 @@ import type { PrismaService } from '@database/prisma/prisma.service';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { CatalogProductRepository } from '../domain/catalog-product.repository';
 import type { ProductMediaUploadTarget } from '../domain/catalog.models';
+import { readProductKind } from './product-kind.mapper';
 
 export async function listProducts(
   prisma: PrismaService,
@@ -14,6 +15,7 @@ export async function listProducts(
     shopId: input.shopId,
     archivedAt: null,
     ...(input.categoryId ? { categoryId: input.categoryId } : {}),
+    ...(input.kind !== undefined ? { kind: input.kind } : {}),
     ...(input.status ? { status: input.status } : {}),
     ...(input.search
       ? {
@@ -39,6 +41,7 @@ export async function listProducts(
       select: {
         id: true,
         code: true,
+        kind: true,
         name: true,
         status: true,
         categoryId: true,
@@ -76,6 +79,7 @@ export async function listProducts(
   return {
     items: items.map(({ category, media, variants, ...product }) => ({
       ...product,
+      kind: readProductKind(product.kind),
       categoryName: category.name,
       imageUrl: media[0] ? mediaUrls.resolve(media[0]) : null,
       variantCount: variants.length,
@@ -96,6 +100,7 @@ export async function lookupProducts(
     shopId: input.shopId,
     archivedAt: null,
     ...(input.productId ? { id: input.productId } : {}),
+    ...(input.kind !== undefined ? { kind: input.kind } : {}),
     ...(input.status ? { status: input.status } : {}),
     ...(input.categoryId ? { categoryId: input.categoryId } : {}),
     ...(input.search
@@ -114,6 +119,7 @@ export async function lookupProducts(
       select: {
         id: true,
         code: true,
+        kind: true,
         name: true,
         status: true,
         rentalRates: {
@@ -149,6 +155,7 @@ export async function lookupProducts(
       }));
       return {
         ...p,
+        kind: readProductKind(p.kind),
         rentalRates: productRates,
         variants: p.variants.map(({ size, color, rentalRates, ...v }) => ({
           ...v,
@@ -178,6 +185,7 @@ export async function findProduct(
     select: {
       id: true,
       code: true,
+      kind: true,
       name: true,
       categoryId: true,
       description: true,
@@ -232,6 +240,7 @@ export async function findProduct(
 
   return {
     ...product,
+    kind: readProductKind(product.kind),
     category: {
       id: product.category.id,
       code: product.category.code,

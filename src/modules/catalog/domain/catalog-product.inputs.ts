@@ -1,4 +1,7 @@
+import type { ProductKind } from './product-kind';
+
 export interface CreateProductData {
+  kind?: ProductKind;
   code: string;
   name: string;
   slug?: string;
@@ -21,6 +24,7 @@ export interface CreateProductData {
 }
 
 export interface UpdateProductData {
+  kind?: ProductKind;
   name?: string;
   slug?: string;
   categoryId?: string;
@@ -49,6 +53,7 @@ export interface ProductMediaData {
 }
 
 export interface CatalogListProductsCriteria {
+  kind?: ProductKind;
   shopId: string;
   search?: string;
   categoryId?: string;

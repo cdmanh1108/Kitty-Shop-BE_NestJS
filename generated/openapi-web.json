@@ -889,6 +889,19 @@
         "operationId": "getWebProducts",
         "parameters": [
           {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "description": "Loại sản phẩm; bỏ qua để lấy tất cả.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PRODUCT",
+                "ACCESSORY"
+              ]
+            }
+          },
+          {
             "name": "q",
             "required": false,
             "in": "query",
@@ -999,6 +1012,18 @@
       "get": {
         "operationId": "getWebCatalogFilters",
         "parameters": [
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PRODUCT",
+                "ACCESSORY"
+              ]
+            }
+          },
           {
             "name": "category",
             "required": false,
@@ -2130,6 +2155,13 @@
       "WebProductDetailDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "id": {
             "type": "string",
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -2206,6 +2238,7 @@
           }
         },
         "required": [
+          "kind",
           "id",
           "code",
           "slug",
@@ -3622,6 +3655,13 @@
       "WebStorefrontSelectionProductDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -3636,6 +3676,7 @@
           }
         },
         "required": [
+          "kind",
           "id",
           "slug",
           "name"

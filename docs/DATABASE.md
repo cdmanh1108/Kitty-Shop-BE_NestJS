@@ -42,6 +42,24 @@ erDiagram
 
 Never replace this with a simple `products.quantity`. Individual pieces have different booking, cleaning, repair, damage and loss states.
 
+### Product and accessory classification (RP06)
+
+`products.kind` is a required `VARCHAR(20)` with default `PRODUCT` and a database
+CHECK allowing only `PRODUCT` (Sản phẩm) or `ACCESSORY` (Phụ kiện). Migration
+`202610060001_product_kind` classifies every existing product as `PRODUCT`; names
+and categories are never used to infer the kind. Apply the committed migration
+before running the updated backend (`npm run db:migrate`).
+
+Kind belongs to Product. ProductVariant and InventoryItem inherit it through
+their product relation; they do not store an independent copy. A shop-scoped
+kind/visibility index supports catalog filtering. Creating a product without
+kind retains the default; updating without kind preserves its current value.
+
+An accessory remains a normally paid, stocked rental item. Catalog kind alone
+does not waive price, deposit, late fees or damage/loss compensation. RP08 will
+introduce the separate complimentary rental-line role and entitlement checks;
+changing catalog kind does not rewrite existing order or pricing snapshots.
+
 ## Rental interval semantics
 
 Intervals are half-open: `[reserved_from, reserved_until)`.

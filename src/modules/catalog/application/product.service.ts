@@ -26,6 +26,7 @@ import type {
 import type { ProductMediaRecord } from '../domain/catalog.records';
 import type { ProductVariantRecord } from '../domain/catalog.records';
 import { CATALOG_ERROR_CODE, CatalogInvariantError } from '../domain/catalog-errors';
+import { PRODUCT_KIND, requireProductKind } from '../domain/product-kind';
 import {
   CatalogResourceNotFoundError,
   DuplicateProductVariantCombinationError,
@@ -46,10 +47,12 @@ export class ProductService {
   }
 
   lookupProducts(user: CurrentUser, query: ProductListQuery & { productId?: string }) {
+    if (query.kind !== undefined) requireProductKind(query.kind);
     return this.repository.lookupProducts({ ...query, shopId: user.shopId });
   }
 
   listProducts(user: CurrentUser, query: ProductListQuery) {
+    if (query.kind !== undefined) requireProductKind(query.kind);
     return this.repository.listProducts({ shopId: user.shopId, ...query });
   }
 
@@ -60,11 +63,12 @@ export class ProductService {
   }
 
   async createProduct(user: CurrentUser, input: CreateProductInput) {
+    const kind = requireProductKind(input.kind === undefined ? PRODUCT_KIND.PRODUCT : input.kind);
     const normalizedVariants = input.variants.map((item) => ({
       ...item,
       variantCode: normalizeVariantCode(item.variantCode),
     }));
-    const normalizedInput = { ...input, variants: normalizedVariants };
+    const normalizedInput = { ...input, kind, variants: normalizedVariants };
     const duplicateVariantCodes = normalizedVariants.map((item) => item.variantCode);
     if (new Set(duplicateVariantCodes).size !== duplicateVariantCodes.length) {
       throw new InvalidCatalogInputError('Mã biến thể không được trùng nhau trong cùng yêu cầu.');
@@ -98,7 +102,7 @@ export class ProductService {
       action: 'CREATE',
       entityType: 'product',
       entityId: product?.id,
-      newValues: { code: input.code, name: input.name },
+      newValues: { code: input.code, name: input.name, kind },
     });
     return product;
   }
@@ -217,7 +221,9 @@ export class ProductService {
   }
 
   async updateProduct(user: CurrentUser, id: string, input: UpdateProductInput) {
+    if (input.kind !== undefined) requireProductKind(input.kind);
     const updated = await this.repository.updateProduct(user.shopId, id, {
+      kind: input.kind,
       name: input.name,
       slug: input.slug,
       categoryId: input.categoryId,

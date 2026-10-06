@@ -1,5 +1,25 @@
 # Catalog read models — Task 4
 
+## Product kind (RP06)
+
+Product responses expose `kind: PRODUCT | ACCESSORY`, including Admin lists,
+lookups, detail/create/update, nested inventory products, Web lists/details,
+selection resolution and favorite product cards. Kind is inherited from Product,
+not stored or edited on individual variants or inventory items.
+
+Optional `kind` filtering is supported by `GET /products`, `GET /products/lookup`,
+`GET /web/products` (including price sorting) and `GET /web/catalog/filters`.
+Omitting the filter returns both kinds under the existing permission/visibility
+rules. Web size/color options use the same kind filter as the product list.
+Invalid kinds, including null on writes, are rejected; API error messages are
+Vietnamese. Admin create accepts optional kind (default PRODUCT), and update
+accepts optional kind (omission keeps the current value).
+
+The canonical vocabulary lives in Catalog domain and is exposed through
+`public/product-kind.ts`. The additive API change is exported to OpenAPI; Admin
+kind controls follow in RP07 and complimentary accessory selection in RP08–RP10.
+No pricing or deposit exemption is inferred from ACCESSORY in RP06.
+
 ## Consumer audit
 
 The audit followed actual frontend render code before choosing projections.

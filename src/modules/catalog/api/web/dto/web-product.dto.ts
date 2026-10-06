@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  ValidateIf,
+} from 'class-validator';
+import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/domain/product-kind';
 
 export class WebRentalPriceDto {
   @ApiProperty({ example: 3, description: 'Số ngày thuê' })
@@ -55,6 +65,7 @@ export class WebProductVariantSummaryDto {
 }
 
 export class WebProductListItemDto {
+  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
   @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   id!: string;
 
@@ -93,6 +104,7 @@ export class WebProductListItemDto {
 }
 
 export class WebProductDetailDto {
+  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
   @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   id!: string;
 
@@ -165,6 +177,14 @@ export class WebProductListResDto {
 }
 
 export class WebProductListQueryDto {
+  @ApiPropertyOptional({
+    enum: Object.values(PRODUCT_KIND),
+    description: 'Loại sản phẩm; bỏ qua để lấy tất cả.',
+  })
+  @ValidateIf((_object: WebProductListQueryDto, value: unknown) => value !== undefined)
+  @IsIn(Object.values(PRODUCT_KIND), { message: 'Loại sản phẩm phải là Sản phẩm hoặc Phụ kiện.' })
+  kind?: ProductKind;
+
   @ApiPropertyOptional({ description: 'Từ khóa tìm kiếm theo tên, mã hoặc mô tả' })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))

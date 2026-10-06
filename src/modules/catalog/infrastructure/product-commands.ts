@@ -19,6 +19,8 @@ import {
   CatalogSizeError,
 } from '../domain/catalog-errors';
 import { generateProductSlug, normalizeProductSlug } from '../domain/product-slug';
+import { PRODUCT_KIND, requireProductKind } from '../domain/product-kind';
+import { readProductKind } from './product-kind.mapper';
 
 function handleProductUniqueViolation(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -105,6 +107,7 @@ export async function createProduct(
           shopId,
           categoryId: input.categoryId,
           code: input.code,
+          kind: requireProductKind(input.kind === undefined ? PRODUCT_KIND.PRODUCT : input.kind),
           name: input.name,
           slug,
           description: input.description,
@@ -128,13 +131,14 @@ export async function createProduct(
         });
       }
 
-      return tx.product.findUniqueOrThrow({
+      const created = await tx.product.findUniqueOrThrow({
         where: { id: product.id },
         include: {
           variants: { include: { inventoryItems: true, rentalRates: true } },
           media: true,
         },
       });
+      return { ...created, kind: readProductKind(created.kind) };
     });
   } catch (error) {
     handleProductUniqueViolation(error);
@@ -229,6 +233,7 @@ export async function updateProduct(
         await assertActiveCategory(tx, shopId, input.categoryId);
       }
       const data: Prisma.ProductUpdateInput = {};
+      if (input.kind !== undefined) data.kind = requireProductKind(input.kind);
       if (input.status === 'ARCHIVED') {
         await assertProductCanArchive(tx, shopId, id);
         data.archivedAt = new Date();
@@ -255,7 +260,8 @@ export async function updateProduct(
       if (input.isRentable !== undefined) data.isRentable = input.isRentable;
       if (input.status !== undefined) data.status = input.status;
 
-      return tx.product.update({ where: { id }, data });
+      const updated = await tx.product.update({ where: { id }, data });
+      return { ...updated, kind: readProductKind(updated.kind) };
     });
   } catch (error) {
     handleProductUniqueViolation(error);

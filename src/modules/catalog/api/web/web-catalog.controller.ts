@@ -96,7 +96,10 @@ export class WebCatalogController {
   @ApiBadRequestResponse({ type: ErrorResDto, description: 'Danh mục lọc không hợp lệ' })
   async listFilters(@Query() query: WebCatalogFiltersQueryDto): Promise<WebCatalogFiltersResDto> {
     const shopId = await this.shopResolver.resolveShopId();
-    const filters = await this.catalogService.listFilters(shopId, { category: query.category });
+    const filters = await this.catalogService.listFilters(shopId, {
+      category: query.category,
+      kind: query.kind,
+    });
     return WebCatalogMapper.toFilters(filters);
   }
 

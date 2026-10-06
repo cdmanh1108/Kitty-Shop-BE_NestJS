@@ -58,6 +58,7 @@ export const WebCatalogMapper = {
     return {
       id: product.id,
       code: product.code,
+      kind: product.kind,
       slug: product.slug,
       name: product.name,
       categoryId: product.categoryId,
@@ -97,6 +98,7 @@ export const WebCatalogMapper = {
     return {
       id: product.id,
       code: product.code,
+      kind: product.kind,
       slug: product.slug,
       name: product.name,
       categoryId: product.categoryId,

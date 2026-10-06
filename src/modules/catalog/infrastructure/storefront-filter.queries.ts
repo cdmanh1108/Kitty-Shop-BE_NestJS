@@ -17,7 +17,7 @@ export async function listStorefrontFilters(
     some: {
       shopId: input.shopId,
       ...storefrontVariantBaseWhere(),
-      product: storefrontProductBaseWhere(input.shopId, input.category),
+      product: storefrontProductBaseWhere(input.shopId, input.category, input.kind),
     },
   };
   const [sizes, colors] = await prisma.$transaction([

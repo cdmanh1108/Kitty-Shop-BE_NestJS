@@ -2,6 +2,8 @@ import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { Prisma } from '@prisma/client';
 import type { StorefrontProductItem, StorefrontRentalPrice } from '../domain/catalog.models';
+import type { ProductKind } from '../domain/product-kind';
+import { readProductKind } from './product-kind.mapper';
 import {
   storefrontProductEligibility,
   storefrontVariantEligibility,
@@ -10,6 +12,7 @@ import {
 export function storefrontProductBaseWhere(
   shopId: string,
   category?: string,
+  kind?: ProductKind,
 ): Prisma.ProductWhereInput {
   const value = category?.trim();
   const categoryFilters: Prisma.CategoryWhereInput[] = value
@@ -23,6 +26,7 @@ export function storefrontProductBaseWhere(
   }
   return {
     shopId,
+    ...(kind !== undefined ? { kind } : {}),
     ...storefrontProductEligibility,
     ...(categoryFilters.length ? { category: { OR: categoryFilters } } : {}),
   };
@@ -64,6 +68,7 @@ export function extractRentalPrices(
 export const storefrontProductSelect = {
   id: true,
   code: true,
+  kind: true,
   slug: true,
   name: true,
   categoryId: true,
@@ -117,6 +122,7 @@ export function toStorefrontProductItem(
   return {
     id: product.id,
     code: product.code,
+    kind: readProductKind(product.kind),
     slug: product.slug,
     name: product.name,
     categoryId: product.categoryId,

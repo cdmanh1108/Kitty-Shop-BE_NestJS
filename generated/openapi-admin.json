@@ -1112,6 +1112,19 @@
             }
           },
           {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "description": "Loại sản phẩm; bỏ qua để lấy tất cả.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PRODUCT",
+                "ACCESSORY"
+              ]
+            }
+          },
+          {
             "name": "search",
             "required": false,
             "in": "query",
@@ -1222,6 +1235,19 @@
               "maximum": 50,
               "default": 20,
               "type": "number"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "description": "Loại sản phẩm; bỏ qua để lấy tất cả.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PRODUCT",
+                "ACCESSORY"
+              ]
             }
           },
           {
@@ -5352,6 +5378,14 @@
       "CreateProductReqDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ],
+            "description": "Loại sản phẩm; mặc định là Sản phẩm khi không truyền."
+          },
           "code": {
             "type": "string",
             "example": "DRESS-AURORA"
@@ -5409,6 +5443,13 @@
       "ProductResDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "id": {
             "type": "string"
           },
@@ -5477,6 +5518,7 @@
           }
         },
         "required": [
+          "kind",
           "id",
           "code",
           "name",
@@ -5510,6 +5552,13 @@
       "UpdateProductReqDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "name": {
             "type": "string"
           },
@@ -8068,6 +8117,13 @@
       "ProductListItemResDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "id": {
             "type": "string"
           },
@@ -8118,6 +8174,7 @@
           }
         },
         "required": [
+          "kind",
           "id",
           "code",
           "name",
@@ -8200,6 +8257,13 @@
       "ProductLookupItemResDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "id": {
             "type": "string"
           },
@@ -8226,6 +8290,7 @@
           }
         },
         "required": [
+          "kind",
           "id",
           "code",
           "name",
@@ -9901,6 +9966,13 @@
       "InventoryProductSummaryResDto": {
         "type": "object",
         "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRODUCT",
+              "ACCESSORY"
+            ]
+          },
           "id": {
             "type": "string"
           },
@@ -9915,6 +9987,7 @@
           }
         },
         "required": [
+          "kind",
           "id",
           "code",
           "name",

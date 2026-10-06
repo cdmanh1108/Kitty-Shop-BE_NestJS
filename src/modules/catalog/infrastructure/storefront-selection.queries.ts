@@ -1,5 +1,6 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import type { PrismaService } from '@database/prisma/prisma.service';
+import { readProductKind } from './product-kind.mapper';
 import type {
   StorefrontSelectionInput,
   StorefrontSelectionResolution,
@@ -69,6 +70,7 @@ export async function resolveStorefrontSelections(
             id: true,
             slug: true,
             name: true,
+            kind: true,
             media: productMediaSelect,
             variants: {
               where: { shopId: input.shopId, ...storefrontVariantEligibility },
@@ -105,6 +107,7 @@ export async function resolveStorefrontSelections(
                 id: true,
                 slug: true,
                 name: true,
+                kind: true,
                 media: productMediaSelect,
               },
             },
@@ -135,6 +138,7 @@ export async function resolveStorefrontSelections(
           id: variant.product.id,
           slug: variant.product.slug,
           name: variant.product.name,
+          kind: readProductKind(variant.product.kind),
         },
         variant: {
           id: variant.id,
@@ -155,7 +159,12 @@ export async function resolveStorefrontSelections(
         status: 'SELECTION_REQUIRED',
         index,
         quantity: selection.quantity,
-        product: { id: product.id, slug: product.slug, name: product.name },
+        product: {
+          id: product.id,
+          slug: product.slug,
+          name: product.name,
+          kind: readProductKind(product.kind),
+        },
         imageUrl: productImageUrl,
       };
     }
@@ -167,7 +176,12 @@ export async function resolveStorefrontSelections(
       status: 'RESOLVED',
       index,
       quantity: selection.quantity,
-      product: { id: product.id, slug: product.slug, name: product.name },
+      product: {
+        id: product.id,
+        slug: product.slug,
+        name: product.name,
+        kind: readProductKind(product.kind),
+      },
       variant: {
         id: variant.id,
         code: variant.variantCode,

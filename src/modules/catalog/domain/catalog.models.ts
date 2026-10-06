@@ -1,6 +1,7 @@
 import type { ProductListItem } from './catalog.read-models';
 import type { PaginatedResult } from '@common/types/pagination';
 import type { DecimalValue } from '@common/types/decimal';
+import type { ProductKind } from './product-kind';
 import type {
   CategoryRecord,
   ColorRecord,
@@ -107,6 +108,7 @@ export type ProductDetails =
       ProductRecord,
       | 'id'
       | 'code'
+      | 'kind'
       | 'name'
       | 'categoryId'
       | 'description'
@@ -196,7 +198,7 @@ export type InventoryPageItem = Pick<
   variant: Pick<ProductVariantRecord, 'id' | 'variantCode' | 'sizeId' | 'colorId'> & {
     size: null | Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder'>;
     color: null | Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor'>;
-    product: Pick<ProductRecord, 'id' | 'code' | 'name' | 'categoryId'>;
+    product: Pick<ProductRecord, 'id' | 'code' | 'name' | 'categoryId' | 'kind'>;
   };
   occupancyStatus: InventoryOccupancyStatus;
   allowedManualTransitions: Array<string>;
@@ -264,6 +266,7 @@ export interface StorefrontCatalogFilters {
 }
 
 export interface StorefrontCatalogFiltersCriteria {
+  kind?: ProductKind;
   shopId: string;
   category?: string;
 }
@@ -282,6 +285,7 @@ export interface StorefrontProductVariant {
 }
 
 export interface StorefrontProductItem {
+  kind: ProductKind;
   id: string;
   code: string;
   slug: string;
@@ -297,6 +301,7 @@ export interface StorefrontProductItem {
 }
 
 export interface StorefrontProductDetails {
+  kind: ProductKind;
   id: string;
   code: string;
   slug: string;
@@ -318,6 +323,7 @@ export interface StorefrontProductDetails {
 export type StorefrontProductPage = PaginatedResult<StorefrontProductItem>;
 
 export interface StorefrontProductListCriteria {
+  kind?: ProductKind;
   shopId: string;
   page: number;
   limit: number;
@@ -340,6 +346,7 @@ export interface StorefrontSelectionInput {
 }
 
 export interface StorefrontSelectedProduct {
+  kind: ProductKind;
   id: string;
   slug: string;
   name: string;

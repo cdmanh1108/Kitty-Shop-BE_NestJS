@@ -32,6 +32,7 @@ function variant(): NonNullable<Parameters<typeof toBookableVariant>[0]> {
     inventoryItems: [],
     rentalRates: [],
     product: {
+      kind: 'PRODUCT',
       id: 'product',
       shopId: 'shop',
       categoryId: 'category',

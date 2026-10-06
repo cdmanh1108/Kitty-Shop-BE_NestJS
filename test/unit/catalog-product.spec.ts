@@ -113,6 +113,7 @@ describe('ProductService', () => {
 
     it('creates product with multiple variants (M/Trắng and M/Hồng) atomically', async () => {
       const createdProduct: CreateProductResult = {
+        kind: 'PRODUCT',
         id: 'prod-1',
         shopId: mockUser.shopId,
         categoryId: 'cat-1',
@@ -291,6 +292,7 @@ describe('ProductService', () => {
   describe('updateProduct', () => {
     it('updates core product fields without altering unprovided values', async () => {
       const updated: UpdateProductResult = {
+        kind: 'PRODUCT',
         id: 'prod-1',
         shopId: mockUser.shopId,
         categoryId: 'cat-1',
@@ -354,6 +356,7 @@ describe('ProductService', () => {
 
     it('forwards explicit slug when provided in updateProduct', async () => {
       const updated: UpdateProductResult = {
+        kind: 'PRODUCT',
         id: 'prod-1',
         shopId: mockUser.shopId,
         categoryId: 'cat-1',

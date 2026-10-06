@@ -1,5 +1,6 @@
 import { PaginationMetaResDto } from '@common/dto/response.dto';
 import { PRODUCT_STATUS } from '@modules/catalog/domain/catalog-status';
+import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/domain/product-kind';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
@@ -114,6 +115,14 @@ export class ProductMediaUploadReqDto {
 }
 
 export class CreateProductReqDto {
+  @ApiPropertyOptional({
+    enum: Object.values(PRODUCT_KIND),
+    description: 'Loại sản phẩm; mặc định là Sản phẩm khi không truyền.',
+  })
+  @ValidateIf((_object: CreateProductReqDto, value: unknown) => value !== undefined)
+  @IsIn(Object.values(PRODUCT_KIND), { message: 'Loại sản phẩm phải là Sản phẩm hoặc Phụ kiện.' })
+  kind?: ProductKind;
+
   @ApiProperty({ example: 'DRESS-AURORA' })
   @IsString({ message: 'Mã phải là chuỗi ký tự.' })
   code!: string;
@@ -177,6 +186,11 @@ export class CreateProductReqDto {
 }
 
 export class UpdateProductReqDto {
+  @ApiPropertyOptional({ enum: Object.values(PRODUCT_KIND) })
+  @ValidateIf((_object: UpdateProductReqDto, value: unknown) => value !== undefined)
+  @IsIn(Object.values(PRODUCT_KIND), { message: 'Loại sản phẩm phải là Sản phẩm hoặc Phụ kiện.' })
+  kind?: ProductKind;
+
   @ApiPropertyOptional()
   @IsString({ message: 'Tên phải là chuỗi ký tự.' })
   @IsOptional()
@@ -321,6 +335,7 @@ export class ProductCategorySummaryResDto {
 }
 
 export class ProductResDto {
+  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
@@ -349,6 +364,7 @@ export class ProductResDto {
 }
 
 export class ProductListItemResDto {
+  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;

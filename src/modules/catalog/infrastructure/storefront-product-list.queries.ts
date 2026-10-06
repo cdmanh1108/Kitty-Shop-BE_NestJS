@@ -1,6 +1,5 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import { paginateMeta } from '@common/types/pagination';
-import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import type {
@@ -10,7 +9,7 @@ import type {
 } from '../domain/catalog.models';
 import { PRODUCT_STATUS } from '../domain/catalog-status';
 import {
-  extractRentalPrices,
+  toStorefrontProductItem,
   storefrontProductBaseWhere,
   storefrontProductSelect,
   storefrontVariantBaseWhere,
@@ -28,7 +27,7 @@ export async function listStorefrontProducts(
 
   // Build Prisma where clause enforcing shop tenancy and public visibility
   const where: Prisma.ProductWhereInput = {
-    ...storefrontProductBaseWhere(input.shopId, input.category),
+    ...storefrontProductBaseWhere(input.shopId, input.category, input.kind),
   };
 
   if (input.q?.trim()) {
@@ -73,6 +72,10 @@ export async function listStorefrontProducts(
       Prisma.sql`p.archived_at IS NULL`,
       Prisma.sql`p.status = ${PRODUCT_STATUS.ACTIVE}`,
     ];
+
+    if (input.kind !== undefined) {
+      sqlConditions.push(Prisma.sql`p.kind = ${input.kind}`);
+    }
 
     if (input.category) {
       const cat = input.category.trim();
@@ -173,7 +176,7 @@ export async function listStorefrontProducts(
     } else {
       const pageIds = pageRows.map((r) => r.id);
       const hydrated = await prisma.product.findMany({
-        where: { id: { in: pageIds } },
+        where: { ...where, id: { in: pageIds } },
         select: storefrontProductSelect,
       });
       const byId = new Map(hydrated.map((p) => [p.id, p]));
@@ -202,37 +205,9 @@ export async function listStorefrontProducts(
     total = count;
   }
 
-  const items: StorefrontProductItem[] = products.map((product) => {
-    const primaryMediaObj = product.media[0] ?? null;
-    const imageUrl = primaryMediaObj ? mediaUrls.resolve(primaryMediaObj) : '';
-
-    const sizes = Array.from(
-      new Set(product.variants.map((v) => v.size?.name).filter((s): s is string => Boolean(s))),
-    );
-    const colors = Array.from(
-      new Set(product.variants.map((v) => v.color?.name).filter((c): c is string => Boolean(c))),
-    );
-
-    const rentalPrices = extractRentalPrices(
-      product.rentalRates,
-      product.variants.map((v) => v.rentalRates),
-    );
-
-    return {
-      id: product.id,
-      code: product.code,
-      slug: product.slug,
-      name: product.name,
-      categoryId: product.categoryId,
-      categoryName: product.category?.name ?? 'Sản phẩm',
-      imageUrl,
-      size: sizes.join(', ') || 'Free size',
-      color: colors.join(', ') || 'Nhiều màu',
-      rentalPrices,
-      depositAmount: decimalToNumber(product.defaultDepositAmount),
-      isRentable: product.isRentable,
-    };
-  });
+  const items: StorefrontProductItem[] = products.map((product) =>
+    toStorefrontProductItem(product, mediaUrls),
+  );
 
   return {
     items,

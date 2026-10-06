@@ -1,6 +1,7 @@
 import { PaginationMetaResDto } from '@common/dto/response.dto';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { INVENTORY_STATUS, type InventoryStatus } from '@modules/catalog/domain/catalog-status';
+import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/domain/product-kind';
 import { ApiProperty, ApiPropertyOptional, PickType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -120,6 +121,7 @@ export class AvailabilityQueryDto {
   until!: string;
 }
 export class InventoryProductSummaryResDto {
+  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
