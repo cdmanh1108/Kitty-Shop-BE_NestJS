@@ -33,12 +33,40 @@ export class PrismaAuditRepository implements AuditRepository {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.auditLog.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (input.page - 1) * input.limit,
         take: input.limit,
       }),
       this.prisma.auditLog.count({ where }),
     ]);
-    return { items, meta: paginateMeta(input.page, input.limit, total) };
+    const memberIds = items.flatMap((item) => (item.actorMemberId ? [item.actorMemberId] : []));
+    const userIds = items.flatMap((item) =>
+      !item.actorMemberId && item.actorUserId ? [item.actorUserId] : [],
+    );
+    const members =
+      memberIds.length || userIds.length
+        ? await this.prisma.shopMember.findMany({
+            where: {
+              shopId: input.shopId,
+              OR: [{ id: { in: memberIds } }, { userId: { in: userIds } }],
+            },
+            select: { id: true, userId: true, displayName: true },
+          })
+        : [];
+    const memberNames = new Map(members.map((member) => [member.id, member.displayName]));
+    const userNames = new Map(members.map((member) => [member.userId, member.displayName]));
+    return {
+      items: items.map((item) => ({
+        ...item,
+        actorDisplayName: item.actorWebAccountId
+          ? null
+          : item.actorMemberId
+            ? (memberNames.get(item.actorMemberId) ?? null)
+            : item.actorUserId
+              ? (userNames.get(item.actorUserId) ?? null)
+              : null,
+      })),
+      meta: paginateMeta(input.page, input.limit, total),
+    };
   }
 }

@@ -1,5 +1,11 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiPropertyOptional,
+  ApiTags,
+} from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
@@ -8,6 +14,8 @@ import type { CurrentUser as CurrentUserType } from '@common/types/current-user'
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { AuditService } from '../application/audit.service';
+import { AuditLogPageResDto } from './dto/audit-log.dto';
+import { mapAuditLogPage } from './audit.mapper';
 
 class AuditQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
@@ -30,13 +38,16 @@ export class AuditController {
   @Get()
   @Permissions(PERMISSIONS.AUDIT_VIEW)
   @ApiOperation({ summary: 'List audit logs' })
-  list(@CurrentUser() user: CurrentUserType, @Query() query: AuditQueryDto) {
-    return this.audit.list({
-      shopId: user.shopId,
-      page: query.page,
-      limit: query.limit,
-      entityType: query.entityType,
-      entityId: query.entityId,
-    });
+  @ApiOkResponse({ type: AuditLogPageResDto })
+  async list(@CurrentUser() user: CurrentUserType, @Query() query: AuditQueryDto) {
+    return mapAuditLogPage(
+      await this.audit.list({
+        shopId: user.shopId,
+        page: query.page,
+        limit: query.limit,
+        entityType: query.entityType,
+        entityId: query.entityId,
+      }),
+    );
   }
 }

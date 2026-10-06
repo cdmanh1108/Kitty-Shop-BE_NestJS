@@ -6,6 +6,8 @@ export interface AuditLogRecord {
   actorUserId: string | null;
   actorMemberId: string | null;
   actorWebAccountId: string | null;
+  /** Current shop member display name, not a historical identity snapshot. */
+  actorDisplayName?: string | null;
   action: string;
   entityType: string;
   entityId: string | null;

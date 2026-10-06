@@ -45,7 +45,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogPageResDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -4894,6 +4901,24 @@
       }
     },
     "schemas": {
+      "AuditLogPageResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLogResDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
       "LoginReqDto": {
         "type": "object",
         "properties": {
@@ -8065,6 +8090,116 @@
           }
         }
       },
+      "AuditLogResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "shopId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "actorMemberId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "actorWebAccountId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "actorDisplayName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tên hiển thị hiện tại của nhân viên trong cửa hàng, không phải tên lưu tại thời điểm thao tác."
+          },
+          "action": {
+            "type": "string"
+          },
+          "entityType": {
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "oldValues": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "newValues": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "userAgent": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestId": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "shopId",
+          "actorUserId",
+          "actorMemberId",
+          "actorWebAccountId",
+          "actorDisplayName",
+          "action",
+          "entityType",
+          "entityId",
+          "oldValues",
+          "newValues",
+          "ipAddress",
+          "userAgent",
+          "requestId",
+          "createdAt"
+        ]
+      },
+      "PaginationMetaResDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
       "AuthTokensResDto": {
         "type": "object",
         "properties": {
@@ -8106,29 +8241,6 @@
           "id",
           "code",
           "name"
-        ]
-      },
-      "PaginationMetaResDto": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "number"
-          },
-          "limit": {
-            "type": "number"
-          },
-          "total": {
-            "type": "number"
-          },
-          "totalPages": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "totalPages"
         ]
       },
       "CategoryLookupResDto": {
