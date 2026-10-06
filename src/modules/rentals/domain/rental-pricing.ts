@@ -23,6 +23,7 @@ export interface ResolvedRentalPricing {
 
 /**
  * Resolves one item price and deposit from already-filtered rental rates.
+ * This is the legacy rate resolver; RP01 cycle pricing is a separate, versioned path.
  *
  * Variant rates always take precedence over product rates at the same duration.
  * When neither an exact nor daily rate exists, the first candidate in the

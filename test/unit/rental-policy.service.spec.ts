@@ -80,7 +80,7 @@ describe('SettingsService - Rental Policy orchestration', () => {
     const operationOrder: string[] = [];
     const savedPolicy: RentalPolicy = {
       ...DEFAULT_RENTAL_POLICY,
-      rentalPricing: { defaultRentalPrice: 60_000 },
+      rentalPricing: { ...DEFAULT_RENTAL_POLICY.rentalPricing, defaultRentalPrice: 60_000 },
       specialCleaning: { feeMin: 35_000, feeMax: 60_000 },
     };
     saveRentalPolicyMock.mockImplementation(() => {
@@ -106,7 +106,7 @@ describe('SettingsService - Rental Policy orchestration', () => {
     expect(saveRentalPolicyMock).toHaveBeenCalledWith(
       mockUser.shopId,
       expect.objectContaining({
-        rentalPricing: { defaultRentalPrice: 60_000 },
+        rentalPricing: { ...DEFAULT_RENTAL_POLICY.rentalPricing, defaultRentalPrice: 60_000 },
         specialCleaning: { feeMin: 35_000, feeMax: 60_000 },
       }),
       mockUser.memberId,

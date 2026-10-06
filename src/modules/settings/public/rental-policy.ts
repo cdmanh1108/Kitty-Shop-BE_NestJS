@@ -6,3 +6,8 @@ export {
   type RentalPolicy,
   type RentalPolicyProvider,
 } from '../domain/rental-policy';
+
+export {
+  validateRentalPricingPolicy,
+  type RentalPricingPolicy,
+} from '../domain/rental-pricing-policy';

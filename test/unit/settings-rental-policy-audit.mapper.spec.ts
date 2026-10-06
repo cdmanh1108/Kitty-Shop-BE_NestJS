@@ -17,6 +17,11 @@ describe('toRentalPolicyAuditSnapshot', () => {
 
     expect(snapshot).toEqual({
       defaultRentalPrice: 60_000,
+      additionalDayFee: 10_000,
+      bulkQuantityThreshold: 3,
+      standardRenewalDay: 5,
+      bulkRenewalDay: 8,
+      maxOnlineRentalDays: 9,
       defaultCashDeposit: 220_000,
       allowedDepositMethods: ['CASH'],
       allowedDocumentTypes: ['CCCD'],

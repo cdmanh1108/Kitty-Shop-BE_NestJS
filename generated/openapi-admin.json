@@ -6585,7 +6585,7 @@
         "type": "object",
         "properties": {
           "rentalPricing": {
-            "$ref": "#/components/schemas/RentalPricingPolicyDto"
+            "$ref": "#/components/schemas/UpdateRentalPricingPolicyDto"
           },
           "deposit": {
             "$ref": "#/components/schemas/DepositPolicyDto"
@@ -9242,11 +9242,53 @@
           "defaultRentalPrice": {
             "type": "number",
             "example": 50000,
-            "description": "Default rental price in VND"
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Giá một lượt thuê mặc định (VND); cũng áp dụng tại mỗi mốc lượt mới"
+          },
+          "additionalDayFee": {
+            "type": "number",
+            "example": 10000,
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Phụ phí mỗi ngày tiếp theo (VND), trừ ngày bắt đầu lượt mới"
+          },
+          "bulkQuantityThreshold": {
+            "type": "number",
+            "example": 3,
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Tổng số món thuê thông thường để hưởng chu kỳ dài; không gồm phụ kiện miễn phí"
+          },
+          "standardRenewalDay": {
+            "type": "number",
+            "example": 5,
+            "minimum": 2,
+            "maximum": 365,
+            "description": "Ngày bắt đầu lượt tiếp theo của đơn dưới ngưỡng; 5 tương ứng các mốc 1, 5, 9, 13..."
+          },
+          "bulkRenewalDay": {
+            "type": "number",
+            "example": 8,
+            "minimum": 2,
+            "maximum": 365,
+            "description": "Ngày bắt đầu lượt tiếp theo của đơn đạt ngưỡng; 8 tương ứng các mốc 1, 8, 15, 22..."
+          },
+          "maxOnlineRentalDays": {
+            "type": "number",
+            "example": 9,
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Số ngày thuê tối đa được đặt qua website; không giới hạn đơn tạo trên admin"
           }
         },
         "required": [
-          "defaultRentalPrice"
+          "defaultRentalPrice",
+          "additionalDayFee",
+          "bulkQuantityThreshold",
+          "standardRenewalDay",
+          "bulkRenewalDay",
+          "maxOnlineRentalDays"
         ]
       },
       "DepositPolicyDto": {
@@ -9382,6 +9424,53 @@
           "rewardRentalValue",
           "stackableWithPromotions"
         ]
+      },
+      "UpdateRentalPricingPolicyDto": {
+        "type": "object",
+        "properties": {
+          "defaultRentalPrice": {
+            "type": "number",
+            "example": 50000,
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Giá một lượt thuê mặc định (VND)"
+          },
+          "additionalDayFee": {
+            "type": "number",
+            "example": 10000,
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Phụ phí mỗi ngày tiếp theo (VND)"
+          },
+          "bulkQuantityThreshold": {
+            "type": "number",
+            "example": 3,
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Ngưỡng số món thuê thông thường hưởng chu kỳ dài"
+          },
+          "standardRenewalDay": {
+            "type": "number",
+            "example": 5,
+            "minimum": 2,
+            "maximum": 365,
+            "description": "Ngày bắt đầu lượt tiếp theo của đơn dưới ngưỡng"
+          },
+          "bulkRenewalDay": {
+            "type": "number",
+            "example": 8,
+            "minimum": 2,
+            "maximum": 365,
+            "description": "Ngày bắt đầu lượt tiếp theo của đơn đạt ngưỡng"
+          },
+          "maxOnlineRentalDays": {
+            "type": "number",
+            "example": 9,
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Số ngày thuê tối đa đặt qua website"
+          }
+        }
       },
       "CustomerListItemResDto": {
         "type": "object",

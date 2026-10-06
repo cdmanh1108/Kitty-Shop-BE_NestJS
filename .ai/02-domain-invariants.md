@@ -5,6 +5,8 @@
 - Active allocations for the same InventoryItem may not overlap in time.
 - Rental interval semantics are `[start, end)`.
 - An order stores historical name/price snapshots.
+- RP01 cycle pricing is a staged domain capability: ordinary physical quantity selects the renewal day (default below 3: day 5; at least 3: day 8). Renewal days replace the daily surcharge with the effective cycle price; cycles repeat every renewalDay - 1 days. Complimentary accessories are excluded from that quantity.
+- Cycle price precedence is item override, order override, then shop setting, including explicit zero. RP01 does not wire the new resolver into creation, quotes or return fees; unversioned pricing snapshots remain legacy and unsupported explicit versions must be rejected.
 - Rental order source is immutable creation provenance: storefront checkout is ONLINE (including guests), while Admin/manual entry is OFFLINE. It is independent from CRM customer identity and WebAccount ownership.
 - RentalOrder.webAccountId is nullable storefront ownership and never replaces customerId; account deletion preserves order history by setting only webAccountId to NULL.
 - A WebAccount may self-cancel only its own ONLINE, RESERVED, unpaid order with no held deposit; cancellation uses the canonical transactional lifecycle and WebAccount audit actor, never staff actor IDs.

@@ -89,6 +89,13 @@ Order monetary columns are immutable-ish snapshots used for operational speed an
 
 `rental_order_items` stores product/variant names and agreed prices at booking time. Catalog price/name changes must not rewrite historical orders.
 
+RP01 extends the existing `app_settings` JSON value at key `rental_policy` with
+cycle pricing configuration. Reads fill missing fields without writing a backfill;
+the validated settings endpoint persists changes through the existing shop-scoped
+repository. No Prisma schema or SQL migration is needed for this foundation.
+Versioned cycle pricing snapshots will be written by RP03; existing unversioned
+order snapshots retain their original rate semantics. See [Business types](BUSINESS_TYPES.md#rental-cycle-pricing-foundation-rp01).
+
 ## Deletion policy
 
 - catalog/customer: archive where historical records exist.

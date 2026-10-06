@@ -10,9 +10,11 @@ import {
   IsString,
   Max,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import type { DepositDocumentType, DepositMethod } from '../domain/rental-policy';
+import { RENTAL_PRICING_LIMITS } from '../domain/rental-pricing-policy';
 
 export class CategoryDepositOverrideDto {
   @ApiProperty({ example: '11111111-1111-1111-1111-111111111111' })
@@ -27,11 +29,142 @@ export class CategoryDepositOverrideDto {
 }
 
 export class RentalPricingPolicyDto {
-  @ApiProperty({ example: 50000, description: 'Default rental price in VND' })
-  @IsInt({ message: 'Giá thuê mặc định phải là số nguyên.' })
-  @Min(0, { message: 'Giá thuê mặc định phải lớn hơn hoặc bằng $constraint1.' })
-  @Max(100_000_000, { message: 'Giá thuê mặc định phải nhỏ hơn hoặc bằng $constraint1.' })
+  @ApiProperty({
+    example: 50000,
+    minimum: 0,
+    maximum: RENTAL_PRICING_LIMITS.maxAmount,
+    description: 'Giá một lượt thuê mặc định (VND); cũng áp dụng tại mỗi mốc lượt mới',
+  })
   defaultRentalPrice!: number;
+
+  @ApiProperty({
+    example: 10000,
+    minimum: 0,
+    maximum: RENTAL_PRICING_LIMITS.maxAmount,
+    description: 'Phụ phí mỗi ngày tiếp theo (VND), trừ ngày bắt đầu lượt mới',
+  })
+  additionalDayFee!: number;
+
+  @ApiProperty({
+    example: 3,
+    minimum: 1,
+    maximum: RENTAL_PRICING_LIMITS.maxQuantityThreshold,
+    description: 'Tổng số món thuê thông thường để hưởng chu kỳ dài; không gồm phụ kiện miễn phí',
+  })
+  bulkQuantityThreshold!: number;
+
+  @ApiProperty({
+    example: 5,
+    minimum: 2,
+    maximum: RENTAL_PRICING_LIMITS.maxDays,
+    description:
+      'Ngày bắt đầu lượt tiếp theo của đơn dưới ngưỡng; 5 tương ứng các mốc 1, 5, 9, 13...',
+  })
+  standardRenewalDay!: number;
+
+  @ApiProperty({
+    example: 8,
+    minimum: 2,
+    maximum: RENTAL_PRICING_LIMITS.maxDays,
+    description:
+      'Ngày bắt đầu lượt tiếp theo của đơn đạt ngưỡng; 8 tương ứng các mốc 1, 8, 15, 22...',
+  })
+  bulkRenewalDay!: number;
+
+  @ApiProperty({
+    example: 9,
+    minimum: 1,
+    maximum: RENTAL_PRICING_LIMITS.maxDays,
+    description: 'Số ngày thuê tối đa được đặt qua website; không giới hạn đơn tạo trên admin',
+  })
+  maxOnlineRentalDays!: number;
+}
+
+/** All fields are optional and have no DTO defaults, so PATCH preserves stored values. */
+export class UpdateRentalPricingPolicyDto {
+  @ApiPropertyOptional({
+    example: 50000,
+    minimum: 0,
+    maximum: RENTAL_PRICING_LIMITS.maxAmount,
+    description: 'Giá một lượt thuê mặc định (VND)',
+  })
+  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Giá một lượt thuê phải là số nguyên.' })
+  @Min(0, { message: 'Giá một lượt thuê không được âm.' })
+  @Max(RENTAL_PRICING_LIMITS.maxAmount, {
+    message: 'Giá một lượt thuê không được vượt quá 100.000.000đ.',
+  })
+  defaultRentalPrice?: number;
+
+  @ApiPropertyOptional({
+    example: 10000,
+    minimum: 0,
+    maximum: RENTAL_PRICING_LIMITS.maxAmount,
+    description: 'Phụ phí mỗi ngày tiếp theo (VND)',
+  })
+  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Phụ phí mỗi ngày tiếp theo phải là số nguyên.' })
+  @Min(0, { message: 'Phụ phí mỗi ngày tiếp theo không được âm.' })
+  @Max(RENTAL_PRICING_LIMITS.maxAmount, {
+    message: 'Phụ phí mỗi ngày tiếp theo không được vượt quá 100.000.000đ.',
+  })
+  additionalDayFee?: number;
+
+  @ApiPropertyOptional({
+    example: 3,
+    minimum: 1,
+    maximum: RENTAL_PRICING_LIMITS.maxQuantityThreshold,
+    description: 'Ngưỡng số món thuê thông thường hưởng chu kỳ dài',
+  })
+  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Ngưỡng số món hưởng chu kỳ dài phải là số nguyên.' })
+  @Min(1, { message: 'Ngưỡng số món hưởng chu kỳ dài phải ít nhất là 1.' })
+  @Max(RENTAL_PRICING_LIMITS.maxQuantityThreshold, {
+    message: 'Ngưỡng số món hưởng chu kỳ dài không được vượt quá 1.000.',
+  })
+  bulkQuantityThreshold?: number;
+
+  @ApiPropertyOptional({
+    example: 5,
+    minimum: 2,
+    maximum: RENTAL_PRICING_LIMITS.maxDays,
+    description: 'Ngày bắt đầu lượt tiếp theo của đơn dưới ngưỡng',
+  })
+  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Mốc lượt mới cho đơn dưới ngưỡng phải là số nguyên.' })
+  @Min(2, { message: 'Mốc lượt mới cho đơn dưới ngưỡng phải từ ngày thứ 2 trở lên.' })
+  @Max(RENTAL_PRICING_LIMITS.maxDays, {
+    message: 'Mốc lượt mới cho đơn dưới ngưỡng không được vượt quá ngày thứ 365.',
+  })
+  standardRenewalDay?: number;
+
+  @ApiPropertyOptional({
+    example: 8,
+    minimum: 2,
+    maximum: RENTAL_PRICING_LIMITS.maxDays,
+    description: 'Ngày bắt đầu lượt tiếp theo của đơn đạt ngưỡng',
+  })
+  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Mốc lượt mới cho đơn đạt ngưỡng phải là số nguyên.' })
+  @Min(2, { message: 'Mốc lượt mới cho đơn đạt ngưỡng phải từ ngày thứ 2 trở lên.' })
+  @Max(RENTAL_PRICING_LIMITS.maxDays, {
+    message: 'Mốc lượt mới cho đơn đạt ngưỡng không được vượt quá ngày thứ 365.',
+  })
+  bulkRenewalDay?: number;
+
+  @ApiPropertyOptional({
+    example: 9,
+    minimum: 1,
+    maximum: RENTAL_PRICING_LIMITS.maxDays,
+    description: 'Số ngày thuê tối đa đặt qua website',
+  })
+  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Số ngày tối đa đặt qua website phải là số nguyên.' })
+  @Min(1, { message: 'Số ngày tối đa đặt qua website phải ít nhất là 1.' })
+  @Max(RENTAL_PRICING_LIMITS.maxDays, {
+    message: 'Số ngày tối đa đặt qua website không được vượt quá 365.',
+  })
+  maxOnlineRentalDays?: number;
 }
 
 export class DepositPolicyDto {
@@ -159,11 +292,11 @@ export class LoyaltyPolicyDto {
 }
 
 export class UpdateRentalPolicyReqDto {
-  @ApiPropertyOptional({ type: RentalPricingPolicyDto })
+  @ApiPropertyOptional({ type: UpdateRentalPricingPolicyDto })
   @IsOptional()
   @ValidateNested({ message: 'Cấu hình giá thuê có dữ liệu không hợp lệ.' })
-  @Type(() => RentalPricingPolicyDto)
-  rentalPricing?: RentalPricingPolicyDto;
+  @Type(() => UpdateRentalPricingPolicyDto)
+  rentalPricing?: UpdateRentalPricingPolicyDto;
 
   @ApiPropertyOptional({ type: DepositPolicyDto })
   @IsOptional()

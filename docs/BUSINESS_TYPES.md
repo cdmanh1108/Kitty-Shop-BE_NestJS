@@ -53,6 +53,71 @@ JavaScript number arithmetic retains its existing precision limits; this refacto
 does not make the full DECIMAL(18,2) range lossless after numeric conversion. A future
 precision redesign needs an explicit API/business decision, not a silent helper change.
 
+## Rental cycle pricing foundation (RP01)
+
+Settings owns `domain/rental-pricing-policy.ts` and publishes the typed policy and
+its pure validator through `settings/public/rental-policy.ts`. The configuration
+is stored in the existing `app_settings` JSON entry `rental_policy.rentalPricing`:
+
+| Field                   | Default | Meaning                                                   |
+| ----------------------- | ------: | --------------------------------------------------------- |
+| `defaultRentalPrice`    |   50000 | Price of the first rental cycle and each subsequent cycle |
+| `additionalDayFee`      |   10000 | Fee for a day that does not begin a new cycle             |
+| `bulkQuantityThreshold` |       3 | Ordinary physical units required for the longer cycle     |
+| `standardRenewalDay`    |       5 | First renewal day below the quantity threshold            |
+| `bulkRenewalDay`        |       8 | First renewal day at or above the threshold               |
+| `maxOnlineRentalDays`   |       9 | Maximum storefront duration to enforce in RP03            |
+
+Existing JSON entries missing the new fields receive these independent defaults
+when read. No migration, seed, automatic database write or historical repricing
+is required. Rental pricing PATCH has its own DTO: all fields are optional, an
+omitted field retains its value, zero remains zero, and explicit null is rejected.
+Only supplied fields are merged; DTO defaults must not overwrite saved settings.
+All effective fields participate in the existing settings audit snapshot.
+
+Money settings are nonnegative whole VND up to 100,000,000. Renewal days are
+integers from 2 through 365; the bulk renewal day cannot precede the standard day.
+The quantity threshold is 1 through 1,000 and the online duration is 1 through 365.
+Settings validation runs before saving, including for application callers.
+
+Rentals owns the separate pure `domain/rental-cycle-pricing.ts` resolver. Its
+`billableQuantity` is the total number of ordinary physical units in the order,
+including paid accessories, regardless of product/variant grouping or a zero
+price override. Complimentary accessories do not contribute. The result is the
+price of **one unit for the entire duration**; the caller applies line quantity.
+Inventory, deposits, shipping and charges are outside this calculation.
+
+For duration `d` and renewal day `r`, the cycle length is `r - 1`:
+
+```text
+cycleCount = 1 + floor((d - 1) / (r - 1))
+additionalDayCount = d - cycleCount
+unitRentalPrice = cycleCount * cyclePrice + additionalDayCount * additionalDayFee
+```
+
+Defaults therefore produce renewal days 1, 5, 9, 13 for orders below three units,
+and 1, 8, 15, 22 for orders with at least three. The new cycle price replaces the
+10,000 daily fee on those days. At 50,000 per cycle, a below-threshold unit costs
+130,000 on day 5 and 210,000 on day 9; an at-threshold unit costs 160,000 on day 8
+and 170,000 on day 9. Explicit item price overrides take precedence over order
+overrides, then the shop price, and apply to every cycle. Zero is a valid override.
+Both supplied override levels are validated, even when the item level wins.
+
+The resolver accepts up to two decimal places for explicit price overrides to
+retain existing command money precision. Arithmetic uses integer cents internally,
+then returns the existing computed-number API convention. Unsafe numeric totals
+and invalid durations, quantities or prices raise safe Vietnamese domain errors.
+It does not clamp an invalid duration into a one-day booking.
+
+`domain/rental-pricing-version.ts` identifies unversioned historical snapshots
+as `LEGACY_RATE_V1` and new resolver results as `CYCLE_V1`. Unknown explicit
+versions fail rather than silently choosing a pricing formula. RP01 prepares this
+version and calculation breakdown; persisting complete order snapshots belongs
+to RP03. `resolveRentalPricing`, existing catalog rates, storefront quotes, order
+creation and legacy late-return calculations continue their previous behavior
+until their respective RP tasks integrate the new capability. Public Web policy
+and booking responses are unchanged in RP01; Admin settings OpenAPI is expanded.
+
 ## Business time and reference numbers
 
 `common/clock/clock.ts` declares the framework-free Clock port and CLOCK token.

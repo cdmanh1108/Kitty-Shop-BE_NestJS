@@ -1,4 +1,12 @@
 import { InvalidShopSettingsError } from './rental-policy.errors';
+import {
+  buildEffectiveRentalPricingPolicy,
+  mergeRentalPricingPolicy,
+  validateRentalPricingPolicy,
+  type RentalPricingPolicy,
+} from './rental-pricing-policy';
+
+export type { RentalPricingPolicy } from './rental-pricing-policy';
 
 export type DepositMethod = 'CASH' | 'DOCUMENT';
 export const RENTAL_POLICY_SETTING_KEY = 'rental_policy';
@@ -7,10 +15,6 @@ export type DepositDocumentType = 'CCCD' | 'GPLX';
 export interface CategoryDepositOverride {
   categoryId: string;
   cashAmount: number;
-}
-
-export interface RentalPricingPolicy {
-  defaultRentalPrice: number;
 }
 
 export interface DepositPolicy {
@@ -77,9 +81,7 @@ export type PersistedRentalPolicy = Partial<{
 }>;
 
 export const DEFAULT_RENTAL_POLICY: RentalPolicy = {
-  rentalPricing: {
-    defaultRentalPrice: 50_000,
-  },
+  rentalPricing: buildEffectiveRentalPricingPolicy(),
   deposit: {
     allowedMethods: ['CASH', 'DOCUMENT'],
     allowedDocumentTypes: ['CCCD', 'GPLX'],
@@ -110,11 +112,7 @@ export const DEFAULT_RENTAL_POLICY: RentalPolicy = {
 
 export function buildEffectiveRentalPolicy(saved?: PersistedRentalPolicy | null): RentalPolicy {
   return {
-    rentalPricing: {
-      defaultRentalPrice:
-        saved?.rentalPricing?.defaultRentalPrice ??
-        DEFAULT_RENTAL_POLICY.rentalPricing.defaultRentalPrice,
-    },
+    rentalPricing: buildEffectiveRentalPricingPolicy(saved?.rentalPricing),
     deposit: {
       allowedMethods: saved?.deposit?.allowedMethods
         ? [...saved.deposit.allowedMethods]
@@ -163,10 +161,7 @@ export function buildEffectiveRentalPolicy(saved?: PersistedRentalPolicy | null)
 
 export function mergeRentalPolicy(base: RentalPolicy, patch: RentalPolicyPatch): RentalPolicy {
   return {
-    rentalPricing: {
-      defaultRentalPrice:
-        patch.rentalPricing?.defaultRentalPrice ?? base.rentalPricing.defaultRentalPrice,
-    },
+    rentalPricing: mergeRentalPricingPolicy(base.rentalPricing, patch.rentalPricing ?? {}),
     deposit: {
       allowedMethods: patch.deposit?.allowedMethods
         ? [...patch.deposit.allowedMethods]
@@ -206,12 +201,7 @@ export function mergeRentalPolicy(base: RentalPolicy, patch: RentalPolicyPatch):
 }
 
 export function validateRentalPolicy(policy: RentalPolicy): void {
-  if (
-    !Number.isInteger(policy.rentalPricing.defaultRentalPrice) ||
-    policy.rentalPricing.defaultRentalPrice < 0
-  ) {
-    throw new InvalidShopSettingsError('Giá thuê mặc định phải là số nguyên không âm.');
-  }
+  validateRentalPricingPolicy(policy.rentalPricing);
 
   if (
     !Number.isInteger(policy.deposit.defaultCashDeposit) ||
