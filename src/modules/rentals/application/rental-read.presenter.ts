@@ -2,7 +2,7 @@ import {
   PUBLIC_MEDIA_URL_RESOLVER,
   type PublicMediaUrlResolver,
 } from '@common/storage/public-url.resolver';
-import type { JsonSerialized } from '@common/types/json';
+import type { JsonSerialized, JsonValue } from '@common/types/json';
 import { Inject, Injectable } from '@nestjs/common';
 import type { RentalOrderDetails, RentalOrderPage } from '../domain/rental.models';
 import {
@@ -24,6 +24,12 @@ type MoneyValue = object | string;
 
 function money(value: MoneyValue): string {
   return typeof value === 'string' ? value : (value as { toString(): string }).toString();
+}
+
+function chargeMetadataString(metadata: JsonValue | null, key: string): string | null {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  const value = metadata[key];
+  return typeof value === 'string' ? value : null;
 }
 
 @Injectable()
@@ -145,6 +151,17 @@ export class RentalReadPresenter {
               inventoryItemId: inspection.inventoryItemId,
               condition: inspection.condition,
               note: inspection.note,
+              calculatedLateFee:
+                inspection.calculatedLateFee == null ? null : money(inspection.calculatedLateFee),
+              calculatedAdditionalRentalFee:
+                inspection.calculatedAdditionalRental == null
+                  ? null
+                  : money(inspection.calculatedAdditionalRental),
+              lateFee: inspection.lateFee == null ? null : money(inspection.lateFee),
+              additionalRentalFee:
+                inspection.additionalRental == null ? null : money(inspection.additionalRental),
+              feeOverrideReason: inspection.feeOverrideReason ?? null,
+              pricingVersion: inspection.pricingVersion ?? null,
             })),
           }
         : null,
@@ -196,6 +213,8 @@ export class RentalReadPresenter {
         })),
       })),
       charges: row.charges.map((charge) => ({
+        inventoryItemId: chargeMetadataString(charge.metadata, 'inventoryItemId'),
+        source: chargeMetadataString(charge.metadata, 'source'),
         id: charge.id,
         chargeType: charge.chargeType,
         description: charge.description,

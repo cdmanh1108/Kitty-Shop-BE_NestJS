@@ -5,9 +5,12 @@ import {
   RENTAL_STATUS,
 } from '@modules/rentals/domain/rental-status';
 import type { RentalPolicy } from '@modules/settings/public/rental-policy';
-import { calculateLateCharges } from '../domain/rental-settlement';
+import { calculateRentalReturnFees } from '../domain/rental-return-fees';
+import { rentalReturnFeeToken } from './rental-return-fee-token';
+import { lockRentalOrder } from './rental-order-lock';
+import { multiplyRentalPricingAmount } from '../domain/rental-cycle-pricing';
 import { rentalPaidQuantity } from '../domain/rental-accessories';
-import { RentalInvariantError } from '../domain/rental-errors';
+import { RentalInvariantError, RentalFeePreviewChangedError } from '../domain/rental-errors';
 import type { Clock } from '@common/clock/clock';
 import { recomputeOrderPaymentState } from '@modules/finance/public/order-payment-state-transaction';
 import { recordRentalReturnInspection } from '@modules/catalog/public/rental-inventory-transaction';
@@ -32,6 +35,7 @@ export async function receiveReturn(
   clock: Clock,
 ): Promise<RentalOrderDetails> {
   return serializableTransaction(prisma, async (tx) => {
+    if (!(await lockRentalOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({
       where: { id: input.orderId, shopId: input.shopId },
       include: {
@@ -68,13 +72,40 @@ export async function receiveReturn(
     });
 
     const itemCount = rentalPaidQuantity(order.items);
-    const late = calculateLateCharges({
+    const late = calculateRentalReturnFees({
+      rentalStartAt: order.rentalStartAt,
       dueAt: order.rentalEndAt,
       returnedAt,
-      itemCount,
-      rentalSubtotal: order.rentalSubtotal.toString(),
+      items: order.items,
+      overrides: input.items,
       policy,
     });
+    if (
+      input.feePreviewToken &&
+      input.feePreviewToken !==
+        rentalReturnFeeToken({
+          orderId: order.id,
+          dueAt: order.rentalEndAt,
+          returnedAt,
+          items: late.items,
+        })
+    )
+      throw new RentalFeePreviewChangedError();
+    for (const charge of input.manualCharges ?? []) {
+      if (
+        charge.chargeType === CHARGE_TYPE.LATE ||
+        charge.chargeType === CHARGE_TYPE.RENTAL_EXTRA
+      ) {
+        throw new RentalInvariantError(
+          'RETURN_FEE_OVERRIDE_REQUIRED',
+          'Vui lòng ghi đè phí trả trễ tại đúng món đồ để tránh cộng trùng.',
+        );
+      }
+      if (!Object.values(CHARGE_TYPE).some((type) => type === charge.chargeType)) {
+        throw new RentalInvariantError('INVALID_CHARGE_TYPE', 'Loại phụ phí không hợp lệ.');
+      }
+      multiplyRentalPricingAmount(charge.amount, charge.quantity ?? 1);
+    }
     await tx.rentalItemAllocation.updateMany({
       where: { orderId: order.id, status: ALLOCATION_STATUS.ACTIVE },
       data: { status: ALLOCATION_STATUS.RETURNED, releasedAt: returnedAt },
@@ -102,12 +133,38 @@ export async function receiveReturn(
 
     let extraChargesTotal = new Prisma.Decimal(0);
     for (const item of input.items) {
+      const fee = late.items.find((line) => line.inventoryItemId === item.inventoryItemId)!;
+      if (item.charge) {
+        multiplyRentalPricingAmount(item.charge.amount, 1);
+        const permitted =
+          fee.billingRole === 'FREE_ACCESSORY'
+            ? [CHARGE_TYPE.REPAIR, CHARGE_TYPE.DAMAGE, CHARGE_TYPE.LOST_ITEM]
+            : [CHARGE_TYPE.CLEANING, CHARGE_TYPE.REPAIR, CHARGE_TYPE.DAMAGE, CHARGE_TYPE.LOST_ITEM];
+        if (!permitted.some((type) => type === item.charge?.chargeType)) {
+          throw new RentalInvariantError(
+            'INVALID_INSPECTION_CHARGE',
+            'Phí kiểm tra không phù hợp với vai trò món đồ.',
+          );
+        }
+        if (!item.charge.description?.trim() || item.charge.description.trim().length > 2000) {
+          throw new RentalInvariantError(
+            'INSPECTION_CHARGE_REASON_REQUIRED',
+            'Vui lòng nhập lý do phí kiểm tra món đồ, tối đa 2.000 ký tự.',
+          );
+        }
+      }
       await tx.rentalReturnInspection.create({
         data: {
           orderId: order.id,
           inventoryItemId: item.inventoryItemId,
           condition: item.condition,
           note: item.note?.trim() || null,
+          calculatedLateFee: fee.calculatedLateFee,
+          calculatedAdditionalRental: fee.calculatedAdditionalRentalFee,
+          lateFee: fee.lateFee,
+          additionalRental: fee.additionalRentalFee,
+          feeOverrideReason: fee.feeOverrideReason,
+          pricingVersion: fee.pricingVersion,
         },
       });
       const targetStatus =
@@ -122,7 +179,42 @@ export async function receiveReturn(
         reason: `ORDER_RETURNED_${item.condition}`,
         notes: item.note?.trim() || null,
       });
-      if (item.charge && item.charge.amount > 0) {
+      for (const [chargeType, amountValue] of [
+        [CHARGE_TYPE.LATE, fee.lateFee],
+        [CHARGE_TYPE.RENTAL_EXTRA, fee.additionalRentalFee],
+      ] as const) {
+        if (
+          amountValue === 0 &&
+          (chargeType === CHARGE_TYPE.RENTAL_EXTRA || !fee.feeOverrideReason)
+        )
+          continue;
+        const amount = new Prisma.Decimal(amountValue);
+        extraChargesTotal = extraChargesTotal.plus(amount);
+        await tx.rentalOrderCharge.create({
+          data: {
+            shopId: input.shopId,
+            orderId: order.id,
+            orderItemId: fee.orderItemId,
+            chargeType,
+            description:
+              fee.feeOverrideReason ??
+              (chargeType === CHARGE_TYPE.LATE ? 'Phí ngày thuê thêm' : 'Phí lượt thuê mới'),
+            amount,
+            quantity: 1,
+            createdBy: input.actorMemberId,
+            metadata: {
+              source: 'RETURN_TIME_FEE',
+              inventoryItemId: fee.inventoryItemId,
+              pricingVersion: fee.pricingVersion,
+              lateDays: late.lateDays,
+              calculatedLateFee: fee.calculatedLateFee,
+              calculatedAdditionalRentalFee: fee.calculatedAdditionalRentalFee,
+              overrideReason: fee.feeOverrideReason,
+            },
+          },
+        });
+      }
+      if (item.charge) {
         const matchingOrderItem = order.items.find((orderItem) =>
           orderItem.allocations.some(
             (allocation) => allocation.inventoryItemId === item.inventoryItemId,
@@ -136,7 +228,7 @@ export async function receiveReturn(
             orderId: order.id,
             orderItemId: matchingOrderItem?.id ?? null,
             chargeType: item.charge.chargeType,
-            description: item.charge.description ?? `Phụ thu kiểm tra đồ (${item.condition})`,
+            description: item.charge.description?.trim(),
             amount,
             quantity: 1,
             createdBy: input.actorMemberId,
@@ -149,43 +241,10 @@ export async function receiveReturn(
         });
       }
     }
-    if (lateAmount.greaterThan(0)) {
-      extraChargesTotal = extraChargesTotal.plus(lateAmount);
-      await tx.rentalOrderCharge.create({
-        data: {
-          shopId: input.shopId,
-          orderId: order.id,
-          chargeType: CHARGE_TYPE.LATE,
-          description: `Phí trả trễ (${late.lateDays} ngày)`,
-          amount: lateAmount,
-          quantity: 1,
-          createdBy: input.actorMemberId,
-          metadata: { source: 'AUTO_LATE_RETURN', lateDays: late.lateDays },
-        },
-      });
-    }
-    if (additionalAmount.greaterThan(0)) {
-      extraChargesTotal = extraChargesTotal.plus(additionalAmount);
-      await tx.rentalOrderCharge.create({
-        data: {
-          shopId: input.shopId,
-          orderId: order.id,
-          chargeType: CHARGE_TYPE.RENTAL_EXTRA,
-          description: `Phí thuê thêm (trả trễ từ ngày thứ ${policy.lateReturn.newRentalChargeFromLateDay})`,
-          amount: additionalAmount,
-          quantity: 1,
-          createdBy: input.actorMemberId,
-          metadata: {
-            source: 'AUTO_LATE_RETURN',
-            thresholdDay: policy.lateReturn.newRentalChargeFromLateDay,
-          },
-        },
-      });
-    }
     for (const charge of input.manualCharges ?? []) {
       if (charge.amount > 0) {
         const amount = new Prisma.Decimal(charge.amount);
-        extraChargesTotal = extraChargesTotal.plus(amount);
+        extraChargesTotal = extraChargesTotal.plus(amount.times(charge.quantity ?? 1));
         await tx.rentalOrderCharge.create({
           data: {
             shopId: input.shopId,
@@ -193,7 +252,7 @@ export async function receiveReturn(
             chargeType: charge.chargeType,
             description: charge.description ?? null,
             amount,
-            quantity: 1,
+            quantity: charge.quantity ?? 1,
             createdBy: input.actorMemberId,
             metadata: { source: 'RETURN_MANUAL_CHARGE' },
           },

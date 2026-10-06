@@ -87,6 +87,8 @@ export class RentalItemResDto extends RentalItemSummaryResDto {
 }
 
 export class RentalChargeResDto {
+  @ApiPropertyOptional({ type: String, nullable: true }) inventoryItemId?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) source?: string | null;
   @ApiProperty() id!: string;
   @ApiProperty() chargeType!: string;
   @ApiProperty({ type: String, nullable: true }) description!: string | null;

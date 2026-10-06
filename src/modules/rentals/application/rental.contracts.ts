@@ -78,6 +78,8 @@ export interface ReturnRentalOrderInput {
     inventoryItemId: string;
     condition: 'NORMAL' | 'CLEANING_REQUIRED' | 'REPAIR_REQUIRED' | 'DAMAGED' | 'LOST';
     note?: string;
+    lateFeeOverride?: { amount: number; reason: string };
+    charge?: { chargeType: string; amount: number; description?: string };
   }>;
   manualCharges?: Array<{
     chargeType: string;
@@ -86,9 +88,12 @@ export interface ReturnRentalOrderInput {
     quantity?: number;
   }>;
   note?: string;
+  feePreviewToken?: string;
 }
 
 export interface SettleRentalOrderInput {
+  feeOverrides?: Array<{ inventoryItemId: string; amount: number; reason: string }>;
+  feePreviewToken?: string;
   paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   settlementType?: string;
   note?: string;

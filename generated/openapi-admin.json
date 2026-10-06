@@ -2806,6 +2806,7 @@
             "in": "query",
             "description": "ISO-8601 string of actual return timestamp",
             "schema": {
+              "format": "date-time",
               "type": "string"
             }
           }
@@ -2875,6 +2876,53 @@
           }
         ],
         "summary": "Receive rental return with per-item inspection and optional manual charges",
+        "tags": [
+          "Admin - Rental Orders"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/rental-orders/{id}/settlement-preview": {
+      "post": {
+        "operationId": "RentalController_settlementPreview",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettlementPreviewReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettlementPreviewResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Xem trước phí từng món và số tiền thu/hoàn theo ledger, chưa ghi thay đổi.",
         "tags": [
           "Admin - Rental Orders"
         ],
@@ -6505,6 +6553,15 @@
             "items": {
               "$ref": "#/components/schemas/ReturnPreviewItemDto"
             }
+          },
+          "durationDays": {
+            "type": "number"
+          },
+          "actualDurationDays": {
+            "type": "number"
+          },
+          "feePreviewToken": {
+            "type": "string"
           }
         },
         "required": [
@@ -6520,6 +6577,10 @@
       "ReturnRentalOrderReqDto": {
         "type": "object",
         "properties": {
+          "feePreviewToken": {
+            "type": "string",
+            "description": "Mã đối chiếu từ return-preview; phí vẫn được backend tính lại khi lưu."
+          },
           "actualReturnedAt": {
             "type": "string",
             "format": "date-time",
@@ -6546,9 +6607,73 @@
           "inspections"
         ]
       },
+      "SettlementPreviewReqDto": {
+        "type": "object",
+        "properties": {
+          "feeOverrides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettlementItemFeeOverrideReqDto"
+            }
+          }
+        }
+      },
+      "SettlementPreviewResDto": {
+        "type": "object",
+        "properties": {
+          "feePreviewToken": {
+            "type": "string"
+          },
+          "grandTotal": {
+            "type": "string"
+          },
+          "totalCharges": {
+            "type": "string"
+          },
+          "depositReceived": {
+            "type": "string"
+          },
+          "depositAvailable": {
+            "type": "string"
+          },
+          "refundAmount": {
+            "type": "string"
+          },
+          "amountDue": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettlementPreviewItemResDto"
+            }
+          }
+        },
+        "required": [
+          "feePreviewToken",
+          "grandTotal",
+          "totalCharges",
+          "depositReceived",
+          "depositAvailable",
+          "refundAmount",
+          "amountDue",
+          "items"
+        ]
+      },
       "SettleRentalOrderReqDto": {
         "type": "object",
         "properties": {
+          "feeOverrides": {
+            "description": "Trong multipart, gửi chuỗi JSON của danh sách {inventoryItemId, amount, reason}.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettlementItemFeeOverrideReqDto"
+            }
+          },
+          "feePreviewToken": {
+            "type": "string",
+            "description": "Mã từ settlement-preview; bắt buộc khi ghi đè phí."
+          },
           "paymentMethod": {
             "type": "string",
             "enum": [
@@ -9134,6 +9259,14 @@
       "RentalChargeResDto": {
         "type": "object",
         "properties": {
+          "inventoryItemId": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "nullable": true
+          },
           "id": {
             "type": "string"
           },
@@ -9309,6 +9442,18 @@
           },
           "variantTitle": {
             "type": "string"
+          },
+          "billingRole": {
+            "type": "string"
+          },
+          "pricingVersion": {
+            "type": "string"
+          },
+          "calculatedLateFee": {
+            "type": "string"
+          },
+          "calculatedAdditionalRentalFee": {
+            "type": "string"
           }
         },
         "required": [
@@ -9339,11 +9484,91 @@
           "note": {
             "type": "string",
             "description": "Ghi chú hiện trạng"
+          },
+          "lateFeeOverride": {
+            "$ref": "#/components/schemas/RentalItemFeeOverrideReqDto"
+          },
+          "charge": {
+            "description": "Bồi thường hoặc phí kiểm tra gắn với đúng SKU. Phụ kiện miễn phí chỉ nhận bồi thường mất/hỏng.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReturnItemChargeReqDto"
+              }
+            ]
           }
         },
         "required": [
           "inventoryItemId",
           "condition"
+        ]
+      },
+      "SettlementItemFeeOverrideReqDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Tổng phí trả trễ/thuê thêm của một SKU; thay thế phí tự tính, không cộng chồng. Giá 0 hợp lệ."
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "inventoryItemId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "reason",
+          "inventoryItemId"
+        ]
+      },
+      "SettlementPreviewItemResDto": {
+        "type": "object",
+        "properties": {
+          "inventoryItemId": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "productName": {
+            "type": "string"
+          },
+          "billingRole": {
+            "type": "string"
+          },
+          "canOverride": {
+            "type": "boolean"
+          },
+          "calculatedFee": {
+            "type": "string",
+            "nullable": true
+          },
+          "currentFee": {
+            "type": "string",
+            "nullable": true
+          },
+          "agreedFee": {
+            "type": "string",
+            "nullable": true
+          },
+          "feeOverrideReason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "inventoryItemId",
+          "sku",
+          "productName",
+          "billingRole",
+          "canOverride",
+          "calculatedFee",
+          "currentFee",
+          "agreedFee",
+          "feeOverrideReason"
         ]
       },
       "RentalPricingPolicyDto": {
@@ -10179,6 +10404,30 @@
           "note": {
             "type": "string",
             "nullable": true
+          },
+          "calculatedLateFee": {
+            "type": "string",
+            "nullable": true
+          },
+          "calculatedAdditionalRentalFee": {
+            "type": "string",
+            "nullable": true
+          },
+          "lateFee": {
+            "type": "string",
+            "nullable": true
+          },
+          "additionalRentalFee": {
+            "type": "string",
+            "nullable": true
+          },
+          "feeOverrideReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "pricingVersion": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
@@ -10186,6 +10435,52 @@
           "inventoryItemId",
           "condition",
           "note"
+        ]
+      },
+      "RentalItemFeeOverrideReqDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Tổng phí trả trễ/thuê thêm của một SKU; thay thế phí tự tính, không cộng chồng. Giá 0 hợp lệ."
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "amount",
+          "reason"
+        ]
+      },
+      "ReturnItemChargeReqDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Tổng phí trả trễ/thuê thêm của một SKU; thay thế phí tự tính, không cộng chồng. Giá 0 hợp lệ."
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "chargeType": {
+            "type": "string",
+            "enum": [
+              "CLEANING",
+              "REPAIR",
+              "DAMAGE",
+              "LOST_ITEM"
+            ]
+          }
+        },
+        "required": [
+          "amount",
+          "reason",
+          "chargeType"
         ]
       },
       "CategoryDepositOverrideDto": {

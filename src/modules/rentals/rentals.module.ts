@@ -27,6 +27,7 @@ import { RENTAL_LIFECYCLE_REPOSITORY } from './domain/ports/rental-lifecycle.por
 import { RENTAL_ORDER_READER } from './domain/ports/rental-order-reader.port';
 import { WEB_ACCOUNT_RENTAL_ORDERS_READER } from './domain/ports/web-account-rental-orders.reader';
 import { PrismaRentalRepository } from './infrastructure/prisma-rental.repository';
+import { RENTAL_SETTLEMENT_PREVIEW_READER } from './domain/ports/rental-settlement-preview.port';
 
 @Module({
   imports: [ClockModule, SettingsModule, CustomersModule, WebAuthModule],
@@ -49,6 +50,7 @@ import { PrismaRentalRepository } from './infrastructure/prisma-rental.repositor
     { provide: RENTAL_CREATION_VALIDATOR, useExisting: PrismaRentalRepository },
     { provide: RENTAL_CREATION_REPOSITORY, useExisting: PrismaRentalRepository },
     { provide: RENTAL_ORDER_READER, useExisting: PrismaRentalRepository },
+    { provide: RENTAL_SETTLEMENT_PREVIEW_READER, useExisting: PrismaRentalRepository },
     { provide: RENTAL_LIFECYCLE_REPOSITORY, useExisting: PrismaRentalRepository },
     { provide: WEB_ACCOUNT_RENTAL_ORDERS_READER, useExisting: PrismaRentalRepository },
   ],

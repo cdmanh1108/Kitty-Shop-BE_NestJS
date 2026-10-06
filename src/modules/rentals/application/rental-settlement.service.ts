@@ -23,6 +23,11 @@ import {
 } from '../domain/ports/rental-order-reader.port';
 import type { AddRentalChargeInput, SettleRentalOrderInput } from './rental.contracts';
 import {
+  RENTAL_SETTLEMENT_PREVIEW_READER,
+  type RentalSettlementPreviewReader,
+  type RentalSettlementFeeOverride,
+} from '../domain/ports/rental-settlement-preview.port';
+import {
   InvalidRentalEvidenceError,
   InvalidRentalChargeError,
   RentalAccessDeniedError,
@@ -50,8 +55,28 @@ export class RentalSettlementService {
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+    @Optional()
+    @Inject(RENTAL_SETTLEMENT_PREVIEW_READER)
+    private readonly previews?: RentalSettlementPreviewReader,
   ) {
     this.logger = loggerFactory?.create(RentalSettlementService.name) ?? silentApplicationLog;
+  }
+
+  async previewSettlement(
+    user: CurrentUser,
+    orderId: string,
+    feeOverrides?: RentalSettlementFeeOverride[],
+  ) {
+    this.authorize(user);
+    if (!this.previews)
+      throw new RentalOperationNotAllowedError('Chưa có dịch vụ xem trước tất toán.');
+    const preview = await this.previews.getSettlementPreview({
+      shopId: user.shopId,
+      orderId,
+      feeOverrides,
+    });
+    if (!preview) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
+    return preview;
   }
 
   async settle(
@@ -126,6 +151,8 @@ export class RentalSettlementService {
         note: input.note?.trim(),
         returnDocument: input.returnDocumentCollateral,
         evidence,
+        feeOverrides: input.feeOverrides,
+        feePreviewToken: input.feePreviewToken,
       });
 
       if (!result) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');

@@ -60,6 +60,12 @@ export interface RentalDetailsResult extends RentalOrderSummaryResult {
       inventoryItemId: string;
       condition: string;
       note: string | null;
+      calculatedLateFee?: string | null;
+      calculatedAdditionalRentalFee?: string | null;
+      lateFee?: string | null;
+      additionalRentalFee?: string | null;
+      feeOverrideReason?: string | null;
+      pricingVersion?: string | null;
     }>;
   } | null;
   settlementDetails: {
@@ -108,6 +114,8 @@ export interface RentalDetailsResult extends RentalOrderSummaryResult {
     }>;
   }>;
   charges: Array<{
+    inventoryItemId?: string | null;
+    source?: string | null;
     id: string;
     chargeType: string;
     description: string | null;

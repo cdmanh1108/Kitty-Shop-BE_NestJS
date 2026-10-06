@@ -107,6 +107,13 @@ invariants remain in the pure Rentals domain policy.
 
 ## Failure windows
 
+RP13 receive-return and settlement share the shop-scoped monetary order lock.
+Per-SKU fee calculation, reasoned overrides, charge replacement/void, inspection
+snapshots, order totals, receipts, audit and the required lifecycle outbox remain
+atomic. Freshness tokens are not authorization or idempotency keys; they detect
+changed fee/ledger previews. A stale token returns a conflict before writes commit.
+Formal extension APIs are not part of the rollout. See [Return fees](RENTAL_RETURN_FEES.md).
+
 | Window                                   | Outcome                                                                   |
 | ---------------------------------------- | ------------------------------------------------------------------------- |
 | Before claim                             | No idempotency/business write                                             |

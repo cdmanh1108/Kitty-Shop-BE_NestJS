@@ -52,3 +52,13 @@ export class RentalOverlapError extends ApplicationError {
     );
   }
 }
+
+export class RentalFeePreviewChangedError extends ApplicationError {
+  readonly kind = 'CONFLICT' as const;
+  constructor() {
+    super(
+      'Thông tin phí hoặc số tiền đã thay đổi. Vui lòng tải lại và kiểm tra trước khi xác nhận.',
+      'RENTAL_FEE_PREVIEW_CHANGED',
+    );
+  }
+}

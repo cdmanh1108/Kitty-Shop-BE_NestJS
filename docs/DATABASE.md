@@ -118,6 +118,13 @@ Order lifecycle and money state are separate:
 
 ## Money
 
+RP13 migration `202610060003_return_item_fees` adds nullable configured/agreed time
+fees, override reason and pricing version to return inspections. Old returns remain
+NULL; new returns capture all SKU fees, including zero for free accessories. Before
+settlement, fee adjustments preserve configured values, void old time-charge rows,
+create replacements and audit their change in the same transaction. See
+[Return fees](RENTAL_RETURN_FEES.md) for deployment and compatibility.
+
 All money uses `NUMERIC(18,2)`. Do not change to floating-point.
 
 A payment transaction records direction (`IN`/`OUT`) and purpose. Deposits (`DEPOSIT`, `DEPOSIT_REFUND`) are excluded from realized revenue reporting.

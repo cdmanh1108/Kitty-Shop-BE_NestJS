@@ -26,13 +26,22 @@ export interface ReceiveRentalReturnData {
     inventoryItemId: string;
     condition: string;
     note?: string;
+    lateFeeOverride?: { amount: number; reason: string };
     charge?: { chargeType: string; amount: number; description?: string };
   }>;
-  manualCharges?: Array<{ chargeType: string; amount: number; description?: string }>;
+  manualCharges?: Array<{
+    chargeType: string;
+    amount: number;
+    description?: string;
+    quantity?: number;
+  }>;
   note?: string;
+  feePreviewToken?: string;
 }
 
 export interface SettleRentalOrderData {
+  feeOverrides?: Array<{ inventoryItemId: string; amount: number; reason: string }>;
+  feePreviewToken?: string;
   paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   shopId: string;
   orderId: string;

@@ -46,7 +46,10 @@ export class RentalReturnService {
       dailyLateFeePerSet: preview.dailyLateFeePerSet,
       lateFee: preview.lateFee,
       additionalRentalFee: preview.additionalRental,
-      items,
+      items: preview.items ?? items,
+      durationDays: preview.durationDays,
+      actualDurationDays: preview.actualDurationDays,
+      feePreviewToken: preview.feePreviewToken,
     };
   }
 
@@ -70,9 +73,12 @@ export class RentalReturnService {
         inventoryItemId: item.inventoryItemId,
         condition: item.condition,
         note: item.note,
+        lateFeeOverride: item.lateFeeOverride,
+        charge: item.charge,
       })),
       manualCharges: input.manualCharges,
       note: input.note,
+      feePreviewToken: input.feePreviewToken,
     });
     await this.audit.log({
       shopId: user.shopId,

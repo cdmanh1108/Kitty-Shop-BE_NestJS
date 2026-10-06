@@ -41,6 +41,19 @@ export interface ReturnPreviewData {
   depositHeld: string;
   collateralMethod: string;
   documentType: string | null;
+  items?: Array<{
+    inventoryItemId: string;
+    sku: string;
+    productName: string;
+    variantTitle: string;
+    billingRole: string;
+    pricingVersion: string;
+    calculatedLateFee: string;
+    calculatedAdditionalRentalFee: string;
+  }>;
+  durationDays?: number;
+  actualDurationDays?: number;
+  feePreviewToken?: string;
 }
 
 export interface StorefrontOrderLookupRecord {

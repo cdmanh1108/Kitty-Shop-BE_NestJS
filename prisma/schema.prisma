@@ -805,12 +805,18 @@ model RentalReturn {
 }
 
 model RentalReturnInspection {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId         String   @map("order_id") @db.Uuid
-  inventoryItemId String   @map("inventory_item_id") @db.Uuid
-  condition       String   @db.VarChar(30)
-  note            String?  @db.Text
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId                    String   @map("order_id") @db.Uuid
+  inventoryItemId            String   @map("inventory_item_id") @db.Uuid
+  condition                  String   @db.VarChar(30)
+  note                       String?  @db.Text
+  calculatedLateFee          Decimal? @map("calculated_late_fee") @db.Decimal(18, 2)
+  calculatedAdditionalRental Decimal? @map("calculated_additional_rental") @db.Decimal(18, 2)
+  lateFee                    Decimal? @map("late_fee") @db.Decimal(18, 2)
+  additionalRental           Decimal? @map("additional_rental") @db.Decimal(18, 2)
+  feeOverrideReason          String?  @map("fee_override_reason") @db.VarChar(2000)
+  pricingVersion             String?  @map("pricing_version") @db.VarChar(30)
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   returnRecord  RentalReturn  @relation(fields: [orderId], references: [orderId], onDelete: Cascade, onUpdate: NoAction)
   inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict, onUpdate: NoAction)

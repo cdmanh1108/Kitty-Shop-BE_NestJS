@@ -30,6 +30,7 @@ export interface ReceiveReturnItemInput {
   inventoryItemId: string;
   condition: ItemInspectionCondition;
   note?: string;
+  lateFeeOverride?: { amount: number; reason: string };
   charge?: {
     chargeType: string;
     amount: number;
@@ -64,6 +65,12 @@ export interface RentalReturnInspectionRecord {
   inventoryItemId: string;
   condition: string;
   note: string | null;
+  calculatedLateFee?: DecimalValue | null;
+  calculatedAdditionalRental?: DecimalValue | null;
+  lateFee?: DecimalValue | null;
+  additionalRental?: DecimalValue | null;
+  feeOverrideReason?: string | null;
+  pricingVersion?: string | null;
   createdAt: Date;
 }
 

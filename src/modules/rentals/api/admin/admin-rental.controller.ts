@@ -60,8 +60,16 @@ import {
   RentalOrderPageResDto,
   RentalOrderResDto,
 } from './dto/rental-order.dto';
-import { ReturnPreviewResDto, ReturnRentalOrderReqDto } from './dto/rental-return.dto';
-import { SettleRentalOrderReqDto } from './dto/rental-settlement.dto';
+import {
+  ReturnPreviewResDto,
+  ReturnRentalOrderReqDto,
+  ReturnPreviewQueryDto,
+} from './dto/rental-return.dto';
+import {
+  SettleRentalOrderReqDto,
+  SettlementPreviewReqDto,
+  SettlementPreviewResDto,
+} from './dto/rental-settlement.dto';
 import {
   toAddRentalChargeInput,
   toCreateRentalOrderInput,
@@ -69,6 +77,7 @@ import {
   toRescheduleRentalInput,
   toReturnRentalOrderInput,
   toTransitionRentalInput,
+  toSettleRentalOrderInput,
 } from '../rental.mapper';
 
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
@@ -252,9 +261,13 @@ export class AdminRentalController {
   returnPreview(
     @CurrentUser() user: CurrentUserType,
     @Param('id') id: string,
-    @Query('returnedAt') returnedAt?: string,
+    @Query() query: ReturnPreviewQueryDto,
   ) {
-    return this.returns.getReturnPreview(user, id, returnedAt ? new Date(returnedAt) : undefined);
+    return this.returns.getReturnPreview(
+      user,
+      id,
+      query.returnedAt ? new Date(query.returnedAt) : undefined,
+    );
   }
 
   @Post(':id/return')
@@ -274,6 +287,29 @@ export class AdminRentalController {
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
+  @Post(':id/settlement-preview')
+  @Permissions(PERMISSIONS.RENTALS_SETTLE)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Xem trước phí từng món và số tiền thu/hoàn theo ledger, chưa ghi thay đổi.',
+  })
+  @ApiOkResponse({ type: SettlementPreviewResDto })
+  settlementPreview(
+    @CurrentUser() user: CurrentUserType,
+    @Param('id') id: string,
+    @Body() body: SettlementPreviewReqDto,
+  ) {
+    return this.settlements.previewSettlement(
+      user,
+      id,
+      body.feeOverrides?.map((item) => ({
+        inventoryItemId: item.inventoryItemId,
+        amount: item.amount,
+        reason: item.reason,
+      })),
+    );
+  }
+
   @Post(':id/settle')
   @Permissions(PERMISSIONS.RENTALS_SETTLE)
   @HttpCode(200)
@@ -291,7 +327,7 @@ export class AdminRentalController {
     @UploadedFile() file?: SettlementImage,
   ) {
     return this.settlements
-      .settle(user, id, body, file)
+      .settle(user, id, toSettleRentalOrderInput(body), file)
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
 

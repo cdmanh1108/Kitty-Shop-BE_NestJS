@@ -8,6 +8,7 @@ import type {
   RescheduleRentalInput,
   ReturnRentalOrderInput,
   TransitionRentalInput,
+  SettleRentalOrderInput,
 } from '../application/rental.contracts';
 import type {
   AddRentalChargeReqDto,
@@ -22,6 +23,21 @@ import type {
 } from './admin/dto/rental-creation.dto';
 import type { RentalListQueryDto } from './admin/dto/rental-order.dto';
 import type { ReturnRentalOrderReqDto } from './admin/dto/rental-return.dto';
+import type { SettleRentalOrderReqDto } from './admin/dto/rental-settlement.dto';
+
+export function toSettleRentalOrderInput(dto: SettleRentalOrderReqDto): SettleRentalOrderInput {
+  return {
+    paymentMethod: dto.paymentMethod,
+    note: dto.note,
+    returnDocumentCollateral: dto.returnDocumentCollateral,
+    feePreviewToken: dto.feePreviewToken,
+    feeOverrides: dto.feeOverrides?.map((item) => ({
+      inventoryItemId: item.inventoryItemId,
+      amount: item.amount,
+      reason: item.reason,
+    })),
+  };
+}
 
 export function toAddRentalChargeInput(dto: AddRentalChargeReqDto): AddRentalChargeInput {
   return { ...dto };
@@ -60,6 +76,14 @@ export function toReturnRentalOrderInput(dto: ReturnRentalOrderReqDto): ReturnRe
       inventoryItemId: item.inventoryItemId,
       condition: item.condition as ReturnRentalOrderInput['inspections'][number]['condition'],
       note: item.note,
+      lateFeeOverride: item.lateFeeOverride ? { ...item.lateFeeOverride } : undefined,
+      charge: item.charge
+        ? {
+            chargeType: item.charge.chargeType,
+            amount: item.charge.amount,
+            description: item.charge.reason,
+          }
+        : undefined,
     })),
     manualCharges: dto.manualCharges?.map((charge) => ({
       chargeType: charge.chargeType,
@@ -68,5 +92,6 @@ export function toReturnRentalOrderInput(dto: ReturnRentalOrderReqDto): ReturnRe
       quantity: charge.quantity,
     })),
     note: dto.note,
+    feePreviewToken: dto.feePreviewToken,
   };
 }

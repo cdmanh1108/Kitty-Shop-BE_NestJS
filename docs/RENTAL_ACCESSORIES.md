@@ -47,7 +47,8 @@ Order, allocations, outbox and idempotency completion stay in that transaction.
 Free accessories reserve the complete rental interval and take part in confirmation,
 handover, reschedule, cancellation, return inspections and release. Current
 automatic return fees exclude their quantity; damage/loss inspection charges are
-preserved. Full cycle-based extension and late-fee calculation belongs to RP11/RP13.
+preserved. RP13 implements cycle-based return fees and reasoned per-SKU overrides;
+see [Return fees](RENTAL_RETURN_FEES.md). Formal extension APIs are no longer planned.
 
 Web idempotency includes free/paid intent. Paid-only hashes retain their previous
 identity, so deployment does not invalidate completed legacy checkout retries.

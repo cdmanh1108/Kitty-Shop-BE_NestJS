@@ -116,7 +116,9 @@ this version and calculation breakdown; RP03 persists complete order snapshots.
 Existing catalog rate presentation and legacy late-return calculations
 continue their previous behavior until their respective RP tasks integrate the
 new capability. RP03 applies the cycle resolver to storefront quotes and booking;
-Admin and Web interfaces follow in RP04/RP05, and continuous return fees in RP13.
+Admin and Web interfaces follow in RP04/RP05. RP13 implements continuous return
+fees and per-SKU overrides; see [Return fees](RENTAL_RETURN_FEES.md). Formal
+extension APIs are no longer part of the rollout.
 
 ## Cycle-priced quotes and booking (RP03)
 

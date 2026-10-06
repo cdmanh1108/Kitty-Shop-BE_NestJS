@@ -36,6 +36,8 @@ import { transition } from './rental-transition.lifecycle';
 import { addCharge, reschedule } from './rental-scheduling.lifecycle';
 import { getReturnPreview, returnDocumentCollateral } from './rental-collateral.lifecycle';
 import { confirmOrder } from './rental-confirmation';
+import type { RentalSettlementPreviewReader } from '../domain/ports/rental-settlement-preview.port';
+import { getSettlementPreview } from './rental-settlement-fees';
 
 @Injectable()
 export class PrismaRentalRepository
@@ -46,8 +48,14 @@ export class PrismaRentalRepository
     RentalCreationValidator,
     RentalLifecycleRepository,
     RentalOrderReader,
+    RentalSettlementPreviewReader,
     WebAccountRentalOrdersReader
 {
+  getSettlementPreview(
+    input: Parameters<RentalSettlementPreviewReader['getSettlementPreview']>[0],
+  ) {
+    return getSettlementPreview(this.prisma, input);
+  }
   async confirm(input: Parameters<RentalLifecycleRepository['confirm']>[0]) {
     return confirmOrder(
       this.prisma,

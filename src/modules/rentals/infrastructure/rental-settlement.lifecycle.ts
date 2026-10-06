@@ -1,7 +1,5 @@
-import { rentalLedger } from './rental-ledger';
 import { recordRentalReceipt } from '@modules/finance/public/rental-receipt-transaction';
 import { recomputeOrderPaymentState } from '@modules/finance/public/order-payment-state-transaction';
-import { listCompletedPaymentLines } from '@modules/finance/public/completed-payment-reader';
 import {
   countQualifiedRentalLoyaltyEntries,
   createRentalLoyaltyEntry,
@@ -11,7 +9,7 @@ import type { RentalOutboxEvent } from '../domain/rental.events';
 import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
 import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { rewardForCompletedRental } from '../domain/rental-settlement';
-import { RentalInvariantError } from '../domain/rental-errors';
+import { RentalInvariantError, RentalFeePreviewChangedError } from '../domain/rental-errors';
 import { assertSettlementAllowed } from '../domain/rental-monetary.policy';
 import type { Clock } from '@common/clock/clock';
 import type { PrismaService } from '@database/prisma/prisma.service';
@@ -21,6 +19,11 @@ import type { SettleRentalOrderData } from '../domain/ports/rental-lifecycle.por
 import type { RentalOrderDetails } from '../domain/rental.models';
 import { getWithTx } from './rental-admin.queries';
 import { lockRentalOrder } from './rental-order-lock';
+import {
+  evaluateSettlementFees,
+  persistSettlementFeeAdjustments,
+  settlementFeeContextInclude,
+} from './rental-settlement-fees';
 
 export async function settleOrder(
   prisma: PrismaService,
@@ -32,10 +35,7 @@ export async function settleOrder(
     if (!(await lockRentalOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({
       where: { id: input.orderId, shopId: input.shopId },
-      include: {
-        confirmation: true,
-        charges: { where: { voidedAt: null } },
-      },
+      include: settlementFeeContextInclude,
     });
     if (!order) return null;
     const existingSettlement = await tx.rentalSettlement.findUnique({
@@ -43,23 +43,25 @@ export async function settleOrder(
     });
     assertSettlementAllowed({ status: order.status, hasSettlement: Boolean(existingSettlement) });
 
-    const payments = await listCompletedPaymentLines(tx, order.id);
-    const ledger = rentalLedger(payments);
+    const plan = await evaluateSettlementFees(tx, order, input.feeOverrides);
+    if (
+      (input.feeOverrides?.length && !input.feePreviewToken) ||
+      (input.feePreviewToken && input.feePreviewToken !== plan.preview.feePreviewToken)
+    )
+      throw new RentalFeePreviewChangedError();
+    const ledger = plan.ledger;
     const depositAmount = ledger.depositHeld;
-    const totalCharges = order.chargesTotal;
-    const remaining = Prisma.Decimal.max(0, order.grandTotal.minus(ledger.paidRental));
-    const refundAmount = Prisma.Decimal.max(0, depositAmount.minus(remaining));
-    const amountDue = Prisma.Decimal.max(0, remaining.minus(depositAmount));
-    const settlementType =
-      order.collateralMethod === 'DOCUMENT'
-        ? amountDue.greaterThan(0)
-          ? 'COLLECTION'
-          : 'COLLATERAL_ONLY'
-        : refundAmount.greaterThan(0)
-          ? 'REFUND'
-          : amountDue.greaterThan(0)
-            ? 'COLLECTION'
-            : 'BALANCED';
+    const totalCharges = plan.totalCharges;
+    const remaining = plan.remaining;
+    const refundAmount = plan.refundAmount;
+    const amountDue = plan.amountDue;
+    const settlementType = refundAmount.greaterThan(0)
+      ? 'REFUND'
+      : amountDue.greaterThan(0)
+        ? 'COLLECTION'
+        : order.collateralMethod === 'DOCUMENT'
+          ? 'COLLATERAL_ONLY'
+          : 'BALANCED';
     if (input.settlementType && input.settlementType !== settlementType) {
       throw new RentalInvariantError(
         'SETTLEMENT_CHANGED',
@@ -78,6 +80,7 @@ export async function settleOrder(
     }
 
     const now = clock.now();
+    await persistSettlementFeeAdjustments(tx, order, plan, input, now);
     const settledMoney = refundAmount.greaterThan(0)
       ? refundAmount
       : amountDue.greaterThan(0)
@@ -98,7 +101,14 @@ export async function settleOrder(
       key: 'RS-F-' + order.id,
       purpose: 'DEPOSIT_REFUND',
       direction: 'OUT',
-      amount: refundAmount,
+      amount: plan.depositRefund,
+    });
+    await recordRentalReceipt(tx, {
+      ...receipt,
+      key: 'RS-O-' + order.id,
+      purpose: 'ORDER_REFUND',
+      direction: 'OUT',
+      amount: plan.rentalRefund,
     });
     await recordRentalReceipt(tx, {
       ...receipt,

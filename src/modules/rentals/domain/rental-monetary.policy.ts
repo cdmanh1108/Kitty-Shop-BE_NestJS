@@ -117,6 +117,7 @@ function isLifecycleReceipt(orderId: string, receiptKey: string | null): boolean
     receiptKey === `RS-F-${orderId}` ||
     receiptKey === `RS-C-${orderId}` ||
     receiptKey === `RS-D-${orderId}` ||
-    receiptKey === `RS-R-${orderId}`
+    receiptKey === `RS-R-${orderId}` ||
+    receiptKey === `RS-O-${orderId}`
   );
 }

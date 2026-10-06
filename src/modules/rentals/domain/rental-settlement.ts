@@ -113,7 +113,9 @@ export function calculateRentalSettlement(input: {
   const unpaidRental = cents(input.grandTotal) - cents(input.paidRental);
   const remaining = unpaidRental > 0n ? unpaidRental : 0n;
   const depositAvailable = received - refunded > 0n ? received - refunded : 0n;
-  const refundDue = depositAvailable > remaining ? depositAvailable - remaining : 0n;
+  const rentalOverpayment = unpaidRental < 0n ? -unpaidRental : 0n;
+  const refundDue =
+    (depositAvailable > remaining ? depositAvailable - remaining : 0n) + rentalOverpayment;
   const amountDue = remaining > depositAvailable ? remaining - depositAvailable : 0n;
   const isPostReturn = input.status === 'RETURNED' || input.status === 'COMPLETED';
 
