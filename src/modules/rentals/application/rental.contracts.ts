@@ -14,6 +14,8 @@ export interface CreateRentalOrderInput {
   items: Array<CreateRentalItemInput>;
   charges: Array<RentalChargeInput>;
   discountTotal: number;
+  /** Per-unit cycle price, applied again at each renewal. Item override takes precedence. */
+  cyclePriceOverride?: number;
   note?: string;
   internalNote?: string;
   delivery?: RentalDeliveryInput;
@@ -23,6 +25,8 @@ export interface CreateRentalOrderInput {
 export interface CreateRentalItemInput {
   variantId: string;
   quantity: number;
+  cyclePriceOverride?: number;
+  /** Deprecated full-period override, retained for existing Admin clients. */
   unitRentalPrice?: number;
   inventoryItemIds?: Array<string>;
 }

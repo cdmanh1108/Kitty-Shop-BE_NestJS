@@ -2,6 +2,7 @@ import type { JsonValue } from '@common/types/json';
 import type { RentalOrderDetails } from '../rental.models';
 import type { RentalOrderSource } from '../rental-order-source';
 import type { WebPaymentPreference } from '../web-payment-preference';
+import type { RentalPricingSnapshot } from '../rental-pricing-snapshot';
 
 export type IdempotencyClaim =
   | { state: 'CLAIMED'; claimId: string }
@@ -43,7 +44,7 @@ export interface CreateRentalOrderData {
     unitRentalPrice: number;
     depositAmount: number;
     lineTotal: number;
-    pricingSnapshot: { durationDays: number; unitRentalPrice: number; depositPerItem: number };
+    pricingSnapshot: RentalPricingSnapshot;
     inventory: Array<{ id: string; sku: string }>;
   }>;
   charges: Array<{ chargeType: string; description?: string; amount: number; quantity: number }>;

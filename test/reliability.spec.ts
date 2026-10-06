@@ -10,6 +10,7 @@ import { AuditService } from '../src/modules/audit/application/audit.service';
 import type { AuditEntry, AuditPort } from '../src/modules/audit/domain/audit.port';
 import type { AuditRepository } from '../src/modules/audit/domain/audit.repository';
 import { RentalCreationService } from '../src/modules/rentals/application/rental-creation.service';
+import { rentalPolicies } from './fixtures/rental-policy.fixture';
 import { RentalOperationConflictError } from '../src/modules/rentals/application/rental.errors';
 import { applicationLoggerMock } from './helpers/application-logger';
 import type { CreateRentalOrderInput } from '../src/modules/rentals/application/rental.contracts';
@@ -578,6 +579,7 @@ function rentalServiceWithPorts(
     ports.availability,
     audit,
     clock,
+    rentalPolicies,
   );
 }
 

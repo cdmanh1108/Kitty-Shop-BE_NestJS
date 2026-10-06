@@ -23,12 +23,13 @@ export class WebPolicyController {
   })
   @ApiOkResponse({
     type: WebRentalPolicyDto,
-    description: 'Chính sách cọc, phí trễ hạn và vận chuyển công khai cho storefront',
+    description: 'Biểu giá thuê, giới hạn đặt online, chính sách cọc và vận chuyển công khai.',
   })
   async getPolicies(): Promise<WebRentalPolicyDto> {
     const shopId = await this.shopResolver.resolveShopId();
     const policy = await this.policyProvider.getPolicy(shopId);
     return {
+      rentalPricing: { ...policy.rentalPricing },
       depositMethods: policy.deposit.allowedMethods,
       depositDocumentTypes: policy.deposit.allowedDocumentTypes,
       defaultDepositAmount: policy.deposit.defaultCashDeposit,

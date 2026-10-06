@@ -66,7 +66,7 @@ is stored in the existing `app_settings` JSON entry `rental_policy.rentalPricing
 | `bulkQuantityThreshold` |       3 | Ordinary physical units required for the longer cycle     |
 | `standardRenewalDay`    |       5 | First renewal day below the quantity threshold            |
 | `bulkRenewalDay`        |       8 | First renewal day at or above the threshold               |
-| `maxOnlineRentalDays`   |       9 | Maximum storefront duration to enforce in RP03            |
+| `maxOnlineRentalDays`   |       9 | Maximum storefront duration                               |
 
 Existing JSON entries missing the new fields receive these independent defaults
 when read. No migration, seed, automatic database write or historical repricing
@@ -111,12 +111,66 @@ It does not clamp an invalid duration into a one-day booking.
 
 `domain/rental-pricing-version.ts` identifies unversioned historical snapshots
 as `LEGACY_RATE_V1` and new resolver results as `CYCLE_V1`. Unknown explicit
-versions fail rather than silently choosing a pricing formula. RP01 prepares this
-version and calculation breakdown; persisting complete order snapshots belongs
-to RP03. `resolveRentalPricing`, existing catalog rates, storefront quotes, order
-creation and legacy late-return calculations continue their previous behavior
-until their respective RP tasks integrate the new capability. Public Web policy
-and booking responses are unchanged in RP01; Admin settings OpenAPI is expanded.
+versions fail rather than silently choosing a pricing formula. RP01 introduced
+this version and calculation breakdown; RP03 persists complete order snapshots.
+Existing catalog rate presentation and legacy late-return calculations
+continue their previous behavior until their respective RP tasks integrate the
+new capability. RP03 applies the cycle resolver to storefront quotes and booking;
+Admin and Web interfaces follow in RP04/RP05, and continuous return fees in RP13.
+
+## Cycle-priced quotes and booking (RP03)
+
+The storefront availability, quote and create paths enforce the shop's
+`maxOnlineRentalDays` (9 by default). Exceeding it raises the safe Vietnamese
+`WEB_RENTAL_DURATION_EXCEEDED` error with instructions to contact the shop.
+Manual Admin creation is not subject to this cap. The booking persistence boundary
+also rejects oversized ONLINE orders. Calendar parsing, half-open allocation
+intervals and elapsed-24-hour duration rounding are unchanged.
+
+Quotes and both booking services use `resolveRentalCyclePricing` through the
+same line-pricing helper. Quantity is the sum of physical units across all lines,
+including duplicate Web selections before their canonical variant aggregation.
+The current inputs contain ordinary lines only; RP08 will introduce complimentary
+roles and exclude those from this count. Legacy product/variant rates no longer
+decide booking rental amounts or block a Web selection because a rate is missing.
+Deposits still follow the existing variant override/product default rules.
+
+Admin creation accepts optional `cyclePriceOverride` on the order and each item.
+The item value takes precedence; zero is valid, and the effective cycle value is
+charged again at every renewal. Values must be finite, nonnegative and have at
+most two decimal places. Null is rejected at the new DTO fields. The existing
+`unitRentalPrice` request remains a deprecated **full-period** override for older
+Admin clients; it is not silently reinterpreted as a cycle price. Such a line has
+an explicit `LEGACY_RATE_V1` snapshot. Combining that old field with a cycle
+override on the same item or its order is rejected as
+`RENTAL_PRICE_OVERRIDE_CONFLICT`. Response `unitRentalPrice` always remains the
+price of one physical unit for the full priced duration.
+
+Every new cycle line stores `CYCLE_V1`, a copy of all six pricing policy fields,
+order/item overrides, price source, quantity context, renewal day, cycle counts,
+priced duration, per-unit amount and deposit. Settings changes do not rewrite the
+snapshot. The serializable booking transaction checks cycle snapshots and line
+amounts against this captured policy before writing. Allocation overlap checks,
+required outbox insertion and owner-fenced idempotency completion remain atomic.
+Existing unversioned persistence fixtures and historical orders retain legacy
+semantics. Unknown explicit pricing versions are rejected.
+
+Money multiplication and rental/deposit sums use integer cents before returning
+the existing computed-number representation; unsafe totals are rejected. Shipping,
+discounts and deposit/revenue separation retain their existing semantics. Web quote
+items now include per-unit rental price, line total and line deposit when their
+selection can be resolved; the quote also exposes the cycle breakdown. Admin detail
+exposes a safe `pricing` breakdown for cycle lines, reconstructed from the captured
+policy; raw `pricingSnapshot` remains private. `/web/policies` publishes the common
+pricing rules for storefront integration.
+
+Completed idempotent requests replay the retained response before any current
+policy read or price/duration-limit validation. Web command hashes continue to
+include the validated checkout command and ownership; Admin hashes include both
+new override fields through the mapped command. Pricing settings are not part of
+the request hash. Failed, uncommitted writes release only their owned claim; retry
+uses the same command/key, while a changed command with a retained key conflicts.
+Neither path automatically retries a write after a committed result.
 
 ## Business time and reference numbers
 

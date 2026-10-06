@@ -26,12 +26,27 @@ import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { RentalInventoryUnavailableError, RentalInvariantError } from '../domain/rental-errors';
 import { storefrontProductEligibility } from '@modules/catalog/public/storefront-eligibility';
 import { createRentalDeliveryJob } from '@modules/deliveries/public/rental-delivery-transaction';
+import { calculateRentalDurationDays } from '../domain/rental-policy';
+import {
+  assertOnlineRentalDuration,
+  sumRentalPricingAmounts,
+} from '../domain/rental-cycle-pricing';
+import {
+  assertRentalPricingLineSnapshot,
+  rentalBillableQuantity,
+} from '../domain/rental-pricing-snapshot';
+import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
+import { RENTAL_PRICING_VERSION } from '../domain/rental-pricing-version';
 
 export async function createOrder(
   prisma: PrismaService,
   data: CreateRentalOrderData,
   policy: RentalPolicy,
 ): ReturnType<RentalCreationRepository['createOrder']> {
+  const durationDays = calculateRentalDurationDays(data.rentalStartAt, data.rentalEndAt);
+  if (data.source === RENTAL_ORDER_SOURCE.ONLINE) {
+    assertOnlineRentalDuration(durationDays, policy.rentalPricing);
+  }
   const collateral = data.collateral ?? { method: 'CASH' as const };
   if (data.collateral && !policy.deposit.allowedMethods.includes(collateral.method))
     throw new RentalInvariantError(
@@ -58,6 +73,9 @@ export async function createOrder(
       if (data.idempotency) await lockRentalCreationClaim(tx, data.shopId, data.idempotency);
 
       assertAllocationPlan(data);
+      const billableQuantity = rentalBillableQuantity(data.lines);
+      for (const line of data.lines)
+        assertRentalPricingLineSnapshot(line, durationDays, billableQuantity);
       if (data.storefrontEligibility) await assertStorefrontEligibleLines(tx, data);
 
       for (const line of data.lines) {
@@ -68,14 +86,14 @@ export async function createOrder(
         });
       }
 
-      const rentalSubtotal = data.lines.reduce((sum, line) => sum + line.lineTotal, 0);
+      const rentalSubtotal = sumRentalPricingAmounts(data.lines.map((line) => line.lineTotal));
       const explicitChargesTotal = data.charges.reduce(
         (sum, charge) => sum + charge.amount * charge.quantity,
         0,
       );
       const shippingTotal = data.delivery?.shippingFee ?? 0;
       const chargesTotal = explicitChargesTotal + shippingTotal;
-      const depositRequired = data.lines.reduce((sum, line) => sum + line.depositAmount, 0);
+      const depositRequired = sumRentalPricingAmounts(data.lines.map((line) => line.depositAmount));
       const grandTotal = Math.max(0, rentalSubtotal + chargesTotal - data.discountTotal);
 
       const order = await tx.rentalOrder.create({
@@ -108,6 +126,11 @@ export async function createOrder(
       });
 
       for (const line of data.lines) {
+        const snapshot = line.pricingSnapshot;
+        const pricingSnapshot =
+          snapshot.version === RENTAL_PRICING_VERSION.CYCLE
+            ? { ...snapshot, policy: { ...snapshot.policy } }
+            : { ...snapshot };
         const orderItem = await tx.rentalOrderItem.create({
           data: {
             shopId: data.shopId,
@@ -123,7 +146,7 @@ export async function createOrder(
             unitRentalPrice: line.unitRentalPrice,
             depositAmount: line.depositAmount,
             lineTotal: line.lineTotal,
-            pricingSnapshot: line.pricingSnapshot as Prisma.InputJsonValue,
+            pricingSnapshot,
             status: RENTAL_ITEM_STATUS.RESERVED,
           },
         });

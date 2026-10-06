@@ -15,6 +15,7 @@ import {
   Max,
   Min,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateRentalItemReqDto {
@@ -29,8 +30,24 @@ export class CreateRentalItemReqDto {
   quantity = 1;
   @ApiPropertyOptional({
     type: Number,
+    minimum: 0,
+    example: 60000,
     description:
-      'Đơn giá thuê mỗi món do admin ghi đè (VNĐ). Nếu để trống, hệ thống dùng giá cấu hình.',
+      'Giá một lượt thuê cho mỗi món của phân loại (VND), áp dụng lại tại mỗi mốc lượt mới; ưu tiên hơn giá ghi đè của đơn. Giá 0 hợp lệ.',
+  })
+  @Type(() => Number)
+  @ValidateIf((_: CreateRentalItemReqDto, value: unknown) => value !== undefined)
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Giá một lượt thuê ghi đè phải là số hữu hạn, có tối đa hai chữ số thập phân.' },
+  )
+  @Min(0, { message: 'Giá một lượt thuê ghi đè không được âm.' })
+  cyclePriceOverride?: number;
+  @ApiPropertyOptional({
+    type: Number,
+    deprecated: true,
+    description:
+      'Trường tương thích cũ: giá toàn kỳ thuê cho mỗi món (VND), không phải giá một lượt. Không dùng đồng thời với cyclePriceOverride của món hoặc đơn. Client mới dùng cyclePriceOverride.',
     example: 150000,
   })
   @Type(() => Number)
@@ -164,6 +181,24 @@ export class CreateRentalOrderReqDto {
   @Min(0, { message: 'Tổng tiền giảm giá phải lớn hơn hoặc bằng $constraint1.' })
   @IsOptional()
   discountTotal = 0;
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 0,
+    example: 60000,
+    description:
+      'Giá một lượt thuê chung cho mỗi món trong đơn (VND), áp dụng lại tại mỗi mốc lượt mới. Ghi đè của từng món được ưu tiên; bỏ trống dùng Cài đặt. Giá 0 hợp lệ.',
+  })
+  @Type(() => Number)
+  @ValidateIf((_: CreateRentalOrderReqDto, value: unknown) => value !== undefined)
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    {
+      message:
+        'Giá một lượt thuê ghi đè của đơn phải là số hữu hạn, có tối đa hai chữ số thập phân.',
+    },
+  )
+  @Min(0, { message: 'Giá một lượt thuê ghi đè của đơn không được âm.' })
+  cyclePriceOverride?: number;
   @ApiPropertyOptional()
   @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
   @IsOptional()

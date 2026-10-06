@@ -50,7 +50,7 @@ describe('Idempotency Integration with PostgreSQL', () => {
     auditMock = {
       log: auditLogMock,
     };
-    service = new RentalCreationService(repo, repo, repo, auditMock, testClock);
+    service = new RentalCreationService(repo, repo, repo, auditMock, testClock, rentalPolicies);
   });
 
   beforeEach(async () => {

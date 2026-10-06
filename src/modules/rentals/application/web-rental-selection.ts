@@ -175,11 +175,7 @@ export async function evaluateWebRentalSelection(
 
     const availableQuantity = variant.availableInventory.length;
     const issue: WebRentalLineIssue | undefined =
-      availableQuantity < group.requestedQuantity
-        ? 'INSUFFICIENT_QUANTITY'
-        : variant.ratePrice === null
-          ? 'PRICE_UNAVAILABLE'
-          : undefined;
+      availableQuantity < group.requestedQuantity ? 'INSUFFICIENT_QUANTITY' : undefined;
     demands.push({ variant, quantity: group.requestedQuantity });
     orderedItems.push({
       index: group.index,

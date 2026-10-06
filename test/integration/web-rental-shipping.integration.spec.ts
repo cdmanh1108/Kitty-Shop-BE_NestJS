@@ -118,14 +118,14 @@ describe('Web rental shipping persistence', () => {
     });
 
     expect(quote).toMatchObject({
-      rentalSubtotal: 450000,
+      rentalSubtotal: 70000,
       shippingFee: 30000,
-      totalAmount: 480000,
+      totalAmount: 100000,
     });
-    expect(response.totalAmount).toBe(480000);
-    expect(order.rentalSubtotal.toString()).toBe('450000');
+    expect(response.totalAmount).toBe(100000);
+    expect(order.rentalSubtotal.toString()).toBe('70000');
     expect(order.chargesTotal.toString()).toBe('30000');
-    expect(order.grandTotal.toString()).toBe('480000');
+    expect(order.grandTotal.toString()).toBe('100000');
     expect(order.charges).toHaveLength(1);
     expect(order.charges[0]).toMatchObject({ chargeType: 'SHIPPING', quantity: 1 });
     expect(order.charges[0]?.amount.toString()).toBe('30000');
@@ -143,10 +143,10 @@ describe('Web rental shipping persistence', () => {
       delivery: 'shop_delivery',
     });
 
-    expect(quote).toMatchObject({ rentalSubtotal: 450000, shippingFee: 0, totalAmount: 450000 });
-    expect(response.totalAmount).toBe(450000);
+    expect(quote).toMatchObject({ rentalSubtotal: 70000, shippingFee: 0, totalAmount: 70000 });
+    expect(response.totalAmount).toBe(70000);
     expect(order.chargesTotal.toString()).toBe('0');
-    expect(order.grandTotal.toString()).toBe('450000');
+    expect(order.grandTotal.toString()).toBe('70000');
     expect(order.charges).toEqual([]);
     expect(order.deliveries).toHaveLength(1);
     expect(order.deliveries[0]).toMatchObject({ method: 'DELIVERY' });
@@ -162,8 +162,8 @@ describe('Web rental shipping persistence', () => {
       delivery: 'self_pickup',
     });
 
-    expect(quote).toMatchObject({ rentalSubtotal: 450000, shippingFee: 0, totalAmount: 450000 });
-    expect(response.totalAmount).toBe(450000);
+    expect(quote).toMatchObject({ rentalSubtotal: 70000, shippingFee: 0, totalAmount: 70000 });
+    expect(response.totalAmount).toBe(70000);
     expect(order.charges).toEqual([]);
     expect(order.chargesTotal.toString()).toBe('0');
     expect(order.deliveries[0]).toMatchObject({ method: 'PICKUP' });
@@ -181,12 +181,12 @@ describe('Web rental shipping persistence', () => {
     });
 
     expect(quote).toMatchObject({
-      rentalSubtotal: 900000,
+      rentalSubtotal: 140000,
       shippingFee: 30000,
-      totalAmount: 930000,
+      totalAmount: 170000,
     });
-    expect(response.totalAmount).toBe(930000);
-    expect(order.grandTotal.toString()).toBe('930000');
+    expect(response.totalAmount).toBe(170000);
+    expect(order.grandTotal.toString()).toBe('170000');
     expect(order.charges).toHaveLength(1);
     expect(order.charges[0]).toMatchObject({ chargeType: 'SHIPPING', quantity: 1 });
     expect(order.items).toHaveLength(1);

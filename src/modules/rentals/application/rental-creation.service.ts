@@ -16,6 +16,14 @@ import type { JsonSerialized } from '@common/types/json';
 import type { RentalOrderDetails } from '../domain/rental.models';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
+  RENTAL_POLICY_PROVIDER,
+  type RentalPolicyProvider,
+} from '@modules/settings/public/rental-policy';
+import {
+  rentalBillableQuantity,
+  resolveRentalLinePricing,
+} from '../domain/rental-pricing-snapshot';
+import {
   RENTAL_AVAILABILITY_READER,
   type RentalAvailabilityReader,
 } from '../domain/ports/rental-availability.port';
@@ -38,7 +46,6 @@ import {
   RentalIdempotencyConflictError,
   RentalInventoryConflictError,
   RentalNotFoundError,
-  RentalPricingUnavailableError,
 } from './rental.errors';
 
 const CHARGE_TYPES: ReadonlySet<string> = new Set(Object.values(CHARGE_TYPE));
@@ -52,6 +59,7 @@ export class RentalCreationService {
     @Inject(RENTAL_AVAILABILITY_READER) private readonly availability: RentalAvailabilityReader,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Inject(RENTAL_POLICY_PROVIDER) private readonly policies: RentalPolicyProvider,
     @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
   ) {
     this.logger = loggerFactory?.create(RentalCreationService.name) ?? silentApplicationLog;
@@ -88,6 +96,7 @@ export class RentalCreationService {
     }
 
     const durationDays = calculateRentalDurationDays(start, end);
+    const billableQuantity = rentalBillableQuantity(input.items);
     const scope = 'rental-order.create';
     const requestHash = createHash('sha256').update(JSON.stringify(input)).digest('hex');
     let claimId: string | undefined;
@@ -120,6 +129,7 @@ export class RentalCreationService {
     }
 
     try {
+      const policy = await this.policies.getPolicy(user.shopId);
       const lines: CreateRentalOrderData['lines'] = [];
       for (const item of input.items) {
         const variant = await this.availability.getBookableVariant({
@@ -131,16 +141,16 @@ export class RentalCreationService {
         });
         if (!variant)
           throw new RentalNotFoundError(`Biến thể ${item.variantId} không được phép cho thuê.`);
-        const effectiveUnitPrice =
-          item.unitRentalPrice !== undefined && item.unitRentalPrice !== null
-            ? item.unitRentalPrice
-            : variant.ratePrice;
-
-        if (effectiveUnitPrice === null || effectiveUnitPrice < 0) {
-          throw new RentalPricingUnavailableError(
-            `Chưa cấu hình giá thuê ${durationDays} ngày cho biến thể ${variant.variantCode}. Vui lòng nhập giá thuê ghi đè.`,
-          );
-        }
+        const pricing = resolveRentalLinePricing({
+          durationDays,
+          billableQuantity,
+          policy: policy.rentalPricing,
+          orderCyclePriceOverride: input.cyclePriceOverride,
+          itemCyclePriceOverride: item.cyclePriceOverride,
+          legacyUnitRentalPrice: item.unitRentalPrice,
+          quantity: item.quantity,
+          depositPerItem: variant.depositPerItem,
+        });
 
         const byId = new Map(
           variant.availableInventory.map((inventory) => [inventory.id, inventory]),
@@ -179,14 +189,7 @@ export class RentalCreationService {
           productName: variant.productName,
           variantName,
           quantity: item.quantity,
-          unitRentalPrice: effectiveUnitPrice,
-          depositAmount: variant.depositPerItem * item.quantity,
-          lineTotal: effectiveUnitPrice * item.quantity,
-          pricingSnapshot: {
-            durationDays,
-            unitRentalPrice: effectiveUnitPrice,
-            depositPerItem: variant.depositPerItem,
-          },
+          ...pricing,
           inventory: selected,
         });
       }

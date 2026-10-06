@@ -1,5 +1,6 @@
 import type { RentalSettlement } from '../domain/rental-settlement';
 import type { WebPaymentPreference } from '../domain/web-payment-preference';
+import type { ResolvedRentalCyclePricing } from '../domain/rental-cycle-pricing';
 
 export type RentalReadTimestamp = Date | string;
 
@@ -90,6 +91,7 @@ export interface RentalDetailsResult extends RentalOrderSummaryResult {
     status: string;
     imageUrl: string | null;
     unitRentalPrice: string;
+    pricing?: ResolvedRentalCyclePricing;
     depositAmount: string;
     lineTotal: string;
     allocations: Array<{

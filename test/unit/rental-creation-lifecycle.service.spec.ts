@@ -10,6 +10,7 @@ import type { RentalOrderDetails } from '../../src/modules/rentals/domain/rental
 import { RENTAL_STATUS } from '../../src/modules/rentals/domain/rental-status';
 import { Prisma } from '@prisma/client';
 import { rentalServicePorts } from '../fixtures/rental-ports.fixture';
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import {
   InvalidRentalInputError,
   RentalNotFoundError,
@@ -155,6 +156,7 @@ describe('Rental creation and lifecycle services', () => {
       ports.availability,
       audit,
       clock,
+      rentalPolicies,
     );
     lifecycleService = new RentalLifecycleService(ports.orderReader, ports.lifecycle, audit);
   });
@@ -256,7 +258,7 @@ describe('Rental creation and lifecycle services', () => {
       ).rejects.toThrow(new RentalNotFoundError('Biến thể var-1 không được phép cho thuê.'));
     });
 
-    it('throws Error if no rental rate is configured for the duration', async () => {
+    it('uses shop cycle pricing when no product rate is configured for the duration', async () => {
       const bookableVariant: BookableVariant = {
         id: 'var-1',
         variantCode: 'VAR-1',
@@ -279,7 +281,7 @@ describe('Rental creation and lifecycle services', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           charges: [],
         }),
-      ).rejects.toThrow(InvalidRentalInputError);
+      ).resolves.toBeDefined();
     });
 
     it('throws Error if available inventory is insufficient for requested quantity', async () => {

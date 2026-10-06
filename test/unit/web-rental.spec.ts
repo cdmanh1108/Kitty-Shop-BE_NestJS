@@ -207,10 +207,10 @@ describe('Web rental use cases', () => {
       });
 
       expect(result.durationDays).toBe(3);
-      expect(result.rentalSubtotal).toBe(300000); // 150000 * 2
+      expect(result.rentalSubtotal).toBe(140000); // (50000 + 2 * 10000) * 2
       expect(result.depositAmount).toBe(1000000); // 500000 * 2
       expect(result.shippingFee).toBe(45000); // from policy
-      expect(result.totalAmount).toBe(345000); // rentalSubtotal + shippingFee
+      expect(result.totalAmount).toBe(185000); // rentalSubtotal + shippingFee
       expect(result.available).toBe(true);
     });
 
@@ -244,6 +244,9 @@ describe('Web rental use cases', () => {
           availableQuantity: 1,
           available: false,
           issue: 'INSUFFICIENT_QUANTITY',
+          unitRentalPrice: 70000,
+          lineTotal: 140000,
+          depositAmount: 1000000,
         },
       ]);
       expect(result.shippingFee).toBe(0);
@@ -307,9 +310,9 @@ describe('Web rental use cases', () => {
       ]);
       expect(result).toMatchObject({
         durationDays: 3,
-        rentalSubtotal: 500000,
+        rentalSubtotal: 280000,
         depositAmount: 900000,
-        totalAmount: 500000,
+        totalAmount: 280000,
         available: false,
         canCheckout: false,
       });
@@ -320,6 +323,9 @@ describe('Web rental use cases', () => {
           requestedQuantity: 2,
           availableQuantity: 2,
           available: true,
+          unitRentalPrice: 70000,
+          lineTotal: 140000,
+          depositAmount: 500000,
         },
         {
           productId: 'prod-3',
@@ -327,6 +333,9 @@ describe('Web rental use cases', () => {
           requestedQuantity: 1,
           availableQuantity: 1,
           available: true,
+          unitRentalPrice: 70000,
+          lineTotal: 70000,
+          depositAmount: 100000,
         },
         {
           productId: 'prod-1',
@@ -335,6 +344,9 @@ describe('Web rental use cases', () => {
           availableQuantity: 0,
           available: false,
           issue: 'INSUFFICIENT_QUANTITY',
+          unitRentalPrice: 70000,
+          lineTotal: 70000,
+          depositAmount: 300000,
         },
       ]);
     });
@@ -406,7 +418,7 @@ describe('Web rental use cases', () => {
 
       expect(result).toMatchObject({
         available: false,
-        rentalSubtotal: 300000,
+        rentalSubtotal: 140000,
         depositAmount: 1000000,
         canCheckout: false,
         items: [
@@ -578,7 +590,7 @@ describe('Web rental use cases', () => {
       creation.createOrder.mockResolvedValue(
         rentalOrderDetailsFixture({
           orderNumber: 'RT-20260920-001',
-          grandTotal: new Prisma.Decimal(250000),
+          grandTotal: new Prisma.Decimal(70000),
           depositRequired: new Prisma.Decimal(600000),
         }),
       );
@@ -598,7 +610,7 @@ describe('Web rental use cases', () => {
       );
 
       expect(res.orderCode).toBe('RT-20260920-001');
-      expect(res.totalAmount).toBe(250000);
+      expect(res.totalAmount).toBe(70000);
       expect(res.depositAmount).toBe(600000);
       expect(res.status).toBe('reserved');
       expect(res.paymentStatus).toBe('unpaid');
@@ -663,7 +675,7 @@ describe('Web rental use cases', () => {
       creation.createOrder.mockResolvedValue(
         rentalOrderDetailsFixture({
           orderNumber: 'RT-20260920-DELIVERY',
-          grandTotal: new Prisma.Decimal(495000),
+          grandTotal: new Prisma.Decimal(115000),
           depositRequired: new Prisma.Decimal(600000),
         }),
       );
@@ -688,9 +700,9 @@ describe('Web rental use cases', () => {
       );
 
       expect(quote).toMatchObject({
-        rentalSubtotal: 450000,
+        rentalSubtotal: 70000,
         shippingFee: 45000,
-        totalAmount: 495000,
+        totalAmount: 115000,
       });
       const createInput = firstCreateOrderInput();
       expect(createInput.source).toBe('ONLINE');
@@ -701,7 +713,7 @@ describe('Web rental use cases', () => {
         addressLine: '1 Nguyễn Huệ',
         shippingFee: 45000,
       });
-      expect(result.totalAmount).toBe(495000);
+      expect(result.totalAmount).toBe(115000);
     });
 
     it('merges duplicate Web lines into one allocation plan', async () => {
@@ -722,7 +734,7 @@ describe('Web rental use cases', () => {
       creation.createOrder.mockResolvedValue(
         rentalOrderDetailsFixture({
           orderNumber: 'RT-001',
-          grandTotal: new Prisma.Decimal(500000),
+          grandTotal: new Prisma.Decimal(140000),
           depositRequired: new Prisma.Decimal(1200000),
         }),
       );
@@ -747,7 +759,7 @@ describe('Web rental use cases', () => {
         expect.objectContaining({
           variantId: 'var-1',
           quantity: 2,
-          lineTotal: 500000,
+          lineTotal: 140000,
           depositAmount: 1200000,
           inventory: [
             { id: 'inv-1', sku: 'SKU-001' },

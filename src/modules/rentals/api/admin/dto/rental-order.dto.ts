@@ -1,4 +1,5 @@
 import { RentalConfirmationResDto } from '../../rental-confirmation.dto';
+import { RentalCyclePricingResDto } from '../../rental-cycle-pricing.dto';
 import { RENTAL_STATUS } from '@modules/rentals/domain/rental-status';
 import { ORDER_PAYMENT_STATUS } from '@modules/finance/public/payment-status';
 import { WEB_PAYMENT_PREFERENCES } from '@modules/rentals/domain/web-payment-preference';
@@ -65,6 +66,12 @@ export class RentalAllocationResDto {
 }
 
 export class RentalItemResDto extends RentalItemSummaryResDto {
+  @ApiPropertyOptional({
+    type: RentalCyclePricingResDto,
+    description:
+      'Biểu giá được chốt khi tạo đơn. Đơn cũ hoặc giá toàn kỳ tương thích không có trường này.',
+  })
+  pricing?: RentalCyclePricingResDto;
   @ApiProperty() productId!: string;
   @ApiProperty() variantId!: string;
   @ApiProperty() status!: string;

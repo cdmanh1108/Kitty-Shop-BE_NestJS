@@ -14,7 +14,7 @@ export interface ResolveRentalCyclePricingInput {
   itemCyclePriceOverride?: number | null;
 }
 
-/** One physical unit's total rental price, with the effective rules ready for an RP03 snapshot. */
+/** One physical unit's total rental price and the effective rules captured by booking snapshots. */
 export interface ResolvedRentalCyclePricing {
   version: typeof RENTAL_PRICING_VERSION.CYCLE;
   durationDays: number;
@@ -32,8 +32,8 @@ export interface ResolvedRentalCyclePricing {
 /**
  * Renewal days replace the additional-day fee with the effective cycle price.
  * A renewal on day 5 repeats every 4 days (1, 5, 9, ...); day 8 repeats every 7.
- * Integer cents keep decimal overrides exact during arithmetic. Existing callers
- * of resolveRentalPricing continue using legacy rates until RP03 integrates this path.
+ * Integer cents keep decimal overrides exact during arithmetic. Booking and quote
+ * callers use this resolver; legacy snapshots retain their original semantics.
  */
 export function resolveRentalCyclePricing(
   input: ResolveRentalCyclePricingInput,
@@ -69,12 +69,7 @@ export function resolveRentalCyclePricing(
   const totalCents =
     BigInt(cycleCount) * cyclePriceCents(cyclePrice) +
     BigInt(additionalDayCount) * BigInt(input.policy.additionalDayFee) * 100n;
-  if (totalCents > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new RentalInvariantError(
-      'RENTAL_PRICING_AMOUNT_EXCEEDED',
-      'Tổng giá thuê vượt quá giới hạn tính toán. Vui lòng kiểm tra lại giá và thời gian thuê.',
-    );
-  }
+  const unitRentalPrice = checkedRentalAmount(totalCents);
 
   return {
     version: RENTAL_PRICING_VERSION.CYCLE,
@@ -87,8 +82,48 @@ export function resolveRentalCyclePricing(
     cyclePrice,
     additionalDayFee: input.policy.additionalDayFee,
     priceSource,
-    unitRentalPrice: Number(totalCents) / 100,
+    unitRentalPrice,
   };
+}
+
+/** Multiply a two-decimal rental amount without introducing fractional-cent drift. */
+export function multiplyRentalPricingAmount(amount: number, quantity: number): number {
+  if (!Number.isSafeInteger(quantity) || quantity < 1) {
+    throw new RentalInvariantError(
+      'INVALID_RENTAL_PRICING_QUANTITY',
+      'Số món thuê phải là số nguyên dương hợp lệ.',
+    );
+  }
+  return checkedRentalAmount(cyclePriceCents(amount) * BigInt(quantity));
+}
+
+export function sumRentalPricingAmounts(amounts: readonly number[]): number {
+  return checkedRentalAmount(amounts.reduce((sum, amount) => sum + cyclePriceCents(amount), 0n));
+}
+
+/** Storefront duration rules never constrain manual Admin bookings. */
+export function assertOnlineRentalDuration(
+  durationDays: number,
+  policy: RentalPricingPolicy,
+): void {
+  validateRentalPricingPolicy(policy);
+  if (durationDays > policy.maxOnlineRentalDays) {
+    throw new RentalInvariantError(
+      'WEB_RENTAL_DURATION_EXCEEDED',
+      `Khoảng thời gian thuê quá dài. Website chỉ nhận đơn tối đa ${policy.maxOnlineRentalDays} ngày. Vui lòng liên hệ trực tiếp cửa hàng nếu cần thuê lâu hơn.`,
+    );
+  }
+}
+
+function checkedRentalAmount(totalCents: bigint): number {
+  if (totalCents > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new RentalInvariantError(
+      'RENTAL_PRICING_AMOUNT_EXCEEDED',
+      'Tổng giá thuê vượt quá giới hạn tính toán. Vui lòng kiểm tra lại giá và thời gian thuê.',
+    );
+  }
+
+  return Number(totalCents) / 100;
 }
 
 function cyclePriceCents(value: number): bigint {

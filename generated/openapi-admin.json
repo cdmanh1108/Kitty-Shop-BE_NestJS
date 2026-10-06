@@ -6079,6 +6079,12 @@
             "type": "number",
             "default": 0
           },
+          "cyclePriceOverride": {
+            "type": "number",
+            "minimum": 0,
+            "example": 60000,
+            "description": "Giá một lượt thuê chung cho mỗi món trong đơn (VND), áp dụng lại tại mỗi mốc lượt mới. Ghi đè của từng món được ưu tiên; bỏ trống dùng Cài đặt. Giá 0 hợp lệ."
+          },
           "note": {
             "type": "string"
           },
@@ -8593,9 +8599,16 @@
             "minimum": 1,
             "maximum": 20
           },
+          "cyclePriceOverride": {
+            "type": "number",
+            "minimum": 0,
+            "example": 60000,
+            "description": "Giá một lượt thuê cho mỗi món của phân loại (VND), áp dụng lại tại mỗi mốc lượt mới; ưu tiên hơn giá ghi đè của đơn. Giá 0 hợp lệ."
+          },
           "unitRentalPrice": {
             "type": "number",
-            "description": "Đơn giá thuê mỗi món do admin ghi đè (VNĐ). Nếu để trống, hệ thống dùng giá cấu hình.",
+            "deprecated": true,
+            "description": "Trường tương thích cũ: giá toàn kỳ thuê cho mỗi món (VND), không phải giá một lượt. Không dùng đồng thời với cyclePriceOverride của món hoặc đơn. Client mới dùng cyclePriceOverride.",
             "example": 150000
           },
           "inventoryItemIds": {
@@ -8807,6 +8820,14 @@
           },
           "quantity": {
             "type": "number"
+          },
+          "pricing": {
+            "description": "Biểu giá được chốt khi tạo đơn. Đơn cũ hoặc giá toàn kỳ tương thích không có trường này.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalCyclePricingResDto"
+              }
+            ]
           },
           "productId": {
             "type": "string"
@@ -9921,6 +9942,79 @@
           "orderNumber",
           "status",
           "customer"
+        ]
+      },
+      "RentalCyclePricingResDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "enum": [
+              "CYCLE_V1"
+            ]
+          },
+          "durationDays": {
+            "type": "number",
+            "example": 5
+          },
+          "billableQuantity": {
+            "type": "number",
+            "example": 2,
+            "description": "Tổng số món thuê thông thường; không gồm phụ kiện miễn phí."
+          },
+          "renewalDay": {
+            "type": "number",
+            "example": 5,
+            "description": "Ngày bắt đầu lượt mới đầu tiên, tính từ đầu kỳ thuê."
+          },
+          "cycleLengthDays": {
+            "type": "number",
+            "example": 4
+          },
+          "cycleCount": {
+            "type": "number",
+            "example": 2
+          },
+          "additionalDayCount": {
+            "type": "number",
+            "example": 3
+          },
+          "cyclePrice": {
+            "type": "number",
+            "example": 50000,
+            "description": "Giá một lượt thuê của một món (VND)."
+          },
+          "additionalDayFee": {
+            "type": "number",
+            "example": 10000,
+            "description": "Phụ phí một ngày không bắt đầu lượt mới (VND / món)."
+          },
+          "priceSource": {
+            "type": "string",
+            "enum": [
+              "SHOP",
+              "ORDER",
+              "ITEM"
+            ]
+          },
+          "unitRentalPrice": {
+            "type": "number",
+            "example": 130000,
+            "description": "Giá thuê một món cho toàn bộ thời gian (VND)."
+          }
+        },
+        "required": [
+          "version",
+          "durationDays",
+          "billableQuantity",
+          "renewalDay",
+          "cycleLengthDays",
+          "cycleCount",
+          "additionalDayCount",
+          "cyclePrice",
+          "additionalDayFee",
+          "priceSource",
+          "unitRentalPrice"
         ]
       },
       "RentalAllocationResDto": {

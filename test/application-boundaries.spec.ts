@@ -20,6 +20,7 @@ import type { ReportRepository } from '../src/modules/reports/domain/report.repo
 import { toPerformanceQuery } from '../src/modules/reports/api/report.mapper';
 import { PerformanceQueryDto } from '../src/modules/reports/api/report.dto';
 import { rentalServicePorts } from './fixtures/rental-ports.fixture';
+import { rentalPolicies } from './fixtures/rental-policy.fixture';
 
 const user: CurrentUser = {
   userId: 'user',
@@ -36,6 +37,7 @@ function rentalCreationService(ports: ReturnType<typeof rentalServicePorts>) {
     ports.availability,
     audit(),
     fixedClock,
+    rentalPolicies,
   );
 }
 const audit = (): AuditPort => ({ log: () => Promise.resolve() });

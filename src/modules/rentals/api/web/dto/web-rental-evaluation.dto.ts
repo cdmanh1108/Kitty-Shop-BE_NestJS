@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { RentalCyclePricingResDto } from '../../rental-cycle-pricing.dto';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -128,17 +129,38 @@ export class WebRentalQuoteItemResDto {
 
   @ApiProperty({
     example: false,
-    description: 'Dòng có đủ tồn kho và có giá thuê cho thời lượng này',
+    description: 'Dòng có đủ tồn kho cho toàn bộ thời lượng thuê; giá lấy từ chính sách chung.',
   })
   available!: boolean;
 
   @ApiPropertyOptional({ enum: ['NOT_RENTABLE', 'INSUFFICIENT_QUANTITY', 'PRICE_UNAVAILABLE'] })
   issue?: 'NOT_RENTABLE' | 'INSUFFICIENT_QUANTITY' | 'PRICE_UNAVAILABLE';
+
+  @ApiPropertyOptional({
+    example: 130000,
+    description: 'Giá thuê một món cho toàn kỳ (VND), chưa nhân số lượng.',
+  })
+  unitRentalPrice?: number;
+
+  @ApiPropertyOptional({
+    example: 260000,
+    description: 'Tiền thuê của dòng sau khi nhân số lượng (VND).',
+  })
+  lineTotal?: number;
+
+  @ApiPropertyOptional({ example: 400000, description: 'Tiền cọc dự kiến của dòng (VND).' })
+  depositAmount?: number;
 }
 
 export class WebRentalQuoteResDto {
   @ApiProperty({ example: 3, description: 'Số ngày thuê tính theo lịch' })
   durationDays!: number;
+
+  @ApiProperty({
+    type: RentalCyclePricingResDto,
+    description: 'Chi tiết biểu giá theo chu kỳ của báo giá hiện tại.',
+  })
+  pricing!: RentalCyclePricingResDto;
 
   @ApiProperty({ example: 450000, description: 'Tiền thuê tạm tính (VND)' })
   rentalSubtotal!: number;

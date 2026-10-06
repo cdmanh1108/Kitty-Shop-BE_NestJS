@@ -8,6 +8,15 @@ import {
   type RentalPolicyProvider,
 } from '@modules/settings/public/rental-policy';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
+import {
+  assertOnlineRentalDuration,
+  resolveRentalCyclePricing,
+  sumRentalPricingAmounts,
+} from '../domain/rental-cycle-pricing';
+import {
+  rentalBillableQuantity,
+  resolveRentalLinePricing,
+} from '../domain/rental-pricing-snapshot';
 import type {
   WebAvailabilityQueryInput,
   WebAvailabilityResult,
@@ -38,6 +47,8 @@ export class WebRentalEvaluationService {
     ]);
 
     const durationDays = calculateRentalDurationDays(from, until);
+    const policy = await this.policyProvider.getPolicy(shopId);
+    assertOnlineRentalDuration(durationDays, policy.rentalPricing);
 
     const selection = await resolveWebRentalSelection(this.availability, {
       shopId,
@@ -63,6 +74,13 @@ export class WebRentalEvaluationService {
 
     const policy = await this.policyProvider.getPolicy(shopId);
     const durationDays = calculateRentalDurationDays(from, until);
+    assertOnlineRentalDuration(durationDays, policy.rentalPricing);
+    const billableQuantity = rentalBillableQuantity(req.items);
+    const pricing = resolveRentalCyclePricing({
+      durationDays,
+      billableQuantity,
+      policy: policy.rentalPricing,
+    });
     const selection = await evaluateWebRentalSelection(this.availability, {
       shopId,
       items: req.items,
@@ -73,28 +91,40 @@ export class WebRentalEvaluationService {
     if (selection.failure) {
       throwForInvalidWebRentalSelection(selection.failure);
     }
-    let rentalSubtotal = 0;
-    let depositAmount = 0;
+    const rentalAmounts: number[] = [];
+    const depositAmounts: number[] = [];
     let allAvailable = selection.failure === undefined;
 
     if (selection.failure === undefined) {
       for (const { variant, quantity } of selection.demands) {
-        if (variant.ratePrice === null) {
-          allAvailable = false;
-          continue;
-        }
         if (variant.availableInventory.length < quantity) allAvailable = false;
-        rentalSubtotal += variant.ratePrice * quantity;
-        depositAmount += variant.depositPerItem * quantity;
+        const line = resolveRentalLinePricing({
+          durationDays,
+          billableQuantity,
+          policy: policy.rentalPricing,
+          quantity,
+          depositPerItem: variant.depositPerItem,
+        });
+        rentalAmounts.push(line.lineTotal);
+        depositAmounts.push(line.depositAmount);
+        const result = selection.items.find((item) => item.variantId === variant.id);
+        if (result) {
+          result.unitRentalPrice = line.unitRentalPrice;
+          result.lineTotal = line.lineTotal;
+          result.depositAmount = line.depositAmount;
+        }
       }
     }
 
     const standardShippingFee = policy.delivery.standardShippingFee;
     const shippingFee = req.deliveryMethod === 'shop_delivery' ? standardShippingFee : 0;
-    const totalAmount = rentalSubtotal + shippingFee;
+    const rentalSubtotal = sumRentalPricingAmounts(rentalAmounts);
+    const depositAmount = sumRentalPricingAmounts(depositAmounts);
+    const totalAmount = sumRentalPricingAmounts([rentalSubtotal, shippingFee]);
 
     return {
       durationDays,
+      pricing,
       rentalSubtotal,
       depositAmount,
       shippingFee,

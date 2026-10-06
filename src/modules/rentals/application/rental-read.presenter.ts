@@ -10,6 +10,7 @@ import {
   calculateRentalSettlement,
 } from '../domain/rental-settlement';
 import { toWebPaymentPreference } from '../domain/web-payment-preference';
+import { readRentalCyclePricing } from '../domain/rental-pricing-snapshot';
 import type { RentalDetailsResult, RentalOrderSummaryResult } from './rental-read.models';
 
 type SummarySource = RentalOrderPage['items'][number] | NonNullable<RentalOrderDetails>;
@@ -176,6 +177,7 @@ export class RentalReadPresenter {
         status: item.status,
         imageUrl: this.resolveItemImage(item),
         unitRentalPrice: money(item.unitRentalPrice),
+        pricing: readRentalCyclePricing(item.pricingSnapshot),
         depositAmount: money(item.depositAmount),
         lineTotal: money(item.lineTotal),
         allocations: item.allocations.map((allocation) => ({

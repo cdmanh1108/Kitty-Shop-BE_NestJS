@@ -64,7 +64,7 @@ describe('Storefront rental selection and allocation', () => {
         items: [{ productId: f.product.id, quantity: 1 }],
         deliveryMethod: 'self_pickup',
       }),
-    ).resolves.toMatchObject({ available: true, rentalSubtotal: 200000 });
+    ).resolves.toMatchObject({ available: true, rentalSubtotal: 60000 });
 
     await expect(
       web.createOrder(f.shop.id, createWebOrderInput(f.product.id), 'web-selection-key'),
@@ -112,7 +112,7 @@ describe('Storefront rental selection and allocation', () => {
         items: duplicateItems,
         deliveryMethod: 'self_pickup',
       }),
-    ).resolves.toMatchObject({ available: false, rentalSubtotal: 400000, depositAmount: 400000 });
+    ).resolves.toMatchObject({ available: false, rentalSubtotal: 120000, depositAmount: 400000 });
     await expect(
       web.createOrder(
         f.shop.id,

@@ -89,6 +89,7 @@ export function toRentalResponse(row: RentalDetailsResult | null): RentalOrderRe
       status: item.status,
       imageUrl: item.imageUrl,
       unitRentalPrice: item.unitRentalPrice,
+      ...(item.pricing ? { pricing: item.pricing } : {}),
       depositAmount: item.depositAmount,
       lineTotal: item.lineTotal,
       allocations: item.allocations.map((allocation) => ({

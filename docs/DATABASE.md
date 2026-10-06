@@ -93,8 +93,13 @@ RP01 extends the existing `app_settings` JSON value at key `rental_policy` with
 cycle pricing configuration. Reads fill missing fields without writing a backfill;
 the validated settings endpoint persists changes through the existing shop-scoped
 repository. No Prisma schema or SQL migration is needed for this foundation.
-Versioned cycle pricing snapshots will be written by RP03; existing unversioned
-order snapshots retain their original rate semantics. See [Business types](BUSINESS_TYPES.md#rental-cycle-pricing-foundation-rp01).
+RP03 writes versioned cycle pricing snapshots into the existing
+`rental_order_items.pricing_snapshot` JSON column, including the captured policy,
+physical quantity context, overrides and calculation breakdown. Booking validates
+those amounts inside its existing serializable transaction. Existing unversioned
+order snapshots retain their original rate semantics; the deprecated Admin
+full-period override writes an explicit legacy version. No backfill or schema
+migration is needed. See [Business types](BUSINESS_TYPES.md#cycle-priced-quotes-and-booking-rp03).
 
 ## Deletion policy
 

@@ -1,4 +1,5 @@
 import type { WebPaymentPreference } from '../domain/web-payment-preference';
+import type { ResolvedRentalCyclePricing } from '../domain/rental-cycle-pricing';
 
 export interface WebAvailabilityQueryInput {
   productId?: string;
@@ -34,10 +35,14 @@ export interface WebRentalLineAvailability {
   availableQuantity: number;
   available: boolean;
   issue?: WebRentalLineIssue;
+  unitRentalPrice?: number;
+  lineTotal?: number;
+  depositAmount?: number;
 }
 
 export interface WebRentalQuoteResult {
   durationDays: number;
+  pricing: ResolvedRentalCyclePricing;
   rentalSubtotal: number;
   depositAmount: number;
   shippingFee: number;

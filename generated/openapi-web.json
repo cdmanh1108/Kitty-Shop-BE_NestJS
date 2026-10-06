@@ -1183,7 +1183,7 @@
             }
           },
           "400": {
-            "description": "Khoảng thời gian thuê không hợp lệ hoặc thiếu productId/variantId",
+            "description": "Khoảng thời gian thuê không hợp lệ, vượt số ngày tối đa đặt qua website (WEB_RENTAL_DURATION_EXCEEDED), hoặc thiếu productId/variantId.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1226,7 +1226,7 @@
             }
           },
           "400": {
-            "description": "Dữ liệu tính báo giá không hợp lệ hoặc khoảng ngày không đúng",
+            "description": "Dữ liệu tính báo giá không hợp lệ hoặc khoảng thuê vượt giới hạn website (WEB_RENTAL_DURATION_EXCEEDED).",
             "content": {
               "application/json": {
                 "schema": {
@@ -1279,7 +1279,7 @@
             }
           },
           "400": {
-            "description": "Dữ liệu người thuê, khoảng ngày, phương thức thế chân hoặc Idempotency-Key không hợp lệ",
+            "description": "Dữ liệu người thuê, khoảng ngày, phương thức thế chân hoặc Idempotency-Key không hợp lệ; khoảng thuê vượt giới hạn website có mã WEB_RENTAL_DURATION_EXCEEDED.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1618,7 +1618,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Chính sách cọc, phí trễ hạn và vận chuyển công khai cho storefront",
+            "description": "Biểu giá thuê, giới hạn đặt online, chính sách cọc và vận chuyển công khai.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2281,6 +2281,14 @@
             "example": 3,
             "description": "Số ngày thuê tính theo lịch"
           },
+          "pricing": {
+            "description": "Chi tiết biểu giá theo chu kỳ của báo giá hiện tại.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalCyclePricingResDto"
+              }
+            ]
+          },
           "rentalSubtotal": {
             "type": "number",
             "example": 450000,
@@ -2325,6 +2333,7 @@
         },
         "required": [
           "durationDays",
+          "pricing",
           "rentalSubtotal",
           "depositAmount",
           "shippingFee",
@@ -2671,6 +2680,14 @@
       "WebRentalPolicyDto": {
         "type": "object",
         "properties": {
+          "rentalPricing": {
+            "description": "Biểu giá thuê chung và giới hạn đặt qua website.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalPricingPolicyDto"
+              }
+            ]
+          },
           "depositMethods": {
             "example": [
               "CASH",
@@ -2701,7 +2718,7 @@
           "lateFeePerItemPerDay": {
             "type": "number",
             "example": 50000,
-            "description": "Phí phụ thu trễ hạn mỗi ngày trên mỗi món đồ (VND)"
+            "description": "Phí phụ thu trễ hạn của chính sách hiện hành (VND / món / ngày); lưu riêng với biểu giá chu kỳ."
           },
           "standardShippingFee": {
             "type": "number",
@@ -2710,6 +2727,7 @@
           }
         },
         "required": [
+          "rentalPricing",
           "depositMethods",
           "depositDocumentTypes",
           "defaultDepositAmount",
@@ -3093,6 +3111,79 @@
           "quantity"
         ]
       },
+      "RentalCyclePricingResDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "enum": [
+              "CYCLE_V1"
+            ]
+          },
+          "durationDays": {
+            "type": "number",
+            "example": 5
+          },
+          "billableQuantity": {
+            "type": "number",
+            "example": 2,
+            "description": "Tổng số món thuê thông thường; không gồm phụ kiện miễn phí."
+          },
+          "renewalDay": {
+            "type": "number",
+            "example": 5,
+            "description": "Ngày bắt đầu lượt mới đầu tiên, tính từ đầu kỳ thuê."
+          },
+          "cycleLengthDays": {
+            "type": "number",
+            "example": 4
+          },
+          "cycleCount": {
+            "type": "number",
+            "example": 2
+          },
+          "additionalDayCount": {
+            "type": "number",
+            "example": 3
+          },
+          "cyclePrice": {
+            "type": "number",
+            "example": 50000,
+            "description": "Giá một lượt thuê của một món (VND)."
+          },
+          "additionalDayFee": {
+            "type": "number",
+            "example": 10000,
+            "description": "Phụ phí một ngày không bắt đầu lượt mới (VND / món)."
+          },
+          "priceSource": {
+            "type": "string",
+            "enum": [
+              "SHOP",
+              "ORDER",
+              "ITEM"
+            ]
+          },
+          "unitRentalPrice": {
+            "type": "number",
+            "example": 130000,
+            "description": "Giá thuê một món cho toàn bộ thời gian (VND)."
+          }
+        },
+        "required": [
+          "version",
+          "durationDays",
+          "billableQuantity",
+          "renewalDay",
+          "cycleLengthDays",
+          "cycleCount",
+          "additionalDayCount",
+          "cyclePrice",
+          "additionalDayFee",
+          "priceSource",
+          "unitRentalPrice"
+        ]
+      },
       "WebRentalQuoteItemResDto": {
         "type": "object",
         "properties": {
@@ -3119,7 +3210,7 @@
           "available": {
             "type": "boolean",
             "example": false,
-            "description": "Dòng có đủ tồn kho và có giá thuê cho thời lượng này"
+            "description": "Dòng có đủ tồn kho cho toàn bộ thời lượng thuê; giá lấy từ chính sách chung."
           },
           "issue": {
             "type": "string",
@@ -3128,6 +3219,21 @@
               "INSUFFICIENT_QUANTITY",
               "PRICE_UNAVAILABLE"
             ]
+          },
+          "unitRentalPrice": {
+            "type": "number",
+            "example": 130000,
+            "description": "Giá thuê một món cho toàn kỳ (VND), chưa nhân số lượng."
+          },
+          "lineTotal": {
+            "type": "number",
+            "example": 260000,
+            "description": "Tiền thuê của dòng sau khi nhân số lượng (VND)."
+          },
+          "depositAmount": {
+            "type": "number",
+            "example": 400000,
+            "description": "Tiền cọc dự kiến của dòng (VND)."
           }
         },
         "required": [
@@ -3456,6 +3562,61 @@
         "required": [
           "status",
           "changedAt"
+        ]
+      },
+      "RentalPricingPolicyDto": {
+        "type": "object",
+        "properties": {
+          "defaultRentalPrice": {
+            "type": "number",
+            "example": 50000,
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Giá một lượt thuê mặc định (VND); cũng áp dụng tại mỗi mốc lượt mới"
+          },
+          "additionalDayFee": {
+            "type": "number",
+            "example": 10000,
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Phụ phí mỗi ngày tiếp theo (VND), trừ ngày bắt đầu lượt mới"
+          },
+          "bulkQuantityThreshold": {
+            "type": "number",
+            "example": 3,
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Tổng số món thuê thông thường để hưởng chu kỳ dài; không gồm phụ kiện miễn phí"
+          },
+          "standardRenewalDay": {
+            "type": "number",
+            "example": 5,
+            "minimum": 2,
+            "maximum": 365,
+            "description": "Ngày bắt đầu lượt tiếp theo của đơn dưới ngưỡng; 5 tương ứng các mốc 1, 5, 9, 13..."
+          },
+          "bulkRenewalDay": {
+            "type": "number",
+            "example": 8,
+            "minimum": 2,
+            "maximum": 365,
+            "description": "Ngày bắt đầu lượt tiếp theo của đơn đạt ngưỡng; 8 tương ứng các mốc 1, 8, 15, 22..."
+          },
+          "maxOnlineRentalDays": {
+            "type": "number",
+            "example": 9,
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Số ngày thuê tối đa được đặt qua website; không giới hạn đơn tạo trên admin"
+          }
+        },
+        "required": [
+          "defaultRentalPrice",
+          "additionalDayFee",
+          "bulkQuantityThreshold",
+          "standardRenewalDay",
+          "bulkRenewalDay",
+          "maxOnlineRentalDays"
         ]
       },
       "WebStorefrontSelectionProductDto": {

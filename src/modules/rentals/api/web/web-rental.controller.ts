@@ -64,7 +64,8 @@ export class WebRentalController {
   })
   @ApiBadRequestResponse({
     type: ErrorResDto,
-    description: 'Khoảng thời gian thuê không hợp lệ hoặc thiếu productId/variantId',
+    description:
+      'Khoảng thời gian thuê không hợp lệ, vượt số ngày tối đa đặt qua website (WEB_RENTAL_DURATION_EXCEEDED), hoặc thiếu productId/variantId.',
   })
   async checkAvailability(@Query() query: WebAvailabilityQueryDto): Promise<WebAvailabilityResDto> {
     const shopId = await this.shopResolver.resolveShopId();
@@ -83,7 +84,8 @@ export class WebRentalController {
   })
   @ApiBadRequestResponse({
     type: ErrorResDto,
-    description: 'Dữ liệu tính báo giá không hợp lệ hoặc khoảng ngày không đúng',
+    description:
+      'Dữ liệu tính báo giá không hợp lệ hoặc khoảng thuê vượt giới hạn website (WEB_RENTAL_DURATION_EXCEEDED).',
   })
   async calculateQuote(@Body() body: WebRentalQuoteReqDto): Promise<WebRentalQuoteResDto> {
     const shopId = await this.shopResolver.resolveShopId();
@@ -110,7 +112,7 @@ export class WebRentalController {
   @ApiBadRequestResponse({
     type: ErrorResDto,
     description:
-      'Dữ liệu người thuê, khoảng ngày, phương thức thế chân hoặc Idempotency-Key không hợp lệ',
+      'Dữ liệu người thuê, khoảng ngày, phương thức thế chân hoặc Idempotency-Key không hợp lệ; khoảng thuê vượt giới hạn website có mã WEB_RENTAL_DURATION_EXCEEDED.',
   })
   @ApiNotFoundResponse({
     type: ErrorResDto,

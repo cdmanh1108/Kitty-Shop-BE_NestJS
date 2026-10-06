@@ -43,7 +43,14 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
   it('rolls back rental, items, allocation, history and idempotency completion when outbox insertion fails', async () => {
     const f = await rentalScenario(prisma);
     const audit = new AuditService(new PrismaAuditRepository(prisma));
-    const service = new RentalCreationService(rentals, rentals, rentals, audit, fixedClock);
+    const service = new RentalCreationService(
+      rentals,
+      rentals,
+      rentals,
+      audit,
+      fixedClock,
+      rentalPolicies,
+    );
     await failOutbox(async () => {
       await expect(service.create(f.principal, f.input, 'outbox-failure')).rejects.toThrow();
     });
@@ -93,6 +100,7 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
       rentals,
       new AuditService(new PrismaAuditRepository(prisma)),
       fixedClock,
+      rentalPolicies,
     );
     await withRequestContext(
       { requestId: 'integration-rental', ipAddress: '127.0.0.1', userAgent: 'Jest' },

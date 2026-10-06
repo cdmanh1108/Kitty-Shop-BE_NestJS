@@ -12,6 +12,11 @@ import {
   type RentalPolicyProvider,
 } from '@modules/settings/public/rental-policy';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
+import { assertOnlineRentalDuration } from '../domain/rental-cycle-pricing';
+import {
+  rentalBillableQuantity,
+  resolveRentalLinePricing,
+} from '../domain/rental-pricing-snapshot';
 import {
   RENTAL_AVAILABILITY_READER,
   type RentalAvailabilityReader,
@@ -45,7 +50,6 @@ import {
   RentalInventoryConflictError,
   RentalIdempotencyReplayUnavailableError,
   RentalNotFoundError,
-  RentalPricingUnavailableError,
   UnsupportedRentalCollateralError,
 } from './rental.errors';
 
@@ -131,6 +135,8 @@ export class WebRentalOrderService {
     try {
       const policy = await this.policyProvider.getPolicy(shopId);
       const durationDays = calculateRentalDurationDays(from, until);
+      assertOnlineRentalDuration(durationDays, policy.rentalPricing);
+      const billableQuantity = rentalBillableQuantity(req.items);
 
       // Collateral preference handling - validate upfront
       const collateralMethod = req.collateral?.method ?? 'CASH';
@@ -163,12 +169,6 @@ export class WebRentalOrderService {
 
       const lines: CreateRentalOrderData['lines'] = [];
       for (const { variant, quantity } of selection.demands) {
-        if (variant.ratePrice === null) {
-          throw new RentalPricingUnavailableError(
-            `Sản phẩm ${variant.productName} chưa được cấu hình giá thuê cho ${durationDays} ngày.`,
-          );
-        }
-
         if (variant.availableInventory.length < quantity) {
           throw new RentalInventoryConflictError(
             `Sản phẩm ${variant.productName} không đủ số lượng có sẵn trong khoảng ngày đã chọn.`,
@@ -186,14 +186,13 @@ export class WebRentalOrderService {
           productName: variant.productName,
           variantName,
           quantity,
-          unitRentalPrice: variant.ratePrice,
-          depositAmount: variant.depositPerItem * quantity,
-          lineTotal: variant.ratePrice * quantity,
-          pricingSnapshot: {
+          ...resolveRentalLinePricing({
             durationDays,
-            unitRentalPrice: variant.ratePrice,
+            billableQuantity,
+            policy: policy.rentalPricing,
+            quantity,
             depositPerItem: variant.depositPerItem,
-          },
+          }),
           inventory: selectedInventory,
         });
       }
