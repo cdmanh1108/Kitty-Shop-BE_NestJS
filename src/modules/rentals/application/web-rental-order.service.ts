@@ -246,6 +246,12 @@ export class WebRentalOrderService {
         rentalStartAt: from,
         rentalEndAt: until,
         discountTotal: 0,
+        ...(req.loyaltyRewardId
+          ? {
+              loyaltyRewardId: req.loyaltyRewardId,
+              loyaltyRewardRedeemedAt: this.clock.now(),
+            }
+          : {}),
         preferredPaymentMethod: req.paymentMethod,
         storefrontEligibility: true,
         idempotency: {
@@ -346,6 +352,7 @@ export class WebRentalOrderService {
           method: req.collateral?.method ?? 'CASH',
           documentType: req.collateral?.documentType ?? null,
         },
+        ...(req.loyaltyRewardId ? { loyaltyRewardId: req.loyaltyRewardId } : {}),
       },
     };
   }

@@ -1354,6 +1354,26 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Cần đăng nhập khi báo giá áp dụng ưu đãi của tài khoản.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Ưu đãi không còn khả dụng hoặc không áp dụng được cho đơn thuê này.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
           }
         },
         "summary": "Tính báo giá thuê tạm tính chính thức từ server",
@@ -2465,6 +2485,11 @@
               "self_pickup",
               "shop_delivery"
             ]
+          },
+          "loyaltyRewardId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ưu đãi thuộc tài khoản web đang đăng nhập; máy chủ tự xác định số tiền giảm."
           }
         },
         "required": [
@@ -2507,6 +2532,14 @@
             "example": 30000,
             "description": "Phí vận chuyển dự kiến (VND)"
           },
+          "discountAmount": {
+            "type": "number",
+            "example": 0,
+            "description": "Số tiền ưu đãi được áp dụng vào tiền thuê (VND)."
+          },
+          "loyaltyReward": {
+            "$ref": "#/components/schemas/WebRentalQuoteRewardResDto"
+          },
           "totalAmount": {
             "type": "number",
             "example": 480000,
@@ -2540,6 +2573,7 @@
           "rentalSubtotal",
           "depositAmount",
           "shippingFee",
+          "discountAmount",
           "totalAmount",
           "currency",
           "available"
@@ -2579,6 +2613,11 @@
               "bank_transfer"
             ],
             "description": "Phương thức khách mong muốn. Lựa chọn này được lưu cho đơn thuê, không tạo giao dịch, không xác nhận đã thanh toán, và không khởi tạo cổng thanh toán."
+          },
+          "loyaltyRewardId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ưu đãi được chọn trong báo giá."
           },
           "collateral": {
             "$ref": "#/components/schemas/WebCreateOrderCollateralDto"
@@ -3476,6 +3515,35 @@
           "additionalDayFee",
           "priceSource",
           "unitRentalPrice"
+        ]
+      },
+      "WebRentalQuoteRewardResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rewardValue": {
+            "type": "number",
+            "example": 50000,
+            "description": "Giá trị ưu đãi trong sổ khách hàng (VND)."
+          },
+          "discountAmount": {
+            "type": "number",
+            "example": 50000,
+            "description": "Số tiền giảm thực tế, không vượt tiền thuê (VND)."
+          },
+          "applicable": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "rewardValue",
+          "discountAmount",
+          "applicable"
         ]
       },
       "WebRentalQuoteItemResDto": {

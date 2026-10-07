@@ -123,6 +123,14 @@ export class WebRentalQuoteReqDto {
   @IsOptional()
   @IsIn(['self_pickup', 'shop_delivery'])
   deliveryMethod?: 'self_pickup' | 'shop_delivery';
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Ưu đãi thuộc tài khoản web đang đăng nhập; máy chủ tự xác định số tiền giảm.',
+  })
+  @IsOptional()
+  @IsUUID(undefined, { message: 'Mã ưu đãi không hợp lệ.' })
+  loyaltyRewardId?: string;
 }
 
 export class WebRentalQuoteItemResDto {
@@ -175,6 +183,20 @@ export class RentalAccessoryAllowanceResDto {
   @ApiProperty() remainingFreeAccessoryQuantity!: number;
 }
 
+export class WebRentalQuoteRewardResDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ example: 50000, description: 'Giá trị ưu đãi trong sổ khách hàng (VND).' })
+  rewardValue!: number;
+
+  @ApiProperty({ example: 50000, description: 'Số tiền giảm thực tế, không vượt tiền thuê (VND).' })
+  discountAmount!: number;
+
+  @ApiProperty({ example: true })
+  applicable!: boolean;
+}
+
 export class WebRentalQuoteResDto {
   @ApiPropertyOptional({ type: RentalAccessoryAllowanceResDto })
   accessoryAllowance?: RentalAccessoryAllowanceResDto;
@@ -195,6 +217,12 @@ export class WebRentalQuoteResDto {
 
   @ApiProperty({ example: 30000, description: 'Phí vận chuyển dự kiến (VND)' })
   shippingFee!: number;
+
+  @ApiProperty({ example: 0, description: 'Số tiền ưu đãi được áp dụng vào tiền thuê (VND).' })
+  discountAmount!: number;
+
+  @ApiPropertyOptional({ type: WebRentalQuoteRewardResDto })
+  loyaltyReward?: WebRentalQuoteRewardResDto;
 
   @ApiProperty({ example: 480000, description: 'Tổng tiền thanh toán dự kiến (VND)' })
   totalAmount!: number;

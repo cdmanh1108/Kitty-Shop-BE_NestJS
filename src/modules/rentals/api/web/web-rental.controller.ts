@@ -26,7 +26,12 @@ import {
   ApiCookieAuth,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { WebJwtAuthGuard, WebAuthOriginGuard, type WebAuthRequest } from '@modules/web-auth/public';
+import {
+  OptionalWebJwtAuthGuard,
+  WebJwtAuthGuard,
+  WebAuthOriginGuard,
+  type WebAuthRequest,
+} from '@modules/web-auth/public';
 import { WebRentalEvaluationService } from '../../application/web-rental-evaluation.service';
 import { WebRentalOrderService } from '../../application/web-rental-order.service';
 import { WebRentalLookupService } from '../../application/web-rental-lookup.service';
@@ -71,6 +76,7 @@ export class WebRentalController {
   }
 
   @Post('rental/quote')
+  @UseGuards(OptionalWebJwtAuthGuard, WebAuthOriginGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     operationId: 'createWebRentalQuote',
@@ -85,9 +91,20 @@ export class WebRentalController {
     description:
       'Dữ liệu tính báo giá không hợp lệ hoặc khoảng thuê vượt giới hạn website (WEB_RENTAL_DURATION_EXCEEDED).',
   })
-  async calculateQuote(@Body() body: WebRentalQuoteReqDto): Promise<WebRentalQuoteResDto> {
+  @ApiUnauthorizedResponse({
+    type: ErrorResDto,
+    description: 'Cần đăng nhập khi báo giá áp dụng ưu đãi của tài khoản.',
+  })
+  @ApiConflictResponse({
+    type: ErrorResDto,
+    description: 'Ưu đãi không còn khả dụng hoặc không áp dụng được cho đơn thuê này.',
+  })
+  async calculateQuote(
+    @Req() request: WebAuthRequest,
+    @Body() body: WebRentalQuoteReqDto,
+  ): Promise<WebRentalQuoteResDto> {
     const shopId = await this.shopResolver.resolveShopId();
-    return this.evaluation.calculateQuote(shopId, body);
+    return this.evaluation.calculateQuote(shopId, body, request.webUser?.id);
   }
 
   @Post('rental-orders')

@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { CustomerLoyaltyService } from '@modules/customers/public/customer-loyalty';
 import {
   RENTAL_AVAILABILITY_READER,
   type RentalAvailabilityReader,
@@ -24,6 +25,8 @@ import type {
   WebRentalQuoteResult,
 } from './web-rental.contracts';
 import { evaluateWebRentalSelection, resolveWebRentalSelection } from './web-rental-selection';
+import { RentalAuthenticationRequiredError } from './rental.errors';
+import { RentalLoyaltyRewardUnavailableError } from '../domain/rental-errors';
 import { rentalAccessoryAllowance, rentalSelectionKey } from '../domain/rental-accessories';
 import {
   parseWebRentalDateRangeInput,
@@ -36,6 +39,7 @@ export class WebRentalEvaluationService {
   constructor(
     @Inject(RENTAL_AVAILABILITY_READER) private readonly availability: RentalAvailabilityReader,
     @Inject(RENTAL_POLICY_PROVIDER) private readonly policyProvider: RentalPolicyProvider,
+    @Optional() private readonly customerLoyalty?: CustomerLoyaltyService,
   ) {}
 
   async checkAvailability(
@@ -69,11 +73,26 @@ export class WebRentalEvaluationService {
     return { available: availableQuantity > 0, availableQuantity };
   }
 
-  async calculateQuote(shopId: string, req: WebRentalQuoteInput): Promise<WebRentalQuoteResult> {
+  async calculateQuote(
+    shopId: string,
+    req: WebRentalQuoteInput,
+    webAccountId?: string,
+  ): Promise<WebRentalQuoteResult> {
     const { from, until } = parseWebRentalDateRangeInput(req);
     assertWebRentalItemsInput(req.items);
 
     const policy = await this.policyProvider.getPolicy(shopId);
+    const selectedReward = req.loyaltyRewardId
+      ? webAccountId && this.customerLoyalty
+        ? await this.customerLoyalty.findAvailableWebReward(
+            shopId,
+            webAccountId,
+            req.loyaltyRewardId,
+          )
+        : null
+      : null;
+    if (req.loyaltyRewardId && !webAccountId) throw new RentalAuthenticationRequiredError();
+    if (req.loyaltyRewardId && !selectedReward) throw new RentalLoyaltyRewardUnavailableError();
     const durationDays = calculateRentalDurationDays(from, until);
     assertOnlineRentalDuration(durationDays, policy.rentalPricing);
     const billableQuantity = rentalBillableQuantity(req.items);
@@ -128,7 +147,21 @@ export class WebRentalEvaluationService {
     const shippingFee = req.deliveryMethod === 'shop_delivery' ? standardShippingFee : 0;
     const rentalSubtotal = sumRentalPricingAmounts(rentalAmounts);
     const depositAmount = sumRentalPricingAmounts(depositAmounts);
-    const totalAmount = sumRentalPricingAmounts([rentalSubtotal, shippingFee]);
+    const discountAmount = selectedReward
+      ? Math.min(selectedReward.rewardValue, rentalSubtotal)
+      : 0;
+    const loyaltyReward = selectedReward
+      ? {
+          id: selectedReward.id,
+          rewardValue: selectedReward.rewardValue,
+          discountAmount,
+          applicable: discountAmount > 0,
+        }
+      : undefined;
+    const totalAmount = Math.max(
+      0,
+      sumRentalPricingAmounts([rentalSubtotal, shippingFee]) - discountAmount,
+    );
 
     return {
       durationDays,
@@ -137,10 +170,12 @@ export class WebRentalEvaluationService {
       rentalSubtotal,
       depositAmount,
       shippingFee,
+      discountAmount,
       totalAmount,
       currency: 'VND',
       available: allAvailable,
-      canCheckout: allAvailable,
+      canCheckout: allAvailable && (!selectedReward || discountAmount > 0),
+      ...(loyaltyReward ? { loyaltyReward } : {}),
       items: selection.items,
     };
   }

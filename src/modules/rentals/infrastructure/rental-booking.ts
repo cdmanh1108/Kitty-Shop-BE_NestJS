@@ -39,6 +39,11 @@ import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { RENTAL_PRICING_VERSION } from '../domain/rental-pricing-version';
 import { assertFreeAccessoryAllowed, rentalBillingRole } from '../domain/rental-accessories';
 import { RentalAuthenticationRequiredError } from '../application/rental.errors';
+import { redeemWebAccountLoyaltyReward } from '@modules/customers/public/rental-loyalty-transaction';
+import {
+  RentalLoyaltyRewardNotApplicableError,
+  RentalLoyaltyRewardUnavailableError,
+} from '../domain/rental-errors';
 
 export async function createOrder(
   prisma: PrismaService,
@@ -89,6 +94,22 @@ export async function createOrder(
       if (data.source === RENTAL_ORDER_SOURCE.ONLINE && !checkoutAccount?.email)
         throw new RentalAuthenticationRequiredError();
 
+      const rewardToRedeem = data.loyaltyRewardId
+        ? data.source === RENTAL_ORDER_SOURCE.ONLINE && data.webAccountId
+          ? await tx.customerLoyaltyReward.findFirst({
+              where: {
+                id: data.loyaltyRewardId,
+                shopId: data.shopId,
+                ownerType: 'WEB_ACCOUNT',
+                webAccountId: data.webAccountId,
+                status: 'AVAILABLE',
+              },
+              select: { rewardValue: true },
+            })
+          : null
+        : null;
+      if (data.loyaltyRewardId && !rewardToRedeem) throw new RentalLoyaltyRewardUnavailableError();
+
       assertAllocationPlan(data);
       const billableQuantity = rentalBillableQuantity(data.lines);
       for (const line of data.lines)
@@ -111,7 +132,11 @@ export async function createOrder(
       const shippingTotal = data.delivery?.shippingFee ?? 0;
       const chargesTotal = explicitChargesTotal + shippingTotal;
       const depositRequired = sumRentalPricingAmounts(data.lines.map((line) => line.depositAmount));
-      const grandTotal = Math.max(0, rentalSubtotal + chargesTotal - data.discountTotal);
+      if (rewardToRedeem && rentalSubtotal <= 0) throw new RentalLoyaltyRewardNotApplicableError();
+      const discountTotal = rewardToRedeem
+        ? Math.min(rewardToRedeem.rewardValue.toNumber(), rentalSubtotal)
+        : data.discountTotal;
+      const grandTotal = Math.max(0, rentalSubtotal + chargesTotal - discountTotal);
 
       const order = await tx.rentalOrder.create({
         data: {
@@ -132,7 +157,7 @@ export async function createOrder(
             depositRequired === 0 ? DEPOSIT_STATUS.NOT_REQUIRED : DEPOSIT_STATUS.PENDING,
           rentalSubtotal,
           chargesTotal,
-          discountTotal: data.discountTotal,
+          discountTotal,
           depositRequired,
           collateralMethod: data.collateral?.method ?? 'CASH',
           documentType: data.collateral?.documentType,
@@ -143,6 +168,17 @@ export async function createOrder(
           updatedBy: data.createdBy,
         },
       });
+
+      if (data.loyaltyRewardId && data.webAccountId) {
+        const redeemed = await redeemWebAccountLoyaltyReward(tx, {
+          shopId: data.shopId,
+          webAccountId: data.webAccountId,
+          rewardId: data.loyaltyRewardId,
+          orderId: order.id,
+          redeemedAt: data.loyaltyRewardRedeemedAt ?? new Date(),
+        });
+        if (!redeemed) throw new RentalLoyaltyRewardUnavailableError();
+      }
 
       for (const line of data.lines) {
         const snapshot = line.pricingSnapshot;

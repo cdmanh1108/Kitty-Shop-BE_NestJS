@@ -25,6 +25,9 @@ export interface CreateRentalOrderData {
   rentalStartAt: Date;
   rentalEndAt: Date;
   discountTotal: number;
+  /** Reward selected by the authenticated Web account; value is always read by Customers in-transaction. */
+  loyaltyRewardId?: string;
+  loyaltyRewardRedeemedAt?: Date;
   /** Storefront-only preference; it is not an actual payment or receipt method. */
   preferredPaymentMethod?: WebPaymentPreference;
   note?: string;

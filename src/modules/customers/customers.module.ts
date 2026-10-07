@@ -23,6 +23,11 @@ import { WebAccountLoyaltyController } from './api/web-account-loyalty.controlle
     { provide: CUSTOMER_LOYALTY_READER, useExisting: PrismaCustomerLoyaltyReader },
     { provide: BOOKING_CUSTOMER_RESOLVER, useExisting: PrismaCustomerRepository },
   ],
-  exports: [CustomerService, CUSTOMER_REPOSITORY, BOOKING_CUSTOMER_RESOLVER],
+  exports: [
+    CustomerService,
+    CustomerLoyaltyService,
+    CUSTOMER_REPOSITORY,
+    BOOKING_CUSTOMER_RESOLVER,
+  ],
 })
 export class CustomersModule {}

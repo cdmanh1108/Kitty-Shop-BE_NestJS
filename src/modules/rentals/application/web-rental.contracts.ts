@@ -26,6 +26,7 @@ export interface WebRentalQuoteInput {
   returnDate: string;
   items: WebRentalItemInput[];
   deliveryMethod?: 'self_pickup' | 'shop_delivery';
+  loyaltyRewardId?: string;
 }
 
 export type WebRentalLineIssue = 'NOT_RENTABLE' | 'INSUFFICIENT_QUANTITY' | 'PRICE_UNAVAILABLE';
@@ -50,10 +51,17 @@ export interface WebRentalQuoteResult {
   rentalSubtotal: number;
   depositAmount: number;
   shippingFee: number;
+  discountAmount: number;
   totalAmount: number;
   currency: string;
   available: boolean;
   canCheckout: boolean;
+  loyaltyReward?: {
+    id: string;
+    rewardValue: number;
+    discountAmount: number;
+    applicable: boolean;
+  };
   items: WebRentalLineAvailability[];
 }
 
@@ -71,6 +79,7 @@ export interface WebCreateOrderInput {
     address?: string;
   };
   paymentMethod: WebCheckoutPaymentPreference;
+  loyaltyRewardId?: string;
   collateral?: {
     method?: 'CASH' | 'DOCUMENT';
     documentType?: 'CCCD' | 'GPLX';

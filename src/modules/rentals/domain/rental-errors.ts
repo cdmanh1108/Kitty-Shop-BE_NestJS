@@ -62,3 +62,19 @@ export class RentalFeePreviewChangedError extends ApplicationError {
     );
   }
 }
+
+export class RentalLoyaltyRewardUnavailableError extends ApplicationError {
+  readonly kind = 'CONFLICT' as const;
+
+  constructor() {
+    super('Ưu đãi này không còn sẵn sàng. Vui lòng tải lại báo giá.', 'LOYALTY_REWARD_UNAVAILABLE');
+  }
+}
+
+export class RentalLoyaltyRewardNotApplicableError extends ApplicationError {
+  readonly kind = 'CONFLICT' as const;
+
+  constructor() {
+    super('Ưu đãi cần ít nhất một món thuê có phí để áp dụng.', 'LOYALTY_REWARD_NOT_APPLICABLE');
+  }
+}

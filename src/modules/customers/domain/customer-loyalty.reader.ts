@@ -7,4 +7,9 @@ export interface CustomerLoyaltyReader {
     shopId: string;
     owner: CustomerLoyaltyOwner;
   }): Promise<CustomerLoyaltyProgressRecord | null>;
+  findAvailableWebReward(input: {
+    shopId: string;
+    webAccountId: string;
+    rewardId: string;
+  }): Promise<{ id: string; rewardValue: number } | null>;
 }

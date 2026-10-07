@@ -30,6 +30,10 @@ export class CustomerLoyaltyService {
     return summary;
   }
 
+  findAvailableWebReward(shopId: string, webAccountId: string, rewardId: string) {
+    return this.loyalty.findAvailableWebReward({ shopId, webAccountId, rewardId });
+  }
+
   private async getSummary(shopId: string, owner: CustomerLoyaltyOwner) {
     const [policy, progress] = await Promise.all([
       this.policies.getPolicy(shopId),

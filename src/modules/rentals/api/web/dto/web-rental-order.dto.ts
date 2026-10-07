@@ -10,6 +10,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   ValidateIf,
@@ -118,6 +119,11 @@ export class WebCreateOrderReqDto {
   })
   @IsIn(WEB_CHECKOUT_PAYMENT_PREFERENCES)
   paymentMethod!: (typeof WEB_CHECKOUT_PAYMENT_PREFERENCES)[number];
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Ưu đãi được chọn trong báo giá.' })
+  @IsOptional()
+  @IsUUID(undefined, { message: 'Mã ưu đãi không hợp lệ.' })
+  loyaltyRewardId?: string;
 
   @ApiPropertyOptional({ type: WebCreateOrderCollateralDto })
   @IsOptional()

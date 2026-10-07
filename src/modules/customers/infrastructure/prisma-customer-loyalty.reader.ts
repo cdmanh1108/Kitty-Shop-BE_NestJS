@@ -8,6 +8,20 @@ import type { CustomerLoyaltyReader } from '../domain/customer-loyalty.reader';
 export class PrismaCustomerLoyaltyReader implements CustomerLoyaltyReader {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findAvailableWebReward(input: { shopId: string; webAccountId: string; rewardId: string }) {
+    const reward = await this.prisma.customerLoyaltyReward.findFirst({
+      where: {
+        id: input.rewardId,
+        shopId: input.shopId,
+        ownerType: 'WEB_ACCOUNT',
+        webAccountId: input.webAccountId,
+        status: 'AVAILABLE',
+      },
+      select: { id: true, rewardValue: true },
+    });
+    return reward ? { id: reward.id, rewardValue: reward.rewardValue.toNumber() } : null;
+  }
+
   async getProgress(input: { shopId: string; owner: CustomerLoyaltyOwner }) {
     return this.prisma.$transaction(
       async (tx) => {

@@ -62,3 +62,31 @@ export async function createRentalLoyaltyEntry(
   });
   return { rewardId: reward.id };
 }
+
+/** Redeems an account-owned reward within the caller's order-creation transaction. */
+export async function redeemWebAccountLoyaltyReward(
+  tx: Prisma.TransactionClient,
+  input: {
+    shopId: string;
+    webAccountId: string;
+    rewardId: string;
+    orderId: string;
+    redeemedAt: Date;
+  },
+): Promise<boolean> {
+  const result = await tx.customerLoyaltyReward.updateMany({
+    where: {
+      id: input.rewardId,
+      shopId: input.shopId,
+      ownerType: 'WEB_ACCOUNT',
+      webAccountId: input.webAccountId,
+      status: 'AVAILABLE',
+    },
+    data: {
+      status: 'REDEEMED',
+      redeemedOrderId: input.orderId,
+      redeemedAt: input.redeemedAt,
+    },
+  });
+  return result.count === 1;
+}
