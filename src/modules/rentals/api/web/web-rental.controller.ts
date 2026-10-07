@@ -23,12 +23,10 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiCookieAuth,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import {
-  OptionalWebJwtAuthGuard,
-  WebAuthOriginGuard,
-  type WebAuthRequest,
-} from '@modules/web-auth/public';
+import { WebJwtAuthGuard, WebAuthOriginGuard, type WebAuthRequest } from '@modules/web-auth/public';
 import { WebRentalEvaluationService } from '../../application/web-rental-evaluation.service';
 import { WebRentalOrderService } from '../../application/web-rental-order.service';
 import { WebRentalLookupService } from '../../application/web-rental-lookup.service';
@@ -93,7 +91,12 @@ export class WebRentalController {
   }
 
   @Post('rental-orders')
-  @UseGuards(OptionalWebJwtAuthGuard, WebAuthOriginGuard)
+  @UseGuards(WebJwtAuthGuard, WebAuthOriginGuard)
+  @ApiCookieAuth('web-access')
+  @ApiUnauthorizedResponse({
+    type: ErrorResDto,
+    description: 'Cần đăng nhập tài khoản đã xác thực email để đặt thuê.',
+  })
   @Header('Cache-Control', 'no-store')
   @ApiHeader({
     name: 'Idempotency-Key',
@@ -141,7 +144,7 @@ export class WebRentalController {
         : idempotencyKeys.length === 1
           ? idempotencyKeys[0]
           : idempotencyKeys,
-      { webAccountId: request.webUser?.id ?? null },
+      { webAccountId: request.webUser!.id, email: request.webUser!.email },
     );
   }
 

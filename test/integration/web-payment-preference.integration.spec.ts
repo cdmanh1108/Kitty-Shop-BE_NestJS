@@ -42,6 +42,14 @@ describe('Web payment preference persistence', () => {
 
   it('stores a Web payment preference atomically without creating a payment or marking a positive order paid', async () => {
     const fixture = await rentalScenario(prisma);
+    const account = await prisma.webAccount.create({
+      data: {
+        email: 'payment-preference@example.test',
+        emailVerifiedAt: fixedClock.now(),
+        passwordHash: 'test-only',
+      },
+    });
+    const owner = { webAccountId: account.id, email: account.email };
     const created = await web.createOrder(
       fixture.shop.id,
       {
@@ -50,16 +58,17 @@ describe('Web payment preference persistence', () => {
         returnDate: '2026-10-12',
         items: [{ variantId: fixture.variant.id, quantity: 1 }],
         delivery: { method: 'self_pickup' },
-        paymentMethod: 'momo',
+        paymentMethod: 'bank_transfer',
       },
       'web-payment-preference',
+      owner,
     );
 
     const stored = await prisma.rentalOrder.findFirstOrThrow({
       where: { shopId: fixture.shop.id, orderNumber: created.orderCode },
     });
     expect(stored).toMatchObject({
-      preferredPaymentMethod: 'momo',
+      preferredPaymentMethod: 'bank_transfer',
       paymentStatus: 'UNPAID',
       collateralMethod: 'CASH',
     });
@@ -71,7 +80,10 @@ describe('Web payment preference persistence', () => {
     const response = toRentalResponse(
       new RentalReadPresenter({ resolve: () => 'https://assets.example.test' }).details(read),
     );
-    expect(response).toMatchObject({ preferredPaymentMethod: 'momo', paymentStatus: 'UNPAID' });
+    expect(response).toMatchObject({
+      preferredPaymentMethod: 'bank_transfer',
+      paymentStatus: 'UNPAID',
+    });
 
     await expect(
       web.createOrder(
@@ -85,6 +97,7 @@ describe('Web payment preference persistence', () => {
           paymentMethod: 'cash',
         },
         'web-payment-preference',
+        owner,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
   });

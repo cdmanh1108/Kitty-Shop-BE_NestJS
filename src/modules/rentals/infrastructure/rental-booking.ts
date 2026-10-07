@@ -38,6 +38,7 @@ import {
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { RENTAL_PRICING_VERSION } from '../domain/rental-pricing-version';
 import { assertFreeAccessoryAllowed, rentalBillingRole } from '../domain/rental-accessories';
+import { RentalAuthenticationRequiredError } from '../application/rental.errors';
 
 export async function createOrder(
   prisma: PrismaService,
@@ -73,6 +74,21 @@ export async function createOrder(
     return await serializableTransaction(prisma, async (tx) => {
       if (data.idempotency) await lockRentalCreationClaim(tx, data.shopId, data.idempotency);
 
+      const checkoutAccount =
+        data.source === RENTAL_ORDER_SOURCE.ONLINE && data.webAccountId
+          ? await tx.webAccount.findFirst({
+              where: {
+                id: data.webAccountId,
+                disabledAt: null,
+                email: { not: null },
+                emailVerifiedAt: { not: null },
+              },
+              select: { email: true },
+            })
+          : null;
+      if (data.source === RENTAL_ORDER_SOURCE.ONLINE && !checkoutAccount?.email)
+        throw new RentalAuthenticationRequiredError();
+
       assertAllocationPlan(data);
       const billableQuantity = rentalBillableQuantity(data.lines);
       for (const line of data.lines)
@@ -105,7 +121,7 @@ export async function createOrder(
           source: data.source,
           webAccountId: data.webAccountId ?? null,
           notificationEmail:
-            data.source === RENTAL_ORDER_SOURCE.ONLINE ? (data.notificationEmail ?? null) : null,
+            data.source === RENTAL_ORDER_SOURCE.ONLINE ? checkoutAccount!.email : null,
           locationId: data.locationId,
           rentalStartAt: data.rentalStartAt,
           rentalEndAt: data.rentalEndAt,

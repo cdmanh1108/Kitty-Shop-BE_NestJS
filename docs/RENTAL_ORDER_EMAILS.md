@@ -2,12 +2,14 @@
 
 ## Scope
 
-Two emails are queued for new `ONLINE` orders with an explicitly supplied checkout
-email: confirmed and settled (`COMPLETED`). Creating or cancelling an order does not
+Two emails are queued for new `ONLINE` orders using the verified account's email:
+confirmed and settled (`COMPLETED`). Creating or cancelling an order does not
 enqueue an email. There are no reschedule, pickup, return or overdue emails.
 Offline orders and orders without a captured email do not create email tasks. Existing
-orders are not backfilled from mutable CRM or account emails. Checkout accepts an
-optional contact email; Web prefills the account email only in an untouched empty field.
+orders are not backfilled from mutable CRM or account emails. New checkout requires
+authentication and does not accept a customer email or social contact field. Web displays
+the account email read-only; the booking transaction reads the verified account's email
+and captures it on the order. Later CRM or profile edits do not redirect notifications.
 
 `rental_orders.notification_email` is captured at creation, independently of ownership.
 Changing a CRM profile cannot redirect subsequent order emails. Idempotent create replay

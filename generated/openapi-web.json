@@ -442,6 +442,84 @@
         "x-api-surface": "web"
       }
     },
+    "/web/auth/profile": {
+      "patch": {
+        "operationId": "updateWebProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebUpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebProfileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Lưu họ tên và số điện thoại mặc định của tài khoản",
+        "tags": [
+          "Web - Auth"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/auth/logout": {
       "post": {
         "operationId": "logoutWebUser",
@@ -1330,6 +1408,16 @@
               }
             }
           },
+          "401": {
+            "description": "Cần đăng nhập tài khoản đã xác thực email để đặt thuê.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Sản phẩm hoặc biến thể không khả dụng",
             "content": {
@@ -1351,6 +1439,11 @@
             }
           }
         },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
         "summary": "Tạo đơn đặt thuê từ Web Storefront",
         "tags": [
           "Web - Rental Orders"
@@ -1877,6 +1970,16 @@
             "nullable": true,
             "description": "Null only for retained accounts created before email identity migration."
           },
+          "fullName": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^0\\d{9}$"
+          },
           "emailVerifiedAt": {
             "type": "string",
             "format": "date-time",
@@ -1893,6 +1996,26 @@
           "email",
           "emailVerifiedAt",
           "createdAt"
+        ]
+      },
+      "WebUpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Nguyễn Minh Anh",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "example": "0939505378",
+            "maxLength": 30
+          }
+        },
+        "required": [
+          "fullName",
+          "phone"
         ]
       },
       "WebLogoutDto": {
@@ -2422,8 +2545,7 @@
             "example": "bank_transfer",
             "enum": [
               "cash",
-              "bank_transfer",
-              "momo"
+              "bank_transfer"
             ],
             "description": "Phương thức khách mong muốn. Lựa chọn này được lưu cho đơn thuê, không tạo giao dịch, không xác nhận đã thanh toán, và không khởi tạo cổng thanh toán."
           },
@@ -3347,17 +3469,6 @@
           "phone": {
             "type": "string",
             "example": "0912345678"
-          },
-          "email": {
-            "type": "string",
-            "example": "nguyenvana@gmail.com",
-            "maxLength": 255,
-            "description": "Có thể bỏ trống; nếu có nội dung phải là email hợp lệ."
-          },
-          "facebookOrZalo": {
-            "type": "string",
-            "example": "https://facebook.com/nguyenvana",
-            "maxLength": 500
           },
           "note": {
             "type": "string",

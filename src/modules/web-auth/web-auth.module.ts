@@ -6,6 +6,7 @@ import { ClockModule } from '@common/clock/clock.module';
 import { WebAuthController } from './api/web-auth.controller';
 import { WebRegistrationService } from './application/web-registration.service';
 import { WebSessionService } from './application/web-session.service';
+import { WebProfileService } from './application/web-profile.service';
 import { OptionalWebJwtAuthGuard, WebJwtAuthGuard, WebAuthOriginGuard } from './public';
 import { WebAuthCookies } from './api/web-auth-cookies';
 import { WEB_AUTH_REPOSITORY } from './domain/web-auth.repository';
@@ -33,6 +34,7 @@ import {
   providers: [
     WebRegistrationService,
     WebSessionService,
+    WebProfileService,
     WebAuthCookies,
     WebJwtAuthGuard,
     OptionalWebJwtAuthGuard,

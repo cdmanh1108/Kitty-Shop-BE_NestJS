@@ -4,6 +4,8 @@ export const WEB_AUTH_REPOSITORY = Symbol('WEB_AUTH_REPOSITORY');
 export interface WebAccount {
   id: string;
   email: string | null;
+  fullName?: string | null;
+  contactPhone?: string | null;
   passwordHash: string;
   pendingPasswordHash?: string | null;
   registrationAttemptId?: string | null;
@@ -15,6 +17,8 @@ export interface WebAccount {
 export interface WebProfile {
   id: string;
   email: string | null;
+  fullName?: string | null;
+  phone?: string | null;
   emailVerifiedAt: Date | null;
   createdAt: Date;
 }
@@ -85,6 +89,10 @@ export interface WebAuthRepository {
   findChallenge(id: string): Promise<OtpChallenge | null>;
   verify(id: string, otpHash: string, now: Date, maxAttempts: number): Promise<VerifyResult>;
   findAccountById(id: string): Promise<WebAccount | null>;
+  updateProfile(
+    id: string,
+    input: { fullName: string; contactPhone: string },
+  ): Promise<WebAccount | null>;
   createRefreshToken(
     input: WebRefreshTokenData & { accountId: string; familyId: string },
   ): Promise<boolean>;

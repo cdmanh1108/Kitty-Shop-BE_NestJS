@@ -18,9 +18,8 @@ import {
 import {
   WEB_RENTAL_MAX_ADDRESS_LENGTH,
   WEB_RENTAL_MAX_ITEM_COUNT,
-  WEB_RENTAL_MAX_SOCIAL_CONTACT_LENGTH,
 } from '../../../application/web-rental-input-validation';
-import { WEB_PAYMENT_PREFERENCES } from '../../../domain/web-payment-preference';
+import { WEB_CHECKOUT_PAYMENT_PREFERENCES } from '../../../domain/web-payment-preference';
 import { WebRentalItemInputDto } from './web-rental-evaluation.dto';
 
 export class WebCreateOrderCustomerDto {
@@ -36,30 +35,6 @@ export class WebCreateOrderCustomerDto {
   @IsNotEmpty({ message: 'Vui lòng nhập số điện thoại.' })
   @Matches(/^(0|\+84)[0-9\s.-]{8,12}$/, { message: 'Số điện thoại không đúng định dạng.' })
   phone!: string;
-
-  @ApiPropertyOptional({
-    example: 'nguyenvana@gmail.com',
-    maxLength: 255,
-    description: 'Có thể bỏ trống; nếu có nội dung phải là email hợp lệ.',
-  })
-  @IsOptional()
-  @ValidateIf(
-    (_: WebCreateOrderCustomerDto, value: unknown) =>
-      typeof value !== 'string' || value.trim().length > 0,
-  )
-  @IsString()
-  @Matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: 'Email không đúng định dạng.' })
-  @MaxLength(255)
-  email?: string;
-
-  @ApiPropertyOptional({
-    example: 'https://facebook.com/nguyenvana',
-    maxLength: WEB_RENTAL_MAX_SOCIAL_CONTACT_LENGTH,
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(WEB_RENTAL_MAX_SOCIAL_CONTACT_LENGTH)
-  facebookOrZalo?: string;
 
   @ApiPropertyOptional({ example: 'Giao buổi sáng' })
   @IsOptional()
@@ -137,12 +112,12 @@ export class WebCreateOrderReqDto {
 
   @ApiProperty({
     example: 'bank_transfer',
-    enum: WEB_PAYMENT_PREFERENCES,
+    enum: WEB_CHECKOUT_PAYMENT_PREFERENCES,
     description:
       'Phương thức khách mong muốn. Lựa chọn này được lưu cho đơn thuê, không tạo giao dịch, không xác nhận đã thanh toán, và không khởi tạo cổng thanh toán.',
   })
-  @IsIn(WEB_PAYMENT_PREFERENCES)
-  paymentMethod!: (typeof WEB_PAYMENT_PREFERENCES)[number];
+  @IsIn(WEB_CHECKOUT_PAYMENT_PREFERENCES)
+  paymentMethod!: (typeof WEB_CHECKOUT_PAYMENT_PREFERENCES)[number];
 
   @ApiPropertyOptional({ type: WebCreateOrderCollateralDto })
   @IsOptional()

@@ -9,7 +9,6 @@ export const WEB_RENTAL_MAX_ITEM_COUNT = 20;
 export const WEB_RENTAL_MAX_QUANTITY_PER_ITEM = 20;
 export const WEB_RENTAL_MAX_TOTAL_QUANTITY = 50;
 export const WEB_RENTAL_MAX_ADDRESS_LENGTH = 500;
-export const WEB_RENTAL_MAX_SOCIAL_CONTACT_LENGTH = 500;
 
 export type WebRentalInputValidationCode =
   | 'INVALID_CALENDAR_DATE'

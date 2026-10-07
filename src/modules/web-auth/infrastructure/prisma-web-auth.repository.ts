@@ -214,6 +214,13 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
   findAccountById(id: string) {
     return this.prisma.webAccount.findUnique({ where: { id } });
   }
+  async updateProfile(id: string, input: { fullName: string; contactPhone: string }) {
+    const accounts = await this.prisma.webAccount.updateManyAndReturn({
+      where: { id, disabledAt: null, email: { not: null }, emailVerifiedAt: { not: null } },
+      data: input,
+    });
+    return accounts[0] ?? null;
+  }
   findChallenge(id: string) {
     return this.prisma.webOtpChallenge.findUnique({ where: { id } });
   }

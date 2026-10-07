@@ -1,4 +1,4 @@
-import type { WebPaymentPreference } from '../domain/web-payment-preference';
+import type { WebCheckoutPaymentPreference } from '../domain/web-payment-preference';
 import type { ResolvedRentalCyclePricing } from '../domain/rental-cycle-pricing';
 import type { RentalBillingRole, RentalAccessoryAllowance } from '../domain/rental-accessories';
 
@@ -61,8 +61,6 @@ export interface WebCreateOrderInput {
   customer: {
     name: string;
     phone: string;
-    email?: string;
-    facebookOrZalo?: string;
     note?: string;
   };
   pickupDate: string;
@@ -72,7 +70,7 @@ export interface WebCreateOrderInput {
     method: 'self_pickup' | 'shop_delivery';
     address?: string;
   };
-  paymentMethod: WebPaymentPreference;
+  paymentMethod: WebCheckoutPaymentPreference;
   collateral?: {
     method?: 'CASH' | 'DOCUMENT';
     documentType?: 'CCCD' | 'GPLX';
@@ -87,9 +85,10 @@ export interface WebCreateOrderResult {
   paymentStatus: string;
 }
 
-/** Trusted request context supplied by optional Web authentication, never a transport DTO. */
+/** Trusted verified account context, never supplied by a checkout transport DTO. */
 export interface WebCheckoutOwnerContext {
   webAccountId: string | null;
+  email?: string | null;
 }
 
 export interface WebOrderLookupInput {

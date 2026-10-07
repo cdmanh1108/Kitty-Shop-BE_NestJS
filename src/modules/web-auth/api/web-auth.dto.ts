@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsString, IsUUID, Length, Matches, MaxLength } from 'class-validator';
 import { normalizeWebEmail } from '../domain/email';
 
@@ -58,6 +58,10 @@ export class WebProfileDto {
     description: 'Null only for retained accounts created before email identity migration.',
   })
   email!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 100 })
+  fullName?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, pattern: '^0\\d{9}$' })
+  phone?: string | null;
   @ApiProperty({
     format: 'date-time',
     nullable: true,
@@ -66,6 +70,20 @@ export class WebProfileDto {
   })
   emailVerifiedAt!: string | null;
   @ApiProperty({ format: 'date-time' }) createdAt!: string;
+}
+
+export class WebUpdateProfileDto {
+  @ApiProperty({ example: 'Nguyễn Minh Anh', minLength: 2, maxLength: 100 })
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString({ message: 'Họ tên phải là chuỗi ký tự.' })
+  @Length(2, 100, { message: 'Họ tên phải có từ 2 đến 100 ký tự.' })
+  fullName!: string;
+
+  @ApiProperty({ example: '0939505378', maxLength: 30 })
+  @IsString({ message: 'Số điện thoại phải là chuỗi ký tự.' })
+  @MaxLength(30, { message: 'Số điện thoại tối đa 30 ký tự.' })
+  @Matches(/^(0|\+84)[0-9\s().-]{8,20}$/, { message: 'Số điện thoại không đúng định dạng.' })
+  phone!: string;
 }
 
 export class WebVerifiedDto {

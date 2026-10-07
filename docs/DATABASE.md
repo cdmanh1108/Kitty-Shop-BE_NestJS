@@ -178,10 +178,10 @@ verification and resend lock the account and update their related rows transacti
 families for 30 days by default; see [Auth ephemeral-data cleanup](AUTH_CLEANUP.md).
 
 Rental order creation provenance is separate from both storefront authentication and CRM
-identity. `rental_orders.source` is `ONLINE` for storefront checkout (including guests) or
+identity. `rental_orders.source` is `ONLINE` for storefront checkout or
 `OFFLINE` for Admin/manual entry. `web_account_id` is nullable storefront ownership and does
 not replace `customer_id`. A checkout with a verified WebAccount stores that account ID;
-guest checkout and Admin/manual orders store NULL. Existing orders are never inferred or
+New checkout requires a verified email account; retained guest orders and Admin/manual orders store NULL. Existing orders are never inferred or
 claimed from customer contact fields; see [Rental order origin](RENTAL_ORDER_ORIGIN.md).
 
 Storefront actions retain their actor separately from staff identities. Migration
@@ -193,6 +193,15 @@ transactional cancellation lifecycle as Admin commands; see
 [Rental order origin](RENTAL_ORDER_ORIGIN.md).
 
 ## Storefront email contact and consumer queue
+
+`202610070003_web_account_contact_profile` adds nullable `web_accounts.full_name`
+and `contact_phone` for checkout defaults. Name is trimmed, 2–100 characters; phone
+is canonical `0` plus nine digits. Contact phone is not unique and is not an identity,
+OTP verification or CRM ownership key. Legacy `phone`/`phone_verified_at` remain untouched;
+existing rows are not inferred or backfilled. Apply this migration and regenerate
+Prisma Client before running the updated Web Auth reads. Profile updates do not rewrite
+historical orders, CRM or notification recipients. New ONLINE writes require a live,
+enabled account with verified email, rechecked in the booking transaction.
 
 Migration `202610070002_rental_order_emails` adds nullable immutable
 `rental_orders.notification_email` without historical backfill, and extends

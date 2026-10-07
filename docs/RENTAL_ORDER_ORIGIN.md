@@ -2,7 +2,7 @@
 
 `rental_orders.source` is immutable creation provenance, not authentication state:
 
-- `ONLINE`: created through the storefront checkout, including guest checkout.
+- `ONLINE`: created through the storefront checkout; new orders require a verified account. Retained guest orders stay ONLINE.
 - `OFFLINE`: entered through an Admin/manual order path.
 
 `rental_orders.web_account_id` is nullable storefront ownership. It is separate from
@@ -15,11 +15,11 @@ Only trusted backend application services choose the source. `WebRentalOrderServ
 writes `ONLINE`; `RentalCreationService` always writes `OFFLINE`. Neither Admin nor storefront
 request DTO accepts source or web-account ownership, and no update command changes it.
 
-The checkout controller uses optional Web JWT authentication. A missing access cookie is a
-guest checkout and writes `web_account_id = NULL`; a valid cookie writes the verified
-`WebAccount.id` in the same order-creation transaction. An expired or invalid supplied
-cookie is rejected rather than silently downgraded to guest. The idempotency command hash
-also includes the stable owner scope (`guest` or the account ID), never a raw token, so a
+The checkout controller requires Web JWT authentication. The application rejects absent
+account/email context, and the transaction rechecks the account's active verified email
+before writing `WebAccount.id` and the captured notification email. The frontend cannot
+select another account or notification email. Retained guest orders remain unchanged.
+The idempotency command hash includes the stable account scope, never a raw token, so a
 key cannot replay one owner's order to another owner.
 
 ## Account order history

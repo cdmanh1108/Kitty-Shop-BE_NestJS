@@ -8,6 +8,8 @@ export const WEB_AUTH_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   EMAIL_NOT_VERIFIED: 'Email của tài khoản này chưa được xác minh.',
   ACCOUNT_DISABLED: 'Tài khoản này đã bị vô hiệu hóa.',
   AUTH_REQUIRED: 'Vui lòng đăng nhập để tiếp tục.',
+  INVALID_PROFILE_NAME: 'Họ tên phải có từ 2 đến 100 ký tự.',
+  INVALID_PHONE: 'Số điện thoại Việt Nam phải gồm 10 chữ số, bắt đầu bằng 0 hoặc +84.',
   OTP_CHALLENGE_NOT_FOUND: 'Không tìm thấy yêu cầu xác minh. Vui lòng yêu cầu mã mới.',
   OTP_EXPIRED: 'Mã xác minh đã hết hạn. Vui lòng yêu cầu mã mới.',
   OTP_ATTEMPTS_EXCEEDED: 'Bạn đã thử quá nhiều lần. Vui lòng yêu cầu mã mới.',

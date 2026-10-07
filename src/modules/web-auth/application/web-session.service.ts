@@ -15,6 +15,7 @@ import {
 import type { CredentialsInput, WebSessionContext, WebTokenResult } from './web-auth.contracts';
 import { normalizeWebAuthEmail, validateWebAuthPassword } from './web-auth.credentials';
 import { webAuthError } from '../domain/web-auth.errors';
+import { webAccountProfile } from '../domain/web-account-profile';
 
 @Injectable()
 export class WebSessionService {
@@ -116,11 +117,6 @@ export class WebSessionService {
   }
 
   private profile(account: WebAccount): WebProfile {
-    return {
-      id: account.id,
-      email: account.email,
-      emailVerifiedAt: account.emailVerifiedAt,
-      createdAt: account.createdAt,
-    };
+    return webAccountProfile(account);
   }
 }

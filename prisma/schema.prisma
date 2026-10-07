@@ -26,6 +26,8 @@ model WebAccount {
   // Nullable while pre-email accounts are retained without inventing addresses.
   email                 String?                 @unique @db.VarChar(254)
   emailVerifiedAt       DateTime?               @map("email_verified_at") @db.Timestamptz(6)
+  fullName              String?                 @map("full_name") @db.VarChar(100)
+  contactPhone          String?                 @map("contact_phone") @db.VarChar(10)
   // Legacy identity columns remain for existing account rows; Web Auth no longer reads them.
   phone                 String?                 @unique @db.VarChar(30)
   passwordHash          String                  @map("password_hash") @db.Text

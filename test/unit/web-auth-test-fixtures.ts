@@ -60,6 +60,7 @@ export function webAuthRepository(overrides: Partial<WebAuthRepository> = {}): W
     findChallenge: () => Promise.reject(new Error('Unconfigured findChallenge fixture')),
     verify: () => Promise.reject(new Error('Unconfigured verify fixture')),
     findAccountById: () => Promise.reject(new Error('Unconfigured findAccountById fixture')),
+    updateProfile: () => Promise.reject(new Error('Unconfigured updateProfile fixture')),
     createRefreshToken: () => Promise.reject(new Error('Unconfigured createRefreshToken fixture')),
     rotateRefreshToken: () => Promise.reject(new Error('Unconfigured rotateRefreshToken fixture')),
     revokeRefreshToken: () => Promise.reject(new Error('Unconfigured revokeRefreshToken fixture')),

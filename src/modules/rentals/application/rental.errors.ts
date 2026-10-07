@@ -1,5 +1,12 @@
 import { ApplicationError } from '@common/errors/application-error';
 
+export class RentalAuthenticationRequiredError extends ApplicationError {
+  readonly kind = 'UNAUTHORIZED' as const;
+  constructor() {
+    super('Vui lòng đăng nhập tài khoản đã xác thực email để đặt thuê.', 'AUTH_REQUIRED');
+  }
+}
+
 export class RentalNotFoundError extends ApplicationError {
   readonly kind = 'NOT_FOUND' as const;
 }

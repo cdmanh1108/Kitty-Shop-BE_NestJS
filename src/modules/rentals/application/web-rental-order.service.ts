@@ -45,6 +45,8 @@ import {
 } from '../domain/web-rental-create-result';
 import {
   InvalidRentalCustomerDetailsError,
+  RentalAuthenticationRequiredError,
+  InvalidRentalInputError,
   InvalidRentalIdempotencyKeyError,
   RentalCreationConflictError,
   RentalIdempotencyConflictError,
@@ -53,6 +55,7 @@ import {
   RentalNotFoundError,
   UnsupportedRentalCollateralError,
 } from './rental.errors';
+import { WEB_CHECKOUT_PAYMENT_PREFERENCES } from '../domain/web-payment-preference';
 
 const WEB_CREATE_IDEMPOTENCY_SCOPE = 'web-rental-order.create.v1';
 const WEB_CREATE_IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -95,6 +98,12 @@ export class WebRentalOrderService {
     rawIdempotencyKey?: string | string[],
     owner: WebCheckoutOwnerContext = { webAccountId: null },
   ): Promise<WebCreateOrderResult> {
+    if (!owner.webAccountId || !owner.email) throw new RentalAuthenticationRequiredError();
+    if (!WEB_CHECKOUT_PAYMENT_PREFERENCES.includes(req.paymentMethod))
+      throw new InvalidRentalInputError(
+        'Vui lòng chọn chuyển khoản hoặc tiền mặt.',
+        'INVALID_PAYMENT_PREFERENCE',
+      );
     const { from, until } = parseWebRentalDateRangeInput(req);
     assertWebRentalItemsInput(req.items);
 
@@ -208,7 +217,7 @@ export class WebRentalOrderService {
       const standardShippingFee = policy.delivery.standardShippingFee;
       const shippingFee = req.delivery.method === 'shop_delivery' ? standardShippingFee : 0;
 
-      // C13 deliberately persists a valid guest profile independently of the booking
+      // Persist the booking contact independently of the booking
       // transaction, but only after all no-write selection, price, and inventory
       // preflight has passed. A later booking failure can therefore leave one
       // reusable profile, never a partial order.
@@ -218,8 +227,7 @@ export class WebRentalOrderService {
           shopId,
           fullName: req.customer.name,
           phone: req.customer.phone,
-          email: req.customer.email,
-          facebook: req.customer.facebookOrZalo,
+          email: owner.email,
         });
       } catch (error) {
         if (error instanceof InvalidCustomerPhoneError) {
@@ -234,7 +242,7 @@ export class WebRentalOrderService {
         customerId: customer.id,
         source: RENTAL_ORDER_SOURCE.ONLINE,
         webAccountId: owner.webAccountId,
-        notificationEmail: req.customer.email?.trim() || undefined,
+        notificationEmail: owner.email,
         rentalStartAt: from,
         rentalEndAt: until,
         discountTotal: 0,
@@ -311,13 +319,11 @@ export class WebRentalOrderService {
 
   private webCommandIdentity(req: WebCreateOrderInput): StableJsonValue {
     return {
-      version: 1,
+      version: 2,
       command: {
         customer: {
           name: req.customer.name,
           phone: req.customer.phone,
-          email: req.customer.email ?? null,
-          facebookOrZalo: req.customer.facebookOrZalo ?? null,
           note: req.customer.note ?? null,
         },
         pickupDate: req.pickupDate,

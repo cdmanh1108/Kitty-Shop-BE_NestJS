@@ -1,5 +1,22 @@
 # Storefront authentication
 
+## Contact defaults and authenticated checkout
+
+`PATCH /web/auth/profile` saves the current verified account's full name and contact
+phone; `/me`, login and refresh return these optional nullable fields. The phone is
+contact information, not a login, verification or ownership key, and multiple accounts
+may use the same contact phone. The endpoint accepts only `fullName` and `phone`,
+normalizes Vietnamese numbers to ten digits and audits the account actor. It does not
+change email, legacy identity columns, CRM contacts or past orders.
+
+Migration `202610070003_web_account_contact_profile` adds the nullable contact defaults
+without backfill. Apply it and regenerate Prisma Client before deploying these reads.
+New storefront booking requires a signed-in verified email account; its email is read
+and captured inside the booking transaction rather than accepted from the frontend.
+Contact details can differ for each order; saving an order contact as default is an
+explicit independent profile PATCH. New payment preferences are bank transfer or cash;
+historical MoMo preferences remain readable.
+
 The storefront account lifecycle is `register by email -> verify email -> sign in`. Registration
 does not create a session. Email identity is trimmed and lowercased before lookup or persistence;
 the API does not apply provider-specific alias rules. Admin authentication remains separate.

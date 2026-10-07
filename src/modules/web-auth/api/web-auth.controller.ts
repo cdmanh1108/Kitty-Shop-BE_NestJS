@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Req,
   Res,
   HttpCode,
@@ -32,6 +33,7 @@ import type { WebProfile } from '../domain/web-auth.repository';
 import type { WebTokenResult } from '../application/web-auth.contracts';
 import { WebRegistrationService } from '../application/web-registration.service';
 import { WebSessionService } from '../application/web-session.service';
+import { WebProfileService } from '../application/web-profile.service';
 import { WebAuthCookies } from './web-auth-cookies';
 import { WebJwtAuthGuard, WebAuthOriginGuard, type WebAuthRequest } from '../public';
 import {
@@ -40,6 +42,7 @@ import {
   WebResendOtpDto,
   WebChallengeDto,
   WebProfileDto,
+  WebUpdateProfileDto,
   WebVerifiedDto,
   WebLogoutDto,
 } from './web-auth.dto';
@@ -47,6 +50,8 @@ import {
 const profile = (user: WebProfile): WebProfileDto => ({
   id: user.id,
   email: user.email,
+  fullName: user.fullName ?? null,
+  phone: user.phone ?? null,
   emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
   createdAt: user.createdAt.toISOString(),
 });
@@ -64,6 +69,7 @@ export class WebAuthController {
     private readonly registration: WebRegistrationService,
     private readonly session: WebSessionService,
     private readonly cookies: WebAuthCookies,
+    private readonly profiles: WebProfileService,
   ) {}
 
   @Post('register')
@@ -166,6 +172,29 @@ export class WebAuthController {
     // Guard always supplies a validated principal.
     return profile(request.webUser!);
   }
+  @Patch('profile')
+  @UseGuards(WebJwtAuthGuard)
+  @ApiCookieAuth('web-access')
+  @ApiOperation({
+    operationId: 'updateWebProfile',
+    summary: 'Lưu họ tên và số điện thoại mặc định của tài khoản',
+  })
+  @ApiOkResponse({ type: WebProfileDto })
+  @ApiUnauthorizedResponse({ type: ErrorResDto })
+  async updateProfile(
+    @Req() request: WebAuthRequest,
+    @Body() input: WebUpdateProfileDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<WebProfileDto> {
+    response.setHeader('Cache-Control', 'no-store');
+    return profile(
+      await this.profiles.update(request.webUser!.id, {
+        fullName: input.fullName,
+        phone: input.phone,
+      }),
+    );
+  }
+
   @Post('logout')
   @HttpCode(200)
   @ApiCookieAuth('web-refresh')
