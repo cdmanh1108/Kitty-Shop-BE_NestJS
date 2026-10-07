@@ -234,6 +234,7 @@ export class WebRentalOrderService {
         customerId: customer.id,
         source: RENTAL_ORDER_SOURCE.ONLINE,
         webAccountId: owner.webAccountId,
+        notificationEmail: req.customer.email?.trim() || undefined,
         rentalStartAt: from,
         rentalEndAt: until,
         discountTotal: 0,

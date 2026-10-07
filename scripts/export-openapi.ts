@@ -18,6 +18,7 @@ async function main(): Promise<void> {
 
   // OpenAPI generation is metadata-only and must not require PostgreSQL to be reachable.
   process.env.SKIP_DATABASE_CONNECT = 'true';
+  process.env.RENTAL_EMAIL_ENABLED = 'false';
   // App configuration validates the sender, but this metadata-only command never sends email.
   process.env.RESEND_API_KEY ??= 're_openapi_metadata_only';
   process.env.EMAIL_FROM_ADDRESS ??= 'no-reply@example.test';

@@ -192,6 +192,16 @@ only for the verified account's unpaid `ONLINE` `RESERVED` order and uses the sa
 transactional cancellation lifecycle as Admin commands; see
 [Rental order origin](RENTAL_ORDER_ORIGIN.md).
 
+## Storefront email contact and consumer queue
+
+Migration `202610070002_rental_order_emails` adds nullable immutable
+`rental_orders.notification_email` without historical backfill, and extends
+`notification_logs` with an event FK, presentation snapshot, frozen provider payload,
+claim token/lease and retry timing. Event uniqueness and a partial order/template index
+prevent repeated logical email tasks. A queue CHECK validates only new event-linked
+EMAIL records, preserving existing logs. Apply before starting new writers and regenerate
+Prisma Client. See [Rental order emails](RENTAL_ORDER_EMAILS.md).
+
 ## Migration rules
 
 1. Edit `prisma/schema.prisma`.

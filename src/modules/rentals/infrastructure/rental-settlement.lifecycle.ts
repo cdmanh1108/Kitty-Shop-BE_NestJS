@@ -19,6 +19,7 @@ import type { SettleRentalOrderData } from '../domain/ports/rental-lifecycle.por
 import type { RentalOrderDetails } from '../domain/rental.models';
 import { getWithTx } from './rental-admin.queries';
 import { lockRentalOrder } from './rental-order-lock';
+import { enqueueRentalEmail } from './rental-email.transaction';
 import {
   evaluateSettlementFees,
   persistSettlementFeeAdjustments,
@@ -224,7 +225,7 @@ export async function settleOrder(
         settledAt: now.toISOString(),
       },
     });
-    await tx.outboxEvent.create({
+    const event = await tx.outboxEvent.create({
       data: {
         shopId: input.shopId,
         eventType: 'RENTAL_ORDER_COMPLETED',
@@ -237,6 +238,13 @@ export async function settleOrder(
         },
       } satisfies RentalOutboxEvent,
     });
+    if (order.source === 'ONLINE' && order.notificationEmail)
+      await enqueueRentalEmail(tx, {
+        shopId: input.shopId,
+        orderId: order.id,
+        eventId: event.id,
+        event: 'COMPLETED',
+      });
     return getWithTx(tx, input.shopId, order.id);
   });
 }

@@ -2,6 +2,7 @@ import { parseObjectStorageConfiguration } from './object-storage.configuration'
 import { parseWebAuthConfiguration } from './web-auth.configuration';
 import { parseAuthCleanupConfiguration } from './auth-cleanup.configuration';
 import { parseEmailConfiguration } from './email.configuration';
+import { parseRentalEmailConfiguration } from './rental-email.configuration';
 const required = (config: Record<string, unknown>, key: string): string => {
   const value = config[key];
   if (typeof value !== 'string' || value.trim() === '') {
@@ -149,6 +150,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   }
 
   parseObjectStorageConfiguration(config);
+  parseRentalEmailConfiguration(config);
 
   return config;
 }

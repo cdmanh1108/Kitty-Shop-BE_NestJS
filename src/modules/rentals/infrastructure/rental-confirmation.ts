@@ -13,6 +13,7 @@ import { RentalInvariantError } from '../domain/rental-errors';
 import { getWithTx } from './rental-admin.queries';
 import { assertInventoryRentable } from './rental-inventory';
 import { lockRentalOrder } from './rental-order-lock';
+import { enqueueRentalEmail } from './rental-email.transaction';
 
 export function confirmOrder(
   prisma: PrismaService,
@@ -151,7 +152,7 @@ export function confirmOrder(
         confirmedAt: now.toISOString(),
       },
     });
-    await tx.outboxEvent.create({
+    const event = await tx.outboxEvent.create({
       data: {
         shopId: input.shopId,
         eventType: 'RENTAL_ORDER_CONFIRMED',
@@ -166,6 +167,13 @@ export function confirmOrder(
         },
       },
     });
+    if (order.source === 'ONLINE' && order.notificationEmail)
+      await enqueueRentalEmail(tx, {
+        shopId: input.shopId,
+        orderId: order.id,
+        eventId: event.id,
+        event: 'CONFIRMED',
+      });
     return getWithTx(tx, input.shopId, order.id);
   });
 }

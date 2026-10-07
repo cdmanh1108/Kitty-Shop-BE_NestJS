@@ -19,6 +19,8 @@ export interface CreateRentalOrderData {
   source: RentalOrderSource;
   /** Nullable storefront ownership, resolved from verified server-side Web auth only. */
   webAccountId?: string | null;
+  /** Checkout email captured per order; absent for offline/legacy orders. */
+  notificationEmail?: string;
   locationId?: string;
   rentalStartAt: Date;
   rentalEndAt: Date;

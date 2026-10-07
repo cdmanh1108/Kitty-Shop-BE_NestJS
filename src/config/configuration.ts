@@ -8,9 +8,14 @@ import {
   type ObjectStorageConfiguration,
 } from './object-storage.configuration';
 import { parseEmailConfiguration, type EmailConfiguration } from './email.configuration';
+import {
+  parseRentalEmailConfiguration,
+  type RentalEmailConfiguration,
+} from './rental-email.configuration';
 export interface AppConfiguration {
   webAuth: WebAuthConfiguration;
   email: EmailConfiguration;
+  rentalEmail: RentalEmailConfiguration;
   authCleanup: AuthCleanupConfiguration;
   nodeEnv: string;
   port: number;
@@ -46,6 +51,7 @@ export default (): AppConfiguration => {
   return {
     webAuth: parseWebAuthConfiguration(process.env),
     email: parseEmailConfiguration(process.env),
+    rentalEmail: parseRentalEmailConfiguration(process.env),
     authCleanup: parseAuthCleanupConfiguration(process.env),
     nodeEnv,
     port: asNumber(process.env.PORT, 3007),

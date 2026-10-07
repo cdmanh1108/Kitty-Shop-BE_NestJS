@@ -57,10 +57,13 @@ satisfies at their Prisma inserts. Names, payloads and transaction placement are
 Outbox insertion failure rejects the owning transaction. Rental replay bypasses creation,
 so it produces neither a second event nor a second business audit.
 
-There is currently no dispatcher or consumer. The guarantee is atomic durable pending
-records, not external delivery. A future dispatcher needs worker claiming, retry and
-idempotent consumption. Do not promise exactly-once delivery. Cleanup and retention jobs
-remain separate work.
+Rental web emails have a dedicated consumer record in `notification_logs`, linked to
+the existing outbox event inside the owning business transaction. A worker handles
+only these records; it does not mark general outbox events processed or consume
+historical pending events. Other event types still have no dispatcher. Email delivery
+uses owner-fenced claims, bounded retry and stable provider idempotency keys; provider
+acceptance is not inbox delivery. Do not promise exactly-once delivery. See
+[Rental order emails](RENTAL_ORDER_EMAILS.md). Cleanup and retention jobs remain separate work.
 
 ## Fenced idempotency
 

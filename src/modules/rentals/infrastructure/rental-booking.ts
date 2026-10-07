@@ -104,6 +104,8 @@ export async function createOrder(
           customerId: data.customerId,
           source: data.source,
           webAccountId: data.webAccountId ?? null,
+          notificationEmail:
+            data.source === RENTAL_ORDER_SOURCE.ONLINE ? (data.notificationEmail ?? null) : null,
           locationId: data.locationId,
           rentalStartAt: data.rentalStartAt,
           rentalEndAt: data.rentalEndAt,

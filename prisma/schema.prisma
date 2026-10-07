@@ -694,6 +694,8 @@ model RentalOrder {
   source                 RentalOrderSource?
   /// Storefront ownership is separate from the shop CRM customer relation.
   webAccountId           String?            @map("web_account_id") @db.Uuid
+  /// Immutable checkout contact; never inferred from mutable CRM customer data.
+  notificationEmail      String?            @map("notification_email") @db.VarChar(255)
   locationId             String?            @map("location_id") @db.Uuid
   rentalStartAt          DateTime           @map("rental_start_at") @db.Timestamptz(6)
   rentalEndAt            DateTime           @map("rental_end_at") @db.Timestamptz(6)
@@ -1189,6 +1191,17 @@ model NotificationLog {
   reminderId        String?   @map("reminder_id") @db.Uuid
   customerId        String?   @map("customer_id") @db.Uuid
   orderId           String?   @map("order_id") @db.Uuid
+  eventId           String?   @unique @map("event_id") @db.Uuid
+  eventSequence     Int?      @map("event_sequence")
+  payload           Json?
+  fromAddress       String?   @map("from_address") @db.VarChar(400)
+  subject           String?   @db.VarChar(255)
+  html              String?   @db.Text
+  ownerToken        String?   @map("owner_token") @db.Uuid
+  leaseUntil        DateTime? @map("lease_until") @db.Timestamptz(6)
+  availableAt       DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  attemptCount      Int       @default(0) @map("attempt_count")
+  firstAttemptAt    DateTime? @map("first_attempt_at") @db.Timestamptz(6)
   channel           String    @db.VarChar(20)
   recipient         String?   @db.VarChar(255)
   templateCode      String?   @map("template_code") @db.VarChar(100)
@@ -1206,8 +1219,10 @@ model NotificationLog {
   reminder Reminder?    @relation(fields: [reminderId], references: [id], onDelete: SetNull)
   customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
   order    RentalOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  event    OutboxEvent? @relation(fields: [eventId], references: [id], onDelete: Restrict)
 
   @@index([shopId, status, createdAt])
+  @@index([channel, status, availableAt])
   @@map("notification_logs")
 }
 
@@ -1265,7 +1280,8 @@ model OutboxEvent {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   processedAt   DateTime? @map("processed_at") @db.Timestamptz(6)
 
-  shop Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shop         Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  notification NotificationLog?
 
   @@index([status, availableAt])
   @@map("outbox_events")

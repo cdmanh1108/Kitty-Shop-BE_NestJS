@@ -28,11 +28,20 @@ import { RENTAL_ORDER_READER } from './domain/ports/rental-order-reader.port';
 import { WEB_ACCOUNT_RENTAL_ORDERS_READER } from './domain/ports/web-account-rental-orders.reader';
 import { PrismaRentalRepository } from './infrastructure/prisma-rental.repository';
 import { RENTAL_SETTLEMENT_PREVIEW_READER } from './domain/ports/rental-settlement-preview.port';
+import { RENTAL_EMAIL_QUEUE, RENTAL_EMAIL_SENDER } from './domain/rental-email';
+import { RentalEmailService } from './application/rental-email.service';
+import { PrismaRentalEmailQueue } from './infrastructure/prisma-rental-email.queue';
+import { ResendRentalEmailSender } from './infrastructure/resend-rental-email.sender';
+import { RentalEmailJob } from './infrastructure/jobs/rental-email.job';
 
 @Module({
   imports: [ClockModule, SettingsModule, CustomersModule, WebAuthModule],
   controllers: [AdminRentalController, WebRentalController, WebAccountRentalOrdersController],
   providers: [
+    RentalEmailService,
+    RentalEmailJob,
+    { provide: RENTAL_EMAIL_QUEUE, useClass: PrismaRentalEmailQueue },
+    { provide: RENTAL_EMAIL_SENDER, useClass: ResendRentalEmailSender },
     RentalConfirmationService,
     RentalSettlementService,
     RentalReadPresenter,

@@ -30,6 +30,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     });
 
     const testConfig: AppConfiguration = {
+      rentalEmail: { enabled: false, webUrl: 'http://localhost:3000' },
       authCleanup: {
         enabled: true,
         refreshTokenRetentionDays: 30,

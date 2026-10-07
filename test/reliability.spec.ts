@@ -432,6 +432,7 @@ function bookingTransaction(prisma: PrismaService) {
   const claim = jest.spyOn(tx.idempotencyRecord, 'updateMany').mockResolvedValue({ count: 1 });
   const create = jest.spyOn(tx.rentalOrder, 'create').mockResolvedValue({
     ...order,
+    notificationEmail: null,
     rentalSubtotal: new Prisma.Decimal(50000),
     chargesTotal: new Prisma.Decimal(0),
     discountTotal: new Prisma.Decimal(0),
@@ -442,6 +443,7 @@ function bookingTransaction(prisma: PrismaService) {
   });
   const detail = jest.spyOn(tx.rentalOrder, 'findFirst').mockResolvedValue({
     ...order,
+    notificationEmail: null,
     rentalSubtotal: new Prisma.Decimal(50000),
     chargesTotal: new Prisma.Decimal(0),
     discountTotal: new Prisma.Decimal(0),
