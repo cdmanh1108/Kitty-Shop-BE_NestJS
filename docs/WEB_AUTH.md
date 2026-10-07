@@ -1,5 +1,22 @@
 # Storefront authentication
 
+## Admin account directory
+
+`GET /admin/web-accounts` and `GET /admin/web-accounts/:id` are read-only and require
+`customers.view` through Admin authentication. Accounts include registrations without
+orders. Because WebAccount is global within the single-shop deployment, the service
+verifies the authenticated shop matches ShopResolver before reading accounts. Rental
+counts and latest booking timestamps are scoped to that shop. The projection selects
+only contact defaults, verification/disabled dates, registration date and activity;
+password hashes, OTPs and session records never enter responses.
+
+The list accepts pagination, name/email/contact-phone search, `verification` and optional
+`customerId`. The customer filter uses actual RentalOrder account/customer relations,
+including historical orders; it never guesses ownership from matching phone or email.
+`GET /admin/rental-orders?webAccountId=...` returns the account's orders under the existing
+`rentals.view` permission and authenticated shop scope, with normal server pagination.
+There are no Admin profile mutations or CRM/account merges in this directory.
+
 ## Contact defaults and authenticated checkout
 
 `PATCH /web/auth/profile` saves the current verified account's full name and contact

@@ -12,6 +12,7 @@ export async function list(
   const where = {
     shopId: input.shopId,
     ...(input.customerId ? { customerId: input.customerId } : {}),
+    ...(input.webAccountId ? { webAccountId: input.webAccountId } : {}),
     ...(input.status ? { status: input.status } : {}),
     ...(input.paymentStatus ? { paymentStatus: input.paymentStatus } : {}),
     ...(input.from || input.until

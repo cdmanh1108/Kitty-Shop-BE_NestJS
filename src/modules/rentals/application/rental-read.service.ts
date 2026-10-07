@@ -20,6 +20,7 @@ export class RentalReadService {
       shopId: user.shopId,
       page: query.page,
       customerId: query.customerId,
+      webAccountId: query.webAccountId,
       limit: query.limit,
       search: query.search,
       status: query.status,

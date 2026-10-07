@@ -17,6 +17,13 @@ export class RentalListQueryDto extends PaginationQueryDto {
   @IsUUID(undefined, { message: 'Mã khách hàng phải là UUID hợp lệ.' })
   @IsOptional()
   customerId?: string;
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Lọc theo tài khoản sở hữu đơn đặt qua web.',
+  })
+  @IsUUID(undefined, { message: 'Mã tài khoản web phải là UUID hợp lệ.' })
+  @IsOptional()
+  webAccountId?: string;
   @ApiPropertyOptional()
   @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
   @IsOptional()

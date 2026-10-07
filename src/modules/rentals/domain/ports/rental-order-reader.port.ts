@@ -20,6 +20,7 @@ export const RENTAL_ORDER_READER = Symbol('RENTAL_ORDER_READER');
 export interface RentalListCriteria {
   shopId: string;
   customerId?: string;
+  webAccountId?: string;
   page: number;
   limit: number;
   search?: string;

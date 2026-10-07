@@ -229,6 +229,134 @@
         "x-api-surface": "admin"
       }
     },
+    "/admin/web-accounts": {
+      "get": {
+        "operationId": "listAdminWebAccounts",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 254,
+              "type": "string"
+            }
+          },
+          {
+            "name": "verification",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "verified",
+                "unverified"
+              ]
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "description": "Tài khoản từng đặt đơn cho khách hàng này.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminWebAccountPageResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Danh sách tài khoản web và hoạt động đặt thuê",
+        "tags": [
+          "Admin - Web Accounts"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/web-accounts/{id}": {
+      "get": {
+        "operationId": "getAdminWebAccount",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminWebAccountResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Thông tin tài khoản web chỉ xem",
+        "tags": [
+          "Admin - Web Accounts"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
     "/admin/catalog/categories": {
       "post": {
         "operationId": "CatalogController_createCategory",
@@ -2331,6 +2459,16 @@
             "required": false,
             "in": "query",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "webAccountId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo tài khoản sở hữu đơn đặt qua web.",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -4844,6 +4982,9 @@
       "name": "Auth"
     },
     {
+      "name": "Admin - Web Accounts"
+    },
+    {
       "name": "Admin - Catalog"
     },
     {
@@ -4993,6 +5134,118 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "AdminWebAccountPageResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminWebAccountResDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "AdminWebAccountResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "fullName": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "emailVerifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "disabledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rentalOrderCount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Số đơn thuộc tài khoản trong cửa hàng hiện tại, gồm mọi trạng thái."
+          },
+          "lastRentalAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Thời điểm đặt đơn gần nhất."
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "fullName",
+          "phone",
+          "emailVerifiedAt",
+          "disabledAt",
+          "createdAt",
+          "rentalOrderCount",
+          "lastRentalAt"
+        ]
+      },
+      "ErrorResDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 400
+          },
+          "code": {
+            "type": "string",
+            "example": "HTTP_400"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "nullable": true
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "path",
+          "timestamp"
         ]
       },
       "CreateCategoryReqDto": {
@@ -7832,43 +8085,6 @@
         },
         "required": [
           "status"
-        ]
-      },
-      "ErrorResDto": {
-        "type": "object",
-        "properties": {
-          "statusCode": {
-            "type": "number",
-            "example": 400
-          },
-          "code": {
-            "type": "string",
-            "example": "HTTP_400"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {
-            "type": "object",
-            "nullable": true
-          },
-          "requestId": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "statusCode",
-          "code",
-          "message",
-          "path",
-          "timestamp"
         ]
       },
       "ReminderResDto": {

@@ -4,6 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import type { AppConfiguration } from '@config/configuration';
 import { ClockModule } from '@common/clock/clock.module';
 import { WebAuthController } from './api/web-auth.controller';
+import { AdminWebAccountController } from './api/admin-web-account.controller';
+import { AdminWebAccountService } from './application/admin-web-account.service';
+import { ADMIN_WEB_ACCOUNT_READER } from './domain/admin-web-account-reader';
+import { PrismaAdminWebAccountReader } from './infrastructure/prisma-admin-web-account.reader';
 import { WebRegistrationService } from './application/web-registration.service';
 import { WebSessionService } from './application/web-session.service';
 import { WebProfileService } from './application/web-profile.service';
@@ -30,11 +34,13 @@ import {
       }),
     }),
   ],
-  controllers: [WebAuthController],
+  controllers: [WebAuthController, AdminWebAccountController],
   providers: [
     WebRegistrationService,
     WebSessionService,
     WebProfileService,
+    AdminWebAccountService,
+    { provide: ADMIN_WEB_ACCOUNT_READER, useClass: PrismaAdminWebAccountReader },
     WebAuthCookies,
     WebJwtAuthGuard,
     OptionalWebJwtAuthGuard,
