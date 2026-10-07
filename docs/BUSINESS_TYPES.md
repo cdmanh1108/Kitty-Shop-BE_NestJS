@@ -56,29 +56,29 @@ precision redesign needs an explicit API/business decision, not a silent helper 
 ## Rental cycle pricing foundation (RP01)
 
 Settings owns `domain/rental-pricing-policy.ts` and publishes the typed policy and
-its pure validator through `settings/public/rental-policy.ts`. The configuration
-is stored in the existing `app_settings` JSON entry `rental_policy.rentalPricing`:
+its pure validator through `settings/public/rental-policy.ts`. Only the two
+shop-editable prices and the default cash deposit are stored in the existing
+`app_settings` JSON entry `rental_policy`:
 
 | Field                   | Default | Meaning                                                   |
 | ----------------------- | ------: | --------------------------------------------------------- |
 | `defaultRentalPrice`    |   50000 | Price of the first rental cycle and each subsequent cycle |
 | `additionalDayFee`      |   10000 | Fee for a day that does not begin a new cycle             |
-| `bulkQuantityThreshold` |       3 | Ordinary physical units required for the longer cycle     |
-| `standardRenewalDay`    |       5 | First renewal day below the quantity threshold            |
-| `bulkRenewalDay`        |       8 | First renewal day at or above the threshold               |
-| `maxOnlineRentalDays`   |       9 | Maximum storefront duration                               |
+| `defaultCashDeposit`    |  200000 | Default deposit suggested when creating a product         |
 
-Existing JSON entries missing the new fields receive these independent defaults
-when read. No migration, seed, automatic database write or historical repricing
-is required. Rental pricing PATCH has its own DTO: all fields are optional, an
-omitted field retains its value, zero remains zero, and explicit null is rejected.
-Only supplied fields are merged; DTO defaults must not overwrite saved settings.
-All effective fields participate in the existing settings audit snapshot.
+The rental quantity threshold (3), renewal days (5 and 8), website duration limit
+(9 days) and other operational policies are fixed in backend code. They are not
+shop settings. Migration `202610070004_simplify_rental_policy_setting` removes
+those legacy fields from stored policy JSON while preserving the three editable
+values; it does not delete the `app_settings` row or touch the historical
+`rental_rates` table. Old order pricing snapshots remain unchanged.
 
-Money settings are nonnegative whole VND up to 100,000,000. Renewal days are
-integers from 2 through 365; the bulk renewal day cannot precede the standard day.
-The quantity threshold is 1 through 1,000 and the online duration is 1 through 365.
-Settings validation runs before saving, including for application callers.
+Rental pricing PATCH accepts only the two editable rental prices and default
+cash deposit. Omitted values retain their current value, zero remains valid, and
+explicit null is rejected. Only changed editable values are written and audited.
+
+Money settings are nonnegative whole VND up to 100,000,000. Settings validation
+runs before saving, including for application callers.
 
 Rentals owns the separate pure `domain/rental-cycle-pricing.ts` resolver. Its
 `billableQuantity` is the total number of ordinary physical units in the order,
@@ -113,12 +113,13 @@ It does not clamp an invalid duration into a one-day booking.
 as `LEGACY_RATE_V1` and new resolver results as `CYCLE_V1`. Unknown explicit
 versions fail rather than silently choosing a pricing formula. RP01 introduced
 this version and calculation breakdown; RP03 persists complete order snapshots.
-Existing catalog rate presentation and legacy late-return calculations
-continue their previous behavior until their respective RP tasks integrate the
-new capability. RP03 applies the cycle resolver to storefront quotes and booking;
-Admin and Web interfaces follow in RP04/RP05. RP13 implements continuous return
-fees and per-SKU overrides; see [Return fees](RENTAL_RETURN_FEES.md). Formal
-extension APIs are no longer part of the rollout.
+The Admin no longer displays or edits legacy catalog rates. Existing rows and
+read/write contracts remain for compatibility; the Admin product form does not
+send rate values. Historical orders retain their saved pricing semantics. RP03
+applies the cycle resolver to storefront quotes and new bookings, and RP13 applies
+it to continuous return fees and per-SKU overrides; see
+[Return fees](RENTAL_RETURN_FEES.md). Formal extension APIs are no longer part of
+the rollout.
 
 ## Cycle-priced quotes and booking (RP03)
 

@@ -74,14 +74,14 @@ describe('SettingsService - Rental Policy orchestration', () => {
     expect(getRentalPolicyMock).toHaveBeenCalledWith(mockUser.shopId);
   });
 
-  it('persists a validated partial update and audits the unchanged before/after shape', async () => {
+  it('persists only editable values and audits their before/after snapshot', async () => {
     getRentalPolicyMock.mockResolvedValue(null);
     const savedDate = new Date('2026-09-11T12:00:00.000Z');
     const operationOrder: string[] = [];
     const savedPolicy: RentalPolicy = {
       ...DEFAULT_RENTAL_POLICY,
       rentalPricing: { ...DEFAULT_RENTAL_POLICY.rentalPricing, defaultRentalPrice: 60_000 },
-      specialCleaning: { feeMin: 35_000, feeMax: 60_000 },
+      deposit: { ...DEFAULT_RENTAL_POLICY.deposit, defaultCashDeposit: 250_000 },
     };
     saveRentalPolicyMock.mockImplementation(() => {
       operationOrder.push('save');
@@ -94,20 +94,18 @@ describe('SettingsService - Rental Policy orchestration', () => {
 
     const result = await service.updateRentalPolicy(mockUser, {
       rentalPricing: { defaultRentalPrice: 60_000 },
-      specialCleaning: { feeMin: 35_000, feeMax: 60_000 },
+      deposit: { defaultCashDeposit: 250_000 },
     });
 
     expect(result.rentalPricing.defaultRentalPrice).toBe(60_000);
-    expect(result.specialCleaning).toEqual({ feeMin: 35_000, feeMax: 60_000 });
-    expect(result.deposit.defaultCashDeposit).toBe(
-      DEFAULT_RENTAL_POLICY.deposit.defaultCashDeposit,
-    );
+    expect(result.specialCleaning).toEqual(DEFAULT_RENTAL_POLICY.specialCleaning);
+    expect(result.deposit.defaultCashDeposit).toBe(250_000);
     expect(result.updatedAt).toBe(savedDate.toISOString());
     expect(saveRentalPolicyMock).toHaveBeenCalledWith(
       mockUser.shopId,
       expect.objectContaining({
         rentalPricing: { ...DEFAULT_RENTAL_POLICY.rentalPricing, defaultRentalPrice: 60_000 },
-        specialCleaning: { feeMin: 35_000, feeMax: 60_000 },
+        deposit: { ...DEFAULT_RENTAL_POLICY.deposit, defaultCashDeposit: 250_000 },
       }),
       mockUser.memberId,
     );
@@ -131,7 +129,7 @@ describe('SettingsService - Rental Policy orchestration', () => {
 
     await expect(
       service.updateRentalPolicy(mockUser, {
-        specialCleaning: { feeMin: 50_000, feeMax: 30_000 },
+        rentalPricing: { defaultRentalPrice: -1 },
       }),
     ).rejects.toThrow(InvalidShopSettingsError);
 

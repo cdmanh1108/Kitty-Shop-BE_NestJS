@@ -7027,19 +7027,7 @@
             "$ref": "#/components/schemas/UpdateRentalPricingPolicyDto"
           },
           "deposit": {
-            "$ref": "#/components/schemas/DepositPolicyDto"
-          },
-          "reschedule": {
-            "$ref": "#/components/schemas/ReschedulePolicyDto"
-          },
-          "lateReturn": {
-            "$ref": "#/components/schemas/LateReturnPolicyDto"
-          },
-          "specialCleaning": {
-            "$ref": "#/components/schemas/SpecialCleaningPolicyDto"
-          },
-          "loyalty": {
-            "$ref": "#/components/schemas/LoyaltyPolicyDto"
+            "$ref": "#/components/schemas/UpdateDepositPolicyDto"
           }
         }
       },
@@ -10077,34 +10065,18 @@
             "minimum": 0,
             "maximum": 100000000,
             "description": "Phụ phí mỗi ngày tiếp theo (VND)"
-          },
-          "bulkQuantityThreshold": {
+          }
+        }
+      },
+      "UpdateDepositPolicyDto": {
+        "type": "object",
+        "properties": {
+          "defaultCashDeposit": {
             "type": "number",
-            "example": 3,
-            "minimum": 1,
-            "maximum": 1000,
-            "description": "Ngưỡng số món thuê thông thường hưởng chu kỳ dài"
-          },
-          "standardRenewalDay": {
-            "type": "number",
-            "example": 5,
-            "minimum": 2,
-            "maximum": 365,
-            "description": "Ngày bắt đầu lượt tiếp theo của đơn dưới ngưỡng"
-          },
-          "bulkRenewalDay": {
-            "type": "number",
-            "example": 8,
-            "minimum": 2,
-            "maximum": 365,
-            "description": "Ngày bắt đầu lượt tiếp theo của đơn đạt ngưỡng"
-          },
-          "maxOnlineRentalDays": {
-            "type": "number",
-            "example": 9,
-            "minimum": 1,
-            "maximum": 365,
-            "description": "Số ngày thuê tối đa đặt qua website"
+            "example": 200000,
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Tiền cọc tiền mặt mặc định (VND)"
           }
         }
       },

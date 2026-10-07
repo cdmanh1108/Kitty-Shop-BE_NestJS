@@ -75,7 +75,13 @@ export class PrismaSettingsRepository implements SettingsRepository {
     policy: RentalPolicy,
     updatedBy: string,
   ): Promise<{ policy: RentalPolicy; updatedAt: Date }> {
-    const value = JSON.parse(JSON.stringify(policy)) as Prisma.InputJsonValue;
+    const value = {
+      rentalPricing: {
+        defaultRentalPrice: policy.rentalPricing.defaultRentalPrice,
+        additionalDayFee: policy.rentalPricing.additionalDayFee,
+      },
+      deposit: { defaultCashDeposit: policy.deposit.defaultCashDeposit },
+    } satisfies Prisma.InputJsonValue;
     const row = await this.prisma.appSetting.upsert({
       where: { shopId_key: { shopId, key: RENTAL_POLICY_SETTING_KEY } },
       create: {
@@ -92,7 +98,7 @@ export class PrismaSettingsRepository implements SettingsRepository {
       },
     });
     return {
-      policy: row.value as unknown as RentalPolicy,
+      policy,
       updatedAt: row.updatedAt,
     };
   }

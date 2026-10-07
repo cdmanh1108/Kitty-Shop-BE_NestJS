@@ -3,6 +3,7 @@ import {
   buildEffectiveRentalPricingPolicy,
   mergeRentalPricingPolicy,
   validateRentalPricingPolicy,
+  type EditableRentalPricingPolicy,
   type RentalPricingPolicy,
 } from './rental-pricing-policy';
 
@@ -61,23 +62,13 @@ export interface RentalPolicy {
 }
 
 export interface RentalPolicyPatch {
-  rentalPricing?: Partial<RentalPricingPolicy>;
-  deposit?: Partial<DepositPolicy>;
-  delivery?: Partial<DeliveryPolicy>;
-  reschedule?: Partial<ReschedulePolicy>;
-  lateReturn?: Partial<LateReturnPolicy>;
-  specialCleaning?: Partial<SpecialCleaningPolicy>;
-  loyalty?: Partial<LoyaltyPolicy>;
+  rentalPricing?: Partial<EditableRentalPricingPolicy>;
+  deposit?: Pick<Partial<DepositPolicy>, 'defaultCashDeposit'>;
 }
 
 export type PersistedRentalPolicy = Partial<{
-  rentalPricing: Partial<RentalPricingPolicy>;
-  deposit: Partial<DepositPolicy>;
-  delivery: Partial<DeliveryPolicy>;
-  reschedule: Partial<ReschedulePolicy>;
-  lateReturn: Partial<LateReturnPolicy>;
-  specialCleaning: Partial<SpecialCleaningPolicy>;
-  loyalty: Partial<LoyaltyPolicy>;
+  rentalPricing: Partial<EditableRentalPricingPolicy>;
+  deposit: Pick<Partial<DepositPolicy>, 'defaultCashDeposit'>;
 }>;
 
 export const DEFAULT_RENTAL_POLICY: RentalPolicy = {
@@ -114,48 +105,19 @@ export function buildEffectiveRentalPolicy(saved?: PersistedRentalPolicy | null)
   return {
     rentalPricing: buildEffectiveRentalPricingPolicy(saved?.rentalPricing),
     deposit: {
-      allowedMethods: saved?.deposit?.allowedMethods
-        ? [...saved.deposit.allowedMethods]
-        : [...DEFAULT_RENTAL_POLICY.deposit.allowedMethods],
-      allowedDocumentTypes: saved?.deposit?.allowedDocumentTypes
-        ? [...saved.deposit.allowedDocumentTypes]
-        : [...DEFAULT_RENTAL_POLICY.deposit.allowedDocumentTypes],
+      allowedMethods: [...DEFAULT_RENTAL_POLICY.deposit.allowedMethods],
+      allowedDocumentTypes: [...DEFAULT_RENTAL_POLICY.deposit.allowedDocumentTypes],
       defaultCashDeposit:
         saved?.deposit?.defaultCashDeposit ?? DEFAULT_RENTAL_POLICY.deposit.defaultCashDeposit,
-      categoryOverrides: saved?.deposit?.categoryOverrides
-        ? saved.deposit.categoryOverrides.map((item) => ({ ...item }))
-        : [...DEFAULT_RENTAL_POLICY.deposit.categoryOverrides],
+      categoryOverrides: DEFAULT_RENTAL_POLICY.deposit.categoryOverrides.map((item) => ({
+        ...item,
+      })),
     },
-    reschedule: {
-      maxDaysFromBooking:
-        saved?.reschedule?.maxDaysFromBooking ??
-        DEFAULT_RENTAL_POLICY.reschedule.maxDaysFromBooking,
-    },
-    lateReturn: {
-      feePerItemPerDay:
-        saved?.lateReturn?.feePerItemPerDay ?? DEFAULT_RENTAL_POLICY.lateReturn.feePerItemPerDay,
-      newRentalChargeFromLateDay:
-        saved?.lateReturn?.newRentalChargeFromLateDay ??
-        DEFAULT_RENTAL_POLICY.lateReturn.newRentalChargeFromLateDay,
-    },
-    specialCleaning: {
-      feeMin: saved?.specialCleaning?.feeMin ?? DEFAULT_RENTAL_POLICY.specialCleaning.feeMin,
-      feeMax: saved?.specialCleaning?.feeMax ?? DEFAULT_RENTAL_POLICY.specialCleaning.feeMax,
-    },
-    loyalty: {
-      enabled: saved?.loyalty?.enabled ?? DEFAULT_RENTAL_POLICY.loyalty.enabled,
-      rentalsRequired:
-        saved?.loyalty?.rentalsRequired ?? DEFAULT_RENTAL_POLICY.loyalty.rentalsRequired,
-      rewardRentalValue:
-        saved?.loyalty?.rewardRentalValue ?? DEFAULT_RENTAL_POLICY.loyalty.rewardRentalValue,
-      stackableWithPromotions:
-        saved?.loyalty?.stackableWithPromotions ??
-        DEFAULT_RENTAL_POLICY.loyalty.stackableWithPromotions,
-    },
-    delivery: {
-      standardShippingFee:
-        saved?.delivery?.standardShippingFee ?? DEFAULT_RENTAL_POLICY.delivery.standardShippingFee,
-    },
+    reschedule: { ...DEFAULT_RENTAL_POLICY.reschedule },
+    lateReturn: { ...DEFAULT_RENTAL_POLICY.lateReturn },
+    specialCleaning: { ...DEFAULT_RENTAL_POLICY.specialCleaning },
+    loyalty: { ...DEFAULT_RENTAL_POLICY.loyalty },
+    delivery: { ...DEFAULT_RENTAL_POLICY.delivery },
   };
 }
 
@@ -163,40 +125,16 @@ export function mergeRentalPolicy(base: RentalPolicy, patch: RentalPolicyPatch):
   return {
     rentalPricing: mergeRentalPricingPolicy(base.rentalPricing, patch.rentalPricing ?? {}),
     deposit: {
-      allowedMethods: patch.deposit?.allowedMethods
-        ? [...patch.deposit.allowedMethods]
-        : [...base.deposit.allowedMethods],
-      allowedDocumentTypes: patch.deposit?.allowedDocumentTypes
-        ? [...patch.deposit.allowedDocumentTypes]
-        : [...base.deposit.allowedDocumentTypes],
+      allowedMethods: [...base.deposit.allowedMethods],
+      allowedDocumentTypes: [...base.deposit.allowedDocumentTypes],
       defaultCashDeposit: patch.deposit?.defaultCashDeposit ?? base.deposit.defaultCashDeposit,
-      categoryOverrides: patch.deposit?.categoryOverrides
-        ? patch.deposit.categoryOverrides.map((item) => ({ ...item }))
-        : base.deposit.categoryOverrides.map((item) => ({ ...item })),
+      categoryOverrides: base.deposit.categoryOverrides.map((item) => ({ ...item })),
     },
-    delivery: {
-      standardShippingFee: patch.delivery?.standardShippingFee ?? base.delivery.standardShippingFee,
-    },
-    reschedule: {
-      maxDaysFromBooking:
-        patch.reschedule?.maxDaysFromBooking ?? base.reschedule.maxDaysFromBooking,
-    },
-    lateReturn: {
-      feePerItemPerDay: patch.lateReturn?.feePerItemPerDay ?? base.lateReturn.feePerItemPerDay,
-      newRentalChargeFromLateDay:
-        patch.lateReturn?.newRentalChargeFromLateDay ?? base.lateReturn.newRentalChargeFromLateDay,
-    },
-    specialCleaning: {
-      feeMin: patch.specialCleaning?.feeMin ?? base.specialCleaning.feeMin,
-      feeMax: patch.specialCleaning?.feeMax ?? base.specialCleaning.feeMax,
-    },
-    loyalty: {
-      enabled: patch.loyalty?.enabled ?? base.loyalty.enabled,
-      rentalsRequired: patch.loyalty?.rentalsRequired ?? base.loyalty.rentalsRequired,
-      rewardRentalValue: patch.loyalty?.rewardRentalValue ?? base.loyalty.rewardRentalValue,
-      stackableWithPromotions:
-        patch.loyalty?.stackableWithPromotions ?? base.loyalty.stackableWithPromotions,
-    },
+    delivery: { ...base.delivery },
+    reschedule: { ...base.reschedule },
+    lateReturn: { ...base.lateReturn },
+    specialCleaning: { ...base.specialCleaning },
+    loyalty: { ...base.loyalty },
   };
 }
 

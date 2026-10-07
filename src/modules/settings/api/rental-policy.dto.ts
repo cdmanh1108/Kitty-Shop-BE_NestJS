@@ -80,7 +80,7 @@ export class RentalPricingPolicyDto {
   maxOnlineRentalDays!: number;
 }
 
-/** All fields are optional and have no DTO defaults, so PATCH preserves stored values. */
+/** Only shop-editable rental prices are accepted by PATCH. */
 export class UpdateRentalPricingPolicyDto {
   @ApiPropertyOptional({
     example: 50000,
@@ -109,64 +109,21 @@ export class UpdateRentalPricingPolicyDto {
     message: 'Phụ phí mỗi ngày tiếp theo không được vượt quá 100.000.000đ.',
   })
   additionalDayFee?: number;
-
-  @ApiPropertyOptional({
-    example: 3,
-    minimum: 1,
-    maximum: RENTAL_PRICING_LIMITS.maxQuantityThreshold,
-    description: 'Ngưỡng số món thuê thông thường hưởng chu kỳ dài',
-  })
-  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
-  @IsInt({ message: 'Ngưỡng số món hưởng chu kỳ dài phải là số nguyên.' })
-  @Min(1, { message: 'Ngưỡng số món hưởng chu kỳ dài phải ít nhất là 1.' })
-  @Max(RENTAL_PRICING_LIMITS.maxQuantityThreshold, {
-    message: 'Ngưỡng số món hưởng chu kỳ dài không được vượt quá 1.000.',
-  })
-  bulkQuantityThreshold?: number;
-
-  @ApiPropertyOptional({
-    example: 5,
-    minimum: 2,
-    maximum: RENTAL_PRICING_LIMITS.maxDays,
-    description: 'Ngày bắt đầu lượt tiếp theo của đơn dưới ngưỡng',
-  })
-  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
-  @IsInt({ message: 'Mốc lượt mới cho đơn dưới ngưỡng phải là số nguyên.' })
-  @Min(2, { message: 'Mốc lượt mới cho đơn dưới ngưỡng phải từ ngày thứ 2 trở lên.' })
-  @Max(RENTAL_PRICING_LIMITS.maxDays, {
-    message: 'Mốc lượt mới cho đơn dưới ngưỡng không được vượt quá ngày thứ 365.',
-  })
-  standardRenewalDay?: number;
-
-  @ApiPropertyOptional({
-    example: 8,
-    minimum: 2,
-    maximum: RENTAL_PRICING_LIMITS.maxDays,
-    description: 'Ngày bắt đầu lượt tiếp theo của đơn đạt ngưỡng',
-  })
-  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
-  @IsInt({ message: 'Mốc lượt mới cho đơn đạt ngưỡng phải là số nguyên.' })
-  @Min(2, { message: 'Mốc lượt mới cho đơn đạt ngưỡng phải từ ngày thứ 2 trở lên.' })
-  @Max(RENTAL_PRICING_LIMITS.maxDays, {
-    message: 'Mốc lượt mới cho đơn đạt ngưỡng không được vượt quá ngày thứ 365.',
-  })
-  bulkRenewalDay?: number;
-
-  @ApiPropertyOptional({
-    example: 9,
-    minimum: 1,
-    maximum: RENTAL_PRICING_LIMITS.maxDays,
-    description: 'Số ngày thuê tối đa đặt qua website',
-  })
-  @ValidateIf((_: UpdateRentalPricingPolicyDto, value: unknown) => value !== undefined)
-  @IsInt({ message: 'Số ngày tối đa đặt qua website phải là số nguyên.' })
-  @Min(1, { message: 'Số ngày tối đa đặt qua website phải ít nhất là 1.' })
-  @Max(RENTAL_PRICING_LIMITS.maxDays, {
-    message: 'Số ngày tối đa đặt qua website không được vượt quá 365.',
-  })
-  maxOnlineRentalDays?: number;
 }
 
+export class UpdateDepositPolicyDto {
+  @ApiPropertyOptional({
+    example: 200000,
+    minimum: 0,
+    maximum: RENTAL_PRICING_LIMITS.maxAmount,
+    description: 'Tiền cọc tiền mặt mặc định (VND)',
+  })
+  @ValidateIf((_: UpdateDepositPolicyDto, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Tiền cọc mặc định phải là số nguyên.' })
+  @Min(0, { message: 'Tiền cọc mặc định không được âm.' })
+  @Max(100_000_000, { message: 'Tiền cọc mặc định không được vượt quá 100.000.000đ.' })
+  defaultCashDeposit?: number;
+}
 export class DepositPolicyDto {
   @ApiProperty({
     example: ['CASH', 'DOCUMENT'],
@@ -298,37 +255,12 @@ export class UpdateRentalPolicyReqDto {
   @Type(() => UpdateRentalPricingPolicyDto)
   rentalPricing?: UpdateRentalPricingPolicyDto;
 
-  @ApiPropertyOptional({ type: DepositPolicyDto })
+  @ApiPropertyOptional({ type: UpdateDepositPolicyDto })
   @IsOptional()
   @ValidateNested({ message: 'Thông tin đặt cọc có dữ liệu không hợp lệ.' })
-  @Type(() => DepositPolicyDto)
-  deposit?: DepositPolicyDto;
-
-  @ApiPropertyOptional({ type: ReschedulePolicyDto })
-  @IsOptional()
-  @ValidateNested({ message: 'Chính sách đổi lịch có dữ liệu không hợp lệ.' })
-  @Type(() => ReschedulePolicyDto)
-  reschedule?: ReschedulePolicyDto;
-
-  @ApiPropertyOptional({ type: LateReturnPolicyDto })
-  @IsOptional()
-  @ValidateNested({ message: 'Chính sách trả trễ có dữ liệu không hợp lệ.' })
-  @Type(() => LateReturnPolicyDto)
-  lateReturn?: LateReturnPolicyDto;
-
-  @ApiPropertyOptional({ type: SpecialCleaningPolicyDto })
-  @IsOptional()
-  @ValidateNested({ message: 'Chính sách vệ sinh đặc biệt có dữ liệu không hợp lệ.' })
-  @Type(() => SpecialCleaningPolicyDto)
-  specialCleaning?: SpecialCleaningPolicyDto;
-
-  @ApiPropertyOptional({ type: LoyaltyPolicyDto })
-  @IsOptional()
-  @ValidateNested({ message: 'Chính sách tích điểm có dữ liệu không hợp lệ.' })
-  @Type(() => LoyaltyPolicyDto)
-  loyalty?: LoyaltyPolicyDto;
+  @Type(() => UpdateDepositPolicyDto)
+  deposit?: UpdateDepositPolicyDto;
 }
-
 export class RentalPolicyResDto {
   @ApiProperty({ type: RentalPricingPolicyDto })
   rentalPricing!: RentalPricingPolicyDto;

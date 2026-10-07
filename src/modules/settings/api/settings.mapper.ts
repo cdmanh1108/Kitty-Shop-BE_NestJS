@@ -16,22 +16,12 @@ export function toUpsertSettingInput(dto: UpsertSettingReqDto): UpsertSettingInp
 
 export function toUpdateRentalPolicyInput(dto: UpdateRentalPolicyReqDto): UpdateRentalPolicyInput {
   return {
-    rentalPricing: dto.rentalPricing ? { ...dto.rentalPricing } : undefined,
-    deposit: dto.deposit
+    rentalPricing: dto.rentalPricing
       ? {
-          allowedMethods: dto.deposit.allowedMethods ? [...dto.deposit.allowedMethods] : undefined,
-          allowedDocumentTypes: dto.deposit.allowedDocumentTypes
-            ? [...dto.deposit.allowedDocumentTypes]
-            : undefined,
-          defaultCashDeposit: dto.deposit.defaultCashDeposit,
-          categoryOverrides: dto.deposit.categoryOverrides
-            ? dto.deposit.categoryOverrides.map((override) => ({ ...override }))
-            : undefined,
+          defaultRentalPrice: dto.rentalPricing.defaultRentalPrice,
+          additionalDayFee: dto.rentalPricing.additionalDayFee,
         }
       : undefined,
-    reschedule: dto.reschedule ? { ...dto.reschedule } : undefined,
-    lateReturn: dto.lateReturn ? { ...dto.lateReturn } : undefined,
-    specialCleaning: dto.specialCleaning ? { ...dto.specialCleaning } : undefined,
-    loyalty: dto.loyalty ? { ...dto.loyalty } : undefined,
+    deposit: dto.deposit ? { defaultCashDeposit: dto.deposit.defaultCashDeposit } : undefined,
   };
 }

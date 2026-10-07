@@ -2,7 +2,6 @@ import {
   buildEffectiveRentalPolicy,
   DEFAULT_RENTAL_POLICY,
   mergeRentalPolicy,
-  type DepositMethod,
   type PersistedRentalPolicy,
   type RentalPolicyPatch,
   validateRentalPolicy,
@@ -15,144 +14,99 @@ describe('RentalPolicy domain rules', () => {
     expect(buildEffectiveRentalPolicy(null)).toEqual(DEFAULT_RENTAL_POLICY);
   });
 
-  it('applies partial persisted values and fills remaining fields from defaults', () => {
-    const stored: PersistedRentalPolicy = {
-      rentalPricing: { defaultRentalPrice: 70_000 },
+  it('reads editable values and ignores legacy persisted policy fields', () => {
+    const stored = {
+      rentalPricing: {
+        defaultRentalPrice: 70_000,
+        additionalDayFee: 12_000,
+        bulkQuantityThreshold: 99,
+        standardRenewalDay: 2,
+        bulkRenewalDay: 4,
+        maxOnlineRentalDays: 30,
+      },
       deposit: {
+        defaultCashDeposit: 250_000,
         allowedMethods: ['CASH'],
         allowedDocumentTypes: ['CCCD'],
-        defaultCashDeposit: 250_000,
         categoryOverrides: [{ categoryId: 'cat-1', cashAmount: 300_000 }],
       },
-    };
+      delivery: { standardShippingFee: 0 },
+      reschedule: { maxDaysFromBooking: 1 },
+    } as unknown as PersistedRentalPolicy;
 
     const effective = buildEffectiveRentalPolicy(stored);
 
-    expect(effective.rentalPricing.defaultRentalPrice).toBe(70_000);
+    expect(effective.rentalPricing).toEqual({
+      ...DEFAULT_RENTAL_POLICY.rentalPricing,
+      defaultRentalPrice: 70_000,
+      additionalDayFee: 12_000,
+    });
     expect(effective.deposit.defaultCashDeposit).toBe(250_000);
-    expect(effective.deposit.allowedMethods).toEqual(['CASH']);
-    expect(effective.deposit.categoryOverrides).toEqual([
-      { categoryId: 'cat-1', cashAmount: 300_000 },
-    ]);
-    expect(effective.reschedule).toEqual(DEFAULT_RENTAL_POLICY.reschedule);
-    expect(effective.lateReturn).toEqual(DEFAULT_RENTAL_POLICY.lateReturn);
+    expect(effective.deposit.allowedMethods).toEqual(DEFAULT_RENTAL_POLICY.deposit.allowedMethods);
+    expect(effective.deposit.allowedDocumentTypes).toEqual(
+      DEFAULT_RENTAL_POLICY.deposit.allowedDocumentTypes,
+    );
+    expect(effective.deposit.categoryOverrides).toEqual([]);
     expect(effective.delivery).toEqual(DEFAULT_RENTAL_POLICY.delivery);
+    expect(effective.reschedule).toEqual(DEFAULT_RENTAL_POLICY.reschedule);
   });
 
-  it('returns independent arrays and override objects without mutating defaults or stored values', () => {
-    const storedDeposit = {
-      allowedMethods: ['CASH'] as DepositMethod[],
-      categoryOverrides: [{ categoryId: 'cat-1', cashAmount: 200_000 }],
-    };
-    const stored: PersistedRentalPolicy = {
-      deposit: storedDeposit,
-    };
-    const storedMethods = [...storedDeposit.allowedMethods];
-    const storedOverrides = storedDeposit.categoryOverrides.map((item) => ({ ...item }));
-    const effective = buildEffectiveRentalPolicy(stored);
-
+  it('returns independent fixed policy data without mutating defaults', () => {
+    const effective = buildEffectiveRentalPolicy();
     effective.deposit.allowedMethods.push('DOCUMENT');
-    const effectiveOverride = effective.deposit.categoryOverrides[0];
-    if (!effectiveOverride) throw new Error('Expected the stored category override to be copied.');
-    effectiveOverride.cashAmount = 0;
+    effective.deposit.categoryOverrides.push({ categoryId: 'local', cashAmount: 1 });
+    effective.delivery.standardShippingFee = 0;
 
-    expect(storedDeposit.allowedMethods).toEqual(storedMethods);
-    expect(storedDeposit.categoryOverrides).toEqual(storedOverrides);
     expect(DEFAULT_RENTAL_POLICY.deposit.allowedMethods).toEqual(['CASH', 'DOCUMENT']);
     expect(DEFAULT_RENTAL_POLICY.deposit.categoryOverrides).toEqual([]);
+    expect(DEFAULT_RENTAL_POLICY.delivery.standardShippingFee).toBe(30_000);
   });
 
-  it('preserves omitted fields while accepting false and zero in a partial update', () => {
+  it('updates only the three editable values and preserves fixed business rules', () => {
     const base = buildEffectiveRentalPolicy();
     const patch = {
-      rentalPricing: { defaultRentalPrice: 0 },
+      rentalPricing: { defaultRentalPrice: 0, additionalDayFee: 0 },
       deposit: { defaultCashDeposit: 0 },
-      lateReturn: { feePerItemPerDay: 0 },
-      loyalty: { enabled: false, stackableWithPromotions: false },
     } satisfies RentalPolicyPatch;
 
     const result = mergeRentalPolicy(base, patch);
 
     expect(result.rentalPricing.defaultRentalPrice).toBe(0);
+    expect(result.rentalPricing.additionalDayFee).toBe(0);
     expect(result.deposit.defaultCashDeposit).toBe(0);
-    expect(result.lateReturn.feePerItemPerDay).toBe(0);
-    expect(result.loyalty.enabled).toBe(false);
-    expect(result.loyalty.stackableWithPromotions).toBe(false);
-    expect(result.reschedule).toEqual(base.reschedule);
+    expect(result.rentalPricing.bulkQuantityThreshold).toBe(
+      DEFAULT_RENTAL_POLICY.rentalPricing.bulkQuantityThreshold,
+    );
+    expect(result.rentalPricing.standardRenewalDay).toBe(
+      DEFAULT_RENTAL_POLICY.rentalPricing.standardRenewalDay,
+    );
     expect(result.delivery).toEqual(base.delivery);
+    expect(result.reschedule).toEqual(base.reschedule);
+    expect(result.lateReturn).toEqual(base.lateReturn);
+    expect(result.specialCleaning).toEqual(base.specialCleaning);
+    expect(result.loyalty).toEqual(base.loyalty);
   });
 
-  it('replaces an explicitly supplied empty array and does not mutate the base or patch', () => {
+  it('validates fixed policy invariants', () => {
     const base = buildEffectiveRentalPolicy();
-    base.loyalty.enabled = true;
-    const patch: RentalPolicyPatch = {
-      deposit: {
-        allowedMethods: [],
-        categoryOverrides: [{ categoryId: 'cat-1', cashAmount: 200_000 }],
-      },
-      loyalty: { enabled: false },
-    };
-    const patchBefore = structuredClone(patch);
-
-    const result = mergeRentalPolicy(base, patch);
-    const resultOverride = result.deposit.categoryOverrides[0];
-    if (!resultOverride) throw new Error('Expected the supplied category override to be copied.');
-    resultOverride.cashAmount = 0;
-    result.deposit.allowedMethods.push('CASH');
-
-    expect(result.deposit.allowedMethods).toEqual(['CASH']);
-    expect(base.deposit.allowedMethods).toEqual(['CASH', 'DOCUMENT']);
-    expect(base.deposit.categoryOverrides).toEqual([]);
-    expect(base.loyalty.enabled).toBe(true);
-    expect(patch).toEqual(patchBefore);
-  });
-
-  it('validates the merged policy and preserves the existing cross-field error', () => {
-    const next = mergeRentalPolicy(buildEffectiveRentalPolicy(), {
+    const invalid = {
+      ...base,
       specialCleaning: { feeMin: 50_000, feeMax: 30_000 },
-    });
+    };
 
-    expect(() => validateRentalPolicy(next)).toThrow(
+    expect(() => validateRentalPolicy(invalid)).toThrow(
       'Phí vệ sinh đặc biệt tối đa không được nhỏ hơn phí tối thiểu.',
     );
-    expect(() => validateRentalPolicy(next)).toThrow(InvalidShopSettingsError);
+    expect(() => validateRentalPolicy(invalid)).toThrow(InvalidShopSettingsError);
   });
 
-  it('validates enum values and duplicate category overrides', () => {
-    const invalidMethod = 'CRYPTO' as DepositMethod;
-    const invalidMethods = mergeRentalPolicy(buildEffectiveRentalPolicy(), {
-      deposit: { allowedMethods: [invalidMethod] },
-    });
-    expect(() => validateRentalPolicy(invalidMethods)).toThrow(
-      'Phương thức đặt cọc phải gồm tiền mặt hoặc giấy tờ.',
-    );
-
-    const duplicateOverrides = mergeRentalPolicy(buildEffectiveRentalPolicy(), {
-      deposit: {
-        categoryOverrides: [
-          { categoryId: 'cat-1', cashAmount: 200_000 },
-          { categoryId: 'cat-1', cashAmount: 300_000 },
-        ],
-      },
-    });
-    expect(() => validateRentalPolicy(duplicateOverrides)).toThrow(
-      'Cấu hình tiền cọc bị trùng cho danh mục: cat-1.',
-    );
-  });
-
-  it('rejects invalid numeric policy values', () => {
+  it('rejects invalid editable numeric values', () => {
     const negativePrice = mergeRentalPolicy(buildEffectiveRentalPolicy(), {
       rentalPricing: { defaultRentalPrice: -1 },
     });
+
     expect(() => validateRentalPolicy(negativePrice)).toThrow(
       'Giá thuê mặc định phải là số nguyên không âm.',
-    );
-
-    const zeroRequiredRentals = mergeRentalPolicy(buildEffectiveRentalPolicy(), {
-      loyalty: { rentalsRequired: 0 },
-    });
-    expect(() => validateRentalPolicy(zeroRequiredRentals)).toThrow(
-      'Số lượt thuê cần để nhận thưởng phải ít nhất là 1.',
     );
   });
 });

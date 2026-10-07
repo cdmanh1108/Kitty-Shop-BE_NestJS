@@ -24,24 +24,31 @@ export const DEFAULT_RENTAL_PRICING_POLICY: Readonly<RentalPricingPolicy> = Obje
   maxOnlineRentalDays: 9,
 });
 
-/** Missing RP01 fields in existing JSON settings receive independent defaults. */
+/** Load only shop-editable prices; all other pricing rules stay at backend defaults. */
 export function buildEffectiveRentalPricingPolicy(
   saved?: Partial<RentalPricingPolicy> | null,
 ): RentalPricingPolicy {
-  return mergeRentalPricingPolicy(DEFAULT_RENTAL_PRICING_POLICY, saved ?? {});
+  return {
+    ...DEFAULT_RENTAL_PRICING_POLICY,
+    defaultRentalPrice:
+      saved?.defaultRentalPrice ?? DEFAULT_RENTAL_PRICING_POLICY.defaultRentalPrice,
+    additionalDayFee: saved?.additionalDayFee ?? DEFAULT_RENTAL_PRICING_POLICY.additionalDayFee,
+  };
 }
+
+export type EditableRentalPricingPolicy = Pick<
+  RentalPricingPolicy,
+  'defaultRentalPrice' | 'additionalDayFee'
+>;
 
 export function mergeRentalPricingPolicy(
   base: Readonly<RentalPricingPolicy>,
-  patch: Partial<RentalPricingPolicy>,
+  patch: Partial<EditableRentalPricingPolicy>,
 ): RentalPricingPolicy {
   return {
+    ...base,
     defaultRentalPrice: patch.defaultRentalPrice ?? base.defaultRentalPrice,
     additionalDayFee: patch.additionalDayFee ?? base.additionalDayFee,
-    bulkQuantityThreshold: patch.bulkQuantityThreshold ?? base.bulkQuantityThreshold,
-    standardRenewalDay: patch.standardRenewalDay ?? base.standardRenewalDay,
-    bulkRenewalDay: patch.bulkRenewalDay ?? base.bulkRenewalDay,
-    maxOnlineRentalDays: patch.maxOnlineRentalDays ?? base.maxOnlineRentalDays,
   };
 }
 

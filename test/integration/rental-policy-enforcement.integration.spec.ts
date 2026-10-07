@@ -83,9 +83,8 @@ describe('Rental policy transaction enforcement', () => {
     );
   });
 
-  it('uses the saved shop policy and never resets the original booking deadline', async () => {
+  it('uses the fixed reschedule limit and never resets the original booking deadline', async () => {
     const f = await booking();
-    await settings.updateRentalPolicy(f.principal, { reschedule: { maxDaysFromBooking: 10 } });
     const input = {
       shopId: f.shop.id,
       orderId: f.order.id,
@@ -98,8 +97,8 @@ describe('Rental policy transaction enforcement', () => {
     await expect(
       repo.reschedule({
         ...input,
-        from: new Date('2026-10-12T12:00:00Z'),
-        until: new Date('2026-10-14T12:00:00Z'),
+        from: new Date('2026-10-22T12:00:00Z'),
+        until: new Date('2026-10-24T12:00:00Z'),
       }),
     ).rejects.toMatchObject({ code: 'RESCHEDULE_LIMIT_EXCEEDED' });
     expect(await prisma.rentalItemAllocation.findMany({ where: { orderId: f.order.id } })).toEqual(

@@ -133,17 +133,20 @@ Order monetary columns are immutable-ish snapshots used for operational speed an
 
 `rental_order_items` stores product/variant names and agreed prices at booking time. Catalog price/name changes must not rewrite historical orders.
 
-RP01 extends the existing `app_settings` JSON value at key `rental_policy` with
-cycle pricing configuration. Reads fill missing fields without writing a backfill;
-the validated settings endpoint persists changes through the existing shop-scoped
-repository. No Prisma schema or SQL migration is needed for this foundation.
+The existing `app_settings` JSON value at key `rental_policy` stores only the
+editable base cycle price, next-day surcharge and default cash deposit. Quantity
+thresholds, renewal days, online duration and other fixed business rules come
+from backend code. Migration `202610070004_simplify_rental_policy_setting`
+removes their legacy copies from JSON without changing historical order snapshots
+or the `rental_rates` table.
 RP03 writes versioned cycle pricing snapshots into the existing
 `rental_order_items.pricing_snapshot` JSON column, including the captured policy,
 physical quantity context, overrides and calculation breakdown. Booking validates
 those amounts inside its existing serializable transaction. Existing unversioned
 order snapshots retain their original rate semantics; the deprecated Admin
-full-period override writes an explicit legacy version. No backfill or schema
-migration is needed. See [Business types](BUSINESS_TYPES.md#cycle-priced-quotes-and-booking-rp03).
+full-period override writes an explicit legacy version. No order backfill or
+table schema change is needed. See
+[Business types](BUSINESS_TYPES.md#cycle-priced-quotes-and-booking-rp03).
 
 ## Deletion policy
 

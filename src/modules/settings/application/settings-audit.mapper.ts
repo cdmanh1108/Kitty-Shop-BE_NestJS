@@ -5,20 +5,6 @@ export function toRentalPolicyAuditSnapshot(policy: RentalPolicy): AuditSnapshot
   return {
     defaultRentalPrice: policy.rentalPricing.defaultRentalPrice,
     additionalDayFee: policy.rentalPricing.additionalDayFee,
-    bulkQuantityThreshold: policy.rentalPricing.bulkQuantityThreshold,
-    standardRenewalDay: policy.rentalPricing.standardRenewalDay,
-    bulkRenewalDay: policy.rentalPricing.bulkRenewalDay,
-    maxOnlineRentalDays: policy.rentalPricing.maxOnlineRentalDays,
     defaultCashDeposit: policy.deposit.defaultCashDeposit,
-    allowedDepositMethods: [...policy.deposit.allowedMethods],
-    allowedDocumentTypes: [...policy.deposit.allowedDocumentTypes],
-    maxRescheduleDaysFromBooking: policy.reschedule.maxDaysFromBooking,
-    lateFeePerItemPerDay: policy.lateReturn.feePerItemPerDay,
-    newRentalChargeFromLateDay: policy.lateReturn.newRentalChargeFromLateDay,
-    cleaningFeeMin: policy.specialCleaning.feeMin,
-    cleaningFeeMax: policy.specialCleaning.feeMax,
-    loyaltyEnabled: policy.loyalty.enabled,
-    loyaltyRentalsRequired: policy.loyalty.rentalsRequired,
-    loyaltyRewardRentalValue: policy.loyalty.rewardRentalValue,
   };
 }

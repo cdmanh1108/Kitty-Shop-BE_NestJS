@@ -1,4 +1,3 @@
-import type { CurrentUser } from '../../src/common/types/current-user';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -16,7 +15,6 @@ import {
   createTestCustomer,
   createTestProductWithVariant,
   createTestShop,
-  createTestUserAndMember,
 } from '../fixtures/test-factories';
 
 describe('Web rental shipping persistence', () => {
@@ -48,20 +46,8 @@ describe('Web rental shipping persistence', () => {
 
   afterAll(disconnectTestDatabase);
 
-  async function setup(input: { shippingFee: number; inventoryCount?: number }) {
+  async function setup(input: { inventoryCount?: number }) {
     const shop = await createTestShop(prisma);
-    const { user, member } = await createTestUserAndMember(prisma, shop.id);
-    const principal: CurrentUser = {
-      userId: user.id,
-      memberId: member.id,
-      shopId: shop.id,
-      email: user.email,
-      fullName: user.fullName,
-      permissions: [],
-    };
-    await settings.updateRentalPolicy(principal, {
-      delivery: { standardShippingFee: input.shippingFee },
-    });
     const customer = await createTestCustomer(prisma, shop.id);
     const catalog = await createTestProductWithVariant(prisma, shop.id, {
       dailyRate: 150000,
@@ -108,8 +94,8 @@ describe('Web rental shipping persistence', () => {
     return { quote, response, order };
   }
 
-  it('records a policy shipping fee once across quote, Web create response, and PostgreSQL', async () => {
-    const { shop, customer, catalog } = await setup({ shippingFee: 30000 });
+  it('records the fixed shipping fee once across quote, Web create response, and PostgreSQL', async () => {
+    const { shop, customer, catalog } = await setup({});
     const { quote, response, order } = await quoteAndCreate({
       shopId: shop.id,
       customer,
@@ -134,27 +120,8 @@ describe('Web rental shipping persistence', () => {
     expect(order.deliveries[0]?.shippingFee.toString()).toBe('30000');
   });
 
-  it('keeps delivery metadata but omits a zero-fee SHIPPING charge', async () => {
-    const { shop, customer, catalog } = await setup({ shippingFee: 0 });
-    const { quote, response, order } = await quoteAndCreate({
-      shopId: shop.id,
-      customer,
-      variantId: catalog.variant.id,
-      delivery: 'shop_delivery',
-    });
-
-    expect(quote).toMatchObject({ rentalSubtotal: 70000, shippingFee: 0, totalAmount: 70000 });
-    expect(response.totalAmount).toBe(70000);
-    expect(order.chargesTotal.toString()).toBe('0');
-    expect(order.grandTotal.toString()).toBe('70000');
-    expect(order.charges).toEqual([]);
-    expect(order.deliveries).toHaveLength(1);
-    expect(order.deliveries[0]).toMatchObject({ method: 'DELIVERY' });
-    expect(order.deliveries[0]?.shippingFee.toString()).toBe('0');
-  });
-
-  it('does not charge shipping for self pickup even when the saved policy has a fee', async () => {
-    const { shop, customer, catalog } = await setup({ shippingFee: 45000 });
+  it('does not charge the fixed shipping fee for self pickup', async () => {
+    const { shop, customer, catalog } = await setup({});
     const { quote, response, order } = await quoteAndCreate({
       shopId: shop.id,
       customer,
@@ -171,7 +138,7 @@ describe('Web rental shipping persistence', () => {
   });
 
   it('charges shipping once for a multi-unit Web line and preserves all allocations', async () => {
-    const { shop, customer, catalog } = await setup({ shippingFee: 30000, inventoryCount: 2 });
+    const { shop, customer, catalog } = await setup({ inventoryCount: 2 });
     const { quote, response, order } = await quoteAndCreate({
       shopId: shop.id,
       customer,
