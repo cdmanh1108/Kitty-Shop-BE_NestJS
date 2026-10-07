@@ -1,6 +1,6 @@
 {
   "name": "rental-shop-backend",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Production-oriented NestJS backend for a clothing rental shop admin platform.",
   "private": true,
   "license": "UNLICENSED",
