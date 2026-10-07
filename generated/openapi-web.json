@@ -3672,6 +3672,10 @@
             "type": "string",
             "example": "M / Trắng"
           },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
           "quantity": {
             "type": "number",
             "example": 1
@@ -3680,6 +3684,7 @@
         "required": [
           "productName",
           "variantName",
+          "imageUrl",
           "quantity"
         ]
       },
@@ -3710,6 +3715,10 @@
           "variantName": {
             "type": "string"
           },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
           "quantity": {
             "type": "number"
           },
@@ -3727,6 +3736,7 @@
           "productId",
           "productName",
           "variantName",
+          "imageUrl",
           "quantity",
           "unitRentalPrice",
           "lineTotal",

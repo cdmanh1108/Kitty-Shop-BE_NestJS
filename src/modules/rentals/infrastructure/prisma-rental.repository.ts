@@ -5,7 +5,11 @@ import {
 } from '@modules/settings/public/rental-policy';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { claimIdempotencyRecord, releaseIdempotencyClaim } from '@database/prisma/idempotency';
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
+import {
+  PUBLIC_MEDIA_URL_RESOLVER,
+  type PublicMediaUrlResolver,
+} from '@common/storage/public-url.resolver';
 import type { RentalAvailabilityReader } from '../domain/ports/rental-availability.port';
 import type { RentalAvailableInventoryReader } from '../public/available-inventory-reader';
 import type {
@@ -68,6 +72,9 @@ export class PrismaRentalRepository
     private readonly prisma: PrismaService,
     @Inject(CLOCK) private readonly clock: Clock,
     @Inject(RENTAL_POLICY_PROVIDER) private readonly policies: RentalPolicyProvider,
+    @Optional()
+    @Inject(PUBLIC_MEDIA_URL_RESOLVER)
+    private readonly mediaUrls?: PublicMediaUrlResolver,
   ) {}
 
   customerExists(
@@ -204,12 +211,12 @@ export class PrismaRentalRepository
   listWebAccountOrders(
     ...args: Parameters<WebAccountRentalOrdersReader['listWebAccountOrders']>
   ): ReturnType<WebAccountRentalOrdersReader['listWebAccountOrders']> {
-    return listWebAccountOrders(this.prisma, ...args);
+    return listWebAccountOrders(this.prisma, args[0], this.mediaUrls);
   }
 
   getWebAccountOrder(
     ...args: Parameters<WebAccountRentalOrdersReader['getWebAccountOrder']>
   ): ReturnType<WebAccountRentalOrdersReader['getWebAccountOrder']> {
-    return getWebAccountOrder(this.prisma, ...args);
+    return getWebAccountOrder(this.prisma, args[0], args[1], args[2], this.mediaUrls);
   }
 }

@@ -30,6 +30,9 @@ export class WebAccountRentalOrderItemPreviewResDto {
   @ApiProperty({ example: 'M / Trắng' })
   variantName!: string;
 
+  @ApiProperty({ type: String, nullable: true })
+  imageUrl!: string | null;
+
   @ApiProperty({ example: 1 })
   quantity!: number;
 }
@@ -92,6 +95,9 @@ export class WebAccountRentalOrderLineResDto {
 
   @ApiProperty()
   variantName!: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  imageUrl!: string | null;
 
   @ApiProperty()
   quantity!: number;

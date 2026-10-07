@@ -10,6 +10,19 @@ import type {
 import type { RentalStatus } from '../domain/rental-status';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { calculateRentalPaymentTotals } from '../domain/rental-settlement';
+import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
+
+type OrderItemMedia = { storageKey: string | null; url: string };
+
+function resolveOrderItemImage(
+  mediaUrls: PublicMediaUrlResolver | undefined,
+  variantMedia: OrderItemMedia[],
+  productMedia: OrderItemMedia[],
+): string | null {
+  const image = variantMedia[0] ?? productMedia[0];
+  if (!image) return null;
+  return mediaUrls?.resolve(image) ?? image.url;
+}
 
 export async function lookupStorefrontOrder(
   prisma: PrismaService,
@@ -97,6 +110,7 @@ const accountOrderWhere = (shopId: string, webAccountId: string, status?: Rental
 export async function listWebAccountOrders(
   prisma: PrismaService,
   input: WebAccountRentalOrderListCriteria,
+  mediaUrls?: PublicMediaUrlResolver,
 ) {
   const where = accountOrderWhere(input.shopId, input.webAccountId, input.status);
   const [orders, total] = await prisma.$transaction([
@@ -115,7 +129,31 @@ export async function listWebAccountOrders(
         depositRequired: true,
         preferredPaymentMethod: true,
         items: {
-          select: { productNameSnapshot: true, variantNameSnapshot: true, quantity: true },
+          select: {
+            productNameSnapshot: true,
+            variantNameSnapshot: true,
+            quantity: true,
+            product: {
+              select: {
+                media: {
+                  where: { mediaType: 'IMAGE' },
+                  orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                  take: 1,
+                  select: { storageKey: true, url: true },
+                },
+              },
+            },
+            variant: {
+              select: {
+                media: {
+                  where: { mediaType: 'IMAGE' },
+                  orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                  take: 1,
+                  select: { storageKey: true, url: true },
+                },
+              },
+            },
+          },
           orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
           take: 3,
         },
@@ -152,6 +190,7 @@ export async function listWebAccountOrders(
       itemsPreview: order.items.map((item) => ({
         productName: item.productNameSnapshot,
         variantName: item.variantNameSnapshot,
+        imageUrl: resolveOrderItemImage(mediaUrls, item.variant.media, item.product.media),
         quantity: item.quantity,
       })),
     })),
@@ -164,6 +203,7 @@ export async function getWebAccountOrder(
   shopId: string,
   webAccountId: string,
   orderNumber: string,
+  mediaUrls?: PublicMediaUrlResolver,
 ): Promise<WebAccountRentalOrderDetail | null> {
   const order = await prisma.rentalOrder.findFirst({
     where: { ...accountOrderWhere(shopId, webAccountId), orderNumber: orderNumber.trim() },
@@ -196,6 +236,26 @@ export async function getWebAccountOrder(
           productKindSnapshot: true,
           lineTotal: true,
           depositAmount: true,
+          product: {
+            select: {
+              media: {
+                where: { mediaType: 'IMAGE' },
+                orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                take: 1,
+                select: { storageKey: true, url: true },
+              },
+            },
+          },
+          variant: {
+            select: {
+              media: {
+                where: { mediaType: 'IMAGE' },
+                orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+                take: 1,
+                select: { storageKey: true, url: true },
+              },
+            },
+          },
         },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       },
@@ -236,6 +296,7 @@ export async function getWebAccountOrder(
     itemsPreview: order.items.slice(0, 3).map((item) => ({
       productName: item.productNameSnapshot,
       variantName: item.variantNameSnapshot,
+      imageUrl: resolveOrderItemImage(mediaUrls, item.variant.media, item.product.media),
       quantity: item.quantity,
     })),
     rentalSubtotal: decimalToNumber(order.rentalSubtotal),
@@ -247,6 +308,7 @@ export async function getWebAccountOrder(
       productId: item.productId,
       productName: item.productNameSnapshot,
       variantName: item.variantNameSnapshot,
+      imageUrl: resolveOrderItemImage(mediaUrls, item.variant.media, item.product.media),
       quantity: item.quantity,
       unitRentalPrice: decimalToNumber(item.unitRentalPrice),
       billingRole: item.billingRole,

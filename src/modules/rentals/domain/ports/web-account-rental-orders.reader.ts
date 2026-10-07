@@ -33,7 +33,12 @@ export interface WebAccountRentalOrderListItem {
   depositRequired: number;
   preferredPaymentMethod: string | null;
   itemCount: number;
-  itemsPreview: Array<{ productName: string; variantName: string; quantity: number }>;
+  itemsPreview: Array<{
+    productName: string;
+    variantName: string;
+    imageUrl: string | null;
+    quantity: number;
+  }>;
 }
 
 export interface WebAccountRentalOrderPage {
@@ -63,6 +68,7 @@ export interface WebAccountRentalOrderDetail extends WebAccountRentalOrderListIt
     productId: string;
     productName: string;
     variantName: string;
+    imageUrl: string | null;
     quantity: number;
     unitRentalPrice: number;
     billingRole?: string;
