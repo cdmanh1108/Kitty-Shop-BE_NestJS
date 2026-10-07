@@ -53,6 +53,29 @@ the template escapes all customer-controlled strings. Guest links prefill only t
 order code on `/tra-cuu-don`; the existing phone check is still required. Owned orders
 link to `/tai-khoan/don-hang/:orderCode`, retaining account authorization.
 
+The compact 560px layout follows the verification email's Dusty Rose palette,
+typography and rounded card. Pickup/return dates, items, payment and collateral
+have distinct sections; settled messages highlight actual collection/refund.
+All captured details remain visible, including zero amounts; unrecognized detail
+labels fall back to an additional information section. HTML and plain text retain
+the full order snapshot. The logo uses the public `/brand/kitty-logo.jpg` on
+`WEB_URL`; the KITTY wordmark remains visible when remote images are blocked.
+Table-based inline styles and an Outlook width fallback keep the layout readable;
+mobile padding is reduced without hiding information.
+
+Verification, confirmation and settlement templates share the public shop footer
+in `src/common/email/shop-email-footer.ts`: KITTY address, map, daily opening hours,
+clickable hotlines, website from `WEB_URL` and TikTok. The HTML and plain-text versions
+use the same information. Rental messages retain their captured shop name/phone/email;
+the verification footer uses the public hotlines and does not invent a support email
+from the sending address. Public address/hours/links are presentation constants, not
+additional order data or mutable CRM lookups. Update them in this shared file when
+the shop's public contact information changes.
+
+Already prepared messages retain their frozen HTML/text on retries. The new
+template applies when a message is first prepared; existing deliveries are not
+rewritten or sent again.
+
 ## Deployment
 
 1. Apply migration `202610070002_rental_order_emails` before starting new writers.
