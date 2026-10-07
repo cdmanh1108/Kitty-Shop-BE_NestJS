@@ -91,21 +91,36 @@ describe('cross-context transaction capabilities', () => {
 
   it('keeps loyalty history reads and entries owned by Customers', async () => {
     const count = jest.fn().mockResolvedValue(2);
-    const create = jest.fn().mockResolvedValue(undefined);
+    const create = jest.fn().mockResolvedValue({ id: 'entry' });
+    const createReward = jest.fn().mockResolvedValue({ id: 'reward' });
     const tx = {
       customerLoyaltyEntry: { count, create },
+      customerLoyaltyReward: { create: createReward },
     } as unknown as Prisma.TransactionClient;
 
-    await expect(countQualifiedRentalLoyaltyEntries(tx, { shopId: 'shop', customerId: 'customer' })).resolves.toBe(2);
-    await createRentalLoyaltyEntry(tx, {
-      shopId: 'shop',
-      customerId: 'customer',
-      orderId: 'order',
-      rewardValue: 500,
-    });
+    const owner = { type: 'CRM_CUSTOMER' as const, customerId: 'customer' };
+    const createdAt = new Date('2026-10-07T00:00:00.000Z');
+    await expect(countQualifiedRentalLoyaltyEntries(tx, { shopId: 'shop', owner })).resolves.toBe(
+      2,
+    );
+    await expect(
+      createRentalLoyaltyEntry(tx, {
+        shopId: 'shop',
+        customerId: 'customer',
+        orderId: 'order',
+        rewardValue: 500,
+        owner,
+        createdAt,
+      }),
+    ).resolves.toEqual({ rewardId: 'reward' });
 
     expect(count).toHaveBeenCalledWith({
-      where: { shopId: 'shop', customerId: 'customer', entryType: 'QUALIFIED' },
+      where: {
+        shopId: 'shop',
+        entryType: 'QUALIFIED',
+        ownerType: 'CRM_CUSTOMER',
+        customerId: 'customer',
+      },
     });
     expect(create).toHaveBeenCalledWith({
       data: {
@@ -113,8 +128,26 @@ describe('cross-context transaction capabilities', () => {
         customerId: 'customer',
         orderId: 'order',
         entryType: 'QUALIFIED',
+        ownerType: 'CRM_CUSTOMER',
+        webAccountId: null,
         rewardValue: 500,
+        createdAt,
       },
+      select: { id: true },
+    });
+    expect(createReward).toHaveBeenCalledWith({
+      data: {
+        shopId: 'shop',
+        customerId: 'customer',
+        ownerType: 'CRM_CUSTOMER',
+        webAccountId: null,
+        earnedEntryId: 'entry',
+        earnedOrderId: 'order',
+        rewardValue: 500,
+        status: 'AVAILABLE',
+        createdAt,
+      },
+      select: { id: true },
     });
   });
 

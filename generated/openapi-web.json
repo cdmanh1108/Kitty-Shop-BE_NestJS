@@ -1769,6 +1769,34 @@
         ],
         "x-api-surface": "web"
       }
+    },
+    "/web/account/loyalty": {
+      "get": {
+        "operationId": "getWebAccountLoyaltySummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerLoyaltySummaryResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "Get loyalty progress and available rewards for the authenticated web account",
+        "tags": [
+          "Web - Account Loyalty"
+        ],
+        "x-api-surface": "web"
+      }
     }
   },
   "info": {
@@ -1798,6 +1826,9 @@
     },
     {
       "name": "Web - Policies"
+    },
+    {
+      "name": "Web - Account Loyalty"
     }
   ],
   "servers": [
@@ -2906,6 +2937,59 @@
           "standardShippingFee"
         ]
       },
+      "CustomerLoyaltySummaryResDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "rentalsRequired": {
+            "type": "number",
+            "example": 5
+          },
+          "rewardValue": {
+            "type": "number",
+            "example": 50000
+          },
+          "completedRentalCount": {
+            "type": "number",
+            "example": 7
+          },
+          "currentCycleProgress": {
+            "type": "number",
+            "example": 2
+          },
+          "rentalsUntilReward": {
+            "type": "number",
+            "example": 3
+          },
+          "availableRewardCount": {
+            "type": "number",
+            "example": 1
+          },
+          "availableRewardValue": {
+            "type": "number",
+            "example": 50000
+          },
+          "availableRewards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerLoyaltyRewardResDto"
+            }
+          }
+        },
+        "required": [
+          "enabled",
+          "rentalsRequired",
+          "rewardValue",
+          "completedRentalCount",
+          "currentCycleProgress",
+          "rentalsUntilReward",
+          "availableRewardCount",
+          "availableRewardValue",
+          "availableRewards"
+        ]
+      },
       "CartItemDto": {
         "type": "object",
         "properties": {
@@ -3861,6 +3945,43 @@
           "standardRenewalDay",
           "bulkRenewalDay",
           "maxOnlineRentalDays"
+        ]
+      },
+      "CustomerLoyaltyRewardResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "REDEEMED",
+              "REVOKED"
+            ]
+          },
+          "rewardValue": {
+            "type": "number",
+            "example": 50000,
+            "description": "Giá trị ưu đãi (VND)."
+          },
+          "earnedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "earnedOrderNumber": {
+            "type": "string",
+            "example": "RT-20261007-AB12CD"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "rewardValue",
+          "earnedAt",
+          "earnedOrderNumber"
         ]
       },
       "WebStorefrontSelectionProductDto": {

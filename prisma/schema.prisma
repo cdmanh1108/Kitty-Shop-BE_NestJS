@@ -12,6 +12,21 @@ enum RentalOrderSource {
   OFFLINE
 }
 
+enum CustomerLoyaltyOwnerType {
+  CRM_CUSTOMER
+  WEB_ACCOUNT
+
+  @@map("customer_loyalty_owner_type")
+}
+
+enum CustomerLoyaltyRewardStatus {
+  AVAILABLE
+  REDEEMED
+  REVOKED
+
+  @@map("customer_loyalty_reward_status")
+}
+
 enum WebOtpDeliveryStatus {
   PENDING
   SENT
@@ -43,6 +58,8 @@ model WebAccount {
   carts                 Cart[]
   favorites             Favorite[]
   rentalOrders          RentalOrder[]
+  loyaltyEntries        CustomerLoyaltyEntry[]
+  loyaltyRewards        CustomerLoyaltyReward[]
   auditLogs             AuditLog[]
 
   @@map("web_accounts")
@@ -178,6 +195,7 @@ model Shop {
   rentalRates            RentalRate[]
   rentalOrders           RentalOrder[]
   loyaltyEntries         CustomerLoyaltyEntry[]
+  loyaltyRewards         CustomerLoyaltyReward[]
   rentalOrderItems       RentalOrderItem[]
   rentalAllocations      RentalItemAllocation[]
   rentalCharges          RentalOrderCharge[]
@@ -393,12 +411,13 @@ model Customer {
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   archivedAt      DateTime? @map("archived_at") @db.Timestamptz(6)
 
-  shop                Shop                   @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  shop                Shop                    @relation(fields: [shopId], references: [id], onDelete: Restrict)
   addresses           CustomerAddress[]
   notes               CustomerNote[]
   tags                CustomerTag[]
   rentalOrders        RentalOrder[]
   loyaltyEntries      CustomerLoyaltyEntry[]
+  loyaltyRewards      CustomerLoyaltyReward[]
   paymentTransactions PaymentTransaction[]
   reminders           Reminder[]
   notificationLogs    NotificationLog[]
@@ -728,22 +747,24 @@ model RentalOrder {
   createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt              DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  shop                   Shop                       @relation(fields: [shopId], references: [id], onDelete: Restrict)
-  customer               Customer                   @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  webAccount             WebAccount?                @relation(fields: [webAccountId], references: [id], onDelete: SetNull)
-  location               ShopLocation?              @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  items                  RentalOrderItem[]
-  allocations            RentalItemAllocation[]
-  charges                RentalOrderCharge[]
-  statusHistory          RentalOrderStatusHistory[]
-  payments               PaymentTransaction[]
-  deliveries             DeliveryJob[]
-  reminders              Reminder[]
-  notificationLogs       NotificationLog[]
-  serviceRecords         InventoryServiceRecord[]
-  inventoryStatusHistory InventoryStatusHistory[]
-  expenses               Expense[]
-  loyaltyEntries         CustomerLoyaltyEntry[]
+  shop                    Shop                       @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  customer                Customer                   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  webAccount              WebAccount?                @relation(fields: [webAccountId], references: [id], onDelete: SetNull)
+  location                ShopLocation?              @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  items                   RentalOrderItem[]
+  allocations             RentalItemAllocation[]
+  charges                 RentalOrderCharge[]
+  statusHistory           RentalOrderStatusHistory[]
+  payments                PaymentTransaction[]
+  deliveries              DeliveryJob[]
+  reminders               Reminder[]
+  notificationLogs        NotificationLog[]
+  serviceRecords          InventoryServiceRecord[]
+  inventoryStatusHistory  InventoryStatusHistory[]
+  expenses                Expense[]
+  loyaltyEntries          CustomerLoyaltyEntry[]
+  loyaltyRewardEarned     CustomerLoyaltyReward?     @relation("LoyaltyRewardEarnedOrder")
+  loyaltyRewardRedemption CustomerLoyaltyReward?     @relation("LoyaltyRewardRedeemedOrder")
 
   confirmation RentalConfirmation?
   returnRecord RentalReturn?
@@ -860,20 +881,51 @@ model RentalSettlement {
 }
 
 model CustomerLoyaltyEntry {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shopId      String   @map("shop_id") @db.Uuid
-  customerId  String   @map("customer_id") @db.Uuid
-  orderId     String   @unique @map("order_id") @db.Uuid
-  entryType   String   @map("entry_type") @db.VarChar(20)
-  rewardValue Decimal  @default(0) @map("reward_value") @db.Decimal(18, 2)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId       String                   @map("shop_id") @db.Uuid
+  customerId   String                   @map("customer_id") @db.Uuid
+  orderId      String                   @unique @map("order_id") @db.Uuid
+  entryType    String                   @map("entry_type") @db.VarChar(20)
+  ownerType    CustomerLoyaltyOwnerType @default(CRM_CUSTOMER) @map("owner_type")
+  webAccountId String?                  @map("web_account_id") @db.Uuid
+  rewardValue  Decimal                  @default(0) @map("reward_value") @db.Decimal(18, 2)
+  createdAt    DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  shop     Shop        @relation(fields: [shopId], references: [id], onDelete: Restrict)
-  customer Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  order    RentalOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  shop       Shop                   @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  customer   Customer               @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  order      RentalOrder            @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  webAccount WebAccount?            @relation(fields: [webAccountId], references: [id], onDelete: Restrict)
+  reward     CustomerLoyaltyReward?
 
-  @@index([shopId, customerId, createdAt])
+  @@index([shopId, ownerType, customerId, createdAt], map: "customer_loyalty_entries_shop_id_owner_customer_created_at_idx")
+  @@index([shopId, ownerType, webAccountId, createdAt], map: "customer_loyalty_entries_shop_id_owner_account_created_at_idx")
   @@map("customer_loyalty_entries")
+}
+
+model CustomerLoyaltyReward {
+  id              String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId          String                      @map("shop_id") @db.Uuid
+  customerId      String                      @map("customer_id") @db.Uuid
+  ownerType       CustomerLoyaltyOwnerType    @map("owner_type")
+  webAccountId    String?                     @map("web_account_id") @db.Uuid
+  earnedEntryId   String                      @unique @map("earned_entry_id") @db.Uuid
+  earnedOrderId   String                      @unique @map("earned_order_id") @db.Uuid
+  rewardValue     Decimal                     @map("reward_value") @db.Decimal(18, 2)
+  status          CustomerLoyaltyRewardStatus @default(AVAILABLE)
+  redeemedOrderId String?                     @unique @map("redeemed_order_id") @db.Uuid
+  redeemedAt      DateTime?                   @map("redeemed_at") @db.Timestamptz(6)
+  createdAt       DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop          Shop                 @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  customer      Customer             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  webAccount    WebAccount?          @relation(fields: [webAccountId], references: [id], onDelete: Restrict)
+  earnedEntry   CustomerLoyaltyEntry @relation(fields: [earnedEntryId], references: [id], onDelete: Restrict)
+  earnedOrder   RentalOrder          @relation("LoyaltyRewardEarnedOrder", fields: [earnedOrderId], references: [id], onDelete: Restrict)
+  redeemedOrder RentalOrder?         @relation("LoyaltyRewardRedeemedOrder", fields: [redeemedOrderId], references: [id], onDelete: Restrict)
+
+  @@index([shopId, ownerType, customerId, status, createdAt], map: "customer_loyalty_rewards_customer_status_idx")
+  @@index([shopId, ownerType, webAccountId, status, createdAt], map: "customer_loyalty_rewards_account_status_idx")
+  @@map("customer_loyalty_rewards")
 }
 
 model RentalOrderItem {

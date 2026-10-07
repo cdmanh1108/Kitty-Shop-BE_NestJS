@@ -1,12 +1,20 @@
 import type { Prisma } from '@prisma/client';
+import type { CustomerLoyaltyOwner } from '../domain/customer-loyalty';
 
 /** Customer-owned loyalty read used while settling a Rental order. */
 export function countQualifiedRentalLoyaltyEntries(
   tx: Prisma.TransactionClient,
-  input: { shopId: string; customerId: string },
+  input: { shopId: string; owner: CustomerLoyaltyOwner },
 ): Promise<number> {
   return tx.customerLoyaltyEntry.count({
-    where: { shopId: input.shopId, customerId: input.customerId, entryType: 'QUALIFIED' },
+    where: {
+      shopId: input.shopId,
+      entryType: 'QUALIFIED',
+      ownerType: input.owner.type,
+      ...(input.owner.type === 'WEB_ACCOUNT'
+        ? { webAccountId: input.owner.webAccountId }
+        : { customerId: input.owner.customerId }),
+    },
   });
 }
 
@@ -18,15 +26,39 @@ export async function createRentalLoyaltyEntry(
     customerId: string;
     orderId: string;
     rewardValue: number;
+    owner: CustomerLoyaltyOwner;
+    createdAt: Date;
   },
-): Promise<void> {
-  await tx.customerLoyaltyEntry.create({
+): Promise<{ rewardId: string | null }> {
+  const webAccountId = input.owner.type === 'WEB_ACCOUNT' ? input.owner.webAccountId : null;
+  const entry = await tx.customerLoyaltyEntry.create({
     data: {
       shopId: input.shopId,
       customerId: input.customerId,
       orderId: input.orderId,
       entryType: 'QUALIFIED',
+      ownerType: input.owner.type,
+      webAccountId,
       rewardValue: input.rewardValue,
+      createdAt: input.createdAt,
     },
+    select: { id: true },
   });
+  if (input.rewardValue <= 0) return { rewardId: null };
+
+  const reward = await tx.customerLoyaltyReward.create({
+    data: {
+      shopId: input.shopId,
+      customerId: input.customerId,
+      ownerType: input.owner.type,
+      webAccountId,
+      earnedEntryId: entry.id,
+      earnedOrderId: input.orderId,
+      rewardValue: input.rewardValue,
+      status: 'AVAILABLE',
+      createdAt: input.createdAt,
+    },
+    select: { id: true },
+  });
+  return { rewardId: reward.id };
 }

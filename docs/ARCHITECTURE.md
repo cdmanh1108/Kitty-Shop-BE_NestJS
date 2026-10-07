@@ -84,8 +84,10 @@ Application/domain contracts do not expose Prisma. Catalog inventory projections
 join Rental allocations and minimal order/customer details for display; Rental
 queries also read payment and Catalog data for order views and availability. These
 are intentional read models. Catalog owns inventory writes, Finance owns payment
-writes, Deliveries owns delivery writes, Customers owns customer-loyalty entries,
-and Rentals owns rental orders/charges and the settlement reward calculation.
+writes, Deliveries owns delivery writes, Customers owns customer-loyalty entries
+and reward records, and Rentals owns rental orders/charges and the settlement
+reward calculation. Loyalty ownership follows `webAccountId` when present and
+otherwise remains with the CRM customer; contact details never merge the scopes.
 Finance's `recomputeOrderPaymentState` is the explicit exception for denormalized
 payment/deposit fields on `RentalOrder`: Finance owns that projection and updates it
 through a named transaction capability after payment changes.

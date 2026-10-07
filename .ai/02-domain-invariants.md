@@ -28,6 +28,9 @@
 - Money uses decimal values only.
 - Business timestamps use timezone-aware timestamps; shop timezone controls day/month reporting boundaries.
 
+- A rental earns one loyalty qualification only when it reaches COMPLETED through settlement. Loyalty is scoped to the immutable `webAccountId` when present; otherwise it belongs to the CRM `customerId`. Contact phone/email never merge these owners. Every fifth qualification issues one 50,000 VND reward and starts the next five-order cycle; qualification/reward/outbox writes stay in the settlement transaction. Historical COMPLETED orders are backfilled using their recorded ownership.
+- Loyalty rewards are explicit records with AVAILABLE/REDEEMED/REVOKED status and a unique earning order. Any future checkout redemption must validate ownership and consume the reward atomically with order creation; client-provided discount amounts are not authoritative.
+
 - Inventory currentStatus stores operational condition only; allocation status owns occupancy.
 - Rental create/reschedule/handover and warehouse mutations validate inside Serializable transactions.
 - Dates do not implicitly release warehouse occupancy; ACTIVE blocks booking until returned.

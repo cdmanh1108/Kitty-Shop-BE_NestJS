@@ -3656,6 +3656,43 @@
         "x-api-surface": "admin"
       }
     },
+    "/admin/customers/{id}/loyalty": {
+      "get": {
+        "operationId": "CustomerController_getLoyalty",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerLoyaltySummaryResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Lấy tiến độ tích lượt và ưu đãi của hồ sơ khách hàng CRM",
+        "tags": [
+          "Customers"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
     "/admin/customers/{id}/notes": {
       "post": {
         "operationId": "CustomerController_addNote",
@@ -7305,6 +7342,59 @@
           }
         }
       },
+      "CustomerLoyaltySummaryResDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "rentalsRequired": {
+            "type": "number",
+            "example": 5
+          },
+          "rewardValue": {
+            "type": "number",
+            "example": 50000
+          },
+          "completedRentalCount": {
+            "type": "number",
+            "example": 7
+          },
+          "currentCycleProgress": {
+            "type": "number",
+            "example": 2
+          },
+          "rentalsUntilReward": {
+            "type": "number",
+            "example": 3
+          },
+          "availableRewardCount": {
+            "type": "number",
+            "example": 1
+          },
+          "availableRewardValue": {
+            "type": "number",
+            "example": 50000
+          },
+          "availableRewards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerLoyaltyRewardResDto"
+            }
+          }
+        },
+        "required": [
+          "enabled",
+          "rentalsRequired",
+          "rewardValue",
+          "completedRentalCount",
+          "currentCycleProgress",
+          "rentalsUntilReward",
+          "availableRewardCount",
+          "availableRewardValue",
+          "availableRewards"
+        ]
+      },
       "AddCustomerNoteReqDto": {
         "type": "object",
         "properties": {
@@ -10188,6 +10278,43 @@
           "completedRentalCount",
           "totalPaid",
           "depositHeld"
+        ]
+      },
+      "CustomerLoyaltyRewardResDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "REDEEMED",
+              "REVOKED"
+            ]
+          },
+          "rewardValue": {
+            "type": "number",
+            "example": 50000,
+            "description": "Giá trị ưu đãi (VND)."
+          },
+          "earnedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "earnedOrderNumber": {
+            "type": "string",
+            "example": "RT-20261007-AB12CD"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "rewardValue",
+          "earnedAt",
+          "earnedOrderNumber"
         ]
       },
       "DashboardRentalResDto": {

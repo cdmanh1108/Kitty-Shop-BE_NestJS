@@ -171,25 +171,39 @@ export async function settleOrder(
     });
 
     if (policy.loyalty.enabled) {
+      const loyaltyOwner = order.webAccountId
+        ? { type: 'WEB_ACCOUNT' as const, webAccountId: order.webAccountId }
+        : { type: 'CRM_CUSTOMER' as const, customerId: order.customerId };
       const completedCount = await countQualifiedRentalLoyaltyEntries(tx, {
         shopId: input.shopId,
-        customerId: order.customerId,
+        owner: loyaltyOwner,
       });
       const rewardValue = rewardForCompletedRental(completedCount, policy);
-      await createRentalLoyaltyEntry(tx, {
+      const { rewardId } = await createRentalLoyaltyEntry(tx, {
         shopId: input.shopId,
         customerId: order.customerId,
         orderId: order.id,
         rewardValue,
+        owner: loyaltyOwner,
+        createdAt: now,
       });
-      if (rewardValue > 0) {
+      if (rewardId) {
         await tx.outboxEvent.create({
           data: {
             shopId: input.shopId,
             eventType: 'LOYALTY_REWARD_EARNED',
             aggregateType: 'rental_order',
             aggregateId: order.id,
-            payload: { orderId: order.id, customerId: order.customerId, rewardValue },
+            payload: {
+              orderId: order.id,
+              customerId: order.customerId,
+              ownerType: loyaltyOwner.type,
+              ...(loyaltyOwner.type === 'WEB_ACCOUNT'
+                ? { webAccountId: loyaltyOwner.webAccountId }
+                : {}),
+              rewardId,
+              rewardValue,
+            },
           },
         });
       }

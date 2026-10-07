@@ -11,6 +11,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CustomerService } from '../application/customer.service';
+import { CustomerLoyaltyService } from '../application/customer-loyalty.service';
+import { CustomerLoyaltySummaryResDto } from './customer-loyalty.dto';
 import {
   AddCustomerNoteReqDto,
   CreateCustomerReqDto,
@@ -42,7 +44,10 @@ import {
 @ApiBearerAuth('access-token')
 @Controller('admin/customers')
 export class CustomerController {
-  constructor(private readonly service: CustomerService) {}
+  constructor(
+    private readonly service: CustomerService,
+    private readonly loyalty: CustomerLoyaltyService,
+  ) {}
 
   @Get()
   @Permissions(PERMISSIONS.CUSTOMERS_VIEW)
@@ -65,6 +70,14 @@ export class CustomerController {
   @ApiOkResponse({ type: CustomerDetailResDto })
   get(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
     return this.service.get(user, id);
+  }
+
+  @Get(':id/loyalty')
+  @Permissions(PERMISSIONS.CUSTOMERS_VIEW)
+  @ApiOperation({ summary: 'Lấy tiến độ tích lượt và ưu đãi của hồ sơ khách hàng CRM' })
+  @ApiOkResponse({ type: CustomerLoyaltySummaryResDto })
+  getLoyalty(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
+    return this.loyalty.forCustomer(user.shopId, id);
   }
 
   @Post()

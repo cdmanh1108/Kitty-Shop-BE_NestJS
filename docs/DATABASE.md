@@ -17,7 +17,17 @@ erDiagram
   Permission ||--o{ RolePermission : contains
 
   Shop ||--o{ Customer : owns
+  Shop ||--o{ CustomerLoyaltyEntry : owns
+  Shop ||--o{ CustomerLoyaltyReward : owns
   Customer ||--o{ RentalOrder : places
+  WebAccount ||--o{ CustomerLoyaltyEntry : qualifies
+  WebAccount ||--o{ CustomerLoyaltyReward : owns
+  Customer ||--o{ CustomerLoyaltyEntry : qualifies_in_crm
+  Customer ||--o{ CustomerLoyaltyReward : owns_in_crm
+  RentalOrder ||--o| CustomerLoyaltyEntry : completes
+  CustomerLoyaltyEntry ||--o| CustomerLoyaltyReward : issues
+  RentalOrder ||--o| CustomerLoyaltyReward : earns
+  RentalOrder ||--o| CustomerLoyaltyReward : redeems
   Product ||--o{ ProductVariant : has
   ProductVariant ||--o{ InventoryItem : has
   Product ||--o{ RentalRate : priced
@@ -113,6 +123,27 @@ Order lifecycle and money state are separate:
 - deposit status: `NOT_REQUIRED`, `PENDING`, `PARTIALLY_HELD`, `HELD`, `PARTIALLY_REFUNDED`, `REFUNDED`, `FORFEITED`.
 
 `OVERDUE` is derived from `rentalEndAt < now` plus an active order status. Do not persist it as an independent source of truth.
+
+## Customer loyalty rewards
+
+Each settled order that reaches `COMPLETED` contributes one qualification. The
+qualification owner is the recorded `webAccountId` when the order belongs to a
+storefront account; otherwise it is the CRM `customerId`. These scopes are
+separate and never merge through phone or email. Every fifth qualification in
+either scope creates a 50,000 VND reward and the next cycle begins at zero.
+
+`CustomerLoyaltyEntry` retains the completed-order qualification and its owner.
+`CustomerLoyaltyReward` stores each issued reward and its `AVAILABLE`, `REDEEMED`
+or `REVOKED` state. Settlement writes the qualification, reward and outbox event
+in its Serializable transaction. `202610080001_customer_loyalty_rewards`
+backfills all historical completed orders, assigning account-linked orders to
+their web account and other orders to their CRM customer. All historical
+milestones without recorded redemption are imported as available rewards.
+
+The progress and reward-balance reads are exposed separately at
+`GET /web/account/loyalty` and `GET /admin/customers/:id/loyalty`. Web reads are
+derived from the authenticated account; they do not accept a customer or account
+ID from the request.
 
 ## Money
 
