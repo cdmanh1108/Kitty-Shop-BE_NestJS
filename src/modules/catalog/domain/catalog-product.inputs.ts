@@ -1,7 +1,5 @@
-import type { ProductKind } from './product-kind';
-
 export interface CreateProductData {
-  kind?: ProductKind;
+  allowFreeAccessory?: boolean;
   code: string;
   name: string;
   slug?: string;
@@ -24,7 +22,7 @@ export interface CreateProductData {
 }
 
 export interface UpdateProductData {
-  kind?: ProductKind;
+  allowFreeAccessory?: boolean;
   name?: string;
   slug?: string;
   categoryId?: string;
@@ -53,7 +51,7 @@ export interface ProductMediaData {
 }
 
 export interface CatalogListProductsCriteria {
-  kind?: ProductKind;
+  allowFreeAccessory?: boolean;
   shopId: string;
   search?: string;
   categoryId?: string;

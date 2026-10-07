@@ -14,7 +14,6 @@ import type {
   WebCatalogFiltersInput,
 } from './web-catalog.contracts';
 import { CatalogResourceNotFoundError } from './catalog-application.errors';
-import { requireProductKind } from '../domain/product-kind';
 
 @Injectable()
 export class WebCatalogService {
@@ -31,11 +30,10 @@ export class WebCatalogService {
     shopId: string,
     query: WebCatalogFiltersInput,
   ): Promise<StorefrontCatalogFilters> {
-    if (query.kind !== undefined) requireProductKind(query.kind);
     return this.repository.listStorefrontFilters({
       shopId,
       category: query.category,
-      kind: query.kind,
+      allowFreeAccessory: query.allowFreeAccessory,
     });
   }
 
@@ -44,7 +42,6 @@ export class WebCatalogService {
     query: WebProductListFilterInput,
   ): Promise<StorefrontProductPage> {
     const page = Math.max(1, query.page ?? 1);
-    if (query.kind !== undefined) requireProductKind(query.kind);
     const limit = Math.min(100, Math.max(1, query.limit ?? 20));
 
     return this.repository.listStorefrontProducts({
@@ -52,7 +49,7 @@ export class WebCatalogService {
       page,
       limit,
       q: query.q,
-      kind: query.kind,
+      allowFreeAccessory: query.allowFreeAccessory,
       category: query.category,
       size: query.size,
       color: query.color,

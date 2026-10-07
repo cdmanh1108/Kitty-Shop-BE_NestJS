@@ -7,7 +7,7 @@ describe('FavoritesMapper', () => {
       items: [
         {
           id: 'product-1',
-          kind: 'PRODUCT',
+          allowFreeAccessory: false,
           code: 'SP-001',
           slug: 'dam-da-hoi-trang',
           name: 'Đầm dạ hội trắng lụa cao cấp',
@@ -31,7 +31,7 @@ describe('FavoritesMapper', () => {
       items: [
         {
           id: 'product-1',
-          kind: 'PRODUCT',
+          allowFreeAccessory: false,
           code: 'SP-001',
           slug: 'dam-da-hoi-trang',
           name: 'Đầm dạ hội trắng lụa cao cấp',

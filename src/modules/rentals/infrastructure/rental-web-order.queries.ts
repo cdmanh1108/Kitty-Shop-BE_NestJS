@@ -80,7 +80,7 @@ export async function lookupStorefrontOrder(
     items: order.items.map((item) => ({
       name: item.productNameSnapshot,
       billingRole: item.billingRole,
-      productKindSnapshot: item.productKindSnapshot,
+      productKindSnapshot: item.productKindSnapshot ?? undefined,
       imageUrl: item.product?.media?.[0]?.url ?? '',
       quantity: item.quantity,
     })),
@@ -250,7 +250,7 @@ export async function getWebAccountOrder(
       quantity: item.quantity,
       unitRentalPrice: decimalToNumber(item.unitRentalPrice),
       billingRole: item.billingRole,
-      productKindSnapshot: item.productKindSnapshot,
+      productKindSnapshot: item.productKindSnapshot ?? undefined,
       lineTotal: decimalToNumber(item.lineTotal),
       depositAmount: decimalToNumber(item.depositAmount),
     })),

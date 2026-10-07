@@ -1,19 +1,22 @@
+import { Transform } from 'class-transformer';
 import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { PaginationMetaResDto } from '@common/dto/response.dto';
 import { PRODUCT_STATUS } from '@modules/catalog/domain/catalog-status';
-import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/domain/product-kind';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, IsUUID, Max, ValidateIf } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString, IsUUID, Max, ValidateIf } from 'class-validator';
 
 /** Query parameters for the admin product listing and form lookups. */
 export class ProductListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
-    enum: Object.values(PRODUCT_KIND),
-    description: 'Loại sản phẩm; bỏ qua để lấy tất cả.',
+    type: Boolean,
+    description: 'Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.',
   })
-  @ValidateIf((_object: ProductListQueryDto, value: unknown) => value !== undefined)
-  @IsIn(Object.values(PRODUCT_KIND), { message: 'Loại sản phẩm phải là Sản phẩm hoặc Phụ kiện.' })
-  kind?: ProductKind;
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí phải là giá trị đúng hoặc sai.' })
+  allowFreeAccessory?: boolean;
 
   @ApiPropertyOptional()
   @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
@@ -57,7 +60,7 @@ export class ProductLookupVariantResDto {
 }
 
 export class ProductLookupItemResDto {
-  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
+  @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;

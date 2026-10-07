@@ -6,8 +6,6 @@ import type {
 } from '../domain/ports/rental-availability.port';
 import { resolveRentalPricing } from '../domain/rental-pricing';
 import { availableInventoryWhere } from './rental-availability.query';
-import { PRODUCT_KIND } from '@modules/catalog/public/product-kind';
-import { RentalInvariantError } from '../domain/rental-errors';
 
 export function bookableVariantInclude(
   input: Pick<RentalGetBookableVariantData, 'from' | 'until'>,
@@ -43,12 +41,6 @@ export function toBookableVariant(
   durationDays = 1,
 ): BookableVariant | null {
   if (!variant) return null;
-  const productKind = variant.product.kind;
-  if (productKind !== PRODUCT_KIND.PRODUCT && productKind !== PRODUCT_KIND.ACCESSORY)
-    throw new RentalInvariantError(
-      'INVALID_RENTAL_PRODUCT_KIND',
-      'Loại sản phẩm cho thuê không hợp lệ.',
-    );
   const pricing = resolveRentalPricing({
     durationDays,
     variantRates: variant.rentalRates.map((rate) => ({
@@ -71,7 +63,7 @@ export function toBookableVariant(
     variantCode: variant.variantCode,
     productId: variant.productId,
     productName: variant.product.name,
-    productKind,
+    allowFreeAccessory: variant.product.allowFreeAccessory,
     sizeName: variant.size?.name ?? null,
     colorName: variant.color?.name ?? null,
     depositPerItem: pricing.depositPerItem,

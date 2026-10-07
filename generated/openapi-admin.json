@@ -1119,16 +1119,12 @@
             }
           },
           {
-            "name": "kind",
+            "name": "allowFreeAccessory",
             "required": false,
             "in": "query",
-            "description": "Loại sản phẩm; bỏ qua để lấy tất cả.",
+            "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "PRODUCT",
-                "ACCESSORY"
-              ]
+              "type": "boolean"
             }
           },
           {
@@ -1245,16 +1241,12 @@
             }
           },
           {
-            "name": "kind",
+            "name": "allowFreeAccessory",
             "required": false,
             "in": "query",
-            "description": "Loại sản phẩm; bỏ qua để lấy tất cả.",
+            "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "PRODUCT",
-                "ACCESSORY"
-              ]
+              "type": "boolean"
             }
           },
           {
@@ -5451,13 +5443,9 @@
       "CreateProductReqDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ],
-            "description": "Loại sản phẩm; mặc định là Sản phẩm khi không truyền."
+          "allowFreeAccessory": {
+            "type": "boolean",
+            "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn."
           },
           "code": {
             "type": "string",
@@ -5516,12 +5504,8 @@
       "ProductResDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
+          "allowFreeAccessory": {
+            "type": "boolean"
           },
           "id": {
             "type": "string"
@@ -5591,7 +5575,7 @@
           }
         },
         "required": [
-          "kind",
+          "allowFreeAccessory",
           "id",
           "code",
           "name",
@@ -5625,12 +5609,9 @@
       "UpdateProductReqDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
+          "allowFreeAccessory": {
+            "type": "boolean",
+            "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn."
           },
           "name": {
             "type": "string"
@@ -8354,12 +8335,8 @@
       "ProductListItemResDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
+          "allowFreeAccessory": {
+            "type": "boolean"
           },
           "id": {
             "type": "string"
@@ -8411,7 +8388,7 @@
           }
         },
         "required": [
-          "kind",
+          "allowFreeAccessory",
           "id",
           "code",
           "name",
@@ -8494,12 +8471,8 @@
       "ProductLookupItemResDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
+          "allowFreeAccessory": {
+            "type": "boolean"
           },
           "id": {
             "type": "string"
@@ -8527,7 +8500,7 @@
           }
         },
         "required": [
-          "kind",
+          "allowFreeAccessory",
           "id",
           "code",
           "name",
@@ -9143,7 +9116,8 @@
             "enum": [
               "PRODUCT",
               "ACCESSORY"
-            ]
+            ],
+            "deprecated": true
           },
           "pricing": {
             "description": "Biểu giá được chốt khi tạo đơn. Đơn cũ hoặc giá toàn kỳ tương thích không có trường này.",
@@ -9188,7 +9162,6 @@
           "variantNameSnapshot",
           "quantity",
           "billingRole",
-          "productKindSnapshot",
           "productId",
           "variantId",
           "status",
@@ -10327,12 +10300,8 @@
       "InventoryProductSummaryResDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
+          "allowFreeAccessory": {
+            "type": "boolean"
           },
           "id": {
             "type": "string"
@@ -10348,7 +10317,7 @@
           }
         },
         "required": [
-          "kind",
+          "allowFreeAccessory",
           "id",
           "code",
           "name",

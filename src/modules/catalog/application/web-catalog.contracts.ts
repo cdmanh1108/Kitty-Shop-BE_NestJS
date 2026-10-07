@@ -8,10 +8,8 @@ import type {
   StorefrontSelectionResolution,
 } from '../domain/catalog.models';
 
-import type { ProductKind } from '../domain/product-kind';
-
 export interface WebProductListFilterInput {
-  kind?: ProductKind;
+  allowFreeAccessory?: boolean;
   page?: number;
   limit?: number;
   q?: string;
@@ -22,7 +20,7 @@ export interface WebProductListFilterInput {
 }
 
 export interface WebCatalogFiltersInput {
-  kind?: ProductKind;
+  allowFreeAccessory?: boolean;
   category?: string;
 }
 

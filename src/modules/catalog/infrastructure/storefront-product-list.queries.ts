@@ -27,7 +27,7 @@ export async function listStorefrontProducts(
 
   // Build Prisma where clause enforcing shop tenancy and public visibility
   const where: Prisma.ProductWhereInput = {
-    ...storefrontProductBaseWhere(input.shopId, input.category, input.kind),
+    ...storefrontProductBaseWhere(input.shopId, input.category, input.allowFreeAccessory),
   };
 
   if (input.q?.trim()) {
@@ -73,8 +73,8 @@ export async function listStorefrontProducts(
       Prisma.sql`p.status = ${PRODUCT_STATUS.ACTIVE}`,
     ];
 
-    if (input.kind !== undefined) {
-      sqlConditions.push(Prisma.sql`p.kind = ${input.kind}`);
+    if (input.allowFreeAccessory !== undefined) {
+      sqlConditions.push(Prisma.sql`p.allow_free_accessory = ${input.allowFreeAccessory}`);
     }
 
     if (input.category) {

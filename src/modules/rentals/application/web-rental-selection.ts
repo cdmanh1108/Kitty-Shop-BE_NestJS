@@ -9,7 +9,7 @@ import type {
 } from './web-rental.contracts';
 import { WEB_RENTAL_MAX_TOTAL_QUANTITY } from './web-rental-input-validation';
 import {
-  assertFreeAccessoryKind,
+  assertFreeAccessoryAllowed,
   rentalAccessoryAllowance,
   rentalBillingRole,
   rentalSelectionKey,
@@ -149,7 +149,7 @@ export async function evaluateWebRentalSelection(
     if (!variant) failure ??= 'UNAVAILABLE';
     else if (candidate.productId && candidate.productId !== variant.productId)
       failure ??= 'PRODUCT_VARIANT_MISMATCH';
-    if (variant) assertFreeAccessoryKind(candidate.billingRole, variant.productKind);
+    if (variant) assertFreeAccessoryAllowed(candidate.billingRole, variant.allowFreeAccessory);
   }
 
   const groups = new Map<string, LineGroup>();

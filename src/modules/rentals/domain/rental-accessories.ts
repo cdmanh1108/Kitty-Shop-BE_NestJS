@@ -1,4 +1,3 @@
-import { PRODUCT_KIND } from '@modules/catalog/public/product-kind';
 import { RentalInvariantError } from './rental-errors';
 
 export const RENTAL_BILLING_ROLE = {
@@ -75,11 +74,14 @@ export function rentalAccessoryAllowance(
   };
 }
 
-export function assertFreeAccessoryKind(role: RentalBillingRole, kind: string): void {
-  if (role === RENTAL_BILLING_ROLE.FREE_ACCESSORY && kind !== PRODUCT_KIND.ACCESSORY)
+export function assertFreeAccessoryAllowed(
+  role: RentalBillingRole,
+  allowFreeAccessory: boolean,
+): void {
+  if (role === RENTAL_BILLING_ROLE.FREE_ACCESSORY && allowFreeAccessory !== true)
     throw new RentalInvariantError(
-      'FREE_ACCESSORY_KIND_REQUIRED',
-      'Chỉ sản phẩm thuộc loại Phụ kiện được chọn làm phụ kiện miễn phí.',
+      'FREE_ACCESSORY_NOT_ALLOWED',
+      'Sản phẩm này không được phép chọn thuê kèm miễn phí.',
     );
 }
 

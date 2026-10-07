@@ -4,7 +4,6 @@ import type { PrismaService } from '@database/prisma/prisma.service';
 import type { CatalogInventoryRepository } from '../domain/catalog-inventory.repository';
 import { getAllowedOperationalTransitions } from '../domain/inventory-status.policy';
 import { ALLOCATION_STATUS } from '@modules/rentals/public/rental-status';
-import { readProductKind } from './product-kind.mapper';
 import type {
   InventoryOccupancyStatus,
   InventoryCurrentRentalSummary,
@@ -104,7 +103,15 @@ export async function listInventory(
             variantCode: true,
             sizeId: true,
             colorId: true,
-            product: { select: { id: true, code: true, name: true, categoryId: true, kind: true } },
+            product: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                categoryId: true,
+                allowFreeAccessory: true,
+              },
+            },
             size: { select: { id: true, code: true, name: true, sortOrder: true, isActive: true } },
             color: { select: { id: true, code: true, name: true, hexColor: true, isActive: true } },
           },
@@ -144,7 +151,7 @@ export async function listInventory(
       ...rest,
       variant: {
         ...rest.variant,
-        product: { ...rest.variant.product, kind: readProductKind(rest.variant.product.kind) },
+        product: rest.variant.product,
       },
       occupancyStatus,
       allowedManualTransitions,
@@ -207,7 +214,7 @@ export async function findInventoryItem(
     ...item,
     variant: {
       ...item.variant,
-      product: { ...item.variant.product, kind: readProductKind(item.variant.product.kind) },
+      product: item.variant.product,
     },
     occupancyStatus,
     allowedManualTransitions,

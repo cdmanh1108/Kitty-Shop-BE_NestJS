@@ -98,7 +98,7 @@ export class WebCatalogController {
     const shopId = await this.shopResolver.resolveShopId();
     const filters = await this.catalogService.listFilters(shopId, {
       category: query.category,
-      kind: query.kind,
+      allowFreeAccessory: query.allowFreeAccessory,
     });
     return WebCatalogMapper.toFilters(filters);
   }

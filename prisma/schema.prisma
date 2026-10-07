@@ -530,14 +530,14 @@ model Color {
   @@map("colors")
 }
 
-/// SQL CHECK: kind IN ('PRODUCT', 'ACCESSORY'); variants and inventory inherit this classification.
+/// Complimentary eligibility is independent of browsing category and inherited by variants/inventory.
 model Product {
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId               String    @map("shop_id") @db.Uuid
   categoryId           String    @map("category_id") @db.Uuid
   code                 String    @db.VarChar(50)
   name                 String    @db.VarChar(255)
-  kind                 String    @default("PRODUCT") @db.VarChar(20)
+  allowFreeAccessory   Boolean   @default(false) @map("allow_free_accessory")
   slug                 String    @db.VarChar(255)
   description          String?   @db.Text
   defaultDepositAmount Decimal   @default(0) @map("default_deposit_amount") @db.Decimal(18, 2)
@@ -565,7 +565,7 @@ model Product {
   @@index([shopId, categoryId, status])
   @@index([shopId, name])
   @@index([shopId, status, isPublic, isRentable, archivedAt, createdAt(sort: Desc)])
-  @@index([shopId, kind, status, isPublic, isRentable, archivedAt, createdAt(sort: Desc)], map: "products_shop_kind_visibility_idx")
+  @@index([shopId, allowFreeAccessory, status, isPublic, isRentable, archivedAt, createdAt(sort: Desc)], map: "products_shop_free_accessory_visibility_idx")
   @@map("products")
 }
 
@@ -873,28 +873,29 @@ model CustomerLoyaltyEntry {
 }
 
 model RentalOrderItem {
-  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shopId              String   @map("shop_id") @db.Uuid
-  orderId             String   @map("order_id") @db.Uuid
-  productId           String   @map("product_id") @db.Uuid
-  variantId           String   @map("variant_id") @db.Uuid
-  quantity            Int      @default(1)
-  billingRole         String   @default("PAID") @map("billing_role") @db.VarChar(30)
-  productKindSnapshot String   @default("PRODUCT") @map("product_kind_snapshot") @db.VarChar(20)
-  rentalStartAt       DateTime @map("rental_start_at") @db.Timestamptz(6)
-  rentalEndAt         DateTime @map("rental_end_at") @db.Timestamptz(6)
-  productNameSnapshot String   @map("product_name_snapshot") @db.VarChar(255)
-  variantNameSnapshot String   @map("variant_name_snapshot") @db.VarChar(255)
-  skuSnapshot         String?  @map("sku_snapshot") @db.VarChar(100)
-  unitRentalPrice     Decimal  @map("unit_rental_price") @db.Decimal(18, 2)
-  depositAmount       Decimal  @default(0) @map("deposit_amount") @db.Decimal(18, 2)
-  discountAmount      Decimal  @default(0) @map("discount_amount") @db.Decimal(18, 2)
-  lineTotal           Decimal  @map("line_total") @db.Decimal(18, 2)
-  pricingSnapshot     Json?    @map("pricing_snapshot")
-  status              String   @default("RESERVED") @db.VarChar(30)
-  notes               String?  @db.Text
-  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId                     String   @map("shop_id") @db.Uuid
+  orderId                    String   @map("order_id") @db.Uuid
+  productId                  String   @map("product_id") @db.Uuid
+  variantId                  String   @map("variant_id") @db.Uuid
+  quantity                   Int      @default(1)
+  billingRole                String   @default("PAID") @map("billing_role") @db.VarChar(30)
+  productKindSnapshot        String?  @map("product_kind_snapshot") @db.VarChar(20)
+  allowFreeAccessorySnapshot Boolean? @map("allow_free_accessory_snapshot")
+  rentalStartAt              DateTime @map("rental_start_at") @db.Timestamptz(6)
+  rentalEndAt                DateTime @map("rental_end_at") @db.Timestamptz(6)
+  productNameSnapshot        String   @map("product_name_snapshot") @db.VarChar(255)
+  variantNameSnapshot        String   @map("variant_name_snapshot") @db.VarChar(255)
+  skuSnapshot                String?  @map("sku_snapshot") @db.VarChar(100)
+  unitRentalPrice            Decimal  @map("unit_rental_price") @db.Decimal(18, 2)
+  depositAmount              Decimal  @default(0) @map("deposit_amount") @db.Decimal(18, 2)
+  discountAmount             Decimal  @default(0) @map("discount_amount") @db.Decimal(18, 2)
+  lineTotal                  Decimal  @map("line_total") @db.Decimal(18, 2)
+  pricingSnapshot            Json?    @map("pricing_snapshot")
+  status                     String   @default("RESERVED") @db.VarChar(30)
+  notes                      String?  @db.Text
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   shop        Shop                   @relation(fields: [shopId], references: [id], onDelete: Restrict)
   order       RentalOrder            @relation(fields: [orderId], references: [id], onDelete: Cascade)

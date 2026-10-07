@@ -76,7 +76,7 @@ export interface RentalOrderItemRecord {
   variantId: string;
   quantity: number;
   billingRole: string;
-  productKindSnapshot: string;
+  productKindSnapshot: string | null;
   rentalStartAt: Date;
   rentalEndAt: Date;
   productNameSnapshot: string;

@@ -1,6 +1,5 @@
 import type { InventoryStatus } from '@modules/catalog/domain/catalog-status';
 import type { PaginationParams } from '@common/types/pagination';
-import type { ProductKind } from '../domain/product-kind';
 import type {
   CreateProductData,
   ProductMediaData,
@@ -114,7 +113,7 @@ export interface InventoryListQuery extends PaginationParams {
 }
 
 export interface ProductListQuery extends PaginationParams {
-  kind?: ProductKind;
+  allowFreeAccessory?: boolean;
   search?: string;
   categoryId?: string;
   status?: string;

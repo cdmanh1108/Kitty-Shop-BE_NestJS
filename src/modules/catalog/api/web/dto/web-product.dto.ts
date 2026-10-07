@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -10,7 +11,6 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/domain/product-kind';
 
 export class WebRentalPriceDto {
   @ApiProperty({ example: 3, description: 'Số ngày thuê' })
@@ -65,8 +65,8 @@ export class WebProductVariantSummaryDto {
 }
 
 export class WebProductListItemDto {
-  @ApiPropertyOptional({ enum: Object.values(PRODUCT_KIND) })
-  kind?: ProductKind;
+  @ApiPropertyOptional({ type: Boolean })
+  allowFreeAccessory?: boolean;
   @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   id!: string;
 
@@ -105,7 +105,7 @@ export class WebProductListItemDto {
 }
 
 export class WebProductDetailDto {
-  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
+  @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
   @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   id!: string;
 
@@ -179,12 +179,15 @@ export class WebProductListResDto {
 
 export class WebProductListQueryDto {
   @ApiPropertyOptional({
-    enum: Object.values(PRODUCT_KIND),
-    description: 'Loại sản phẩm; bỏ qua để lấy tất cả.',
+    type: Boolean,
+    description: 'Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.',
   })
-  @ValidateIf((_object: WebProductListQueryDto, value: unknown) => value !== undefined)
-  @IsIn(Object.values(PRODUCT_KIND), { message: 'Loại sản phẩm phải là Sản phẩm hoặc Phụ kiện.' })
-  kind?: ProductKind;
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí phải là giá trị đúng hoặc sai.' })
+  allowFreeAccessory?: boolean;
 
   @ApiPropertyOptional({ description: 'Từ khóa tìm kiếm theo tên, mã hoặc mô tả' })
   @IsOptional()

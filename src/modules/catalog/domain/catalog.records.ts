@@ -1,6 +1,5 @@
 import type { DecimalValue } from '@common/types/decimal';
 import type { JsonValue } from '@common/types/json';
-import type { ProductKind } from './product-kind';
 
 export interface CategoryRecord {
   id: string;
@@ -39,7 +38,7 @@ export interface ColorRecord {
 }
 
 export interface ProductRecord {
-  kind: ProductKind;
+  allowFreeAccessory: boolean;
   id: string;
   shopId: string;
   categoryId: string;

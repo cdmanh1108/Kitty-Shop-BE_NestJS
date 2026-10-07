@@ -1,9 +1,8 @@
 import type { PaginatedResult } from '@common/types/pagination';
 import type { DecimalValue } from '@common/types/decimal';
-import type { ProductKind } from './product-kind';
 
 export interface ProductListItem {
-  kind: ProductKind;
+  allowFreeAccessory: boolean;
   id: string;
   code: string;
   name: string;
@@ -25,7 +24,7 @@ export interface ProductLookupRate {
 }
 
 export interface ProductLookupItem {
-  kind: ProductKind;
+  allowFreeAccessory: boolean;
   id: string;
   code: string;
   name: string;

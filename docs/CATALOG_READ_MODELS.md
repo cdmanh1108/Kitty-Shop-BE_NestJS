@@ -1,24 +1,23 @@
 # Catalog read models — Task 4
 
-## Product kind (RP06)
+## Complimentary accessory eligibility
 
-Product responses expose `kind: PRODUCT | ACCESSORY`, including Admin lists,
-lookups, detail/create/update, nested inventory products, Web lists/details,
-selection resolution and favorite product cards. Kind is inherited from Product,
-not stored or edited on individual variants or inventory items.
+Product responses expose `allowFreeAccessory: boolean` on Admin lists, lookups,
+details/create/update, nested inventory products, Web lists/details, selection
+resolution and Favorites. It belongs to Product; variants and inventory inherit
+it through their product relation. Category is only a browsing classification.
 
-Optional `kind` filtering is supported by `GET /products`, `GET /products/lookup`,
-`GET /web/products` (including price sorting) and `GET /web/catalog/filters`.
-Omitting the filter returns both kinds under the existing permission/visibility
-rules. Web size/color options use the same kind filter as the product list.
-Invalid kinds, including null on writes, are rejected; API error messages are
-Vietnamese. Admin create accepts optional kind (default PRODUCT), and update
-accepts optional kind (omission keeps the current value).
+Optional `allowFreeAccessory` filtering is supported by `GET /products`,
+`GET /products/lookup`, `GET /web/products` (including SQL price sorting), and
+`GET /web/catalog/filters`. True and false are distinct filters; omission means
+all products under existing authorization/visibility rules. Query strings accept
+only `true`/`false`; JSON writes accept actual booleans and reject null.
+Create defaults to false; an omitted update preserves the stored value.
 
-The canonical vocabulary lives in Catalog domain and is exposed through
-`public/product-kind.ts`. The additive API change is exported to OpenAPI; Admin
-kind controls follow in RP07 and complimentary accessory selection in RP08–RP10.
-No pricing or deposit exemption is inferred from ACCESSORY in RP06.
+Only a booking line explicitly selected as `FREE_ACCESSORY` receives the
+exemption, within its order allowance. The same product remains normally paid
+when selected as `PAID`. Both frontend contracts are regenerated from OpenAPI.
+The removed `kind` API parameter/field has no ongoing catalog meaning.
 
 ## Consumer audit
 

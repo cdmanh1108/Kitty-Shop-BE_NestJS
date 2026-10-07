@@ -42,32 +42,30 @@ erDiagram
 
 Never replace this with a simple `products.quantity`. Individual pieces have different booking, cleaning, repair, damage and loss states.
 
-### Product and accessory classification (RP06)
+### Complimentary accessory eligibility
 
-`products.kind` is a required `VARCHAR(20)` with default `PRODUCT` and a database
-CHECK allowing only `PRODUCT` (Sản phẩm) or `ACCESSORY` (Phụ kiện). Migration
-`202610060001_product_kind` classifies every existing product as `PRODUCT`; names
-and categories are never used to infer the kind. Apply the committed migration
-before running the updated backend (`npm run db:migrate`).
+`products.allow_free_accessory` is a required boolean, default false. It is the
+sole catalog eligibility for complimentary selection, independent of category.
+Variants and inventory inherit it; normal paid rental remains available whether
+it is enabled or disabled. Updating without the field preserves its current value.
 
-Kind belongs to Product. ProductVariant and InventoryItem inherit it through
-their product relation; they do not store an independent copy. A shop-scoped
-kind/visibility index supports catalog filtering. Creating a product without
-kind retains the default; updating without kind preserves its current value.
-
-An accessory remains a normally paid, stocked rental item. Catalog kind alone
-does not waive price, deposit, late fees or damage/loss compensation. RP08
-introduces the separate complimentary rental-line role and entitlement checks;
-changing catalog kind does not rewrite existing order or pricing snapshots.
+Migration `202610070001_free_accessory_eligibility` backfills previous ACCESSORY
+products to true, then removes `products.kind`, its CHECK and index. A shop-scoped
+eligibility/visibility index replaces that index. Existing migration files remain
+unchanged. Apply migrations before starting the new backend and deploy matching
+Admin/Web contracts together.
 
 ## Complimentary accessories (RP08)
 
-Migration `202610060002_rental_accessory_billing` adds `billing_role` (default
-`PAID`) and `product_kind_snapshot` (default `PRODUCT`) to rental lines. Existing
-history stays paid; zero prices and current catalog classification never infer a
-historical free entitlement. New bookings capture the canonical Catalog kind in
-their Serializable transaction. Database CHECKs constrain both vocabularies and
-require free accessories to have zero rental, line total, deposit and discount.
+Migration `202610060002_rental_accessory_billing` originally added `billing_role`
+and the legacy `product_kind_snapshot`. Existing values remain untouched.
+The eligibility migration makes that legacy field nullable without a default;
+new bookings leave it null and capture `allow_free_accessory_snapshot` from the
+catalog in the Serializable transaction. Order roles and pricing never derive
+from current catalog data. Database CHECKs require a free line to have captured
+true eligibility (or the retained legacy accessory snapshot for old orders),
+and zero rental, line total, deposit and discount. False eligibility cannot pass
+through a null SQL comparison.
 
 Entitlement is one free physical accessory per paid physical unit, pooled within
 the order. Paid standalone accessories count; free lines do not count toward
@@ -77,7 +75,7 @@ the existing PostgreSQL allocation exclusion constraint protects both line roles
 against concurrent/overlapping bookings. Duplicate variant/role lines are merged
 on Web; paid/free lines remain distinct and use disjoint physical inventory IDs.
 
-Apply the migration after RP06 and before starting the updated booking writers.
+Apply all committed migrations before starting the updated booking writers.
 Prisma Client must be regenerated after the schema change. See
 [Accessory rentals](RENTAL_ACCESSORIES.md) for the API and recovery contract.
 

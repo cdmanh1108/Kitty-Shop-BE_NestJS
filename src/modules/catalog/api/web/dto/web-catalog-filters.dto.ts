@@ -1,13 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsIn, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
-import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/domain/product-kind';
+import { IsBoolean, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
 
 export class WebCatalogFiltersQueryDto {
-  @ApiPropertyOptional({ enum: Object.values(PRODUCT_KIND) })
-  @ValidateIf((_object: WebCatalogFiltersQueryDto, value: unknown) => value !== undefined)
-  @IsIn(Object.values(PRODUCT_KIND), { message: 'Loại sản phẩm phải là Sản phẩm hoặc Phụ kiện.' })
-  kind?: ProductKind;
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: 'Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.',
+  })
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @Transform(({ value }: { value: unknown }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí phải là giá trị đúng hoặc sai.' })
+  allowFreeAccessory?: boolean;
 
   @ApiPropertyOptional({
     description: 'Giới hạn lựa chọn theo slug, mã hoặc id danh mục',

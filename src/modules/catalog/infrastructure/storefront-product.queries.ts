@@ -2,7 +2,6 @@ import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { StorefrontProductDetails, StorefrontProductItem } from '../domain/catalog.models';
-import { readProductKind } from './product-kind.mapper';
 import {
   extractRentalPrices,
   storefrontProductBaseWhere,
@@ -45,7 +44,7 @@ export async function findStorefrontProductBySlug(
     select: {
       id: true,
       code: true,
-      kind: true,
+      allowFreeAccessory: true,
       slug: true,
       name: true,
       categoryId: true,
@@ -122,7 +121,7 @@ export async function findStorefrontProductBySlug(
   return {
     id: product.id,
     code: product.code,
-    kind: readProductKind(product.kind),
+    allowFreeAccessory: product.allowFreeAccessory,
     slug: product.slug,
     name: product.name,
     categoryId: product.categoryId,

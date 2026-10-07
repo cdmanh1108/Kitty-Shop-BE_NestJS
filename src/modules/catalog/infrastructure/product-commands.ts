@@ -19,8 +19,6 @@ import {
   CatalogSizeError,
 } from '../domain/catalog-errors';
 import { generateProductSlug, normalizeProductSlug } from '../domain/product-slug';
-import { PRODUCT_KIND, requireProductKind } from '../domain/product-kind';
-import { readProductKind } from './product-kind.mapper';
 
 function handleProductUniqueViolation(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -107,7 +105,7 @@ export async function createProduct(
           shopId,
           categoryId: input.categoryId,
           code: input.code,
-          kind: requireProductKind(input.kind === undefined ? PRODUCT_KIND.PRODUCT : input.kind),
+          allowFreeAccessory: input.allowFreeAccessory ?? false,
           name: input.name,
           slug,
           description: input.description,
@@ -138,7 +136,7 @@ export async function createProduct(
           media: true,
         },
       });
-      return { ...created, kind: readProductKind(created.kind) };
+      return created;
     });
   } catch (error) {
     handleProductUniqueViolation(error);
@@ -233,7 +231,8 @@ export async function updateProduct(
         await assertActiveCategory(tx, shopId, input.categoryId);
       }
       const data: Prisma.ProductUpdateInput = {};
-      if (input.kind !== undefined) data.kind = requireProductKind(input.kind);
+      if (input.allowFreeAccessory !== undefined)
+        data.allowFreeAccessory = input.allowFreeAccessory;
       if (input.status === 'ARCHIVED') {
         await assertProductCanArchive(tx, shopId, id);
         data.archivedAt = new Date();
@@ -261,7 +260,7 @@ export async function updateProduct(
       if (input.status !== undefined) data.status = input.status;
 
       const updated = await tx.product.update({ where: { id }, data });
-      return { ...updated, kind: readProductKind(updated.kind) };
+      return updated;
     });
   } catch (error) {
     handleProductUniqueViolation(error);

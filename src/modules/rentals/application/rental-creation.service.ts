@@ -38,7 +38,7 @@ import { RentalOverlapError } from '../domain/rental-errors';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type { CreateRentalOrderInput } from './rental.contracts';
 import {
-  assertFreeAccessoryKind,
+  assertFreeAccessoryAllowed,
   rentalBillingRole,
   rentalSelectionKey,
 } from '../domain/rental-accessories';
@@ -150,7 +150,7 @@ export class RentalCreationService {
         if (!variant)
           throw new RentalNotFoundError(`Biến thể ${item.variantId} không được phép cho thuê.`);
         const billingRole = rentalBillingRole(item.billingRole);
-        assertFreeAccessoryKind(billingRole, variant.productKind);
+        assertFreeAccessoryAllowed(billingRole, variant.allowFreeAccessory);
         const pricing = resolveRentalLinePricing({
           durationDays,
           billableQuantity,

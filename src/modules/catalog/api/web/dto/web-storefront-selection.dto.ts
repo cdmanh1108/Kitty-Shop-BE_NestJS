@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, getSchemaPath } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/domain/product-kind';
 import {
   ArrayMaxSize,
   IsArray,
@@ -50,7 +49,7 @@ export class WebStorefrontSelectionResolveReqDto {
 }
 
 export class WebStorefrontSelectionProductDto {
-  @ApiProperty({ enum: Object.values(PRODUCT_KIND) }) kind!: ProductKind;
+  @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
   @ApiProperty({ format: 'uuid' })
   id!: string;
 

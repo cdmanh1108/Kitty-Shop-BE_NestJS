@@ -889,16 +889,12 @@
         "operationId": "getWebProducts",
         "parameters": [
           {
-            "name": "kind",
+            "name": "allowFreeAccessory",
             "required": false,
             "in": "query",
-            "description": "Loại sản phẩm; bỏ qua để lấy tất cả.",
+            "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "PRODUCT",
-                "ACCESSORY"
-              ]
+              "type": "boolean"
             }
           },
           {
@@ -1013,15 +1009,12 @@
         "operationId": "getWebCatalogFilters",
         "parameters": [
           {
-            "name": "kind",
+            "name": "allowFreeAccessory",
             "required": false,
             "in": "query",
+            "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.",
             "schema": {
-              "type": "string",
-              "enum": [
-                "PRODUCT",
-                "ACCESSORY"
-              ]
+              "type": "boolean"
             }
           },
           {
@@ -2155,12 +2148,8 @@
       "WebProductDetailDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
+          "allowFreeAccessory": {
+            "type": "boolean"
           },
           "id": {
             "type": "string",
@@ -2238,7 +2227,7 @@
           }
         },
         "required": [
-          "kind",
+          "allowFreeAccessory",
           "id",
           "code",
           "slug",
@@ -2805,12 +2794,8 @@
       "WebProductListItemDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
+          "allowFreeAccessory": {
+            "type": "boolean"
           },
           "id": {
             "type": "string",
@@ -3736,12 +3721,8 @@
       "WebStorefrontSelectionProductDto": {
         "type": "object",
         "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
+          "allowFreeAccessory": {
+            "type": "boolean"
           },
           "id": {
             "type": "string",
@@ -3757,7 +3738,7 @@
           }
         },
         "required": [
-          "kind",
+          "allowFreeAccessory",
           "id",
           "slug",
           "name"

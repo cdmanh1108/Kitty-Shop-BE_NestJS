@@ -1,6 +1,5 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import type { PrismaService } from '@database/prisma/prisma.service';
-import { readProductKind } from './product-kind.mapper';
 import type {
   StorefrontSelectionInput,
   StorefrontSelectionResolution,
@@ -70,7 +69,7 @@ export async function resolveStorefrontSelections(
             id: true,
             slug: true,
             name: true,
-            kind: true,
+            allowFreeAccessory: true,
             media: productMediaSelect,
             variants: {
               where: { shopId: input.shopId, ...storefrontVariantEligibility },
@@ -107,7 +106,7 @@ export async function resolveStorefrontSelections(
                 id: true,
                 slug: true,
                 name: true,
-                kind: true,
+                allowFreeAccessory: true,
                 media: productMediaSelect,
               },
             },
@@ -138,7 +137,7 @@ export async function resolveStorefrontSelections(
           id: variant.product.id,
           slug: variant.product.slug,
           name: variant.product.name,
-          kind: readProductKind(variant.product.kind),
+          allowFreeAccessory: variant.product.allowFreeAccessory,
         },
         variant: {
           id: variant.id,
@@ -163,7 +162,7 @@ export async function resolveStorefrontSelections(
           id: product.id,
           slug: product.slug,
           name: product.name,
-          kind: readProductKind(product.kind),
+          allowFreeAccessory: product.allowFreeAccessory,
         },
         imageUrl: productImageUrl,
       };
@@ -180,7 +179,7 @@ export async function resolveStorefrontSelections(
         id: product.id,
         slug: product.slug,
         name: product.name,
-        kind: readProductKind(product.kind),
+        allowFreeAccessory: product.allowFreeAccessory,
       },
       variant: {
         id: variant.id,

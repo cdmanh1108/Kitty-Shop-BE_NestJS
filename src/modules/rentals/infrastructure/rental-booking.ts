@@ -37,8 +37,7 @@ import {
 } from '../domain/rental-pricing-snapshot';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { RENTAL_PRICING_VERSION } from '../domain/rental-pricing-version';
-import { assertFreeAccessoryKind, rentalBillingRole } from '../domain/rental-accessories';
-import { PRODUCT_KIND, type ProductKind } from '@modules/catalog/public/product-kind';
+import { assertFreeAccessoryAllowed, rentalBillingRole } from '../domain/rental-accessories';
 
 export async function createOrder(
   prisma: PrismaService,
@@ -78,7 +77,7 @@ export async function createOrder(
       const billableQuantity = rentalBillableQuantity(data.lines);
       for (const line of data.lines)
         assertRentalPricingLineSnapshot(line, durationDays, billableQuantity);
-      const productKinds = await assertRentalCatalogLines(tx, data);
+      const accessoryEligibility = await assertRentalCatalogLines(tx, data);
 
       for (const line of data.lines) {
         await assertInventoryRentable(tx, {
@@ -129,8 +128,8 @@ export async function createOrder(
 
       for (const line of data.lines) {
         const snapshot = line.pricingSnapshot;
-        const productKindSnapshot = productKinds.get(line.variantId);
-        if (!productKindSnapshot) throw new RentalInventoryUnavailableError();
+        const allowFreeAccessorySnapshot = accessoryEligibility.get(line.variantId);
+        if (allowFreeAccessorySnapshot === undefined) throw new RentalInventoryUnavailableError();
         const pricingSnapshot =
           snapshot.version === RENTAL_PRICING_VERSION.CYCLE
             ? { ...snapshot, policy: { ...snapshot.policy } }
@@ -143,7 +142,7 @@ export async function createOrder(
             variantId: line.variantId,
             quantity: line.quantity,
             billingRole: rentalBillingRole(line.billingRole),
-            productKindSnapshot,
+            allowFreeAccessorySnapshot,
             rentalStartAt: data.rentalStartAt,
             rentalEndAt: data.rentalEndAt,
             productNameSnapshot: line.productName,
@@ -241,7 +240,7 @@ export async function createOrder(
 async function assertRentalCatalogLines(
   tx: Prisma.TransactionClient,
   data: CreateRentalOrderData,
-): Promise<Map<string, ProductKind>> {
+): Promise<Map<string, boolean>> {
   // Revalidate Catalog-owned eligibility in the serializable booking transaction
   // so stale storefront selections cannot create a Rental allocation.
   const expectedProductByVariant = new Map<string, string>();
@@ -264,7 +263,7 @@ async function assertRentalCatalogLines(
         ...(data.storefrontEligibility ? storefrontProductEligibility : {}),
       },
     },
-    select: { id: true, productId: true, product: { select: { kind: true } } },
+    select: { id: true, productId: true, product: { select: { allowFreeAccessory: true } } },
   });
   if (
     eligibleVariants.length !== expectedProductByVariant.size ||
@@ -274,22 +273,16 @@ async function assertRentalCatalogLines(
   ) {
     throw new RentalInventoryUnavailableError();
   }
-  const productKinds = new Map<string, ProductKind>();
+  const accessoryEligibility = new Map<string, boolean>();
   for (const variant of eligibleVariants) {
-    const kind = variant.product.kind;
-    if (kind !== PRODUCT_KIND.PRODUCT && kind !== PRODUCT_KIND.ACCESSORY)
-      throw new RentalInvariantError(
-        'INVALID_RENTAL_PRODUCT_KIND',
-        'Loại sản phẩm cho thuê không hợp lệ.',
-      );
-    productKinds.set(variant.id, kind);
+    accessoryEligibility.set(variant.id, variant.product.allowFreeAccessory);
   }
   for (const line of data.lines) {
-    const kind = productKinds.get(line.variantId);
-    if (!kind) throw new RentalInventoryUnavailableError();
-    assertFreeAccessoryKind(rentalBillingRole(line.billingRole), kind);
+    const allowed = accessoryEligibility.get(line.variantId);
+    if (allowed === undefined) throw new RentalInventoryUnavailableError();
+    assertFreeAccessoryAllowed(rentalBillingRole(line.billingRole), allowed);
   }
-  return productKinds;
+  return accessoryEligibility;
 }
 
 /**
