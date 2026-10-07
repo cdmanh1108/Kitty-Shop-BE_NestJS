@@ -84,6 +84,23 @@ export class WebCatalogController {
     return WebCatalogMapper.toProductListResponse(result);
   }
 
+  @Get('products/latest')
+  @ApiOperation({
+    operationId: 'getWebLatestProducts',
+    summary: 'Tối đa 8 sản phẩm mới nhất không cho phép thuê kèm miễn phí',
+    description:
+      'Dành cho bộ sưu tập trang chủ. Chỉ lấy sản phẩm công khai, đang hoạt động, cho thuê và có allowFreeAccessory=false; sắp xếp ngày tạo giảm dần. Không nhận bộ lọc hoặc phân trang.',
+  })
+  @ApiOkResponse({
+    type: WebProductListResDto,
+    description: 'Tối đa 8 sản phẩm mới nhất; metadata cố định trang 1 và giới hạn 8.',
+  })
+  async listLatestProducts(): Promise<WebProductListResDto> {
+    const shopId = await this.shopResolver.resolveShopId();
+    const result = await this.catalogService.listLatestProducts(shopId);
+    return WebCatalogMapper.toProductListResponse(result);
+  }
+
   @Get('catalog/filters')
   @ApiOperation({
     operationId: 'getWebCatalogFilters',

@@ -57,6 +57,16 @@ export class WebCatalogService {
     });
   }
 
+  async listLatestProducts(shopId: string): Promise<StorefrontProductPage> {
+    return this.repository.listStorefrontProducts({
+      shopId,
+      page: 1,
+      limit: 8,
+      sort: 'newest',
+      allowFreeAccessory: false,
+    });
+  }
+
   async getProduct(shopId: string, slug: string): Promise<StorefrontProductDetails> {
     const product = await this.repository.findStorefrontProductBySlug(shopId, slug);
     if (!product) {

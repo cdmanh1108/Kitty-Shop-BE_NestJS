@@ -25,6 +25,7 @@ All endpoints are mounted under the `/web` prefix:
 
 - **`GET /api/v1/web/categories`**: Lists active categories for storefront navigation.
 - **`GET /api/v1/web/products`**: Lists rentable, active products with primary thumbnail, sizes, colors, and rate options.
+- **`GET /api/v1/web/products/latest`**: Returns up to 8 newest public, active, rentable products with `allowFreeAccessory=false` for the home collection. Filtering happens before the database limit, ordered by creation time descending with ID descending as a stable tie-breaker. No caller-controlled filters or pagination; the standard list response retains `{ items, meta }` with page 1 and limit 8.
 - **`GET /api/v1/web/products/:slug`**: Retrieves product details, image gallery, description, available variants, and rental rates.
 
 ### 3.2 Availability & Quoting

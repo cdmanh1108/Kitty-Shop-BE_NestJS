@@ -1004,6 +1004,30 @@
         "x-api-surface": "web"
       }
     },
+    "/web/products/latest": {
+      "get": {
+        "description": "Dành cho bộ sưu tập trang chủ. Chỉ lấy sản phẩm công khai, đang hoạt động, cho thuê và có allowFreeAccessory=false; sắp xếp ngày tạo giảm dần. Không nhận bộ lọc hoặc phân trang.",
+        "operationId": "getWebLatestProducts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Tối đa 8 sản phẩm mới nhất; metadata cố định trang 1 và giới hạn 8.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebProductListResDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tối đa 8 sản phẩm mới nhất không cho phép thuê kèm miễn phí",
+        "tags": [
+          "Web - Catalog"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/catalog/filters": {
       "get": {
         "operationId": "getWebCatalogFilters",
