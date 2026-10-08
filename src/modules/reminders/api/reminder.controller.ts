@@ -4,24 +4,16 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
-  ApiPropertyOptional,
   ApiTags,
 } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
 import { ReminderService } from '../application/reminder.service';
-import { ReminderResDto } from './reminder.dto';
-
-class ReminderQueryDto {
-  @ApiPropertyOptional()
-  @IsString({ message: 'Trạng thái phải là chuỗi ký tự.' })
-  @IsOptional()
-  status?: string;
-}
+import { ReminderPageResDto, ReminderResDto } from './reminder.dto';
+import { ReminderQueryDto, toReminderListQuery } from './reminder-query.dto';
 
 @ApiSurface('admin')
 @ApiTags('Reminders')
@@ -32,9 +24,9 @@ export class ReminderController {
 
   @Get()
   @Permissions(PERMISSIONS.REMINDERS_VIEW)
-  @ApiOkResponse({ type: [ReminderResDto] })
+  @ApiOkResponse({ type: ReminderPageResDto })
   list(@CurrentUser() user: CurrentUserType, @Query() query: ReminderQueryDto) {
-    return this.service.list(user, query.status);
+    return this.service.list(user, toReminderListQuery(query));
   }
 
   @Post('refresh')

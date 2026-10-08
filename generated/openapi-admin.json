@@ -4643,7 +4643,60 @@
             "required": false,
             "in": "query",
             "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "DISMISSED",
+                "RESOLVED",
+                "all"
+              ]
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PICKUP_TODAY",
+                "RETURN_TODAY",
+                "RETURN_SOON",
+                "OVERDUE",
+                "PAYMENT_DUE",
+                "DEPOSIT_DUE"
+              ]
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo nội dung, khách hoặc mã đơn.",
+            "schema": {
+              "maxLength": 100,
               "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10,
+              "type": "number"
             }
           }
         ],
@@ -4653,10 +4706,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ReminderResDto"
-                  }
+                  "$ref": "#/components/schemas/ReminderPageResDto"
                 }
               }
             }
@@ -8165,6 +8215,28 @@
           "status"
         ]
       },
+      "ReminderPageResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReminderResDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ReminderSummaryResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta",
+          "summary"
+        ]
+      },
       "ReminderResDto": {
         "type": "object",
         "properties": {
@@ -10534,6 +10606,38 @@
         },
         "required": [
           "orderNumber"
+        ]
+      },
+      "ReminderSummaryResDto": {
+        "type": "object",
+        "properties": {
+          "pickupToday": {
+            "type": "number",
+            "description": "Số lời nhắc nhận đồ trong ngày."
+          },
+          "returnToday": {
+            "type": "number",
+            "description": "Số lời nhắc trả đồ trong ngày."
+          },
+          "overdue": {
+            "type": "number",
+            "description": "Số lời nhắc quá hạn."
+          },
+          "paymentDue": {
+            "type": "number",
+            "description": "Số lời nhắc còn thiếu tiền."
+          },
+          "depositDue": {
+            "type": "number",
+            "description": "Số lời nhắc chưa đủ tiền cọc."
+          }
+        },
+        "required": [
+          "pickupToday",
+          "returnToday",
+          "overdue",
+          "paymentDue",
+          "depositDue"
         ]
       },
       "ReminderCustomerResDto": {

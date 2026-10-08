@@ -1,6 +1,8 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { paginateMeta } from '@common/types/pagination';
 import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/public/payment-status';
 import { RENTAL_STATUS } from '@modules/rentals/public/rental-status';
 import type { ReminderRepository } from '../domain/reminder.repository';
@@ -121,15 +123,79 @@ export class PrismaReminderRepository implements ReminderRepository {
     return result.count;
   }
 
-  list(shopId: string, status?: string) {
-    return this.prisma.reminder.findMany({
-      where: { shopId, ...(status ? { status } : {}) },
-      include: {
-        customer: { select: { fullName: true, phone: true } },
-        order: { select: { orderNumber: true, status: true } },
-      },
-      orderBy: [{ priority: 'desc' }, { scheduledFor: 'asc' }],
-      take: 500,
+  async list(input: Parameters<ReminderRepository['list']>[0]) {
+    const search = input.search?.trim();
+    const statusFilter = input.status ? Prisma.sql`AND r.status = ${input.status}` : Prisma.empty;
+    const typeFilter = input.type ? Prisma.sql`AND r.type = ${input.type}` : Prisma.empty;
+    const searchFilter = search
+      ? Prisma.sql`AND (
+          strpos(unaccent(lower(r.title)), unaccent(lower(${search}))) > 0
+          OR strpos(unaccent(lower(coalesce(r.content, ''))), unaccent(lower(${search}))) > 0
+          OR strpos(unaccent(lower(coalesce(c.full_name, ''))), unaccent(lower(${search}))) > 0
+          OR strpos(unaccent(lower(coalesce(c.phone, ''))), unaccent(lower(${search}))) > 0
+          OR strpos(unaccent(lower(coalesce(o.order_number, ''))), unaccent(lower(${search}))) > 0
+        )`
+      : Prisma.empty;
+    const searchJoins = search
+      ? Prisma.sql`LEFT JOIN customers c ON c.id = r.customer_id AND c.shop_id = r.shop_id
+                   LEFT JOIN rental_orders o ON o.id = r.order_id AND o.shop_id = r.shop_id`
+      : Prisma.empty;
+    const fromAndFilters = Prisma.sql`
+      FROM reminders r
+      ${searchJoins}
+      WHERE r.shop_id = ${input.shopId}::uuid
+        ${statusFilter}
+        ${typeFilter}
+        ${searchFilter}
+    `;
+
+    return this.prisma.$transaction(async (transaction) => {
+      const [pageRows, countRows, typeCounts] = await Promise.all([
+        transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+          SELECT r.id
+          ${fromAndFilters}
+          ORDER BY r.priority DESC, r.scheduled_for ASC, r.id ASC
+          LIMIT ${input.limit} OFFSET ${(input.page - 1) * input.limit}
+        `),
+        transaction.$queryRaw<Array<{ total: number }>>(Prisma.sql`
+          SELECT count(DISTINCT r.id)::int AS total
+          ${fromAndFilters}
+        `),
+        transaction.$queryRaw<Array<{ type: string; count: number }>>(Prisma.sql`
+          SELECT type, count(*)::int AS count
+          FROM reminders
+          WHERE shop_id = ${input.shopId}::uuid
+            ${input.status ? Prisma.sql`AND status = ${input.status}` : Prisma.empty}
+          GROUP BY type
+        `),
+      ]);
+      const rows = pageRows.length
+        ? await transaction.reminder.findMany({
+            where: { shopId: input.shopId, id: { in: pageRows.map((row) => row.id) } },
+            include: {
+              customer: { select: { fullName: true, phone: true } },
+              order: { select: { orderNumber: true, status: true } },
+            },
+          })
+        : [];
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      const items = pageRows.flatMap((row) => {
+        const item = byId.get(row.id);
+        return item ? [item] : [];
+      });
+      const total = countRows[0]?.total ?? 0;
+      const countByType = new Map(typeCounts.map((row) => [row.type, row.count]));
+      return {
+        items,
+        meta: paginateMeta(input.page, input.limit, total),
+        summary: {
+          pickupToday: countByType.get('PICKUP_TODAY') ?? 0,
+          returnToday: countByType.get('RETURN_TODAY') ?? 0,
+          overdue: countByType.get('OVERDUE') ?? 0,
+          paymentDue: countByType.get('PAYMENT_DUE') ?? 0,
+          depositDue: countByType.get('DEPOSIT_DUE') ?? 0,
+        },
+      };
     });
   }
 

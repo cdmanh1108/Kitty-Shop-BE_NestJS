@@ -10,6 +10,7 @@ import {
 } from '@common/logging/application-logger.port';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
+import type { ReminderListQuery } from './reminder.contracts';
 import { zonedDateKey, zonedDayRange } from '@common/utils/timezone';
 import {
   REMINDER_REPOSITORY,
@@ -71,8 +72,8 @@ export class ReminderService {
     return { refreshed: true };
   }
 
-  list(user: CurrentUser, status?: string) {
-    return this.repository.list(user.shopId, status);
+  list(user: CurrentUser, query: ReminderListQuery) {
+    return this.repository.list({ shopId: user.shopId, ...query });
   }
 
   async dismiss(user: CurrentUser, id: string) {

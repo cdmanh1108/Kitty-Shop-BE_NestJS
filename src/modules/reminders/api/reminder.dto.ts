@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationMetaResDto } from '@common/dto/response.dto';
 
 export class ReminderCustomerResDto {
   @ApiProperty()
@@ -49,4 +50,32 @@ export class ReminderResDto {
 
   @ApiPropertyOptional({ type: ReminderOrderResDto, nullable: true })
   order!: ReminderOrderResDto | null;
+}
+
+export class ReminderSummaryResDto {
+  @ApiProperty({ description: 'Số lời nhắc nhận đồ trong ngày.' })
+  pickupToday!: number;
+
+  @ApiProperty({ description: 'Số lời nhắc trả đồ trong ngày.' })
+  returnToday!: number;
+
+  @ApiProperty({ description: 'Số lời nhắc quá hạn.' })
+  overdue!: number;
+
+  @ApiProperty({ description: 'Số lời nhắc còn thiếu tiền.' })
+  paymentDue!: number;
+
+  @ApiProperty({ description: 'Số lời nhắc chưa đủ tiền cọc.' })
+  depositDue!: number;
+}
+
+export class ReminderPageResDto {
+  @ApiProperty({ type: [ReminderResDto] })
+  items!: ReminderResDto[];
+
+  @ApiProperty({ type: PaginationMetaResDto })
+  meta!: PaginationMetaResDto;
+
+  @ApiProperty({ type: ReminderSummaryResDto })
+  summary!: ReminderSummaryResDto;
 }

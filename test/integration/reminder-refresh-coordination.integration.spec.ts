@@ -47,7 +47,7 @@ function withBlockedFirstPage(
     },
     upsert: (input) => delegate.upsert(input),
     resolveMissing: (shopId, activeKeys) => delegate.resolveMissing(shopId, activeKeys),
-    list: (shopId, status) => delegate.list(shopId, status),
+    list: (input) => delegate.list(input),
     dismiss: (shopId, id, dismissedBy) => delegate.dismiss(shopId, id, dismissedBy),
   };
 }
@@ -196,7 +196,7 @@ describe('Reminder refresh lease coordination', () => {
       candidatePage: secondCandidatePage,
       upsert: (input) => secondRepository.upsert(input),
       resolveMissing: (shopId, activeKeys) => secondRepository.resolveMissing(shopId, activeKeys),
-      list: (shopId, status) => secondRepository.list(shopId, status),
+      list: (input) => secondRepository.list(input),
       dismiss: (shopId, id, dismissedBy) => secondRepository.dismiss(shopId, id, dismissedBy),
     };
     const user: CurrentUser = {

@@ -1,4 +1,4 @@
-import type { ReminderList, ReminderResult } from './reminder.models';
+import type { ReminderPage, ReminderResult, ReminderStatus, ReminderType } from './reminder.models';
 export interface ReminderOrderCandidate {
   id: string;
   orderNumber: string;
@@ -38,6 +38,15 @@ export interface ReminderCandidatePage {
   nextCursor: string | null;
 }
 
+export interface ReminderListCriteria {
+  shopId: string;
+  page: number;
+  limit: number;
+  status?: ReminderStatus;
+  type?: ReminderType;
+  search?: string;
+}
+
 export const REMINDER_REPOSITORY = Symbol('REMINDER_REPOSITORY');
 
 export interface ReminderRepository {
@@ -45,7 +54,7 @@ export interface ReminderRepository {
   candidatePage(input: ReminderCandidatePageRequest): Promise<ReminderCandidatePage>;
   upsert(input: ReminderUpsertData): Promise<void>;
   resolveMissing(shopId: string, activeKeys: string[]): Promise<number>;
-  list(shopId: string, status?: string): Promise<ReminderList>;
+  list(input: ReminderListCriteria): Promise<ReminderPage>;
   dismiss(shopId: string, id: string, dismissedBy: string): Promise<ReminderResult>;
 }
 
