@@ -32,7 +32,6 @@ import {
 } from './dto/web-product.dto';
 import {
   WebResolvedStorefrontSelectionDto,
-  WebSelectionRequiredStorefrontSelectionDto,
   WebStorefrontSelectionResolveReqDto,
   WebStorefrontSelectionResolveResDto,
   WebUnavailableStorefrontSelectionDto,
@@ -43,7 +42,6 @@ import {
 @Public()
 @ApiExtraModels(
   WebResolvedStorefrontSelectionDto,
-  WebSelectionRequiredStorefrontSelectionDto,
   WebUnavailableStorefrontSelectionDto,
 )
 @Controller('web')

@@ -24,8 +24,11 @@ import type {
   WebRentalQuoteInput,
   WebRentalQuoteResult,
 } from './web-rental.contracts';
-import { evaluateWebRentalSelection, resolveWebRentalSelection } from './web-rental-selection';
-import { RentalAuthenticationRequiredError } from './rental.errors';
+import { evaluateWebRentalSelection } from './web-rental-selection';
+import {
+  InvalidRentalItemSelectionError,
+  RentalAuthenticationRequiredError,
+} from './rental.errors';
 import { RentalLoyaltyRewardUnavailableError } from '../domain/rental-errors';
 import { rentalAccessoryAllowance, rentalSelectionKey } from '../domain/rental-accessories';
 import {
@@ -55,21 +58,17 @@ export class WebRentalEvaluationService {
     const policy = await this.policyProvider.getPolicy(shopId);
     assertOnlineRentalDuration(durationDays, policy.rentalPricing);
 
-    const selection = await resolveWebRentalSelection(this.availability, {
+    const variant = await this.availability.getBookableVariant({
       shopId,
-      items: [{ productId: query.productId, variantId: query.variantId, quantity: 1 }],
+      variantId: query.variantId,
       durationDays,
       from,
       until,
+      storefrontEligibility: true,
     });
-    if (!selection.valid) {
-      throwForInvalidWebRentalSelection(selection.reason);
-      return { available: false, availableQuantity: 0 };
-    }
-
-    const demand = selection.demands[0];
-    if (!demand) return { available: false, availableQuantity: 0 };
-    const availableQuantity = demand.variant.availableInventory.length;
+    if (variant && query.productId && variant.productId !== query.productId)
+      throw new InvalidRentalItemSelectionError('productId không khớp với variantId đã chọn.');
+    const availableQuantity = variant?.availableInventory.length ?? 0;
     return { available: availableQuantity > 0, availableQuantity };
   }
 

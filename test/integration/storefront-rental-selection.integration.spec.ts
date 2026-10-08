@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -55,25 +55,23 @@ describe('Storefront rental selection and allocation', () => {
     };
   }
 
-  it('keeps productId-only compatibility only when exactly one eligible variant exists', async () => {
+  it('requires an explicit variant for quotes and order creation', async () => {
     const f = await rentalScenario(prisma);
 
     await expect(
       evaluation.calculateQuote(f.shop.id, {
         ...interval,
-        items: [{ productId: f.product.id, quantity: 1 }],
+        items: [{ productId: f.product.id, quantity: 1 }] as never,
         deliveryMethod: 'self_pickup',
       }),
-    ).resolves.toMatchObject({ available: true, rentalSubtotal: 60000 });
+    ).rejects.toThrow();
 
     await expect(
-      web.createOrder(f.shop.id, createWebOrderInput(f.product.id), 'web-selection-key'),
-    ).resolves.toMatchObject({
-      status: 'reserved',
-    });
+      web.createOrder(f.shop.id, createWebOrderInput(f.product.id) as never, 'web-selection-key'),
+    ).rejects.toThrow();
   });
 
-  it('does not choose a first variant or aggregate stock for a multi-variant product', async () => {
+  it('does not choose a first variant for product-only quote or create input', async () => {
     const f = await rentalScenario(prisma);
     await prisma.productVariant.create({
       data: {
@@ -85,18 +83,15 @@ describe('Storefront rental selection and allocation', () => {
     });
 
     await expect(
-      evaluation.checkAvailability(f.shop.id, { ...interval, productId: f.product.id }),
-    ).resolves.toEqual({ available: false, availableQuantity: 0 });
-    await expect(
       evaluation.calculateQuote(f.shop.id, {
         ...interval,
-        items: [{ productId: f.product.id, quantity: 1 }],
+        items: [{ productId: f.product.id, quantity: 1 }] as never,
         deliveryMethod: 'self_pickup',
       }),
-    ).resolves.toMatchObject({ available: false, rentalSubtotal: 0 });
+    ).rejects.toThrow();
     await expect(
-      web.createOrder(f.shop.id, createWebOrderInput(f.product.id), 'web-selection-key'),
-    ).rejects.toBeInstanceOf(NotFoundException);
+      web.createOrder(f.shop.id, createWebOrderInput(f.product.id) as never, 'web-selection-key'),
+    ).rejects.toThrow();
   });
 
   it('aggregates duplicate explicit demand before quote and allocation', async () => {

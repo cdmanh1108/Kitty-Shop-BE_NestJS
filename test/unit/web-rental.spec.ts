@@ -77,10 +77,9 @@ describe('Web rental use cases', () => {
         }),
       ).rejects.toThrow(InvalidRentalInputError);
       expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
-      expect(availability.findActiveVariantIdsByProduct.mock.calls).toHaveLength(0);
     });
 
-    it('throws Error if pickupDate is equal to or after returnDate', async () => {
+    it('rejects a return date that is before the pickup date', async () => {
       await expect(
         evaluationService.checkAvailability('shop-1', {
           pickupDate: '2026-09-25',
@@ -90,7 +89,7 @@ describe('Web rental use cases', () => {
       ).rejects.toThrow(InvalidRentalInputError);
     });
 
-    it('returns availability and count for a specific variant', async () => {
+    it('returns availability and count for an explicitly selected variant', async () => {
       availability.getBookableVariant.mockResolvedValue({
         id: 'var-1',
         productId: 'prod-1',
@@ -123,47 +122,6 @@ describe('Web rental use cases', () => {
           storefrontEligibility: true,
         }),
       );
-    });
-
-    it('does not aggregate availability across ambiguous product variants', async () => {
-      availability.findActiveVariantIdsByProduct.mockResolvedValue(['v-1', 'v-2']);
-      const result = await evaluationService.checkAvailability('shop-1', {
-        pickupDate: '2026-09-20',
-        returnDate: '2026-09-23',
-        productId: 'prod-1',
-      });
-
-      expect(result).toEqual({ available: false, availableQuantity: 0 });
-      expect(availability.findActiveVariantIdsByProduct.mock.calls[0]).toEqual([
-        'shop-1',
-        'prod-1',
-        true,
-      ]);
-      expect(availability.getBookableVariant.mock.calls).toHaveLength(0);
-    });
-
-    it('uses productId as a compatibility alias only for one eligible variant', async () => {
-      availability.findActiveVariantIdsByProduct.mockResolvedValue(['var-1']);
-      availability.getBookableVariant.mockResolvedValue({
-        id: 'var-1',
-        productId: 'prod-1',
-        variantCode: 'DR-S',
-        productName: 'Dress',
-        allowFreeAccessory: false,
-        sizeName: null,
-        colorName: null,
-        ratePrice: null,
-        depositPerItem: 0,
-        availableInventory: [{ id: 'inv-1', sku: 'SKU-1' }],
-      });
-
-      await expect(
-        evaluationService.checkAvailability('shop-1', {
-          pickupDate: '2026-09-20',
-          returnDate: '2026-09-23',
-          productId: 'prod-1',
-        }),
-      ).resolves.toEqual({ available: true, availableQuantity: 1 });
     });
   });
 

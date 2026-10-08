@@ -15,11 +15,7 @@ import {
   Matches,
   Max,
   Min,
-  Validate,
   ValidateIf,
-  ValidatorConstraint,
-  type ValidationArguments,
-  type ValidatorConstraintInterface,
   ValidateNested,
 } from 'class-validator';
 import {
@@ -27,28 +23,15 @@ import {
   WEB_RENTAL_MAX_QUANTITY_PER_ITEM,
 } from '../../../application/web-rental-input-validation';
 
-@ValidatorConstraint({ name: 'webRentalSelection', async: false })
-class WebRentalSelectionConstraint implements ValidatorConstraintInterface {
-  validate(_: unknown, args: ValidationArguments): boolean {
-    const value = args.object as { productId?: unknown; variantId?: unknown };
-    return value.productId !== undefined || value.variantId !== undefined;
-  }
-
-  defaultMessage(): string {
-    return 'Vui lòng cung cấp productId hoặc variantId.';
-  }
-}
-
 export class WebAvailabilityQueryDto {
-  @ApiPropertyOptional({ format: 'uuid', description: 'ID của sản phẩm hoặc biến thể' })
-  @ValidateIf((_: WebAvailabilityQueryDto, value: unknown) => value !== undefined)
+  @ApiPropertyOptional({ format: 'uuid', description: 'ID sản phẩm dùng để xác nhận phân loại.' })
+  @IsOptional()
   @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
   productId?: string;
 
-  @ApiPropertyOptional({ format: 'uuid', description: 'ID của biến thể cụ thể' })
-  @ValidateIf((_: WebAvailabilityQueryDto, value: unknown) => value !== undefined)
-  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
-  variantId?: string;
+  @ApiProperty({ format: 'uuid', description: 'ID phân loại đã chọn.' })
+  @IsUUID(undefined, { message: 'Mã phân loại phải là UUID hợp lệ.' })
+  variantId!: string;
 
   @ApiProperty({ example: '2026-09-20', format: 'date', description: 'Ngày nhận (YYYY-MM-DD)' })
   @IsString()
@@ -58,7 +41,6 @@ export class WebAvailabilityQueryDto {
   @ApiProperty({ example: '2026-09-23', format: 'date', description: 'Ngày trả (YYYY-MM-DD)' })
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'returnDate phải có định dạng YYYY-MM-DD.' })
-  @Validate(WebRentalSelectionConstraint)
   returnDate!: string;
 }
 
@@ -81,13 +63,12 @@ export class WebRentalItemInputDto {
     message: 'Vai trò tính tiền của món thuê không hợp lệ.',
   })
   billingRole?: RentalBillingRole;
-  @ApiPropertyOptional({ format: 'uuid', description: 'ID biến thể sản phẩm' })
-  @ValidateIf((_: WebRentalItemInputDto, value: unknown) => value !== undefined)
+  @ApiProperty({ format: 'uuid', description: 'ID phân loại đã chọn' })
   @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
-  variantId?: string;
+  variantId!: string;
 
   @ApiPropertyOptional({ format: 'uuid', description: 'ID sản phẩm' })
-  @ValidateIf((_: WebRentalItemInputDto, value: unknown) => value !== undefined)
+  @IsOptional()
   @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
   productId?: string;
 
@@ -95,7 +76,6 @@ export class WebRentalItemInputDto {
   @IsInt()
   @Min(1)
   @Max(WEB_RENTAL_MAX_QUANTITY_PER_ITEM)
-  @Validate(WebRentalSelectionConstraint)
   quantity!: number;
 }
 

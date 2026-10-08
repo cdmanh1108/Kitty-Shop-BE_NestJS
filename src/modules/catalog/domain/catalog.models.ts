@@ -333,14 +333,10 @@ export interface StorefrontProductListCriteria {
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
 }
 
-/**
- * A selected cart identity. `productId` remains an explicitly documented
- * compatibility alias; a variant is selected only when the C09 rules can
- * prove that the product has exactly one eligible variant.
- */
+/** A selected cart identity always names the exact variant chosen by the visitor. */
 export interface StorefrontSelectionInput {
   productId?: string;
-  variantId?: string;
+  variantId: string;
   quantity: number;
 }
 
@@ -365,13 +361,6 @@ export type StorefrontSelectionResolution =
       quantity: number;
       product: StorefrontSelectedProduct;
       variant: StorefrontSelectedVariant;
-      imageUrl: string | null;
-    }
-  | {
-      status: 'SELECTION_REQUIRED';
-      index: number;
-      quantity: number;
-      product: StorefrontSelectedProduct;
       imageUrl: string | null;
     }
   | {

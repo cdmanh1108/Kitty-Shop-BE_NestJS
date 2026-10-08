@@ -4,16 +4,14 @@
 
 C25 validates the Web availability, quote, and order-create inputs before
 catalog selection, policy pricing, customer resolution, or an idempotency claim.
-It does not change payment-method handling (C26), stock eligibility (C08/C09),
-customer resolution (C13), or idempotency semantics (C14).
+The availability endpoint requires a selected variant. It does not change
+payment-method handling (C26), stock eligibility (C08/C09), customer resolution
+(C13), or idempotency semantics (C14).
 
 ## Selection and limits
 
-`productId` and `variantId` are UUIDs when supplied. A request may supply either
-one, or both: the C09 resolver accepts product-only only when it resolves to
-exactly one public eligible variant, and accepts a pair only when the variant
-belongs to that product. A mismatched pair is a `400`; unavailable or ambiguous
-public selections retain their endpoint-specific availability/not-found behavior.
+Each rental line must provide a `variantId`. `productId` is optional and, when
+provided, must match the selected variant's parent. A mismatch is a `400`.
 
 The following are new technical resource limits, not catalog, inventory, or
 pricing policy:
@@ -22,11 +20,12 @@ pricing policy:
 | ---------------------------------------------------------------- | -------------: |
 | Raw item lines                                                   |             20 |
 | Quantity per line                                                |             20 |
-| Total quantity, including duplicate lines before/after C09 merge |             50 |
+| Total quantity, including duplicate lines before/after merge     |             50 |
 | Delivery address / social contact text                           | 500 characters |
 
 Quantities remain required integers; the API never defaults an omitted quantity
-to one. Duplicate variant lines remain supported and are merged by C09.
+to one. Duplicate variant lines remain supported and are merged before pricing
+and allocation.
 
 ## Dates and delivery
 

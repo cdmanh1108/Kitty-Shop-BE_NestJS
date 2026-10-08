@@ -16,16 +16,6 @@ export const RENTAL_AVAILABILITY_READER = Symbol('RENTAL_AVAILABILITY_READER');
 export interface RentalAvailabilityReader {
   getBookableVariant(input: RentalGetBookableVariantData): Promise<BookableVariant | null>;
   getBookableVariants(input: RentalGetBookableVariantsData): Promise<BookableVariant[]>;
-  findActiveVariantIdsByProduct(
-    shopId: string,
-    productId: string,
-    storefrontEligibility?: boolean,
-  ): Promise<string[]>;
-  findActiveVariantIdsByProducts(
-    shopId: string,
-    productIds: readonly string[],
-    storefrontEligibility?: boolean,
-  ): Promise<Record<string, string[]>>;
 }
 
 export interface RentalGetBookableVariantData {

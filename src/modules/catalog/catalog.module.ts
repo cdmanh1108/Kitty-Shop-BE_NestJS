@@ -13,6 +13,7 @@ import { ColorService } from './application/color.service';
 import { SizeService } from './application/size.service';
 import { InventoryService } from './application/inventory.service';
 import { ProductService } from './application/product.service';
+import { ProductMediaService } from './application/product-media.service';
 import { WebCatalogService } from './application/web-catalog.service';
 import { CATALOG_CATEGORY_REPOSITORY } from './domain/catalog-category.repository';
 import { CATALOG_COLOR_REPOSITORY } from './domain/catalog-color.repository';
@@ -40,6 +41,7 @@ import { PrismaCatalogRepository } from './infrastructure/prisma-catalog.reposit
     ColorService,
     SizeService,
     ProductService,
+    ProductMediaService,
     InventoryService,
     WebCatalogService,
     PrismaCatalogRepository,

@@ -30,6 +30,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ProductService } from '../../application/product.service';
+import { ProductMediaService } from '../../application/product-media.service';
 import {
   AddVariantReqDto,
   CreateProductReqDto,
@@ -63,7 +64,10 @@ import { ProductMediaUploadInterceptor } from './product-media-upload.intercepto
 @ApiBearerAuth('access-token')
 @Controller('admin')
 export class AdminProductController {
-  constructor(private readonly service: ProductService) {}
+  constructor(
+    private readonly service: ProductService,
+    private readonly mediaService: ProductMediaService,
+  ) {}
 
   @Get('products')
   @Permissions(PERMISSIONS.CATALOG_VIEW)
@@ -206,7 +210,7 @@ export class AdminProductController {
     @Param('id') id: string,
     @Body() body: ProductMediaReqDto,
   ) {
-    return this.service.addProductMedia(user, id, toProductMediaInput(body));
+    return this.mediaService.addProductMedia(user, id, toProductMediaInput(body));
   }
 
   @Post('products/:id/media/upload')
@@ -242,7 +246,7 @@ export class AdminProductController {
     @UploadedFile() file: { buffer: Buffer; mimetype: string } | undefined,
     @Body() body: ProductMediaUploadReqDto,
   ) {
-    return this.service.uploadProductMedia(
+    return this.mediaService.uploadProductMedia(
       user,
       id,
       toProductMediaUploadInput(body, file && { buffer: file.buffer, mimetype: file.mimetype }),
@@ -257,7 +261,7 @@ export class AdminProductController {
     @Param('id') id: string,
     @Param('mediaId') mediaId: string,
   ) {
-    return this.service.removeProductMedia(user, id, mediaId);
+    return this.mediaService.removeProductMedia(user, id, mediaId);
   }
 
   @Patch('products/:id/media/:mediaId/primary')
@@ -270,6 +274,6 @@ export class AdminProductController {
     @Param('id') id: string,
     @Param('mediaId') mediaId: string,
   ) {
-    return this.service.setPrimaryProductMedia(user, id, mediaId);
+    return this.mediaService.setPrimaryProductMedia(user, id, mediaId);
   }
 }

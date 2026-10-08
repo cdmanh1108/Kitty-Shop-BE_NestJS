@@ -11,8 +11,6 @@ export function rentalAvailabilityReaderMock(): jest.Mocked<RentalAvailabilityRe
   const reader: jest.Mocked<RentalAvailabilityReader> = {
     getBookableVariant: jest.fn(),
     getBookableVariants: jest.fn(),
-    findActiveVariantIdsByProduct: jest.fn(),
-    findActiveVariantIdsByProducts: jest.fn(),
   };
   reader.getBookableVariants.mockImplementation(async (input) => {
     const variants = await Promise.all(
@@ -30,19 +28,6 @@ export function rentalAvailabilityReaderMock(): jest.Mocked<RentalAvailabilityRe
     );
     return variants.filter((variant): variant is NonNullable<typeof variant> => variant !== null);
   });
-  reader.findActiveVariantIdsByProducts.mockImplementation(
-    async (shopId, productIds, storefrontEligibility) => {
-      const entries: Array<[string, string[]]> = await Promise.all(
-        productIds.map(
-          async (productId): Promise<[string, string[]]> => [
-            productId,
-            await reader.findActiveVariantIdsByProduct(shopId, productId, storefrontEligibility),
-          ],
-        ),
-      );
-      return Object.fromEntries(entries);
-    },
-  );
   return reader;
 }
 

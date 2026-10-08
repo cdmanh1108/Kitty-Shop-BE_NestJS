@@ -1252,7 +1252,7 @@
             "name": "productId",
             "required": false,
             "in": "query",
-            "description": "ID của sản phẩm hoặc biến thể",
+            "description": "ID sản phẩm dùng để xác nhận phân loại.",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -1260,9 +1260,9 @@
           },
           {
             "name": "variantId",
-            "required": false,
+            "required": true,
             "in": "query",
-            "description": "ID của biến thể cụ thể",
+            "description": "ID phân loại đã chọn.",
             "schema": {
               "format": "uuid",
               "type": "string"
@@ -1293,7 +1293,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Tình trạng còn hàng của sản phẩm hoặc biến thể",
+            "description": "Tình trạng còn hàng của phân loại đã chọn",
             "content": {
               "application/json": {
                 "schema": {
@@ -1303,7 +1303,7 @@
             }
           },
           "400": {
-            "description": "Khoảng thời gian thuê không hợp lệ, vượt số ngày tối đa đặt qua website (WEB_RENTAL_DURATION_EXCEEDED), hoặc thiếu productId/variantId.",
+            "description": "Khoảng thời gian thuê không hợp lệ, vượt số ngày tối đa đặt qua website (WEB_RENTAL_DURATION_EXCEEDED), hoặc phân loại không khớp sản phẩm.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1313,7 +1313,7 @@
             }
           }
         },
-        "summary": "Kiểm tra tình trạng trống của sản phẩm hoặc biến thể",
+        "summary": "Kiểm tra tình trạng trống của một phân loại đã chọn",
         "tags": [
           "Web - Rental Orders"
         ],
@@ -2330,9 +2330,6 @@
                   "$ref": "#/components/schemas/WebResolvedStorefrontSelectionDto"
                 },
                 {
-                  "$ref": "#/components/schemas/WebSelectionRequiredStorefrontSelectionDto"
-                },
-                {
                   "$ref": "#/components/schemas/WebUnavailableStorefrontSelectionDto"
                 }
               ]
@@ -3221,12 +3218,12 @@
           "productId": {
             "type": "string",
             "format": "uuid",
-            "description": "ID sản phẩm; legacy alias chỉ resolve khi có đúng một biến thể storefront eligible."
+            "description": "ID sản phẩm dùng để xác nhận phân loại."
           },
           "variantId": {
             "type": "string",
             "format": "uuid",
-            "description": "ID biến thể đã chọn cụ thể."
+            "description": "ID phân loại đã chọn cụ thể."
           },
           "quantity": {
             "type": "number",
@@ -3236,6 +3233,7 @@
           }
         },
         "required": [
+          "variantId",
           "quantity"
         ]
       },
@@ -3277,43 +3275,6 @@
           "status",
           "product",
           "variant",
-          "imageUrl"
-        ]
-      },
-      "WebSelectionRequiredStorefrontSelectionDto": {
-        "type": "object",
-        "properties": {
-          "index": {
-            "type": "number",
-            "example": 0,
-            "description": "Chỉ số input để correlate với dòng giỏ."
-          },
-          "quantity": {
-            "type": "number",
-            "example": 1,
-            "description": "Quantity được echo nguyên trạng; không phải tồn kho."
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "SELECTION_REQUIRED"
-            ],
-            "example": "SELECTION_REQUIRED"
-          },
-          "product": {
-            "$ref": "#/components/schemas/WebStorefrontSelectionProductDto"
-          },
-          "imageUrl": {
-            "type": "string",
-            "nullable": true,
-            "example": "https://cdn.example.test/products/dam.jpg"
-          }
-        },
-        "required": [
-          "index",
-          "quantity",
-          "status",
-          "product",
           "imageUrl"
         ]
       },
@@ -3406,7 +3367,7 @@
           "variantId": {
             "type": "string",
             "format": "uuid",
-            "description": "ID biến thể sản phẩm"
+            "description": "ID phân loại đã chọn"
           },
           "productId": {
             "type": "string",
@@ -3421,6 +3382,7 @@
           }
         },
         "required": [
+          "variantId",
           "quantity"
         ]
       },

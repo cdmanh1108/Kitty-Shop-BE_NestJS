@@ -4,29 +4,24 @@ import {
   ArrayMaxSize,
   IsArray,
   IsInt,
+  IsOptional,
   IsUUID,
   Max,
   Min,
-  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
 export const WEB_STOREFRONT_SELECTION_BATCH_LIMIT = 50;
 
 export class WebStorefrontSelectionInputDto {
-  @ApiPropertyOptional({
-    format: 'uuid',
-    description:
-      'ID sản phẩm; legacy alias chỉ resolve khi có đúng một biến thể storefront eligible.',
-  })
-  @ValidateIf((selection: WebStorefrontSelectionInputDto) => !selection.variantId)
+  @ApiPropertyOptional({ format: 'uuid', description: 'ID sản phẩm dùng để xác nhận phân loại.' })
+  @IsOptional()
   @IsUUID()
   productId?: string;
 
-  @ApiPropertyOptional({ format: 'uuid', description: 'ID biến thể đã chọn cụ thể.' })
-  @ValidateIf((selection: WebStorefrontSelectionInputDto) => !selection.productId)
+  @ApiProperty({ format: 'uuid', description: 'ID phân loại đã chọn cụ thể.' })
   @IsUUID()
-  variantId?: string;
+  variantId!: string;
 
   @ApiProperty({ example: 1, minimum: 1, maximum: 1000 })
   @IsInt()
@@ -100,21 +95,6 @@ export class WebResolvedStorefrontSelectionDto extends WebStorefrontSelectionRes
   imageUrl!: string | null;
 }
 
-export class WebSelectionRequiredStorefrontSelectionDto extends WebStorefrontSelectionResolutionBaseDto {
-  @ApiProperty({ enum: ['SELECTION_REQUIRED'], example: 'SELECTION_REQUIRED' })
-  status!: 'SELECTION_REQUIRED';
-
-  @ApiProperty({ type: WebStorefrontSelectionProductDto })
-  product!: WebStorefrontSelectionProductDto;
-
-  @ApiProperty({
-    type: String,
-    nullable: true,
-    example: 'https://cdn.example.test/products/dam.jpg',
-  })
-  imageUrl!: string | null;
-}
-
 export class WebUnavailableStorefrontSelectionDto extends WebStorefrontSelectionResolutionBaseDto {
   @ApiProperty({ enum: ['UNAVAILABLE'], example: 'UNAVAILABLE' })
   status!: 'UNAVAILABLE';
@@ -126,14 +106,12 @@ export class WebStorefrontSelectionResolveResDto {
     items: {
       oneOf: [
         { $ref: getSchemaPath(WebResolvedStorefrontSelectionDto) },
-        { $ref: getSchemaPath(WebSelectionRequiredStorefrontSelectionDto) },
         { $ref: getSchemaPath(WebUnavailableStorefrontSelectionDto) },
       ],
     },
   })
   items!: Array<
     | WebResolvedStorefrontSelectionDto
-    | WebSelectionRequiredStorefrontSelectionDto
     | WebUnavailableStorefrontSelectionDto
   >;
 }

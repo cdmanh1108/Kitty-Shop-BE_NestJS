@@ -23,8 +23,6 @@ import { customerExists, locationExists } from './rental-creation-validation.que
 import { list, get, getStatus, getSchedule } from './rental-admin.queries';
 import {
   findAvailableInventory,
-  findActiveVariantIdsByProduct,
-  findActiveVariantIdsByProducts,
   getBookableVariant,
   getBookableVariants,
 } from './rental-availability';
@@ -183,22 +181,6 @@ export class PrismaRentalRepository
     ...args: Parameters<RentalCreationRepository['releaseIdempotency']>
   ): ReturnType<RentalCreationRepository['releaseIdempotency']> {
     return releaseIdempotencyClaim(this.prisma, ...args);
-  }
-
-  findActiveVariantIdsByProduct(
-    shopId: string,
-    productId: string,
-    storefrontEligibility?: boolean,
-  ): ReturnType<RentalAvailabilityReader['findActiveVariantIdsByProduct']> {
-    return findActiveVariantIdsByProduct(this.prisma, shopId, productId, storefrontEligibility);
-  }
-
-  findActiveVariantIdsByProducts(
-    shopId: string,
-    productIds: readonly string[],
-    storefrontEligibility?: boolean,
-  ): ReturnType<RentalAvailabilityReader['findActiveVariantIdsByProducts']> {
-    return findActiveVariantIdsByProducts(this.prisma, shopId, productIds, storefrontEligibility);
   }
 
   lookupStorefrontOrder(

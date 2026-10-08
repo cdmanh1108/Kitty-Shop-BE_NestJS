@@ -63,7 +63,7 @@ export function assertWebRentalItems(items: readonly WebRentalItemInput[]): void
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       throw new WebRentalInputValidationError('INVALID_SELECTION');
     }
-    if (typeof item.productId !== 'string' && typeof item.variantId !== 'string') {
+    if (typeof item.variantId !== 'string') {
       throw new WebRentalInputValidationError('INVALID_SELECTION');
     }
     if (

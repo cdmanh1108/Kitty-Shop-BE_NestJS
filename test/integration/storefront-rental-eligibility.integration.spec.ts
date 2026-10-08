@@ -52,9 +52,6 @@ describe('Storefront rental eligibility boundary', () => {
       evaluation.checkAvailability(f.shop.id, { ...interval, variantId: f.variant.id }),
     ).resolves.toEqual({ available: false, availableQuantity: 0 });
     await expect(
-      evaluation.checkAvailability(f.shop.id, { ...interval, productId: f.product.id }),
-    ).resolves.toEqual({ available: false, availableQuantity: 0 });
-    await expect(
       evaluation.calculateQuote(f.shop.id, {
         ...interval,
         items: [{ variantId: f.variant.id, quantity: 1 }],

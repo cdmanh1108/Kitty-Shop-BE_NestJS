@@ -4,7 +4,7 @@ import type { RentalBillingRole, RentalAccessoryAllowance } from '../domain/rent
 
 export interface WebAvailabilityQueryInput {
   productId?: string;
-  variantId?: string;
+  variantId: string;
   pickupDate: string;
   returnDate: string;
 }
@@ -15,7 +15,7 @@ export interface WebAvailabilityResult {
 }
 
 export interface WebRentalItemInput {
-  variantId?: string;
+  variantId: string;
   productId?: string;
   quantity: number;
   billingRole?: RentalBillingRole;

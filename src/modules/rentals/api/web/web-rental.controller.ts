@@ -59,16 +59,16 @@ export class WebRentalController {
   @Get('availability')
   @ApiOperation({
     operationId: 'getWebAvailability',
-    summary: 'Kiểm tra tình trạng trống của sản phẩm hoặc biến thể',
+    summary: 'Kiểm tra tình trạng trống của một phân loại đã chọn',
   })
   @ApiOkResponse({
     type: WebAvailabilityResDto,
-    description: 'Tình trạng còn hàng của sản phẩm hoặc biến thể',
+    description: 'Tình trạng còn hàng của phân loại đã chọn',
   })
   @ApiBadRequestResponse({
     type: ErrorResDto,
     description:
-      'Khoảng thời gian thuê không hợp lệ, vượt số ngày tối đa đặt qua website (WEB_RENTAL_DURATION_EXCEEDED), hoặc thiếu productId/variantId.',
+      'Khoảng thời gian thuê không hợp lệ, vượt số ngày tối đa đặt qua website (WEB_RENTAL_DURATION_EXCEEDED), hoặc phân loại không khớp sản phẩm.',
   })
   async checkAvailability(@Query() query: WebAvailabilityQueryDto): Promise<WebAvailabilityResDto> {
     const shopId = await this.shopResolver.resolveShopId();

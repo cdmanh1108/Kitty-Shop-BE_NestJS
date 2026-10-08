@@ -3,14 +3,14 @@ import type { AuditPort } from '@modules/audit/domain/audit.port';
 import type { CurrentUser } from '@common/types/current-user';
 import type { CatalogProductRepository } from '@modules/catalog/domain/catalog-product.repository';
 import type { ProductMediaRecord } from '@modules/catalog/domain/catalog.records';
-import { ProductService } from '@modules/catalog/application/product.service';
+import { ProductMediaService } from '@modules/catalog/application/product-media.service';
 import {
   CatalogResourceNotFoundError,
   InvalidCatalogInputError,
 } from '@modules/catalog/application/catalog-application.errors';
 import { validateAndHashImage, buildProductMediaKey } from '@common/storage/storage-key.builder';
 
-describe('ProductService managed product media', () => {
+describe('ProductMediaService', () => {
   const user: CurrentUser = {
     userId: 'user-1',
     memberId: 'member-1',
@@ -45,7 +45,7 @@ describe('ProductService managed product media', () => {
   let removeMedia: jest.MockedFunction<CatalogProductRepository['removeProductMedia']>;
   let putObject: jest.MockedFunction<ObjectStoragePort['putObject']>;
   let deleteObject: jest.MockedFunction<ObjectStoragePort['deleteObject']>;
-  let service: ProductService;
+  let service: ProductMediaService;
 
   beforeEach(() => {
     addMedia = jest.fn();
@@ -88,7 +88,7 @@ describe('ProductService managed product media', () => {
     };
     auditLog = jest.fn().mockResolvedValue(undefined);
     cleanupLog = jest.fn();
-    service = new ProductService(repository, { log: auditLog }, storage, {
+    service = new ProductMediaService(repository, { log: auditLog }, storage, {
       create: () => ({ log: jest.fn(), error: cleanupLog }),
     });
   });

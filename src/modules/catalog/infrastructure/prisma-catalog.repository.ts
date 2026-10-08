@@ -61,10 +61,12 @@ import {
   upsertRentalRate,
   updateProduct,
   archiveProduct,
+} from './product-commands';
+import {
   addProductMedia,
   setPrimaryProductMedia,
   removeProductMedia,
-} from './product-commands';
+} from './product-media-commands';
 import {
   updateProductVariant,
   setProductVariantArchived,
