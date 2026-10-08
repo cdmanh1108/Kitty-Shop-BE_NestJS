@@ -283,7 +283,7 @@ const routeContracts: RouteContract[] = [
 
 describe('admin catalog API contract', () => {
   const document = JSON.parse(
-    readFileSync(resolve(__dirname, '../generated/openapi.json'), 'utf8'),
+    readFileSync(resolve(__dirname, '../generated/openapi-admin.json'), 'utf8'),
   ) as OpenAPIObject;
 
   it('preserves every catalog method and route, with the existing bearer security', () => {

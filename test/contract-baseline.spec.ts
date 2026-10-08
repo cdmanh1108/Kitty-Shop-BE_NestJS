@@ -7,14 +7,14 @@ import type {
 } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 
 describe('OpenAPI Contract Baseline', () => {
-  const openApiPath = resolve(__dirname, '../generated/openapi.json');
+  const openApiPath = resolve(__dirname, '../generated/openapi-admin.json');
 
   function loadDocument(): OpenAPIObject {
     const content = readFileSync(openApiPath, 'utf8');
     return JSON.parse(content) as OpenAPIObject;
   }
 
-  it('verifies that generated/openapi.json exists', () => {
+  it('verifies that generated/openapi-admin.json exists', () => {
     expect(existsSync(openApiPath)).toBe(true);
   });
 

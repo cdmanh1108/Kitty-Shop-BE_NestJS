@@ -7,7 +7,6 @@ import type { AppConfiguration } from '../../src/config/configuration';
 describe('OpenAPI Separation & Production Contract Specification', () => {
   const adminDocPath = resolve(__dirname, '../../generated/openapi-admin.json');
   const webDocPath = resolve(__dirname, '../../generated/openapi-web.json');
-  const compatDocPath = resolve(__dirname, '../../generated/openapi.json');
 
   function loadDoc(path: string): OpenAPIObject {
     return JSON.parse(readFileSync(path, 'utf8')) as OpenAPIObject;
@@ -21,10 +20,9 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
     return refMatches.filter((schemaName) => !doc.components?.schemas?.[schemaName]);
   }
 
-  it('exports both admin and web OpenAPI JSON artifacts', () => {
+  it('provides the generated admin and web OpenAPI JSON artifacts', () => {
     expect(existsSync(adminDocPath)).toBe(true);
     expect(existsSync(webDocPath)).toBe(true);
-    expect(existsSync(compatDocPath)).toBe(true);
   });
 
   describe('Admin OpenAPI Document', () => {
@@ -296,15 +294,6 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       const collateralDto = schemas['WebCreateOrderCollateralDto'];
       expect(collateralDto?.properties?.method?.enum).toEqual(['CASH', 'DOCUMENT']);
       expect(collateralDto?.properties?.documentType?.enum).toEqual(['CCCD', 'GPLX']);
-    });
-  });
-
-  describe('Backwards Compatibility Document (openapi.json)', () => {
-    const adminDoc = loadDoc(adminDocPath);
-    const compatDoc = loadDoc(compatDocPath);
-
-    it('preserves same path count as admin OpenAPI for kitty-admin-fe', () => {
-      expect(Object.keys(compatDoc.paths).length).toEqual(Object.keys(adminDoc.paths).length);
     });
   });
 
