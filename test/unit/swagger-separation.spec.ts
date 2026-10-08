@@ -300,6 +300,11 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
   describe('Base Application OpenAPI Surface Completeness', () => {
     it('guarantees 100% of operations in the base document have an explicit x-api-surface set', async () => {
       process.env.SKIP_DATABASE_CONNECT = 'true';
+      process.env.RENTAL_EMAIL_ENABLED = 'false';
+      process.env.RESEND_API_KEY ??= 're_openapi_metadata_only';
+      process.env.EMAIL_FROM_ADDRESS ??= 'no-reply@example.test';
+      process.env.EMAIL_FROM_NAME ??= 'Kitty OpenAPI';
+
       const [{ createApplication }, { createBaseOpenApiDocument }] = await Promise.all([
         import('../../src/main'),
         import('../../src/common/swagger/openapi'),
