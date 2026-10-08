@@ -56,7 +56,7 @@ export default (): AppConfiguration => {
     nodeEnv,
     port: asNumber(process.env.PORT, 3007),
     apiPrefix: process.env.API_PREFIX ?? 'api/v1',
-    appName: process.env.APP_NAME ?? 'Rental Shop API',
+    appName: process.env.APP_NAME ?? 'Kitty Shop API',
     appUrl: process.env.APP_URL ?? 'http://localhost:3007',
     corsOrigins: (process.env.CORS_ORIGINS ?? '')
       .split(',')
