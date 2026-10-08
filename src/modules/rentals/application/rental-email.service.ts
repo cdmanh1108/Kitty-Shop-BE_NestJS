@@ -1,7 +1,13 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfiguration } from '@config/configuration';
 import { CLOCK, type Clock } from '@common/clock/clock';
+import {
+  APPLICATION_LOGGER,
+  silentApplicationLog,
+  type ApplicationLog,
+  type ApplicationLoggerFactory,
+} from '@common/logging/application-logger.port';
 import {
   RENTAL_EMAIL_QUEUE,
   RENTAL_EMAIL_SENDER,
@@ -13,7 +19,7 @@ import { renderRentalEmail } from './rental-email.template';
 
 @Injectable()
 export class RentalEmailService {
-  private readonly logger = new Logger(RentalEmailService.name);
+  private readonly logger: ApplicationLog;
   private processing = false;
 
   constructor(
@@ -21,7 +27,10 @@ export class RentalEmailService {
     @Inject(RENTAL_EMAIL_SENDER) private readonly sender: RentalEmailSender,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly config: ConfigService<AppConfiguration, true>,
-  ) {}
+    @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+  ) {
+    this.logger = loggerFactory?.create(RentalEmailService.name) ?? silentApplicationLog;
+  }
 
   async deliverPending(): Promise<void> {
     const settings = this.config.get('rentalEmail', { infer: true });
@@ -54,7 +63,7 @@ export class RentalEmailService {
           const providerId = await this.sender.send(message, `rental-email-${claim.id}`);
           const recorded = await this.queue.sent(claim, providerId, this.clock.now());
           if (!recorded)
-            this.logger.warn(
+            this.logger.error(
               `Email acceptance requires reconciliation; notificationId=${claim.id}`,
             );
         } catch (error) {
@@ -71,7 +80,7 @@ export class RentalEmailService {
             deliveryError.retryable,
             this.clock.now(),
           );
-          this.logger.warn(
+          this.logger.error(
             `Email delivery deferred; notificationId=${claim.id}; attempt=${claim.attemptCount}`,
           );
         }
@@ -79,7 +88,7 @@ export class RentalEmailService {
         await new Promise<void>((resolve) => setTimeout(resolve, 650));
       }
     } catch {
-      this.logger.warn(
+      this.logger.error(
         'Không thể xử lý hàng đợi email đơn thuê. Tác vụ sẽ thử lại ở lượt tiếp theo.',
       );
     } finally {

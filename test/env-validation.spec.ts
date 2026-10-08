@@ -17,6 +17,7 @@ describe('environment validation and configuration', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    process.env.WEB_URL = 'https://shop.example.test';
   });
 
   afterAll(() => {

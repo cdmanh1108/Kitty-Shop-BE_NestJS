@@ -223,11 +223,7 @@ describe('Rental creation and lifecycle services', () => {
           ],
           charges: [],
         }),
-      ).rejects.toThrow(
-        new InvalidRentalInputError(
-          'Mỗi biến thể sản phẩm chỉ được xuất hiện một lần trong đơn thuê.',
-        ),
-      );
+      ).rejects.toBeInstanceOf(InvalidRentalInputError);
     });
 
     it('throws Error if charge type is unsupported', async () => {

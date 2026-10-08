@@ -418,7 +418,20 @@ function bookingInput(): CreateRentalOrderData {
     rentalEndAt: new Date(now.getTime() + 86400000),
     discountTotal: 0,
     createdBy: 'member',
-    lines: [],
+    lines: [
+      {
+        productId: 'product',
+        variantId: 'variant',
+        productName: 'Product',
+        variantName: 'VAR-1',
+        quantity: 1,
+        unitRentalPrice: 50000,
+        depositAmount: 0,
+        lineTotal: 50000,
+        pricingSnapshot: { durationDays: 1, unitRentalPrice: 50000, depositPerItem: 0 },
+        inventory: [{ id: 'inventory', sku: 'SKU-1' }],
+      },
+    ],
     charges: [],
     idempotency: { scope: input.scope, key: input.key, claimId: 'old-claim' },
   };
@@ -476,6 +489,54 @@ function bookingTransaction(prisma: PrismaService) {
     lastError: null,
     createdAt: now,
     processedAt: null,
+  });
+  const eligibleVariants = [
+    { id: 'variant', productId: 'product', product: { allowFreeAccessory: false } },
+  ] satisfies Array<{ id: string; productId: string; product: { allowFreeAccessory: boolean } }>;
+  Object.defineProperty(tx.productVariant, 'findMany', {
+    configurable: true,
+    value: jest.fn().mockResolvedValue(eligibleVariants),
+  });
+  jest.spyOn(tx.inventoryItem, 'count').mockResolvedValue(1);
+  jest.spyOn(tx.rentalOrderItem, 'create').mockResolvedValue({
+    id: 'order-item',
+    shopId: 'shop',
+    orderId: 'order',
+    productId: 'product',
+    variantId: 'variant',
+    quantity: 1,
+    billingRole: 'PAID',
+    productKindSnapshot: null,
+    allowFreeAccessorySnapshot: false,
+    rentalStartAt: now,
+    rentalEndAt: new Date(now.getTime() + 86400000),
+    productNameSnapshot: 'Product',
+    variantNameSnapshot: 'VAR-1',
+    skuSnapshot: 'SKU-1',
+    unitRentalPrice: new Prisma.Decimal(50000),
+    depositAmount: new Prisma.Decimal(0),
+    discountAmount: new Prisma.Decimal(0),
+    lineTotal: new Prisma.Decimal(50000),
+    pricingSnapshot: { durationDays: 1, unitRentalPrice: 50000, depositPerItem: 0 },
+    status: 'RESERVED',
+    notes: null,
+    createdAt: now,
+    updatedAt: now,
+  });
+  jest.spyOn(tx.rentalItemAllocation, 'create').mockResolvedValue({
+    id: 'allocation',
+    shopId: 'shop',
+    orderId: 'order',
+    orderItemId: 'order-item',
+    inventoryItemId: 'inventory',
+    reservedFrom: now,
+    reservedUntil: new Date(now.getTime() + 86400000),
+    status: 'HELD',
+    allocatedAt: now,
+    releasedAt: null,
+    createdBy: 'member',
+    createdAt: now,
+    updatedAt: now,
   });
   return { tx, transaction, claim, create, detail, history, outbox };
 }
@@ -567,7 +628,7 @@ const requestInput = (): CreateRentalOrderInput => ({
   rentalStartAt: now.toISOString(),
   rentalEndAt: new Date(now.getTime() + 86400000).toISOString(),
   discountTotal: 0,
-  items: [],
+  items: [{ variantId: 'variant', quantity: 1 }],
   charges: [],
 });
 
@@ -575,6 +636,18 @@ function rentalServiceWithPorts(
   ports: ReturnType<typeof rentalServicePorts>,
   audit: AuditPort,
 ): RentalCreationService {
+  ports.availability.getBookableVariant.mockResolvedValue({
+    id: 'variant',
+    variantCode: 'VAR-1',
+    productId: 'product',
+    productName: 'Product',
+    allowFreeAccessory: false,
+    sizeName: null,
+    colorName: null,
+    depositPerItem: 0,
+    ratePrice: 50000,
+    availableInventory: [{ id: 'inventory', sku: 'SKU-1' }],
+  });
   return new RentalCreationService(
     ports.creation,
     ports.creationValidator,

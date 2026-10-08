@@ -91,6 +91,7 @@ describe('persistence mapping and availability', () => {
       variantCode: 'BB-01',
       productId: 'product',
       productName: 'Ba ba',
+      allowFreeAccessory: false,
       sizeName: null,
       colorName: null,
       depositPerItem: 300000,
@@ -285,6 +286,14 @@ describe('repository persistence boundaries', () => {
     const root = jest.spyOn(prisma.rentalOrder, 'create');
     const write = jest.spyOn(tx.rentalOrder, 'create').mockRejectedValue(failure);
     const outbox = jest.spyOn(tx.outboxEvent, 'create');
+    const eligibleVariants = [
+      { id: 'variant', productId: 'product', product: { allowFreeAccessory: false } },
+    ] satisfies Array<{ id: string; productId: string; product: { allowFreeAccessory: boolean } }>;
+    Object.defineProperty(tx.productVariant, 'findMany', {
+      configurable: true,
+      value: jest.fn().mockResolvedValue(eligibleVariants),
+    });
+    jest.spyOn(tx.inventoryItem, 'count').mockResolvedValue(1);
     jest.spyOn(prisma, '$transaction').mockImplementation((operation) => operation(tx));
     await expect(
       new PrismaRentalRepository(prisma, { now: () => new Date() }, rentalPolicies).createOrder({
@@ -293,10 +302,23 @@ describe('repository persistence boundaries', () => {
         orderNumber: 'R-01',
         source: 'OFFLINE',
         rentalStartAt: now,
-        rentalEndAt: now,
+        rentalEndAt: new Date(now.getTime() + 86400000),
         createdBy: 'user',
         discountTotal: 0,
-        lines: [],
+        lines: [
+          {
+            productId: 'product',
+            variantId: 'variant',
+            productName: 'Ba ba',
+            variantName: 'BB-01',
+            quantity: 1,
+            unitRentalPrice: 50000,
+            depositAmount: 0,
+            lineTotal: 50000,
+            pricingSnapshot: { durationDays: 1, unitRentalPrice: 50000, depositPerItem: 0 },
+            inventory: [{ id: 'inventory', sku: 'BB-01-001' }],
+          },
+        ],
         charges: [],
       }),
     ).rejects.toBe(failure);
@@ -304,7 +326,7 @@ describe('repository persistence boundaries', () => {
     expect(write.mock.calls[0]?.[0]?.data).toMatchObject({
       shopId: 'shop',
       status: 'RESERVED',
-      paymentStatus: 'PAID',
+      paymentStatus: 'UNPAID',
       depositStatus: 'NOT_REQUIRED',
     });
     expect(outbox.mock.calls).toHaveLength(0);

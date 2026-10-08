@@ -244,6 +244,7 @@ describe('Web rental use cases', () => {
         {
           productId: 'prod-1',
           variantId: 'var-1',
+          billingRole: 'PAID',
           requestedQuantity: 2,
           availableQuantity: 1,
           available: false,
@@ -327,6 +328,7 @@ describe('Web rental use cases', () => {
         {
           productId: 'prod-2',
           variantId: 'var-2',
+          billingRole: 'PAID',
           requestedQuantity: 2,
           availableQuantity: 2,
           available: true,
@@ -337,6 +339,7 @@ describe('Web rental use cases', () => {
         {
           productId: 'prod-3',
           variantId: 'var-3',
+          billingRole: 'PAID',
           requestedQuantity: 1,
           availableQuantity: 1,
           available: true,
@@ -347,6 +350,7 @@ describe('Web rental use cases', () => {
         {
           productId: 'prod-1',
           variantId: 'var-1',
+          billingRole: 'PAID',
           requestedQuantity: 1,
           availableQuantity: 0,
           available: false,
@@ -372,6 +376,7 @@ describe('Web rental use cases', () => {
         {
           productId: 'prod-1',
           variantId: 'var-1',
+          billingRole: 'PAID',
           requestedQuantity: 1,
           availableQuantity: 0,
           available: false,
@@ -471,7 +476,7 @@ describe('Web rental use cases', () => {
   describe('createOrder', () => {
     it('rejects invalid calendar dates before an idempotency claim', async () => {
       await expect(
-        orderService.createOrder(
+        submitOrder(
           'shop-1',
           {
             customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
@@ -487,6 +492,16 @@ describe('Web rental use cases', () => {
       expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
     });
 
+    const submitOrder = (
+      shopId: string,
+      request: Parameters<WebRentalOrderService['createOrder']>[1],
+      idempotencyKey?: string | string[],
+    ) =>
+      orderService.createOrder(shopId, request, idempotencyKey, {
+        webAccountId: 'web-account-1',
+        email: 'customer@example.test',
+      });
+
     const webOrderInput = () => ({
       customer: { name: 'Trần Thị B', phone: '0987654321' },
       pickupDate: '2026-09-20',
@@ -497,7 +512,7 @@ describe('Web rental use cases', () => {
     });
 
     it('requires an opaque idempotency key before any customer or booking work', async () => {
-      await expect(orderService.createOrder('shop-1', webOrderInput())).rejects.toThrow(Error);
+      await expect(submitOrder('shop-1', webOrderInput())).rejects.toThrow(Error);
       expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
       expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
       expect(creation.createOrder.mock.calls).toHaveLength(0);
@@ -505,7 +520,7 @@ describe('Web rental use cases', () => {
 
     it('rejects ambiguous multi-value keys before claiming', async () => {
       await expect(
-        orderService.createOrder('shop-1', webOrderInput(), ['key-a', 'key-b']),
+        submitOrder('shop-1', webOrderInput(), ['key-a', 'key-b']),
       ).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_INVALID' });
       expect(creation.claimIdempotency.mock.calls).toHaveLength(0);
     });
@@ -527,7 +542,7 @@ describe('Web rental use cases', () => {
       });
 
       await expect(
-        orderService.createOrder('shop-1', webOrderInput(), 'web-replay-key'),
+        submitOrder('shop-1', webOrderInput(), 'web-replay-key'),
       ).resolves.toEqual({
         orderCode: 'RT-REPLAY',
         totalAmount: 250000,
@@ -544,7 +559,7 @@ describe('Web rental use cases', () => {
       creation.claimIdempotency.mockResolvedValue({ state: 'HASH_MISMATCH' });
 
       await expect(
-        orderService.createOrder('shop-1', webOrderInput(), 'web-reused-key'),
+        submitOrder('shop-1', webOrderInput(), 'web-reused-key'),
       ).rejects.toMatchObject({
         code: 'IDEMPOTENCY_KEY_REUSED',
       });
@@ -566,7 +581,7 @@ describe('Web rental use cases', () => {
       });
 
       await expect(
-        orderService.createOrder(
+        submitOrder(
           'shop-1',
           {
             customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
@@ -606,7 +621,7 @@ describe('Web rental use cases', () => {
         }),
       );
 
-      const res = await orderService.createOrder(
+      const res = await submitOrder(
         'shop-1',
         {
           customer: { name: 'Trần Thị B', phone: '0987654321' },
@@ -629,7 +644,7 @@ describe('Web rental use cases', () => {
         shopId: 'shop-1',
         fullName: 'Trần Thị B',
         phone: '0987654321',
-        email: undefined,
+        email: 'customer@example.test',
         facebook: undefined,
       });
       expect(firstCreateOrderInput().preferredPaymentMethod).toBe('bank_transfer');
@@ -652,7 +667,7 @@ describe('Web rental use cases', () => {
       });
 
       await expect(
-        orderService.createOrder(
+        submitOrder(
           'shop-1',
           {
             customer: { name: 'Trần Thị B', phone: 'invalid-phone' },
@@ -699,7 +714,7 @@ describe('Web rental use cases', () => {
         items: [{ variantId: 'var-1', quantity: 1 }],
         deliveryMethod: 'shop_delivery',
       });
-      const result = await orderService.createOrder(
+      const result = await submitOrder(
         'shop-1',
         {
           customer: { name: 'Trần Thị B', phone: '0987654321' },
@@ -753,7 +768,7 @@ describe('Web rental use cases', () => {
         }),
       );
 
-      await orderService.createOrder(
+      await submitOrder(
         'shop-1',
         {
           customer: { name: 'Trần Thị B', phone: '0987654321' },
@@ -798,7 +813,7 @@ describe('Web rental use cases', () => {
       });
 
       await expect(
-        orderService.createOrder(
+        submitOrder(
           'shop-1',
           {
             customer: { name: 'Trần Thị B', phone: '0987654321' },
@@ -824,7 +839,7 @@ describe('Web rental use cases', () => {
       });
 
       await expect(
-        orderService.createOrder(
+        submitOrder(
           'shop-1',
           {
             customer: { name: 'Nguyễn Văn A', phone: '0912345678' },

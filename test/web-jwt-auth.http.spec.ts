@@ -12,6 +12,7 @@ import { WebAuthCookies } from '../src/modules/web-auth/api/web-auth-cookies';
 import { WebAuthOriginGuard, WebJwtAuthGuard } from '../src/modules/web-auth/public';
 import { WebRegistrationService } from '../src/modules/web-auth/application/web-registration.service';
 import { WebSessionService } from '../src/modules/web-auth/application/web-session.service';
+import { WebProfileService } from '../src/modules/web-auth/application/web-profile.service';
 import type { Clock } from '../src/common/clock/clock';
 import type { AppConfiguration } from '../src/config/configuration';
 import type { WebAuthRepository } from '../src/modules/web-auth/domain/web-auth.repository';
@@ -54,6 +55,7 @@ describe('Web JWT authentication HTTP boundary', () => {
         { provide: ConfigService, useValue: new ConfigService() },
         { provide: WebRegistrationService, useValue: {} },
         { provide: WebSessionService, useValue: session },
+        { provide: WebProfileService, useValue: { update: jest.fn() } },
         { provide: WebAuthCookies, useValue: cookies },
         { provide: JwtService, useValue: jwt },
         {
