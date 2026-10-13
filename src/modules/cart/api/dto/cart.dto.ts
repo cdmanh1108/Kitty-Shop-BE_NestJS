@@ -18,7 +18,8 @@ import {
 } from '@modules/rentals/public/rental-billing-role';
 import { CART_MAX_ITEM_COUNT, CART_MAX_QUANTITY_PER_ITEM } from '../../application/cart.service';
 
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const CART_RENTAL_PERIOD =
+  /^(?:\d{4}-\d{2}-\d{2}|\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d))$/;
 
 export class CartItemDto {
   @ApiPropertyOptional({
@@ -45,12 +46,20 @@ export class CartItemDto {
 }
 
 export class CartDraftDto {
-  @ApiProperty({ example: '2026-10-01', format: 'date' })
-  @Matches(DATE_ONLY)
+  @ApiProperty({
+    example: '2026-10-01T01:30:00.000Z',
+    format: 'date-time',
+    description: 'Mốc nhận ISO 8601 có múi giờ; ngày thuần được nhận cho dữ liệu/client cũ.',
+  })
+  @Matches(CART_RENTAL_PERIOD)
   pickupDate!: string;
 
-  @ApiProperty({ example: '2026-10-03', format: 'date' })
-  @Matches(DATE_ONLY)
+  @ApiProperty({
+    example: '2026-10-03T01:30:00.000Z',
+    format: 'date-time',
+    description: 'Mốc trả ISO 8601 có múi giờ; ngày thuần được nhận cho dữ liệu/client cũ.',
+  })
+  @Matches(CART_RENTAL_PERIOD)
   returnDate!: string;
 
   @ApiProperty({ type: [CartItemDto], maxItems: CART_MAX_ITEM_COUNT })

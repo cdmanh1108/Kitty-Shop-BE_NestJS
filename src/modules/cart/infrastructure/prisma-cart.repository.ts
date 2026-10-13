@@ -29,8 +29,8 @@ export class PrismaCartRepository implements CartRepository {
   ): Promise<CartReplaceResult> {
     const data = {
       items: toJsonItems(draft.items),
-      pickupDate: dateOnly(draft.pickupDate),
-      returnDate: dateOnly(draft.returnDate),
+      pickupDate: parseInstant(draft.pickupDate),
+      returnDate: parseInstant(draft.returnDate),
     };
     if (expectedVersion === 0) {
       try {
@@ -62,8 +62,8 @@ type PrismaCart = {
 function mapCart(cart: PrismaCart): CartSnapshot {
   return {
     version: cart.version,
-    pickupDate: formatDate(cart.pickupDate),
-    returnDate: formatDate(cart.returnDate),
+    pickupDate: cart.pickupDate.toISOString(),
+    returnDate: cart.returnDate.toISOString(),
     items: parseItems(cart.items),
   };
 }
@@ -95,12 +95,8 @@ function parseItems(value: Prisma.JsonValue): CartSelection[] {
   return items;
 }
 
-function dateOnly(value: string): Date {
-  return new Date(`${value}T00:00:00.000Z`);
-}
-
-function formatDate(value: Date): string {
-  return value.toISOString().slice(0, 10);
+function parseInstant(value: string): Date {
+  return new Date(value.length === 10 ? `${value}T08:30:00+07:00` : value);
 }
 
 function toJsonItems(items: readonly CartSelection[]): Prisma.InputJsonArray {

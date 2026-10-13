@@ -26,9 +26,29 @@ npm run test:e2e
 docker stop kitty-testing-p0
 ```
 
-These are local test credentials, never production defaults. Wait until PostgreSQL is ready before running migration. Existing PostgreSQL infrastructure is equally suitable if it provides a dedicated test database. No new Docker orchestration or CI workflow is required.
+These are local test credentials, never production defaults. Wait until PostgreSQL is ready before running migration. Existing PostgreSQL infrastructure is equally suitable if it provides a dedicated test database.
 
 `test:db:migrate` runs actual committed `prisma migrate deploy` migrations using TEST_DATABASE_URL explicitly. It does not seed users, reset databases or fall back to DATABASE_URL. Prisma CLI may print that `.env` was loaded; the explicitly supplied DATABASE_URL takes precedence. Missing test URL fails before connecting.
+
+## GitHub Actions CI (retained, optional)
+
+`.github/workflows/ci.yml` is retained in the repository. Its direct `push`
+trigger is commented out, so pushing to `main` or `master` does not start the
+workflow. It still runs manually with `workflow_dispatch` and on pull requests
+targeting `main` or `master`. Keep the commented trigger as a reference; do not
+delete the workflow file. This workflow is optional for local checks; use the
+commands in this guide to verify the backend locally.
+
+The `quality` job provisions a disposable PostgreSQL 17 service and uses Node 22.
+Its steps install dependencies, generate Prisma Client, apply migrations, seed
+the isolated database, run typecheck and `npm run quality`, then run the real
+PostgreSQL integration suite. `quality` covers lint, database-free unit tests,
+build and OpenAPI freshness; the final integration step covers database
+constraints and transactions. The workflow does not run E2E or coverage suites.
+
+CI database credentials and signing secrets in the workflow are test-only
+values. Keep application or production secrets out of the workflow. If its
+triggers or automated checks change, keep this summary aligned with the file.
 
 ## Database safety and lifecycle
 
@@ -86,7 +106,9 @@ npm run openapi:export
 npm run format:check
 ```
 
-CI should provide TEST_DATABASE_URL, create an isolated PostgreSQL database, apply migrations, and execute the suites sequentially. CI implementation and maintenance jobs remain out of scope.
+For local database integration and E2E runs, provide TEST_DATABASE_URL for a
+dedicated disposable database and run the suites sequentially. GitHub Actions
+currently runs the integration suite as described above; run E2E separately.
 
 ## Verified result (2026-09-11)
 

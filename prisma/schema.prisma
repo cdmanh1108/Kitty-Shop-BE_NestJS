@@ -131,8 +131,8 @@ model Cart {
   accountId  String   @map("account_id") @db.Uuid
   shopId     String   @map("shop_id") @db.Uuid
   items      Json
-  pickupDate DateTime @map("pickup_date") @db.Date
-  returnDate DateTime @map("return_date") @db.Date
+  pickupDate DateTime @map("pickup_date") @db.Timestamptz(6)
+  returnDate DateTime @map("return_date") @db.Timestamptz(6)
   version    Int      @default(1)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)

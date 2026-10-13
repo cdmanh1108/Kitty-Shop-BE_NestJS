@@ -40,8 +40,8 @@ describe('Web Order Lookup Security and Behavior', () => {
     expect(result.orderCode).toBe('RT-20260920-001');
     expect(result.customerName).toBe('Nguyễn Thị Mai');
     expect(result.phoneMasked).toBe('091****678');
-    expect(result.pickupDate).toBe('2026-09-20');
-    expect(result.returnDate).toBe('2026-09-23');
+    expect(result.pickupDate).toBe('2026-09-20T09:00:00.000Z');
+    expect(result.returnDate).toBe('2026-09-23T18:00:00.000Z');
     expect(result.status).toBe('confirmed');
     expect(result.totalAmount).toBe(450000);
     expect(result.depositAmount).toBe(500000);

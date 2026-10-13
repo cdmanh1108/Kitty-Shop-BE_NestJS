@@ -51,6 +51,28 @@ describe('CartService', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
+  it('compares cart periods by timezone-aware instants and accepts minute precision', async () => {
+    const replace = jest
+      .fn()
+      .mockResolvedValue({ kind: 'updated', cart: { version: 1, ...draft } });
+    const repo = repository({ replace });
+    const preciseDraft = {
+      ...draft,
+      pickupDate: '2026-10-01T08:30:00+07:00',
+      returnDate: '2026-10-01T08:31:00+07:00',
+    };
+
+    await expect(service(repo).replace('account-id', 0, preciseDraft)).resolves.toMatchObject({
+      version: 1,
+    });
+    await expect(
+      service(repo).replace('account-id', 0, {
+        ...preciseDraft,
+        returnDate: '2026-10-01T01:29:59Z',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_CART_PERIOD' });
+  });
+
   it('fails rather than silently overwriting a concurrent cart update', async () => {
     const repo = repository({
       replace: jest.fn().mockResolvedValue({ kind: 'conflict', cart: null }),

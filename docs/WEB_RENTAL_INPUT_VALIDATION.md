@@ -29,10 +29,15 @@ and allocation.
 
 ## Dates and delivery
 
-Dates must be `YYYY-MM-DD` and be real UTC calendar dates. Rollover dates such
-as `2026-02-30`, timestamps, and non-zero-padded dates are rejected. The same
-date-only parser is used by availability, quote, and create; pickup must be
-strictly before return.
+New availability, quote, and create requests use ISO 8601 date-times with an
+explicit timezone. The storefront and admin interpret entered times as Vietnam
+time (`Asia/Ho_Chi_Minh`, UTC+07:00), then send timezone-aware timestamps. The
+backend compares those exact instants.
+
+For clients being upgraded, legacy `YYYY-MM-DD` values remain accepted and are
+interpreted as 08:30 in Vietnam, the shop opening time. Calendar rollover dates
+such as `2026-02-30`, timestamps without a timezone, and non-zero-padded dates
+are rejected. Pickup must be strictly before return.
 
 Create requires object-valued `customer` and `delivery`. Customer names cannot
 be blank after whitespace inspection. `shop_delivery` requires a nonblank,
@@ -41,5 +46,6 @@ supplied address still has type, nonblank, and length validation. Blank/null
 email remains compatible with the existing customer resolver; a nonblank email
 must be syntactically valid and at most 255 characters.
 
-No migration is needed. Consumers must send UUID product/variant identifiers,
-an explicit quantity, and a delivery address whenever selecting `shop_delivery`.
+Consumers must send UUID product/variant identifiers, an explicit quantity,
+timezone-aware rental timestamps, and a delivery address whenever selecting
+`shop_delivery`.

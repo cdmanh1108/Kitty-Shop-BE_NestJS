@@ -105,6 +105,17 @@ EXCLUDE USING gist (
 WHERE (status IN ('HELD', 'CONFIRMED', 'ACTIVE'));
 ```
 
+## Storefront rental periods
+
+Rental orders and inventory reservations are persisted as timezone-aware instants.
+Storefront and admin forms interpret entered wall-clock values in `Asia/Ho_Chi_Minh`
+and send ISO 8601 timestamps; the UI displays those instants in Vietnam time. Cart
+period columns use `TIMESTAMPTZ(6)` as well. Migration
+`202610130001_cart_rental_period_timestamps` preserves existing cart calendar dates
+as 08:30 in Vietnam, the store opening time. Old date-only API requests and cart
+writes remain accepted during client rollout and use the same 08:30 Vietnam-time
+interpretation.
+
 ## Inventory operational condition vs Rental occupancy
 
 Physical inventory operational condition and rental reservation occupancy are strictly decoupled:

@@ -39,10 +39,10 @@ export class WebOrderLookupResDto {
   @ApiProperty({ example: '091****678' })
   phoneMasked!: string;
 
-  @ApiProperty({ example: '2026-09-20' })
+  @ApiProperty({ example: '2026-09-20T01:30:00.000Z', format: 'date-time' })
   pickupDate!: string;
 
-  @ApiProperty({ example: '2026-09-23' })
+  @ApiProperty({ example: '2026-09-23T01:30:00.000Z', format: 'date-time' })
   returnDate!: string;
 
   @ApiProperty({ example: 'pending' })

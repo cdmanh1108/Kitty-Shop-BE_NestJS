@@ -28,7 +28,7 @@ export async function enqueueRentalEmail(
       notificationEmail: { not: null },
     },
     include: {
-      shop: { select: { name: true, phone: true, email: true, timezone: true } },
+      shop: { select: { name: true, phone: true, email: true } },
       customer: { select: { fullName: true } },
       items: {
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
@@ -63,7 +63,7 @@ export async function enqueueRentalEmail(
     }).format(Number(value.toString()));
   const date = (value: Date): string =>
     new Intl.DateTimeFormat('vi-VN', {
-      timeZone: order.shop.timezone,
+      timeZone: 'Asia/Ho_Chi_Minh',
       dateStyle: 'short',
       timeStyle: 'short',
       hour12: false,
@@ -71,7 +71,7 @@ export async function enqueueRentalEmail(
   const details = [
     { label: 'Ngày nhận đồ', value: date(order.rentalStartAt) },
     { label: 'Ngày trả đồ', value: date(order.rentalEndAt) },
-    { label: 'Múi giờ', value: order.shop.timezone },
+    { label: 'Múi giờ', value: 'Asia/Ho_Chi_Minh' },
     { label: 'Tiền thuê', value: money(order.rentalSubtotal) },
     { label: 'Phí phát sinh / giao nhận', value: money(order.chargesTotal) },
     { label: 'Giảm giá', value: money(order.discountTotal) },

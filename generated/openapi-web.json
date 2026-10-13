@@ -1272,10 +1272,10 @@
             "name": "pickupDate",
             "required": true,
             "in": "query",
-            "description": "Ngày nhận (YYYY-MM-DD)",
+            "description": "Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.",
             "schema": {
-              "format": "date",
-              "example": "2026-09-20",
+              "format": "date-time",
+              "example": "2026-09-20T01:30:00.000Z",
               "type": "string"
             }
           },
@@ -1283,10 +1283,10 @@
             "name": "returnDate",
             "required": true,
             "in": "query",
-            "description": "Ngày trả (YYYY-MM-DD)",
+            "description": "Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.",
             "schema": {
-              "format": "date",
-              "example": "2026-09-23",
+              "format": "date-time",
+              "example": "2026-09-23T01:30:00.000Z",
               "type": "string"
             }
           }
@@ -2105,13 +2105,15 @@
         "properties": {
           "pickupDate": {
             "type": "string",
-            "example": "2026-10-01",
-            "format": "date"
+            "example": "2026-10-01T01:30:00.000Z",
+            "format": "date-time",
+            "description": "Mốc nhận ISO 8601 có múi giờ; ngày thuần được nhận cho dữ liệu/client cũ."
           },
           "returnDate": {
             "type": "string",
-            "example": "2026-10-03",
-            "format": "date"
+            "example": "2026-10-03T01:30:00.000Z",
+            "format": "date-time",
+            "description": "Mốc trả ISO 8601 có múi giờ; ngày thuần được nhận cho dữ liệu/client cũ."
           },
           "items": {
             "maxItems": 20,
@@ -2138,13 +2140,15 @@
         "properties": {
           "pickupDate": {
             "type": "string",
-            "example": "2026-10-01",
-            "format": "date"
+            "example": "2026-10-01T01:30:00.000Z",
+            "format": "date-time",
+            "description": "Mốc nhận ISO 8601 có múi giờ; ngày thuần được nhận cho dữ liệu/client cũ."
           },
           "returnDate": {
             "type": "string",
-            "example": "2026-10-03",
-            "format": "date"
+            "example": "2026-10-03T01:30:00.000Z",
+            "format": "date-time",
+            "description": "Mốc trả ISO 8601 có múi giờ; ngày thuần được nhận cho dữ liệu/client cũ."
           },
           "items": {
             "maxItems": 20,
@@ -2460,13 +2464,15 @@
         "properties": {
           "pickupDate": {
             "type": "string",
-            "example": "2026-09-20",
-            "format": "date"
+            "example": "2026-09-20T01:30:00.000Z",
+            "format": "date-time",
+            "description": "Mốc nhận ISO 8601 có múi giờ; ngày thuần chỉ dành cho client cũ."
           },
           "returnDate": {
             "type": "string",
-            "example": "2026-09-23",
-            "format": "date"
+            "example": "2026-09-23T01:30:00.000Z",
+            "format": "date-time",
+            "description": "Mốc trả ISO 8601 có múi giờ; ngày thuần chỉ dành cho client cũ."
           },
           "items": {
             "maxItems": 20,
@@ -2584,13 +2590,15 @@
           },
           "pickupDate": {
             "type": "string",
-            "example": "2026-09-20",
-            "format": "date"
+            "example": "2026-09-20T01:30:00.000Z",
+            "format": "date-time",
+            "description": "Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ."
           },
           "returnDate": {
             "type": "string",
-            "example": "2026-09-23",
-            "format": "date"
+            "example": "2026-09-23T01:30:00.000Z",
+            "format": "date-time",
+            "description": "Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ."
           },
           "items": {
             "maxItems": 20,
@@ -2702,11 +2710,13 @@
           },
           "pickupDate": {
             "type": "string",
-            "example": "2026-09-20"
+            "example": "2026-09-20T01:30:00.000Z",
+            "format": "date-time"
           },
           "returnDate": {
             "type": "string",
-            "example": "2026-09-23"
+            "example": "2026-09-23T01:30:00.000Z",
+            "format": "date-time"
           },
           "status": {
             "type": "string",

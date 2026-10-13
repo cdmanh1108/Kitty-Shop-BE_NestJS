@@ -21,6 +21,7 @@ import {
 import {
   WEB_RENTAL_MAX_ITEM_COUNT,
   WEB_RENTAL_MAX_QUANTITY_PER_ITEM,
+  WEB_RENTAL_DATE_TIME_PATTERN,
 } from '../../../application/web-rental-input-validation';
 
 export class WebAvailabilityQueryDto {
@@ -33,14 +34,28 @@ export class WebAvailabilityQueryDto {
   @IsUUID(undefined, { message: 'Mã phân loại phải là UUID hợp lệ.' })
   variantId!: string;
 
-  @ApiProperty({ example: '2026-09-20', format: 'date', description: 'Ngày nhận (YYYY-MM-DD)' })
+  @ApiProperty({
+    example: '2026-09-20T01:30:00.000Z',
+    format: 'date-time',
+    description:
+      'Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.',
+  })
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'pickupDate phải có định dạng YYYY-MM-DD.' })
+  @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
+    message: 'pickupDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+  })
   pickupDate!: string;
 
-  @ApiProperty({ example: '2026-09-23', format: 'date', description: 'Ngày trả (YYYY-MM-DD)' })
+  @ApiProperty({
+    example: '2026-09-23T01:30:00.000Z',
+    format: 'date-time',
+    description:
+      'Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.',
+  })
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'returnDate phải có định dạng YYYY-MM-DD.' })
+  @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
+    message: 'returnDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+  })
   returnDate!: string;
 }
 
@@ -80,14 +95,26 @@ export class WebRentalItemInputDto {
 }
 
 export class WebRentalQuoteReqDto {
-  @ApiProperty({ example: '2026-09-20', format: 'date' })
+  @ApiProperty({
+    example: '2026-09-20T01:30:00.000Z',
+    format: 'date-time',
+    description: 'Mốc nhận ISO 8601 có múi giờ; ngày thuần chỉ dành cho client cũ.',
+  })
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'pickupDate phải có định dạng YYYY-MM-DD.' })
+  @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
+    message: 'pickupDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+  })
   pickupDate!: string;
 
-  @ApiProperty({ example: '2026-09-23', format: 'date' })
+  @ApiProperty({
+    example: '2026-09-23T01:30:00.000Z',
+    format: 'date-time',
+    description: 'Mốc trả ISO 8601 có múi giờ; ngày thuần chỉ dành cho client cũ.',
+  })
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'returnDate phải có định dạng YYYY-MM-DD.' })
+  @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
+    message: 'returnDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+  })
   returnDate!: string;
 
   @ApiProperty({ type: [WebRentalItemInputDto], maxItems: WEB_RENTAL_MAX_ITEM_COUNT })

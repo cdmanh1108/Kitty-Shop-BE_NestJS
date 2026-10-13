@@ -9,6 +9,9 @@ export const WEB_RENTAL_MAX_ITEM_COUNT = 20;
 export const WEB_RENTAL_MAX_QUANTITY_PER_ITEM = 20;
 export const WEB_RENTAL_MAX_TOTAL_QUANTITY = 50;
 export const WEB_RENTAL_MAX_ADDRESS_LENGTH = 500;
+/** Date-only values remain accepted for clients predating precise rental times. */
+export const WEB_RENTAL_DATE_TIME_PATTERN =
+  /^(?:\d{4}-\d{2}-\d{2}|\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d))$/;
 
 export type WebRentalInputValidationCode =
   | 'INVALID_CALENDAR_DATE'
@@ -40,10 +43,10 @@ type WebRentalItemValidationCandidate = {
   quantity?: number;
 };
 
-/** Parses date-only Web input without accepting JavaScript date rollovers. */
+/** Parses legacy date-only input or a timezone-explicit Web date-time. */
 export function parseWebRentalDateRange(input: WebRentalDateRangeInput): WebRentalDateRange {
-  const from = parseCalendarDate(input.pickupDate);
-  const until = parseCalendarDate(input.returnDate);
+  const from = parseRentalDateTime(input.pickupDate);
+  const until = parseRentalDateTime(input.returnDate);
   if (from >= until) throw new WebRentalInputValidationError('INVALID_RENTAL_INTERVAL');
   return { from, until };
 }
@@ -82,8 +85,8 @@ export function assertWebRentalItems(items: readonly WebRentalItemInput[]): void
   rentalAccessoryAllowance(items);
 }
 
-function parseCalendarDate(value: string): Date {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+function assertCalendarDate(value: string): void {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new WebRentalInputValidationError('INVALID_CALENDAR_DATE');
   }
 
@@ -102,5 +105,21 @@ function parseCalendarDate(value: string): Date {
   ) {
     throw new WebRentalInputValidationError('INVALID_CALENDAR_DATE');
   }
+}
+
+function parseRentalDateTime(value: string): Date {
+  if (typeof value !== 'string') throw new WebRentalInputValidationError('INVALID_CALENDAR_DATE');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    assertCalendarDate(value);
+    return new Date(`${value}T08:30:00+07:00`);
+  }
+  const match = value.match(
+    /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/,
+  );
+  if (!match?.[1]) throw new WebRentalInputValidationError('INVALID_CALENDAR_DATE');
+  assertCalendarDate(match[1]);
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime()))
+    throw new WebRentalInputValidationError('INVALID_CALENDAR_DATE');
   return parsed;
 }

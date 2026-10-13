@@ -2,8 +2,9 @@ name: CI
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, master]
+  # Automatic runs on direct pushes are paused; keep this trigger commented for reference.
+  # push:
+  #   branches: [main, master]
   pull_request:
     branches: [main, master]
 
