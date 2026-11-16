@@ -1,3 +1,5 @@
+import { decimalToNumber } from '@database/prisma/decimal-mapping';
+import { RentalProductPriceChangedError } from '../domain/rental-errors';
 import { assertInventoryRentable } from './rental-inventory';
 import type { RentalOutboxEvent } from '../domain/rental.events';
 import {
@@ -316,7 +318,11 @@ async function assertRentalCatalogLines(
         ...(data.storefrontEligibility ? storefrontProductEligibility : {}),
       },
     },
-    select: { id: true, productId: true, product: { select: { allowFreeAccessory: true } } },
+    select: {
+      id: true,
+      productId: true,
+      product: { select: { allowFreeAccessory: true, rentalPriceOverride: true } },
+    },
   });
   if (
     eligibleVariants.length !== expectedProductByVariant.size ||
@@ -334,6 +340,18 @@ async function assertRentalCatalogLines(
     const allowed = accessoryEligibility.get(line.variantId);
     if (allowed === undefined) throw new RentalInventoryUnavailableError();
     assertFreeAccessoryAllowed(rentalBillingRole(line.billingRole), allowed);
+    const snapshot = line.pricingSnapshot;
+    if (
+      snapshot.version === RENTAL_PRICING_VERSION.CYCLE &&
+      snapshot.itemCyclePriceOverride == null &&
+      snapshot.orderCyclePriceOverride == null
+    ) {
+      const current = eligibleVariants.find((variant) => variant.id === line.variantId)!.product
+        .rentalPriceOverride;
+      const price = current == null ? null : decimalToNumber(current);
+      if ((snapshot.productCyclePriceOverride ?? null) !== price)
+        throw new RentalProductPriceChangedError();
+    }
   }
   return accessoryEligibility;
 }

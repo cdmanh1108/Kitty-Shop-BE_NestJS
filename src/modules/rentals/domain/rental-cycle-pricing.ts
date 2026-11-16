@@ -12,6 +12,7 @@ export interface ResolveRentalCyclePricingInput {
   policy: Readonly<RentalPricingPolicy>;
   orderCyclePriceOverride?: number | null;
   itemCyclePriceOverride?: number | null;
+  productCyclePriceOverride?: number | null;
 }
 
 /** One physical unit's total rental price and the effective rules captured by booking snapshots. */
@@ -25,7 +26,7 @@ export interface ResolvedRentalCyclePricing {
   additionalDayCount: number;
   cyclePrice: number;
   additionalDayFee: number;
-  priceSource: 'SHOP' | 'ORDER' | 'ITEM';
+  priceSource: 'SHOP' | 'PRODUCT' | 'ORDER' | 'ITEM';
   unitRentalPrice: number;
 }
 
@@ -54,11 +55,20 @@ export function resolveRentalCyclePricing(
 
   const orderPrice = input.orderCyclePriceOverride;
   const itemPrice = input.itemCyclePriceOverride;
+  const productPrice = input.productCyclePriceOverride;
+  if (productPrice != null) cyclePriceCents(productPrice);
   // Validate supplied overrides even when a more specific override wins.
   if (orderPrice != null) cyclePriceCents(orderPrice);
   if (itemPrice != null) cyclePriceCents(itemPrice);
-  const cyclePrice = itemPrice ?? orderPrice ?? input.policy.defaultRentalPrice;
-  const priceSource = itemPrice != null ? 'ITEM' : orderPrice != null ? 'ORDER' : 'SHOP';
+  const cyclePrice = itemPrice ?? orderPrice ?? productPrice ?? input.policy.defaultRentalPrice;
+  const priceSource =
+    itemPrice != null
+      ? 'ITEM'
+      : orderPrice != null
+        ? 'ORDER'
+        : productPrice != null
+          ? 'PRODUCT'
+          : 'SHOP';
   const renewalDay =
     input.billableQuantity >= input.policy.bulkQuantityThreshold
       ? input.policy.bulkRenewalDay

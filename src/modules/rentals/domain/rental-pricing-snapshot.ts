@@ -19,6 +19,8 @@ export interface RentalCyclePricingSnapshot extends ResolvedRentalCyclePricing {
   policy: RentalPricingPolicy;
   orderCyclePriceOverride: number | null;
   itemCyclePriceOverride: number | null;
+  /** Absent on older CYCLE_V1 snapshots; absence means no catalog price. */
+  productCyclePriceOverride?: number | null;
   depositPerItem: number;
 }
 
@@ -79,6 +81,7 @@ export function resolveRentalLinePricing(
     policy: { ...input.policy },
     orderCyclePriceOverride: input.orderCyclePriceOverride ?? null,
     itemCyclePriceOverride: input.itemCyclePriceOverride ?? null,
+    productCyclePriceOverride: input.productCyclePriceOverride ?? null,
     depositPerItem: input.depositPerItem,
   };
   return {
@@ -126,6 +129,7 @@ export function assertRentalPricingLineSnapshot(
     policy: snapshot.policy,
     orderCyclePriceOverride: snapshot.orderCyclePriceOverride,
     itemCyclePriceOverride: snapshot.itemCyclePriceOverride,
+    productCyclePriceOverride: snapshot.productCyclePriceOverride,
   });
   if (
     PRICING_FIELDS.some((key) => snapshot[key] !== pricing[key]) ||
@@ -170,6 +174,7 @@ export function readRentalCyclePricing(
     policy,
     orderCyclePriceOverride: optionalPrice(record.orderCyclePriceOverride),
     itemCyclePriceOverride: optionalPrice(record.itemCyclePriceOverride),
+    productCyclePriceOverride: optionalPrice(record.productCyclePriceOverride),
   });
   if (PRICING_FIELDS.some((key) => record[key] !== pricing[key])) throw invalidSnapshot();
   return pricing;

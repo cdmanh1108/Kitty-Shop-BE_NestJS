@@ -2,8 +2,8 @@
 
 PostgreSQL is the source of truth. `prisma/schema.prisma` describes the current
 release schema; `prisma/migrations/202610230001_initial_release/migration.sql`
-creates that schema for a new database and includes PostgreSQL-only indexes and
-invariants Prisma cannot represent.
+creates the initial schema for a new database and includes PostgreSQL-only indexes and
+invariants Prisma cannot represent. Subsequent committed migrations upgrade that baseline.
 
 ## Release database setup
 
@@ -46,6 +46,9 @@ local reset, production setup and rerun behavior.
 - Rental prices are resolved from the current cycle policy. Catalog product-rate
   rows are not part of this schema. Historical price amounts remain on order
   items as immutable records.
+- Products may have a nullable `rentalPriceOverride`; null uses the shop price,
+  zero is explicit. The additive `202611160001_product_rental_price_override`
+  migration preserves all catalog and order data. See [Product rental pricing](PRODUCT_RENTAL_PRICING.md).
 - Free accessory eligibility is captured as a boolean on the order item. A free
   line must have eligibility captured and zero rental, deposit, discount, and
   line total.
@@ -63,8 +66,8 @@ guard: the same physical inventory item cannot have overlapping HELD,
 CONFIRMED, or ACTIVE allocations. Adjacent half-open intervals are allowed.
 
 Prisma schema edits do not automatically update SQL-only invariants. Review the
-baseline's custom SQL whenever changing the affected fields, and regenerate the
-baseline only when preparing another intentionally fresh-database release.
+baseline's custom SQL whenever changing the affected fields. Never rewrite an
+applied baseline; use additive migrations for deployed databases.
 
 ## Local and test databases
 

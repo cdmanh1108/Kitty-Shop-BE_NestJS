@@ -33,6 +33,7 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
     catalogRepo = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     );
   });
 

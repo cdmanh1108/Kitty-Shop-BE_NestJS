@@ -23,6 +23,7 @@ describe('Catalog purpose-specific reads', () => {
     repo = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     );
   });
   beforeEach(async () => {

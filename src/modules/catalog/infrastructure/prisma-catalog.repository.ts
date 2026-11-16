@@ -1,4 +1,8 @@
 import {
+  RENTAL_POLICY_PROVIDER,
+  type RentalPolicyProvider,
+} from '@modules/settings/public/rental-policy';
+import {
   PUBLIC_MEDIA_URL_RESOLVER,
   type PublicMediaUrlResolver,
 } from '@common/storage/public-url.resolver';
@@ -94,6 +98,7 @@ export class PrismaCatalogRepository
   constructor(
     private readonly prisma: PrismaService,
     @Inject(PUBLIC_MEDIA_URL_RESOLVER) private readonly mediaUrls: PublicMediaUrlResolver,
+    @Inject(RENTAL_POLICY_PROVIDER) private readonly policies: RentalPolicyProvider,
   ) {}
 
   listStorefrontCategories(
@@ -102,10 +107,15 @@ export class PrismaCatalogRepository
     return listStorefrontCategories(this.prisma, shopId);
   }
 
-  listStorefrontProducts(
+  async listStorefrontProducts(
     input: Parameters<CatalogPersistenceAdapter['listStorefrontProducts']>[0],
   ): ReturnType<CatalogPersistenceAdapter['listStorefrontProducts']> {
-    return listStorefrontProducts(this.prisma, this.mediaUrls, input);
+    return listStorefrontProducts(
+      this.prisma,
+      this.mediaUrls,
+      input,
+      (await this.policies.getPolicy(input.shopId)).rentalPricing.defaultRentalPrice,
+    );
   }
 
   listStorefrontFilters(
@@ -114,18 +124,30 @@ export class PrismaCatalogRepository
     return listStorefrontFilters(this.prisma, input);
   }
 
-  listStorefrontProductsByIds(
+  async listStorefrontProductsByIds(
     shopId: string,
     productIds: string[],
   ): ReturnType<CatalogPersistenceAdapter['listStorefrontProductsByIds']> {
-    return listStorefrontProductsByIds(this.prisma, this.mediaUrls, shopId, productIds);
+    return listStorefrontProductsByIds(
+      this.prisma,
+      this.mediaUrls,
+      shopId,
+      productIds,
+      (await this.policies.getPolicy(shopId)).rentalPricing.defaultRentalPrice,
+    );
   }
 
-  findStorefrontProductBySlug(
+  async findStorefrontProductBySlug(
     shopId: string,
     slug: string,
   ): ReturnType<CatalogPersistenceAdapter['findStorefrontProductBySlug']> {
-    return findStorefrontProductBySlug(this.prisma, this.mediaUrls, shopId, slug);
+    return findStorefrontProductBySlug(
+      this.prisma,
+      this.mediaUrls,
+      shopId,
+      slug,
+      (await this.policies.getPolicy(shopId)).rentalPricing.defaultRentalPrice,
+    );
   }
 
   resolveStorefrontSelections(

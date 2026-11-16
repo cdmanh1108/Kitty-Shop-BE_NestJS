@@ -40,6 +40,7 @@ function variant(): NonNullable<Parameters<typeof toBookableVariant>[0]> {
       name: 'Ba ba',
       slug: 'ba-ba',
       description: null,
+      rentalPriceOverride: null,
       defaultDepositAmount: new Prisma.Decimal(300000),
       replacementValue: null,
       facebookPostUrl: null,
@@ -113,6 +114,7 @@ describe('repository persistence boundaries', () => {
       await new PrismaCatalogRepository(
         prisma,
         new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+        rentalPolicies,
       ).findProduct('shop', 'missing'),
     ).toBeNull();
     expect(
@@ -138,6 +140,7 @@ describe('repository persistence boundaries', () => {
     await new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     ).findProduct('shop', 'product');
     expect(find.mock.calls[0]?.[0]?.select).toMatchObject({
       category: { select: { id: true, code: true, name: true, isActive: true } },
@@ -189,6 +192,7 @@ describe('repository persistence boundaries', () => {
       new PrismaCatalogRepository(
         prisma,
         new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+        rentalPolicies,
       ).createCategory('shop', {
         code: 'BB',
         name: 'Ba ba',
@@ -209,6 +213,7 @@ describe('repository persistence boundaries', () => {
       new PrismaCatalogRepository(
         prisma,
         new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+        rentalPolicies,
       ).createProduct('shop', {
         code: 'BB',
         name: 'Ba ba',

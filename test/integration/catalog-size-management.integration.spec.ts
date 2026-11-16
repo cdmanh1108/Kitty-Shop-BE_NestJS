@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { randomUUID } from 'node:crypto';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import { SizeService } from '../../src/modules/catalog/application/size.service';
@@ -25,6 +26,7 @@ describe('Admin Size management persistence', () => {
     catalog = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     );
     sizes = new SizeService(catalog, audit);
   });

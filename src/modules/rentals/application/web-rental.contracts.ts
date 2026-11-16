@@ -39,6 +39,7 @@ export interface WebRentalLineAvailability {
   availableQuantity: number;
   available: boolean;
   issue?: WebRentalLineIssue;
+  pricing?: ResolvedRentalCyclePricing;
   unitRentalPrice?: number;
   lineTotal?: number;
   depositAmount?: number;
@@ -46,7 +47,7 @@ export interface WebRentalLineAvailability {
 
 export interface WebRentalQuoteResult {
   durationDays: number;
-  pricing: ResolvedRentalCyclePricing;
+  pricing: ResolvedRentalCyclePricing | null;
   accessoryAllowance: RentalAccessoryAllowance;
   rentalSubtotal: number;
   depositAmount: number;
@@ -66,6 +67,7 @@ export interface WebRentalQuoteResult {
 }
 
 export interface WebCreateOrderInput {
+  expectedRentalSubtotal?: number;
   customer: {
     name: string;
     phone: string;

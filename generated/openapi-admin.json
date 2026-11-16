@@ -5737,6 +5737,13 @@
       "CreateProductReqDto": {
         "type": "object",
         "properties": {
+          "rentalPriceOverride": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Giá một lượt thuê riêng của sản phẩm (VND). null dùng giá chung; 0 hợp lệ."
+          },
           "allowFreeAccessory": {
             "type": "boolean",
             "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn."
@@ -5798,6 +5805,10 @@
       "ProductResDto": {
         "type": "object",
         "properties": {
+          "rentalPriceOverride": {
+            "type": "string",
+            "nullable": true
+          },
           "allowFreeAccessory": {
             "type": "boolean"
           },
@@ -5863,6 +5874,7 @@
           }
         },
         "required": [
+          "rentalPriceOverride",
           "allowFreeAccessory",
           "id",
           "code",
@@ -5897,6 +5909,13 @@
       "UpdateProductReqDto": {
         "type": "object",
         "properties": {
+          "rentalPriceOverride": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100000000,
+            "description": "Giá một lượt thuê riêng của sản phẩm (VND). null dùng giá chung; 0 hợp lệ."
+          },
           "allowFreeAccessory": {
             "type": "boolean",
             "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn."
@@ -8590,6 +8609,10 @@
       "ProductListItemResDto": {
         "type": "object",
         "properties": {
+          "rentalPriceOverride": {
+            "type": "string",
+            "nullable": true
+          },
           "allowFreeAccessory": {
             "type": "boolean"
           },
@@ -8635,6 +8658,7 @@
           }
         },
         "required": [
+          "rentalPriceOverride",
           "allowFreeAccessory",
           "id",
           "code",
@@ -8709,6 +8733,10 @@
       "ProductLookupItemResDto": {
         "type": "object",
         "properties": {
+          "rentalPriceOverride": {
+            "type": "string",
+            "nullable": true
+          },
           "allowFreeAccessory": {
             "type": "boolean"
           },
@@ -8732,6 +8760,7 @@
           }
         },
         "required": [
+          "rentalPriceOverride",
           "allowFreeAccessory",
           "id",
           "code",
@@ -10623,6 +10652,7 @@
             "type": "string",
             "enum": [
               "SHOP",
+              "PRODUCT",
               "ORDER",
               "ITEM"
             ]

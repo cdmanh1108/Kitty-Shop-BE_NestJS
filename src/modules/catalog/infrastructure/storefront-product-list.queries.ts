@@ -18,6 +18,7 @@ export async function listStorefrontProducts(
   prisma: PrismaService,
   mediaUrls: PublicMediaUrlResolver,
   input: StorefrontProductListCriteria,
+  defaultRentalPrice: number,
 ): Promise<StorefrontProductPage> {
   const page = Math.min(1000, Math.max(1, input.page));
   const limit = Math.min(100, Math.max(1, input.limit));
@@ -65,7 +66,7 @@ export async function listStorefrontProducts(
     prisma.product.count({ where }),
   ]);
   const items: StorefrontProductItem[] = products.map((product) =>
-    toStorefrontProductItem(product, mediaUrls),
+    toStorefrontProductItem(product, mediaUrls, defaultRentalPrice),
   );
 
   return {

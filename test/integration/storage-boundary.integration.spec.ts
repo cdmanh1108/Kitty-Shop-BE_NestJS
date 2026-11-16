@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
@@ -36,6 +37,7 @@ describe('Storage persistence', () => {
       const repository = new PrismaCatalogRepository(
         prisma,
         new ConfiguredPublicMediaUrlResolver(base),
+        rentalPolicies,
       );
       expect((await repository.findProduct(shop.id, product.id))?.media[0]?.url).toBe(
         `${base}/${media.storageKey}`,

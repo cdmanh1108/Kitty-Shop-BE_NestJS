@@ -2,6 +2,7 @@ import type { PaginatedResult } from '@common/types/pagination';
 import type { DecimalValue } from '@common/types/decimal';
 
 export interface ProductListItem {
+  rentalPriceOverride: DecimalValue | null;
   allowFreeAccessory: boolean;
   id: string;
   code: string;
@@ -17,6 +18,7 @@ export interface ProductListItem {
 }
 
 export interface ProductLookupItem {
+  rentalPriceOverride: DecimalValue | null;
   allowFreeAccessory: boolean;
   id: string;
   code: string;

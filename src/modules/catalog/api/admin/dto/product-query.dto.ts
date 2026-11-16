@@ -53,6 +53,7 @@ export class ProductLookupVariantResDto {
 }
 
 export class ProductLookupItemResDto {
+  @ApiProperty({ type: String, nullable: true }) rentalPriceOverride!: string | null;
   @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;

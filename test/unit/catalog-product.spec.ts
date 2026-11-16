@@ -111,6 +111,7 @@ describe('ProductService', () => {
         name: 'Váy Công Chúa',
         slug: 'vay-cong-chua',
         description: 'Mô tả',
+        rentalPriceOverride: new Prisma.Decimal(80000),
         defaultDepositAmount: new Prisma.Decimal(200000),
         replacementValue: new Prisma.Decimal(1500000),
         facebookPostUrl: 'https://www.facebook.com/share/p/123456/',
@@ -131,6 +132,7 @@ describe('ProductService', () => {
         code: 'DRESS-01',
         name: 'Váy Công Chúa',
         categoryId: 'cat-1',
+        rentalPriceOverride: 80000,
         defaultDepositAmount: 200000,
         replacementValue: 1500000,
         facebookPostUrl: 'https://www.facebook.com/share/p/123456/',
@@ -158,6 +160,7 @@ describe('ProductService', () => {
         expect.objectContaining({
           code: 'DRESS-01',
           name: 'Váy Công Chúa',
+          rentalPriceOverride: 80000,
           replacementValue: 1500000,
           facebookPostUrl: 'https://www.facebook.com/share/p/123456/',
         }),
@@ -272,47 +275,53 @@ describe('ProductService', () => {
   });
 
   describe('updateProduct', () => {
-    it('updates core product fields without altering unprovided values', async () => {
-      const updated: UpdateProductResult = {
-        allowFreeAccessory: false,
-        id: 'prod-1',
-        shopId: mockUser.shopId,
-        categoryId: 'cat-1',
-        code: 'LEGACY-30K',
-        name: 'Tên mới',
-        slug: null,
-        description: null,
-        defaultDepositAmount: new Prisma.Decimal(0),
-        replacementValue: new Prisma.Decimal(500000),
-        facebookPostUrl: 'https://facebook.com/new-post',
-        currency: 'VND',
-        status: 'ACTIVE',
-        isRentable: true,
-        isPublic: true,
-        metadata: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        archivedAt: null,
-      };
-      updateProductMock.mockResolvedValue(updated);
-
-      const result = await service.updateProduct(mockUser, 'prod-1', {
-        name: 'Tên mới',
-        replacementValue: 500000,
-        facebookPostUrl: 'https://facebook.com/new-post',
-      });
-
-      expect(result).toBe(updated);
-      expect(updateProductMock).toHaveBeenCalledWith(
-        mockUser.shopId,
-        'prod-1',
-        expect.objectContaining({
+    it.each([undefined, null, 0, 80000])(
+      'forwards product price %s while updating core fields',
+      async (rentalPriceOverride) => {
+        const updated: UpdateProductResult = {
+          allowFreeAccessory: false,
+          id: 'prod-1',
+          shopId: mockUser.shopId,
+          categoryId: 'cat-1',
+          code: 'LEGACY-30K',
           name: 'Tên mới',
+          slug: null,
+          description: null,
+          rentalPriceOverride: null,
+          defaultDepositAmount: new Prisma.Decimal(0),
+          replacementValue: new Prisma.Decimal(500000),
+          facebookPostUrl: 'https://facebook.com/new-post',
+          currency: 'VND',
+          status: 'ACTIVE',
+          isRentable: true,
+          isPublic: true,
+          metadata: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          archivedAt: null,
+        };
+        updateProductMock.mockResolvedValue(updated);
+
+        const result = await service.updateProduct(mockUser, 'prod-1', {
+          name: 'Tên mới',
+          rentalPriceOverride,
           replacementValue: 500000,
           facebookPostUrl: 'https://facebook.com/new-post',
-        }),
-      );
-    });
+        });
+
+        expect(result).toBe(updated);
+        expect(updateProductMock).toHaveBeenCalledWith(
+          mockUser.shopId,
+          'prod-1',
+          expect.objectContaining({
+            name: 'Tên mới',
+            rentalPriceOverride,
+            replacementValue: 500000,
+            facebookPostUrl: 'https://facebook.com/new-post',
+          }),
+        );
+      },
+    );
 
     it('throws Error when product does not exist', async () => {
       updateProductMock.mockResolvedValue(null);
@@ -346,6 +355,7 @@ describe('ProductService', () => {
         name: 'Váy dạ hội',
         slug: 'vay-da-hoi-moi',
         description: null,
+        rentalPriceOverride: null,
         defaultDepositAmount: new Prisma.Decimal(0),
         replacementValue: null,
         facebookPostUrl: null,

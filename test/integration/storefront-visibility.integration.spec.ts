@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import * as request from 'supertest';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
@@ -58,6 +59,7 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     repo = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     );
     app = await createTestApp();
     server = app.getHttpServer() as Server;

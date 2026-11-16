@@ -41,6 +41,7 @@ export async function listProducts(
       select: {
         id: true,
         code: true,
+        rentalPriceOverride: true,
         allowFreeAccessory: true,
         name: true,
         status: true,
@@ -103,6 +104,7 @@ export async function lookupProducts(
       select: {
         id: true,
         code: true,
+        rentalPriceOverride: true,
         allowFreeAccessory: true,
         name: true,
         status: true,
@@ -148,6 +150,7 @@ export async function findProduct(
     select: {
       id: true,
       code: true,
+      rentalPriceOverride: true,
       allowFreeAccessory: true,
       name: true,
       categoryId: true,

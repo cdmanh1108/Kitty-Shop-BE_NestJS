@@ -29,6 +29,7 @@ describe('Catalog persistence invariants', () => {
     catalog = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     );
     rentals = new PrismaRentalRepository(prisma, fixedClock, rentalPolicies);
   });

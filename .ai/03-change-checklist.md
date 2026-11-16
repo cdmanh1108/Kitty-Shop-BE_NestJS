@@ -19,7 +19,7 @@ For DB changes:
 - update `prisma/schema.prisma`.
 - inspect the initial-release SQL baseline when changing database structure or invariants.
 - preserve PostgreSQL-specific overlap/index constraints.
-- keep the baseline aligned with `prisma/schema.prisma`; it targets a new, empty database only.
+- keep the full migration chain aligned with `prisma/schema.prisma`; the initial baseline targets a new, empty database only. Never edit an applied baseline; add a migration for deployed databases.
 
 Before finishing:
 

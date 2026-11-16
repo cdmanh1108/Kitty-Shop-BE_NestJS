@@ -46,6 +46,7 @@ export interface ProductRecord {
   name: string;
   slug: string | null;
   description: string | null;
+  rentalPriceOverride: DecimalValue | null;
   defaultDepositAmount: DecimalValue;
   replacementValue: DecimalValue | null;
   facebookPostUrl: string | null;

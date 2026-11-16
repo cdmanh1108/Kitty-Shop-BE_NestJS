@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import { ColorService } from '../../src/modules/catalog/application/color.service';
 import { SizeService } from '../../src/modules/catalog/application/size.service';
@@ -29,6 +30,7 @@ describe('Catalog Color and Size persistence invariants', () => {
     catalog = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     );
     colors = new ColorService(catalog, audit);
     sizes = new SizeService(catalog, audit);

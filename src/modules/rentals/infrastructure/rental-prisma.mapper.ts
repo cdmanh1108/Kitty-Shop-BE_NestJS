@@ -39,6 +39,10 @@ export function toBookableVariant(variant: BookableVariantRecord | null): Bookab
     sizeName: variant.size?.name ?? null,
     colorName: variant.color?.name ?? null,
     depositPerItem,
+    productCyclePriceOverride:
+      variant.product.rentalPriceOverride == null
+        ? null
+        : decimalToNumber(variant.product.rentalPriceOverride),
     availableInventory: variant.inventoryItems.map((item) => ({ id: item.id, sku: item.sku })),
   };
 }

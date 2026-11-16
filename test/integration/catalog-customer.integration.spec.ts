@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import {
@@ -36,6 +37,7 @@ describe('Catalog and customer persistence boundaries', () => {
     const repo = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     );
     const product = await repo.createProduct(shop.id, {
       code: uniqueCode('P'),

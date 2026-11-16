@@ -158,6 +158,7 @@ export class RentalCreationService {
           itemCyclePriceOverride: item.cyclePriceOverride,
           quantity: item.quantity,
           depositPerItem: variant.depositPerItem,
+          productCyclePriceOverride: variant.productCyclePriceOverride,
           billingRole,
         });
 

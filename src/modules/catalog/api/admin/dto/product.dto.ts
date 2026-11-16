@@ -15,6 +15,7 @@ import {
   IsUrl,
   IsUUID,
   MaxLength,
+  Max,
   Min,
   ValidateIf,
   ValidateNested,
@@ -94,6 +95,22 @@ export class ProductMediaUploadReqDto {
 
 export class CreateProductReqDto {
   @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: 100000000,
+    description: 'Giá một lượt thuê riêng của sản phẩm (VND). null dùng giá chung; 0 hợp lệ.',
+  })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Giá thuê riêng phải là số có tối đa hai chữ số thập phân.' },
+  )
+  @Min(0)
+  @Max(100000000)
+  rentalPriceOverride?: number | null;
+  @ApiPropertyOptional({
     type: Boolean,
     description: 'Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.',
   })
@@ -164,6 +181,22 @@ export class CreateProductReqDto {
 }
 
 export class UpdateProductReqDto {
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: 100000000,
+    description: 'Giá một lượt thuê riêng của sản phẩm (VND). null dùng giá chung; 0 hợp lệ.',
+  })
+  @Type(() => Number)
+  @IsOptional()
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'Giá thuê riêng phải là số có tối đa hai chữ số thập phân.' },
+  )
+  @Min(0)
+  @Max(100000000)
+  rentalPriceOverride?: number | null;
   @ApiPropertyOptional({
     type: Boolean,
     description: 'Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.',
@@ -306,6 +339,7 @@ export class ProductCategorySummaryResDto {
 }
 
 export class ProductResDto {
+  @ApiProperty({ type: String, nullable: true }) rentalPriceOverride!: string | null;
   @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
@@ -334,6 +368,7 @@ export class ProductResDto {
 }
 
 export class ProductListItemResDto {
+  @ApiProperty({ type: String, nullable: true }) rentalPriceOverride!: string | null;
   @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;

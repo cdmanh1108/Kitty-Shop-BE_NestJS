@@ -73,7 +73,12 @@ export class ProductService {
       action: 'CREATE',
       entityType: 'product',
       entityId: product?.id,
-      newValues: { code: input.code, name: input.name, allowFreeAccessory },
+      newValues: {
+        code: input.code,
+        name: input.name,
+        allowFreeAccessory,
+        rentalPriceOverride: input.rentalPriceOverride ?? null,
+      },
     });
     return product;
   }
@@ -193,6 +198,7 @@ export class ProductService {
       categoryId: input.categoryId,
       description: input.description,
       defaultDepositAmount: input.defaultDepositAmount,
+      rentalPriceOverride: input.rentalPriceOverride,
       replacementValue: input.replacementValue,
       facebookPostUrl: input.facebookPostUrl,
       isPublic: input.isPublic,

@@ -23,7 +23,11 @@ export class RentalCyclePricingResDto {
     description: 'Phụ phí một ngày không bắt đầu lượt mới (VND / món).',
   })
   additionalDayFee!: number;
-  @ApiProperty({ enum: ['SHOP', 'ORDER', 'ITEM'] }) priceSource!: 'SHOP' | 'ORDER' | 'ITEM';
+  @ApiProperty({ enum: ['SHOP', 'PRODUCT', 'ORDER', 'ITEM'] }) priceSource!:
+    | 'SHOP'
+    | 'PRODUCT'
+    | 'ORDER'
+    | 'ITEM';
   @ApiProperty({ example: 130000, description: 'Giá thuê một món cho toàn bộ thời gian (VND).' })
   unitRentalPrice!: number;
 }

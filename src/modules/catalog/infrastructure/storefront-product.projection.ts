@@ -43,6 +43,7 @@ export const storefrontProductSelect = {
   slug: true,
   name: true,
   categoryId: true,
+  rentalPriceOverride: true,
   defaultDepositAmount: true,
   isRentable: true,
   category: { select: { name: true } },
@@ -68,6 +69,7 @@ export type StorefrontProductRecord = Prisma.ProductGetPayload<{
 export function toStorefrontProductItem(
   product: StorefrontProductRecord,
   mediaUrls: PublicMediaUrlResolver,
+  defaultRentalPrice: number,
 ): StorefrontProductItem {
   const primaryMediaObj = product.media[0] ?? null;
   const imageUrl = primaryMediaObj ? mediaUrls.resolve(primaryMediaObj) : '';
@@ -88,6 +90,12 @@ export function toStorefrontProductItem(
     imageUrl,
     size: sizes.join(', ') || 'Free size',
     color: colors.join(', ') || 'Nhiều màu',
+    rentalPriceOverride:
+      product.rentalPriceOverride == null ? null : decimalToNumber(product.rentalPriceOverride),
+    rentalPrice:
+      product.rentalPriceOverride == null
+        ? defaultRentalPrice
+        : decimalToNumber(product.rentalPriceOverride),
     depositAmount: decimalToNumber(product.defaultDepositAmount),
     isRentable: product.isRentable,
   };

@@ -1,3 +1,4 @@
+import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { randomUUID } from 'node:crypto';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import { ColorService } from '../../src/modules/catalog/application/color.service';
@@ -25,6 +26,7 @@ describe('Admin Color management persistence', () => {
     catalog = new PrismaCatalogRepository(
       prisma,
       new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
     );
     colors = new ColorService(catalog, audit);
   });

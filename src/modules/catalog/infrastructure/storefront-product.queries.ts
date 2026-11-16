@@ -14,6 +14,7 @@ export async function listStorefrontProductsByIds(
   mediaUrls: PublicMediaUrlResolver,
   shopId: string,
   productIds: string[],
+  defaultRentalPrice: number,
 ): Promise<StorefrontProductItem[]> {
   const ids = [...new Set(productIds)];
   if (ids.length === 0) return [];
@@ -25,7 +26,7 @@ export async function listStorefrontProductsByIds(
   const byId = new Map(products.map((product) => [product.id, product]));
   return ids.flatMap((id) => {
     const product = byId.get(id);
-    return product ? [toStorefrontProductItem(product, mediaUrls)] : [];
+    return product ? [toStorefrontProductItem(product, mediaUrls, defaultRentalPrice)] : [];
   });
 }
 
@@ -34,6 +35,7 @@ export async function findStorefrontProductBySlug(
   mediaUrls: PublicMediaUrlResolver,
   shopId: string,
   slug: string,
+  defaultRentalPrice: number,
 ): Promise<StorefrontProductDetails | null> {
   const product = await prisma.product.findFirst({
     where: {
@@ -48,6 +50,7 @@ export async function findStorefrontProductBySlug(
       name: true,
       categoryId: true,
       description: true,
+      rentalPriceOverride: true,
       defaultDepositAmount: true,
       facebookPostUrl: true,
       isRentable: true,
@@ -111,6 +114,12 @@ export async function findStorefrontProductBySlug(
     gallery: gallery.length ? gallery : imageUrl ? [imageUrl] : [],
     size: sizes.join(', ') || 'Free size',
     color: colors.join(', ') || 'Nhiều màu',
+    rentalPriceOverride:
+      product.rentalPriceOverride == null ? null : decimalToNumber(product.rentalPriceOverride),
+    rentalPrice:
+      product.rentalPriceOverride == null
+        ? defaultRentalPrice
+        : decimalToNumber(product.rentalPriceOverride),
     depositAmount: baseDepositAmount,
     isRentable: product.isRentable,
     description: product.description,

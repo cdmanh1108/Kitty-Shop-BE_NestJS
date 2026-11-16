@@ -40,6 +40,16 @@ export class RentalInventoryUnavailableError extends ApplicationError {
   }
 }
 
+export class RentalProductPriceChangedError extends ApplicationError {
+  readonly kind = 'CONFLICT' as const;
+  constructor() {
+    super(
+      'Giá sản phẩm vừa thay đổi. Vui lòng tải lại báo giá trước khi tạo đơn.',
+      'RENTAL_PRODUCT_PRICE_CHANGED',
+    );
+  }
+}
+
 export class RentalOverlapError extends ApplicationError {
   readonly kind = 'CONFLICT' as const;
 

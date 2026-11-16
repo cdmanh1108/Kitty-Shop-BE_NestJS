@@ -92,6 +92,7 @@ export async function createProduct(
           name: input.name,
           slug,
           description: input.description,
+          rentalPriceOverride: input.rentalPriceOverride ?? null,
           defaultDepositAmount: input.defaultDepositAmount,
           replacementValue: input.replacementValue != null ? input.replacementValue : null,
           facebookPostUrl:
@@ -193,6 +194,8 @@ export async function updateProduct(
       if (input.description !== undefined) data.description = input.description;
       if (input.defaultDepositAmount !== undefined)
         data.defaultDepositAmount = input.defaultDepositAmount;
+      if (input.rentalPriceOverride !== undefined)
+        data.rentalPriceOverride = input.rentalPriceOverride;
       if (input.replacementValue !== undefined) data.replacementValue = input.replacementValue;
       if (input.facebookPostUrl !== undefined) {
         data.facebookPostUrl =

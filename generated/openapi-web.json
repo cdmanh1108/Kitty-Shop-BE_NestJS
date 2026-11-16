@@ -2291,6 +2291,14 @@
       "WebProductDetailDto": {
         "type": "object",
         "properties": {
+          "rentalPriceOverride": {
+            "type": "number",
+            "nullable": true
+          },
+          "rentalPrice": {
+            "type": "number",
+            "minimum": 0
+          },
           "allowFreeAccessory": {
             "type": "boolean"
           },
@@ -2364,6 +2372,8 @@
           }
         },
         "required": [
+          "rentalPriceOverride",
+          "rentalPrice",
           "allowFreeAccessory",
           "id",
           "code",
@@ -2450,7 +2460,9 @@
             "description": "Số ngày thuê tính theo lịch"
           },
           "pricing": {
-            "description": "Chi tiết biểu giá theo chu kỳ của báo giá hiện tại.",
+            "nullable": true,
+            "description": "Biểu giá chung khi mọi dòng cùng giá; null nếu giá khác nhau, xem pricing từng dòng.",
+            "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/RentalCyclePricingResDto"
@@ -2522,6 +2534,11 @@
       "WebCreateOrderReqDto": {
         "type": "object",
         "properties": {
+          "expectedRentalSubtotal": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Tổng tiền thuê của báo giá khách vừa xác nhận; dùng để phát hiện thay đổi giá, không dùng để tính tiền."
+          },
           "customer": {
             "$ref": "#/components/schemas/WebCreateOrderCustomerDto"
           },
@@ -2926,6 +2943,14 @@
       "WebProductListItemDto": {
         "type": "object",
         "properties": {
+          "rentalPriceOverride": {
+            "type": "number",
+            "nullable": true
+          },
+          "rentalPrice": {
+            "type": "number",
+            "minimum": 0
+          },
           "allowFreeAccessory": {
             "type": "boolean"
           },
@@ -2976,6 +3001,8 @@
           }
         },
         "required": [
+          "rentalPriceOverride",
+          "rentalPrice",
           "id",
           "code",
           "slug",
@@ -3295,6 +3322,7 @@
             "type": "string",
             "enum": [
               "SHOP",
+              "PRODUCT",
               "ORDER",
               "ITEM"
             ]
@@ -3395,6 +3423,9 @@
             "type": "number",
             "example": 130000,
             "description": "Giá thuê một món cho toàn kỳ (VND), chưa nhân số lượng."
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/RentalCyclePricingResDto"
           },
           "lineTotal": {
             "type": "number",

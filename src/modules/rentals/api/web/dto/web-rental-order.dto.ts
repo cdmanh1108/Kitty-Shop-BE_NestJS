@@ -9,6 +9,8 @@ import {
   IsNotEmpty,
   IsObject,
   IsOptional,
+  IsNumber,
+  Min,
   IsString,
   IsUUID,
   Matches,
@@ -79,6 +81,17 @@ export class WebCreateOrderCollateralDto {
 }
 
 export class WebCreateOrderReqDto {
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 0,
+    description:
+      'Tổng tiền thuê của báo giá khách vừa xác nhận; dùng để phát hiện thay đổi giá, không dùng để tính tiền.',
+  })
+  @ValidateIf((_: WebCreateOrderReqDto, value: unknown) => value !== undefined)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  expectedRentalSubtotal?: number;
+
   @ApiProperty({ type: WebCreateOrderCustomerDto })
   @IsDefined()
   @IsObject()

@@ -2,6 +2,8 @@ import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 
 @ApiSchema({ name: 'WebProductListItemDto' })
 export class FavoriteProductListItemDto {
+  @ApiProperty({ type: Number, nullable: true }) rentalPriceOverride!: number | null;
+  @ApiProperty({ type: Number, minimum: 0 }) rentalPrice!: number;
   @ApiPropertyOptional({ type: Boolean })
   allowFreeAccessory?: boolean;
 

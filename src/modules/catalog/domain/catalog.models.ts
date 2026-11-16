@@ -107,6 +107,7 @@ export type ProductDetails =
       | 'name'
       | 'categoryId'
       | 'description'
+      | 'rentalPriceOverride'
       | 'defaultDepositAmount'
       | 'replacementValue'
       | 'facebookPostUrl'
@@ -263,6 +264,8 @@ export interface StorefrontProductVariant {
 }
 
 export interface StorefrontProductItem {
+  rentalPriceOverride: number | null;
+  rentalPrice: number;
   allowFreeAccessory: boolean;
   id: string;
   code: string;
@@ -278,6 +281,8 @@ export interface StorefrontProductItem {
 }
 
 export interface StorefrontProductDetails {
+  rentalPriceOverride: number | null;
+  rentalPrice: number;
   allowFreeAccessory: boolean;
   id: string;
   code: string;

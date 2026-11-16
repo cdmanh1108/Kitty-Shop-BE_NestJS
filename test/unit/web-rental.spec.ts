@@ -190,7 +190,7 @@ describe('Web rental use cases', () => {
 
       expect(result.available).toBe(false);
       expect(result.canCheckout).toBe(false);
-      expect(result.items).toEqual([
+      expect(result.items).toMatchObject([
         {
           productId: 'prod-1',
           variantId: 'var-1',
@@ -271,7 +271,7 @@ describe('Web rental use cases', () => {
         available: false,
         canCheckout: false,
       });
-      expect(result.items).toEqual([
+      expect(result.items).toMatchObject([
         {
           productId: 'prod-2',
           variantId: 'var-2',
@@ -319,7 +319,7 @@ describe('Web rental use cases', () => {
       });
 
       expect(result).toMatchObject({ available: false, canCheckout: false, rentalSubtotal: 0 });
-      expect(result.items).toEqual([
+      expect(result.items).toMatchObject([
         {
           productId: 'prod-1',
           variantId: 'var-1',

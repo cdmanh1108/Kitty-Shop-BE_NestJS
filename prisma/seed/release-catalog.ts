@@ -142,12 +142,19 @@ export async function assertInitialReleaseDatabase(tx: Prisma.TransactionClient)
     Array<{ migration_name: string; finished_at: Date | null }>
   >`SELECT migration_name, finished_at FROM "_prisma_migrations" WHERE rolled_back_at IS NULL`;
   if (
-    migrations.length !== 1 ||
-    migrations[0]?.migration_name !== '202610230001_initial_release' ||
-    !migrations[0].finished_at
+    migrations.some(
+      (row) =>
+        !row.finished_at ||
+        !['202610230001_initial_release', '202611160001_product_rental_price_override'].includes(
+          row.migration_name,
+        ),
+    ) ||
+    !['202610230001_initial_release', '202611160001_product_rental_price_override'].every((name) =>
+      migrations.some((row) => row.migration_name === name && row.finished_at),
+    )
   ) {
     throw new ReleaseSeedError(
-      'Release seed requires the completed initial-release baseline on a new/reset database. Existing migration history was left unchanged.',
+      'Release seed requires all committed release migrations on a new/reset database. Run db:migrate first. Existing migration history was left unchanged.',
     );
   }
 }

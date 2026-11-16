@@ -12,7 +12,11 @@ import {
   type RentalPolicyProvider,
 } from '@modules/settings/public/rental-policy';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
-import { assertOnlineRentalDuration } from '../domain/rental-cycle-pricing';
+import { RentalProductPriceChangedError } from '../domain/rental-errors';
+import {
+  assertOnlineRentalDuration,
+  sumRentalPricingAmounts,
+} from '../domain/rental-cycle-pricing';
 import {
   rentalBillableQuantity,
   resolveRentalLinePricing,
@@ -208,12 +212,19 @@ export class WebRentalOrderService {
             policy: policy.rentalPricing,
             quantity,
             depositPerItem: variant.depositPerItem,
+            productCyclePriceOverride: variant.productCyclePriceOverride,
             billingRole,
           }),
           inventory: selectedInventory,
         });
       }
 
+      if (
+        req.expectedRentalSubtotal !== undefined &&
+        req.expectedRentalSubtotal !== sumRentalPricingAmounts(lines.map((line) => line.lineTotal))
+      ) {
+        throw new RentalProductPriceChangedError();
+      }
       const standardShippingFee = policy.delivery.standardShippingFee;
       const shippingFee = req.delivery.method === 'shop_delivery' ? standardShippingFee : 0;
 
@@ -350,6 +361,9 @@ export class WebRentalOrderService {
           documentType: req.collateral?.documentType ?? null,
         },
         ...(req.loyaltyRewardId ? { loyaltyRewardId: req.loyaltyRewardId } : {}),
+        ...(req.expectedRentalSubtotal === undefined
+          ? {}
+          : { expectedRentalSubtotal: req.expectedRentalSubtotal }),
       },
     };
   }

@@ -1,5 +1,14 @@
 # Release runbook
 
+## Update an initialized release database
+
+For a database already initialized with `202610230001_initial_release`, apply
+subsequent committed migrations with the one-off migrator (or `npm run db:migrate`
+from a configured source checkout), then deploy the matching API and FE builds.
+The product rental-price migration adds a nullable column and preserves data;
+do not reset or seed the existing release database for that update. See
+[Product rental pricing](PRODUCT_RENTAL_PRICING.md).
+
 ## New-database release
 
 This release expects a separately provisioned, empty PostgreSQL database. Its

@@ -109,6 +109,7 @@ export class WebRentalEvaluationService {
     if (selection.failure) {
       throwForInvalidWebRentalSelection(selection.failure);
     }
+    const linePricings: (typeof pricing)[] = [];
     const rentalAmounts: number[] = [];
     const depositAmounts: number[] = [];
     let allAvailable = selection.failure === undefined;
@@ -122,8 +123,19 @@ export class WebRentalEvaluationService {
           policy: policy.rentalPricing,
           quantity,
           depositPerItem: variant.depositPerItem,
+          productCyclePriceOverride: variant.productCyclePriceOverride,
           billingRole,
         });
+        const linePricing =
+          line.pricingSnapshot.version === pricing.version
+            ? resolveRentalCyclePricing({
+                durationDays,
+                billableQuantity,
+                policy: policy.rentalPricing,
+                productCyclePriceOverride: variant.productCyclePriceOverride,
+              })
+            : undefined;
+        if (linePricing) linePricings.push(linePricing);
         rentalAmounts.push(line.lineTotal);
         depositAmounts.push(line.depositAmount);
         const result = selection.items.find(
@@ -134,6 +146,7 @@ export class WebRentalEvaluationService {
         );
         if (result) {
           if (!result.available) allAvailable = false;
+          if (linePricing) result.pricing = linePricing;
           result.unitRentalPrice = line.unitRentalPrice;
           result.lineTotal = line.lineTotal;
           result.depositAmount = line.depositAmount;
@@ -163,7 +176,15 @@ export class WebRentalEvaluationService {
 
     return {
       durationDays,
-      pricing,
+      pricing:
+        linePricings.length &&
+        linePricings.every(
+          (line) =>
+            line.cyclePrice === linePricings[0]!.cyclePrice &&
+            line.priceSource === linePricings[0]!.priceSource,
+        )
+          ? linePricings[0]!
+          : null,
       accessoryAllowance: rentalAccessoryAllowance(req.items),
       rentalSubtotal,
       depositAmount,

@@ -7,6 +7,7 @@ export interface BookableVariant {
   sizeName: string | null;
   colorName: string | null;
   depositPerItem: number;
+  productCyclePriceOverride?: number | null;
   availableInventory: Array<{ id: string; sku: string }>;
 }
 

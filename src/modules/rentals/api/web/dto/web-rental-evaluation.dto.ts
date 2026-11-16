@@ -170,6 +170,8 @@ export class WebRentalQuoteItemResDto {
     description: 'Giá thuê một món cho toàn kỳ (VND), chưa nhân số lượng.',
   })
   unitRentalPrice?: number;
+  @ApiPropertyOptional({ type: RentalCyclePricingResDto })
+  pricing?: RentalCyclePricingResDto;
 
   @ApiPropertyOptional({
     example: 260000,
@@ -210,9 +212,11 @@ export class WebRentalQuoteResDto {
 
   @ApiProperty({
     type: RentalCyclePricingResDto,
-    description: 'Chi tiết biểu giá theo chu kỳ của báo giá hiện tại.',
+    nullable: true,
+    description:
+      'Biểu giá chung khi mọi dòng cùng giá; null nếu giá khác nhau, xem pricing từng dòng.',
   })
-  pricing!: RentalCyclePricingResDto;
+  pricing!: RentalCyclePricingResDto | null;
 
   @ApiProperty({ example: 450000, description: 'Tiền thuê tạm tính (VND)' })
   rentalSubtotal!: number;

@@ -63,8 +63,8 @@ npm run db:seed
 npm run start:dev
 ```
 
-`migrate reset` xóa dữ liệu/schema đích và áp dụng lại baseline
-`202610230001_initial_release`. Giữ lời nhắc xác nhận tương tác của Prisma;
+`migrate reset` xóa dữ liệu/schema đích và áp dụng lại toàn bộ migration,
+bắt đầu từ baseline `202610230001_initial_release`. Giữ lời nhắc xác nhận tương tác của Prisma;
 chỉ chạy seed nếu reset thành công. Không dùng quy trình reset local này trên
 database production hiện có.
 

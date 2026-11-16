@@ -66,6 +66,8 @@ export const WebCatalogMapper = {
       imageUrl: product.imageUrl,
       size: product.size,
       color: product.color,
+      rentalPriceOverride: product.rentalPriceOverride,
+      rentalPrice: product.rentalPrice,
       depositAmount: product.depositAmount,
       isRentable: product.isRentable,
     };
@@ -103,6 +105,8 @@ export const WebCatalogMapper = {
       gallery: product.gallery,
       size: product.size,
       color: product.color,
+      rentalPriceOverride: product.rentalPriceOverride,
+      rentalPrice: product.rentalPrice,
       depositAmount: product.depositAmount,
       isRentable: product.isRentable,
       description: product.description ?? undefined,
