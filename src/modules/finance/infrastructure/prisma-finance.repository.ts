@@ -14,6 +14,7 @@ import {
 import { lockRentalOrder } from '@modules/rentals/public/rental-order-lock';
 import { writeTransactionalAuditLog } from '@modules/audit/public/transactional-audit';
 import { Inject, Injectable } from '@nestjs/common';
+import { currentRequestMetadata } from '@common/request-context/request-context';
 import type { Prisma } from '@prisma/client';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import {
@@ -25,6 +26,10 @@ import {
   FinancePaymentClaimLostError,
   toStoredManualPaymentCreateResult,
 } from '../domain/manual-payment-idempotency';
+import {
+  FinanceExpenseClaimLostError,
+  toStoredExpenseCreateResult,
+} from '../domain/expense-idempotency';
 
 @Injectable()
 export class PrismaFinanceRepository implements FinanceRepository {
@@ -224,7 +229,11 @@ export class PrismaFinanceRepository implements FinanceRepository {
   }
 
   async createExpense(input: Parameters<FinanceRepository['createExpense']>[0]) {
-    return this.prisma.$transaction(async (tx) => {
+    const { idempotency, audit, ...data } = input;
+    return serializableTransaction(this.prisma, async (tx) => {
+      if (!(await lockIdempotencyClaim(tx, input.shopId, idempotency))) {
+        throw new FinanceExpenseClaimLostError();
+      }
       const category = await tx.expenseCategory.findFirst({
         where: { id: input.categoryId, shopId: input.shopId, isActive: true },
         select: { id: true },
@@ -249,8 +258,35 @@ export class PrismaFinanceRepository implements FinanceRepository {
           throw new FinanceInvariantError('Món đồ của khoản chi không thuộc cửa hàng này.');
       }
 
-      return tx.expense.create({ data: input });
+      const expense = await tx.expense.create({ data });
+      await writeTransactionalAuditLog(tx, {
+        ...currentRequestMetadata(),
+        shopId: input.shopId,
+        actorUserId: audit.actorUserId,
+        actorMemberId: audit.actorMemberId,
+        action: 'CREATE',
+        entityType: 'expense',
+        entityId: expense.id,
+        newValues: { amount: input.amount, description: expense.description },
+      });
+      const completed = await completeIdempotencyClaim(tx, {
+        shopId: input.shopId,
+        ...idempotency,
+        responseCode: 201,
+        responseBody: toStoredExpenseCreateResult(expense),
+        completedAt: this.clock.now(),
+      });
+      if (!completed) throw new FinanceExpenseClaimLostError();
+      return expense;
     });
+  }
+
+  claimExpenseIdempotency(input: Parameters<FinanceRepository['claimExpenseIdempotency']>[0]) {
+    return claimIdempotencyRecord(this.prisma, this.clock, input);
+  }
+
+  releaseExpenseIdempotency(shopId: string, scope: string, key: string, claimId: string) {
+    return releaseIdempotencyClaim(this.prisma, shopId, scope, key, claimId);
   }
 
   async listExpenses(input: Parameters<FinanceRepository['listExpenses']>[0]) {

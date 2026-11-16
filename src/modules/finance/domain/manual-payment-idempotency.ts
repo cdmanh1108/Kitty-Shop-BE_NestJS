@@ -10,12 +10,6 @@ export class FinancePaymentClaimLostError extends Error {
   }
 }
 
-export type FinanceIdempotencyClaim =
-  | { state: 'CLAIMED'; claimId: string }
-  | { state: 'IN_PROGRESS' }
-  | { state: 'HASH_MISMATCH' }
-  | { state: 'COMPLETED'; responseBody: JsonValue };
-
 export interface ManualPaymentCreateResult {
   id: string;
   orderId: string;

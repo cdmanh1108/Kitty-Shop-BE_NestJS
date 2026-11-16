@@ -15,7 +15,6 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { FinanceService } from '../application/finance.service';
-import type { ExpenseRecord } from '../domain/finance.records';
 import { ExpenseCategoryResDto } from './finance-read.dto';
 import {
   CreateExpenseReqDto,
@@ -107,10 +106,34 @@ export class FinanceController {
   }
 
   @Post('expenses')
+  @Header('Cache-Control', 'no-store')
   @Permissions(PERMISSIONS.FINANCE_MANAGE)
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: true,
+    description:
+      'Opaque ASCII key (1-255 characters) created once per expense intent and reused with the original body for retries.',
+  })
   @ApiCreatedResponse({ type: ExpenseResDto })
-  async createExpense(@CurrentUser() user: CurrentUserType, @Body() body: CreateExpenseReqDto) {
-    return expenseResponse(await this.service.createExpense(user, toCreateExpenseInput(body)));
+  @ApiBadRequestResponse({ description: 'Thông tin khoản chi hoặc Idempotency-Key không hợp lệ.' })
+  @ApiConflictResponse({
+    description: 'Yêu cầu đang được xử lý hoặc Idempotency-Key đã dùng cho khoản chi khác.',
+  })
+  createExpense(
+    @CurrentUser() user: CurrentUserType,
+    @Body() body: CreateExpenseReqDto,
+    @Req() request: Request,
+  ) {
+    const keys = request.rawHeaders
+      .filter((_, index) => index % 2 === 0)
+      .map((header, index) => ({ header, value: request.rawHeaders[index * 2 + 1] }))
+      .filter(({ header }) => header.toLowerCase() === 'idempotency-key')
+      .map(({ value }) => value ?? '');
+    return this.service.createExpense(
+      user,
+      toCreateExpenseInput(body),
+      keys.length === 0 ? undefined : keys.length === 1 ? keys[0] : keys,
+    );
   }
 
   @Post('expenses/:id/void')
@@ -119,16 +142,4 @@ export class FinanceController {
   voidExpense(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
     return this.service.voidExpense(user, id);
   }
-}
-
-function expenseResponse(expense: ExpenseRecord): ExpenseResDto {
-  return {
-    id: expense.id,
-    expenseNumber: expense.expenseNumber,
-    categoryId: expense.categoryId,
-    description: expense.description,
-    amount: expense.amount.toString(),
-    status: expense.status,
-    expenseDate: expense.expenseDate.toISOString().slice(0, 10),
-  };
 }

@@ -31,3 +31,19 @@ export class ManualPaymentReplayUnavailableError extends ApplicationError {
     super('Không thể khôi phục kết quả giao dịch đã ghi nhận.', 'IDEMPOTENCY_REPLAY_INVALID');
   }
 }
+
+export class ExpenseIdempotencyConflictError extends ApplicationError {
+  readonly kind = 'CONFLICT' as const;
+
+  constructor(code: string, message: string) {
+    super(message, code);
+  }
+}
+
+export class ExpenseReplayUnavailableError extends ApplicationError {
+  readonly kind = 'INTERNAL' as const;
+
+  constructor() {
+    super('Chưa thể xác nhận kết quả khoản chi đã lưu.', 'IDEMPOTENCY_REPLAY_INVALID');
+  }
+}

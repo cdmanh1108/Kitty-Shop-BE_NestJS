@@ -25,6 +25,7 @@
 - Deposit cash movements are separate from earned rental revenue.
 - Payment status and deposit status are derived from non-voided transaction history.
 - Void/cancel/archive replaces destructive delete for business history.
+- Expense creation requires an actor/shop-scoped intent key. Expense, durable CREATE audit and public replay snapshot commit atomically under the claim ownership fence. Retrying the same input/key replays the original creation result; an intentionally distinct identical expense uses a new key. Replay retention is 30 days; see `docs/EXPENSE_IDEMPOTENCY.md`.
 - Money uses decimal values only.
 - Business timestamps use timezone-aware timestamps; shop timezone controls day/month reporting boundaries.
 

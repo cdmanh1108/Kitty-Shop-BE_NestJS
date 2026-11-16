@@ -110,11 +110,13 @@ describe('Finance HTTP authorization and validation', () => {
     await request(server)
       .post('/api/v1/admin/expenses')
       .set('Authorization', `Bearer ${token(manager)}`)
+      .set('Idempotency-Key', 'finance-invalid-expense-date')
       .send({ ...body, expenseDate: '2026-02-30' })
       .expect(400);
     await request(server)
       .post('/api/v1/admin/expenses')
       .set('Authorization', `Bearer ${token(manager)}`)
+      .set('Idempotency-Key', 'finance-create-expense')
       .send(body)
       .expect(201);
     expect(
@@ -131,7 +133,75 @@ describe('Finance HTTP authorization and validation', () => {
     await request(server)
       .post('/api/v1/admin/expenses')
       .set('Authorization', `Bearer ${token(manager)}`)
+      .set('Idempotency-Key', 'finance-invalid-category')
       .send({ ...body, categoryId: '00000000-0000-4000-8000-000000000000' })
       .expect(400);
+  });
+
+  it('requires a single key and replays a committed expense without duplicating expense or audit', async () => {
+    const shop = await createTestShop(prisma);
+    const manager = await createTestUserAndMember(prisma, shop.id, {
+      permissions: ['finance.view', 'finance.manage'],
+    });
+    const auth = `Bearer ${generateTestAccessToken({ shopId: shop.id, userId: manager.user.id, memberId: manager.member.id })}`;
+    const category = await prisma.expenseCategory.create({
+      data: { shopId: shop.id, code: 'CLEAN', name: 'Giặt hấp' },
+    });
+    const body = {
+      categoryId: category.id,
+      description: 'Giặt đồ',
+      amount: 100000,
+      expenseDate: '2026-11-16',
+    };
+    const missingKey = await request(server)
+      .post('/api/v1/admin/expenses')
+      .set('Authorization', auth)
+      .send(body)
+      .expect(400);
+    expect(missingKey.body).toMatchObject({ code: 'IDEMPOTENCY_KEY_REQUIRED' });
+    await request(server)
+      .post('/api/v1/admin/expenses')
+      .set('Authorization', auth)
+      .set({ 'Idempotency-Key': ['one', 'two'] })
+      .send(body)
+      .expect(400);
+    expect(await prisma.expense.count()).toBe(0);
+    const first = await request(server)
+      .post('/api/v1/admin/expenses')
+      .set('Authorization', auth)
+      .set('x-request-id', 'expense-idempotent-first')
+      .set('Idempotency-Key', 'http-expense')
+      .send(body)
+      .expect(201)
+      .expect('Cache-Control', 'no-store');
+    const replay = await request(server)
+      .post('/api/v1/admin/expenses')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', 'http-expense')
+      .send(body)
+      .expect(201);
+    expect(replay.body).toEqual(first.body);
+    await request(server)
+      .post('/api/v1/admin/expenses')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', 'http-expense')
+      .send({ ...body, amount: 100001 })
+      .expect(409);
+    expect(await prisma.expense.count()).toBe(1);
+    expect(
+      await prisma.auditLog.count({ where: { entityType: 'expense', action: 'CREATE' } }),
+    ).toBe(1);
+    expect(
+      await prisma.auditLog.findFirstOrThrow({
+        where: { entityType: 'expense', action: 'CREATE' },
+      }),
+    ).toMatchObject({ requestId: 'expense-idempotent-first' });
+    await request(server)
+      .post('/api/v1/admin/expenses')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', 'http-new-expense')
+      .send(body)
+      .expect(201);
+    expect(await prisma.expense.count()).toBe(2);
   });
 });

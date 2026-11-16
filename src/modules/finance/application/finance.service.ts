@@ -26,6 +26,14 @@ import {
   toManualPaymentCreateResult,
   type ManualPaymentCreateResult,
 } from '../domain/manual-payment-idempotency';
+import {
+  FINANCE_EXPENSE_IDEMPOTENCY_SCOPE,
+  FINANCE_EXPENSE_REPLAY_RETENTION_MS,
+  FinanceExpenseClaimLostError,
+  isStoredExpenseCreateResult,
+  toExpenseCreateResult,
+  type ExpenseCreateResult,
+} from '../domain/expense-idempotency';
 import type {
   CreateExpenseInput,
   CreatePaymentInput,
@@ -38,6 +46,8 @@ import {
   InvalidPaymentCommandError,
   ManualPaymentIdempotencyConflictError,
   ManualPaymentReplayUnavailableError,
+  ExpenseIdempotencyConflictError,
+  ExpenseReplayUnavailableError,
 } from './finance.errors';
 
 const PAYMENT_PURPOSES: ReadonlySet<string> = new Set(Object.values(PAYMENT_PURPOSE));
@@ -203,7 +213,12 @@ export class FinanceService {
     });
   }
 
-  async createExpense(user: CurrentUser, input: CreateExpenseInput) {
+  async createExpense(
+    user: CurrentUser,
+    input: CreateExpenseInput,
+    rawIdempotencyKey?: string | string[],
+  ): Promise<ExpenseCreateResult> {
+    const key = requireExpenseIdempotencyKey(rawIdempotencyKey);
     const description = input.description.trim();
     const expenseDate = new Date(input.expenseDate + 'T00:00:00Z');
     if (description.length < 3 || description.length > 2000) {
@@ -215,7 +230,57 @@ export class FinanceService {
     ) {
       throw new InvalidExpenseDetailsError('Ngày chi không hợp lệ.');
     }
-    let expense: Awaited<ReturnType<FinanceRepository['createExpense']>>;
+    if (!Number.isFinite(input.amount) || input.amount < 0.01) {
+      throw new InvalidExpenseDetailsError('Số tiền phải lớn hơn 0.');
+    }
+    const paidAt = input.paidAt ? new Date(input.paidAt) : undefined;
+    if (paidAt && !Number.isFinite(paidAt.getTime())) {
+      throw new InvalidExpenseDetailsError('Thời gian thanh toán không hợp lệ.');
+    }
+    const scope = `${FINANCE_EXPENSE_IDEMPOTENCY_SCOPE}:${user.memberId}`;
+    const requestHash = createHash('sha256')
+      .update(
+        stableJson({
+          version: 1,
+          categoryId: input.categoryId,
+          description,
+          amount: input.amount,
+          expenseDate: input.expenseDate,
+          orderId: input.orderId ?? null,
+          inventoryItemId: input.inventoryItemId ?? null,
+          paymentMethod: input.paymentMethod ?? null,
+          vendorName: input.vendorName ?? null,
+          paidAt: paidAt?.toISOString() ?? null,
+          receiptUrl: input.receiptUrl ?? null,
+        }),
+      )
+      .digest('hex');
+    const claim = await this.repository.claimExpenseIdempotency({
+      shopId: user.shopId,
+      scope,
+      key,
+      requestHash,
+      expiresAt: new Date(this.clock.now().getTime() + FINANCE_EXPENSE_REPLAY_RETENTION_MS),
+    });
+    if (claim.state === 'HASH_MISMATCH') {
+      throw new ExpenseIdempotencyConflictError(
+        'IDEMPOTENCY_KEY_REUSED',
+        'Thông tin khoản chi khác với lần gửi trước. Vui lòng kiểm tra giao dịch đã lưu.',
+      );
+    }
+    if (claim.state === 'IN_PROGRESS') {
+      throw new ExpenseIdempotencyConflictError(
+        'IDEMPOTENCY_IN_PROGRESS',
+        'Khoản chi đang được lưu. Vui lòng đợi rồi thử lại.',
+      );
+    }
+    if (claim.state === 'COMPLETED') {
+      if (!isStoredExpenseCreateResult(claim.responseBody)) {
+        throw new ExpenseReplayUnavailableError();
+      }
+      return claim.responseBody.result;
+    }
+    let expense: Awaited<ReturnType<FinanceRepository['createExpense']>> | undefined;
     try {
       expense = await this.repository.createExpense({
         shopId: user.shopId,
@@ -228,25 +293,39 @@ export class FinanceService {
         paymentMethod: input.paymentMethod,
         vendorName: input.vendorName,
         expenseDate,
-        paidAt: input.paidAt ? new Date(input.paidAt) : undefined,
+        paidAt,
         receiptUrl: input.receiptUrl,
         createdBy: user.memberId,
+        idempotency: { scope, key, claimId: claim.claimId },
+        audit: { actorUserId: user.userId, actorMemberId: user.memberId },
       });
     } catch (error) {
+      if (error instanceof FinanceExpenseClaimLostError) {
+        throw new ExpenseIdempotencyConflictError(
+          'IDEMPOTENCY_CLAIM_LOST',
+          'Yêu cầu lưu đang được xử lý lại. Vui lòng đợi rồi thử lại.',
+        );
+      }
       if (error instanceof FinanceInvariantError)
         throw new InvalidExpenseDetailsError(error.message);
       throw error;
+    } finally {
+      if (!expense) {
+        try {
+          await this.repository.releaseExpenseIdempotency(user.shopId, scope, key, claim.claimId);
+        } catch (releaseError) {
+          this.logger.error({
+            event: 'finance.expense.idempotency.release.failed',
+            shopId: user.shopId,
+            error:
+              releaseError instanceof Error
+                ? releaseError
+                : new Error('Không thể giải phóng yêu cầu lưu khoản chi.'),
+          });
+        }
+      }
     }
-    await this.audit.log({
-      shopId: user.shopId,
-      actorUserId: user.userId,
-      actorMemberId: user.memberId,
-      action: 'CREATE',
-      entityType: 'expense',
-      entityId: expense?.id,
-      newValues: { amount: input.amount, description: input.description },
-    });
-    return expense;
+    return toExpenseCreateResult(expense);
   }
 
   async voidExpense(user: CurrentUser, id: string) {
@@ -262,6 +341,22 @@ export class FinanceService {
     });
     return expense;
   }
+}
+
+function requireExpenseIdempotencyKey(value: string | string[] | undefined): string {
+  if (value === undefined) {
+    throw new InvalidExpenseDetailsError(
+      'Thiếu thông tin xác nhận lần lưu khoản chi. Vui lòng tải lại trang và thử lại.',
+      'IDEMPOTENCY_KEY_REQUIRED',
+    );
+  }
+  if (Array.isArray(value) || !/^[\x21-\x7e]{1,255}$/.test(value)) {
+    throw new InvalidExpenseDetailsError(
+      'Thông tin xác nhận lần lưu khoản chi không hợp lệ.',
+      'IDEMPOTENCY_KEY_INVALID',
+    );
+  }
+  return value;
 }
 
 function requireIdempotencyKey(value: string | string[] | undefined): string {

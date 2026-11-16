@@ -4162,7 +4162,17 @@
       },
       "post": {
         "operationId": "FinanceController_createExpense",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Opaque ASCII key (1-255 characters) created once per expense intent and reused with the original body for retries.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -4183,6 +4193,12 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Thông tin khoản chi hoặc Idempotency-Key không hợp lệ."
+          },
+          "409": {
+            "description": "Yêu cầu đang được xử lý hoặc Idempotency-Key đã dùng cho khoản chi khác."
           }
         },
         "security": [

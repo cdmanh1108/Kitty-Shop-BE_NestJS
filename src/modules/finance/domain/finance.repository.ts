@@ -12,7 +12,11 @@ import type {
   ListPaymentsResult,
   VoidExpenseResult,
 } from './finance.models';
-import type { FinanceIdempotencyClaim } from './manual-payment-idempotency';
+import type {
+  FinanceClaimIdempotencyData,
+  FinanceIdempotencyClaim,
+  FinanceIdempotencyOwner,
+} from './finance-idempotency';
 
 export class FinanceInvariantError extends ApplicationError {
   readonly kind = 'VALIDATION' as const;
@@ -28,9 +32,7 @@ export const FINANCE_REPOSITORY = Symbol('FINANCE_REPOSITORY');
 
 export interface FinanceRepository {
   createPayment(input: FinanceCreatePaymentData): Promise<CreatePaymentResult>;
-  claimPaymentIdempotency(
-    input: FinanceClaimPaymentIdempotencyData,
-  ): Promise<FinanceIdempotencyClaim>;
+  claimPaymentIdempotency(input: FinanceClaimIdempotencyData): Promise<FinanceIdempotencyClaim>;
   releasePaymentIdempotency(
     shopId: string,
     scope: string,
@@ -44,6 +46,13 @@ export interface FinanceRepository {
   }): Promise<CreatePaymentResult>;
   listPayments(input: FinanceListPaymentsCriteria): Promise<ListPaymentsResult>;
   createExpense(input: FinanceCreateExpenseData): Promise<ExpenseRecord>;
+  claimExpenseIdempotency(input: FinanceClaimIdempotencyData): Promise<FinanceIdempotencyClaim>;
+  releaseExpenseIdempotency(
+    shopId: string,
+    scope: string,
+    key: string,
+    claimId: string,
+  ): Promise<void>;
   listExpenses(input: FinanceListExpensesCriteria): Promise<ListExpensesResult>;
   voidExpense(input: { shopId: string; expenseId: string }): Promise<VoidExpenseResult>;
   listExpenseCategories(shopId: string): Promise<ListExpenseCategoriesResult>;
@@ -64,14 +73,6 @@ export interface FinanceCreatePaymentData {
   createdBy: string;
   idempotency?: { scope: string; key: string; claimId: string };
   audit?: { actorUserId: string; actorMemberId: string };
-}
-
-export interface FinanceClaimPaymentIdempotencyData {
-  shopId: string;
-  scope: string;
-  key: string;
-  requestHash: string;
-  expiresAt: Date;
 }
 
 export interface FinanceListPaymentsCriteria {
@@ -98,6 +99,8 @@ export interface FinanceCreateExpenseData {
   paidAt?: Date;
   receiptUrl?: string;
   createdBy: string;
+  idempotency: FinanceIdempotencyOwner;
+  audit: { actorUserId: string; actorMemberId: string };
 }
 
 export interface FinanceListExpensesCriteria {

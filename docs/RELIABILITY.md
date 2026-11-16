@@ -14,7 +14,8 @@ and the listed outbox events commit with their owning transactions.
 | Manual keyed payment creation        | Payment and payment/deposit recomputation                                 | Durable CREATE audit in the same transaction               | PAYMENT_RECORDED and completion snapshot together |
 | Internal payment creation            | Payment and payment/deposit recomputation                                 | Best effort after commit where its caller uses AuditPort   | PAYMENT_RECORDED in the same transaction          |
 | Payment void                         | Void and payment/deposit recomputation                                    | Best effort after commit                                   | None currently                                    |
-| Expense create/void                  | Existing expense persistence boundaries                                   | Best effort after success                                  | None currently                                    |
+| Keyed expense creation               | Expense and completion snapshot in one Serializable transaction           | Durable CREATE audit in the same transaction               | None currently                                    |
+| Expense void                         | Existing expense persistence boundary                                     | Best effort after success                                  | None currently                                    |
 | Product/variant/media                | Existing aggregate/media transactions                                     | Existing audited commands remain best effort after success | None currently                                    |
 | Inventory state                      | Inventory and status history                                              | Best effort after commit                                   | None currently                                    |
 | Customer/member/settings             | Existing repository boundaries                                            | Existing audited commands remain best effort after success | None currently                                    |
@@ -22,10 +23,10 @@ and the listed outbox events commit with their owning transactions.
 | Delivery status                      | Atomic compare-and-swap lifecycle update                                  | Best effort after success                                  | None currently                                    |
 | Auth                                 | Existing authentication persistence                                       | HTTP outcome logs, no new business audit                   | None currently                                    |
 
-Not every existing mutation emits an audit record. Coverage is unchanged except known
-entity IDs added to existing creation audits. There is no new mandatory audit_logs writer:
-critical histories/ledgers and the listed outbox events are required transactional records.
-A crash after commit can still lose a best-effort audit.
+Not every mutation emits an audit record. Keyed Finance payment and expense creation
+require their CREATE audit inside the business transaction. Other listed best-effort
+audits can still be lost on a crash after commit; critical histories/ledgers and the
+listed outbox events remain required transactional records.
 
 ## Audit port and context
 
@@ -131,6 +132,11 @@ are not repaired; the existing narrow serialized-response assertion remains. No 
 order is guessed to be a stale request's result by matching a business reference.
 
 ## Deployment
+
+Expense creation uses a separate actor-scoped namespace, 30-day completion
+retention and the same fenced claim table. The matching Admin client sends its
+required header and retains uncertain requests in owner-scoped tab storage.
+See [Expense idempotency](EXPENSE_IDEMPOTENCY.md) for rollout and recovery limits.
 
 The initial-release schema stores `audit_logs.request_id` as `VARCHAR(100)` so
 middleware can retain the same correlation ID without generating a second one.

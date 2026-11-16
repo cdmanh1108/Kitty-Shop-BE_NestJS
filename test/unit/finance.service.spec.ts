@@ -1,5 +1,7 @@
 import { FinanceService } from '../../src/modules/finance/application/finance.service';
 import type { FinanceRepository } from '../../src/modules/finance/domain/finance.repository';
+import type { ExpenseRecord } from '../../src/modules/finance/domain/finance.records';
+import { toStoredExpenseCreateResult } from '../../src/modules/finance/domain/expense-idempotency';
 import { FinanceInvariantError } from '../../src/modules/finance/domain/finance.repository';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import type { CurrentUser } from '../../src/common/types/current-user';
@@ -27,6 +29,8 @@ describe('FinanceService Unit Tests', () => {
   >;
   let voidPaymentMock: jest.MockedFunction<FinanceRepository['voidPayment']>;
   let createExpenseMock: jest.MockedFunction<FinanceRepository['createExpense']>;
+  let claimExpenseMock: jest.MockedFunction<FinanceRepository['claimExpenseIdempotency']>;
+  let releaseExpenseMock: jest.MockedFunction<FinanceRepository['releaseExpenseIdempotency']>;
   let voidExpenseMock: jest.MockedFunction<FinanceRepository['voidExpense']>;
   let auditLogMock: jest.MockedFunction<AuditPort['log']>;
 
@@ -61,26 +65,26 @@ describe('FinanceService Unit Tests', () => {
     updatedAt: new Date('2026-10-01T12:00:00.000Z'),
   };
 
-  const sampleExpense = {
+  const sampleExpense: ExpenseRecord = {
     id: 'exp-1',
     shopId: 'shop-1',
     expenseNumber: 'EXP-20261001-001',
+    categoryId: 'cat-1',
+    orderId: null,
+    inventoryItemId: null,
     description: 'Dry cleaning',
     amount: new Prisma.Decimal(50000),
+    currency: 'VND',
+    vendorName: null,
+    receiptUrl: null,
+    createdBy: 'member-1',
+    createdAt: new Date('2026-10-01T12:00:00.000Z'),
+    updatedAt: new Date('2026-10-01T12:00:00.000Z'),
     expenseDate: new Date('2026-10-01'),
     paymentMethod: 'CASH',
     paidAt: new Date('2026-10-01T12:00:00.000Z'),
     status: EXPENSE_STATUS.PAID,
     voidedAt: null,
-    voidedBy: null,
-    category: {
-      id: 'cat-1',
-      shopId: 'shop-1',
-      code: 'CLEANING',
-      name: 'Cleaning',
-      createdAt: new Date('2026-10-01T12:00:00.000Z'),
-      updatedAt: new Date('2026-10-01T12:00:00.000Z'),
-    },
   };
 
   beforeEach(() => {
@@ -90,6 +94,8 @@ describe('FinanceService Unit Tests', () => {
       .mockResolvedValue({ state: 'CLAIMED', claimId: 'claim-1' });
     voidPaymentMock = jest.fn().mockResolvedValue(samplePayment);
     createExpenseMock = jest.fn().mockResolvedValue(sampleExpense);
+    claimExpenseMock = jest.fn().mockResolvedValue({ state: 'CLAIMED', claimId: 'expense-claim' });
+    releaseExpenseMock = jest.fn().mockResolvedValue(undefined);
     voidExpenseMock = jest.fn().mockResolvedValue(sampleExpense);
     auditLogMock = jest.fn().mockResolvedValue(undefined);
 
@@ -101,6 +107,8 @@ describe('FinanceService Unit Tests', () => {
       listPayments: jest.fn(),
       listExpenseCategories: jest.fn(),
       createExpense: createExpenseMock,
+      claimExpenseIdempotency: claimExpenseMock,
+      releaseExpenseIdempotency: releaseExpenseMock,
       voidExpense: voidExpenseMock,
       listExpenses: jest.fn(),
     };
@@ -305,34 +313,113 @@ describe('FinanceService Unit Tests', () => {
       );
 
       await expect(
-        service.createExpense(currentUser, {
-          categoryId: 'cat-inactive',
+        service.createExpense(
+          currentUser,
+          {
+            categoryId: 'cat-inactive',
+            description: 'Dry cleaning',
+            amount: 50000,
+            expenseDate: '2026-10-01',
+            paymentMethod: 'CASH',
+          },
+          'expense-inactive',
+        ),
+      ).rejects.toThrow(new InvalidExpenseDetailsError('Expense category not active'));
+    });
+
+    it('passes claim ownership and audit actor into the atomic expense write', async () => {
+      const result = await service.createExpense(
+        currentUser,
+        {
+          categoryId: 'cat-1',
           description: 'Dry cleaning',
           amount: 50000,
           expenseDate: '2026-10-01',
           paymentMethod: 'CASH',
-        }),
-      ).rejects.toThrow(new InvalidExpenseDetailsError('Expense category not active'));
-    });
-
-    it('creates expense successfully and logs audit event', async () => {
-      const result = await service.createExpense(currentUser, {
-        categoryId: 'cat-1',
-        description: 'Dry cleaning',
-        amount: 50000,
-        expenseDate: '2026-10-01',
-        paymentMethod: 'CASH',
-      });
+        },
+        'expense-create',
+      );
 
       expect(result).toBeDefined();
       expect(createExpenseMock).toHaveBeenCalledTimes(1);
-      expect(auditLogMock).toHaveBeenCalledWith(
+      expect(createExpenseMock).toHaveBeenCalledWith(
         expect.objectContaining({
           shopId: currentUser.shopId,
-          action: 'CREATE',
-          entityType: 'expense',
-          entityId: sampleExpense.id,
+          idempotency: {
+            scope: 'finance.expense.create.v1:member-1',
+            key: 'expense-create',
+            claimId: 'expense-claim',
+          },
+          audit: { actorUserId: currentUser.userId, actorMemberId: currentUser.memberId },
         }),
+      );
+      expect(auditLogMock).not.toHaveBeenCalled();
+      expect(releaseExpenseMock).not.toHaveBeenCalled();
+    });
+
+    const expenseInput = {
+      categoryId: 'cat-1',
+      description: 'Dry cleaning',
+      amount: 50000,
+      expenseDate: '2026-10-01',
+    };
+
+    it.each([undefined, '', 'with spaces', ['one', 'two'], 'a'.repeat(256)])(
+      'rejects an invalid key %j before any claim or expense write',
+      async (key) => {
+        await expect(service.createExpense(currentUser, expenseInput, key)).rejects.toBeInstanceOf(
+          InvalidExpenseDetailsError,
+        );
+        expect(claimExpenseMock).not.toHaveBeenCalled();
+        expect(createExpenseMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it('replays the stored creation result without new persistence or post-commit audit', async () => {
+      const stored = toStoredExpenseCreateResult(sampleExpense);
+      claimExpenseMock.mockResolvedValueOnce({ state: 'COMPLETED', responseBody: stored });
+      await expect(service.createExpense(currentUser, expenseInput, 'replay')).resolves.toEqual(
+        stored.result,
+      );
+      expect(createExpenseMock).not.toHaveBeenCalled();
+      expect(auditLogMock).not.toHaveBeenCalled();
+    });
+
+    it.each(['IN_PROGRESS', 'HASH_MISMATCH'] as const)(
+      'does not execute a %s claim',
+      async (state) => {
+        claimExpenseMock.mockResolvedValueOnce({ state });
+        await expect(
+          service.createExpense(currentUser, expenseInput, 'conflict'),
+        ).rejects.toMatchObject({ kind: 'CONFLICT' });
+        expect(createExpenseMock).not.toHaveBeenCalled();
+        expect(releaseExpenseMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it('does not repeat a write when the retained replay result is malformed', async () => {
+      claimExpenseMock.mockResolvedValueOnce({
+        state: 'COMPLETED',
+        responseBody: { version: 1, result: {} },
+      });
+      await expect(
+        service.createExpense(currentUser, expenseInput, 'malformed'),
+      ).rejects.toMatchObject({ code: 'IDEMPOTENCY_REPLAY_INVALID' });
+      expect(createExpenseMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps the original failure when best-effort claim cleanup also fails', async () => {
+      const original = new Error('transaction rolled back');
+      createExpenseMock.mockRejectedValueOnce(original);
+      releaseExpenseMock.mockRejectedValueOnce(new Error('cleanup unavailable'));
+      await expect(service.createExpense(currentUser, expenseInput, 'cleanup')).rejects.toBe(
+        original,
+      );
+      expect(releaseExpenseMock).toHaveBeenCalledWith(
+        currentUser.shopId,
+        'finance.expense.create.v1:member-1',
+        'cleanup',
+        'expense-claim',
       );
     });
   });
