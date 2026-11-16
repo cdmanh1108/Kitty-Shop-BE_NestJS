@@ -38,6 +38,7 @@
 - Future reservations allow finishing cleaning/repair to AVAILABLE; handover requires AVAILABLE.
 
 - Product and inventory archive are blocked by unreleased HELD/CONFIRMED/ACTIVE allocations, even after their planned end.
+- Production storefront auth requires a short-lived BFF-signed client-IP assertion before throttling. Only verified canonical IPs can replace the BFF socket identity; arbitrary forwarding headers never establish this trust. Account authentication and Admin proxy policy remain independent. See `docs/WEB_BFF_CLIENT_CONTEXT.md`.
 - Unarchived variant size/color combinations (including NULL) and primary product media have database uniqueness.
 
 - Manual confirmation records actual rental/deposit receipts atomically with audit/outbox; suggested deposit is not a minimum or a debt.

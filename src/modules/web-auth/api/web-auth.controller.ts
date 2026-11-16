@@ -8,7 +8,7 @@ import {
   Res,
   HttpCode,
   UseGuards,
-  Ip,
+  SetMetadata,
   Headers,
 } from '@nestjs/common';
 import {
@@ -23,11 +23,17 @@ import {
   ApiTooManyRequestsResponse,
   ApiResponse,
   ApiCookieAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '@common/decorators/public.decorator';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
+import {
+  verifiedWebClientIp,
+  WEB_CLIENT_CONTEXT_REQUIRED,
+  WEB_CLIENT_CONTEXT_HEADER,
+} from '@common/web-client-context/verified-web-client';
 import type { Request, Response } from 'express';
 import type { WebProfile } from '../domain/web-auth.repository';
 import type { WebTokenResult } from '../application/web-auth.contracts';
@@ -59,6 +65,14 @@ const profile = (user: WebProfile): WebProfileDto => ({
 @ApiTags('Web - Auth')
 @ApiSurface('web')
 @Public() // Dedicated Web JWT guard protects /me; Admin bearer authentication stays separate.
+@SetMetadata(WEB_CLIENT_CONTEXT_REQUIRED, true)
+@ApiHeader({
+  name: WEB_CLIENT_CONTEXT_HEADER,
+  required: true,
+  description:
+    'Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.',
+  schema: { type: 'string', maxLength: 180 },
+})
 @Controller('web/auth')
 @UseGuards(WebAuthOriginGuard)
 @ApiBadRequestResponse({ type: ErrorResDto })
@@ -126,12 +140,12 @@ export class WebAuthController {
   async login(
     @Body() input: WebCredentialsDto,
     @Res({ passthrough: true }) response: Response,
-    @Ip() ipAddress: string,
+    @Req() request: Request,
     @Headers('user-agent') userAgent?: string,
   ): Promise<WebProfileDto> {
     const tokens = await this.session.login(
       { email: input.email, password: input.password },
-      { ipAddress, userAgent },
+      { ipAddress: verifiedWebClientIp(request) ?? request.ip, userAgent },
     );
     this.setTokens(response, tokens);
     return profile(tokens.user);
@@ -148,11 +162,10 @@ export class WebAuthController {
   async refresh(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
-    @Ip() ipAddress: string,
     @Headers('user-agent') userAgent?: string,
   ): Promise<WebProfileDto> {
     const tokens = await this.session.refresh(this.cookies.readRefresh(request), {
-      ipAddress,
+      ipAddress: verifiedWebClientIp(request) ?? request.ip,
       userAgent,
     });
     this.setTokens(response, tokens);

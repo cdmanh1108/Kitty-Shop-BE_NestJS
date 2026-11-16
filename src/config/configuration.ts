@@ -9,10 +9,15 @@ import {
 } from './object-storage.configuration';
 import { parseEmailConfiguration, type EmailConfiguration } from './email.configuration';
 import {
+  parseWebClientContextConfiguration,
+  type WebClientContextConfiguration,
+} from './web-client-context.configuration';
+import {
   parseRentalEmailConfiguration,
   type RentalEmailConfiguration,
 } from './rental-email.configuration';
 export interface AppConfiguration {
+  webClientContext: WebClientContextConfiguration;
   webAuth: WebAuthConfiguration;
   email: EmailConfiguration;
   rentalEmail: RentalEmailConfiguration;
@@ -49,6 +54,7 @@ export default (): AppConfiguration => {
   const isProduction = nodeEnv === 'production';
 
   return {
+    webClientContext: parseWebClientContextConfiguration(process.env),
     webAuth: parseWebAuthConfiguration(process.env),
     email: parseEmailConfiguration(process.env),
     rentalEmail: parseRentalEmailConfiguration(process.env),

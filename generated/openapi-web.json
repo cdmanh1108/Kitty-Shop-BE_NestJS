@@ -4,7 +4,18 @@
     "/web/auth/register": {
       "post": {
         "operationId": "registerWebUser",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-kitty-web-client-context",
+            "in": "header",
+            "description": "Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -87,7 +98,18 @@
     "/web/auth/verify-otp": {
       "post": {
         "operationId": "verifyWebRegistrationOtp",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-kitty-web-client-context",
+            "in": "header",
+            "description": "Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -150,7 +172,18 @@
     "/web/auth/resend-otp": {
       "post": {
         "operationId": "resendWebRegistrationOtp",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-kitty-web-client-context",
+            "in": "header",
+            "description": "Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -224,6 +257,16 @@
       "post": {
         "operationId": "loginWebUser",
         "parameters": [
+          {
+            "name": "x-kitty-web-client-context",
+            "in": "header",
+            "description": "Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
           {
             "name": "user-agent",
             "required": true,
@@ -307,6 +350,16 @@
         "operationId": "refreshWebAuth",
         "parameters": [
           {
+            "name": "x-kitty-web-client-context",
+            "in": "header",
+            "description": "Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          },
+          {
             "name": "user-agent",
             "required": true,
             "in": "header",
@@ -377,7 +430,18 @@
     "/web/auth/me": {
       "get": {
         "operationId": "getWebCurrentUser",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-kitty-web-client-context",
+            "in": "header",
+            "description": "Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -445,7 +509,18 @@
     "/web/auth/profile": {
       "patch": {
         "operationId": "updateWebProfile",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-kitty-web-client-context",
+            "in": "header",
+            "description": "Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -523,7 +598,18 @@
     "/web/auth/logout": {
       "post": {
         "operationId": "logoutWebUser",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-kitty-web-client-context",
+            "in": "header",
+            "description": "Server-to-server signed client-IP assertion from the storefront BFF. Required in production; never supplied by the browser. See docs/WEB_BFF_CLIENT_CONTEXT.md.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 180
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",

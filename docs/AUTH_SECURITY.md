@@ -74,7 +74,7 @@ plaintext replacements to make retries work.
 
 ## Rate limiting and deployment
 
-The existing global ThrottlerGuard runs first, then JwtAuthGuard, then PermissionsGuard.
+The global ClientThrottlerGuard (extending Nest's ThrottlerGuard) runs first, then JwtAuthGuard, then PermissionsGuard.
 General APIs retain RATE_LIMIT_LIMIT / RATE_LIMIT_TTL_MS (defaults 300 / 60000 ms).
 Login overrides the default bucket to 10 requests / 60000 ms / IP; refresh overrides
 it to 60 / 60000 ms / IP. These starting limits allow manual admin login retries and
@@ -82,7 +82,12 @@ more frequent token renewal while reducing the general default budget. Successfu
 requests also count. Auth overrides are fixed policies independent of general env
 settings, and do not lower limits on health or ordinary protected routes.
 
-The existing throttler keys by request.ip plus controller/handler and returns 429.
+The throttler keys by request.ip plus controller/handler and returns 429 for direct APIs.
+Storefront auth uses a signed Vercel client-IP assertion instead of the shared BFF egress IP;
+all Web auth handlers require that assertion in production. Web login is 10/minute, Web refresh
+30/minute; the 60/minute refresh policy above is for Admin. See
+[Storefront client identity](WEB_BFF_CLIENT_CONTEXT.md) for the required shared-secret configuration,
+trust boundary and storefront-first deployment order.
 Storage remains per process/in memory, not distributed; restarts clear counters.
 No account-keyed lockout was added. Large shared-NAT deployments may need tuning.
 TRUST_PROXY=false is the default. Enabling it trusts one proxy hop; deployment must

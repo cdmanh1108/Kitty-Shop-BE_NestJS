@@ -2,13 +2,16 @@ import { MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import configuration, { type AppConfiguration } from '@config/configuration';
 import { validateEnvironment } from '@config/env.validation';
 import { PrismaModule } from '@database/prisma/prisma.module';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '@common/guards/permissions.guard';
 import { RequestContextMiddleware } from '@common/middleware/request-context.middleware';
+import { ClockModule } from '@common/clock/clock.module';
+import { ClientThrottlerGuard } from '@common/guards/client-throttler.guard';
+import { WebClientContextMiddleware } from '@common/web-client-context/web-client-context.middleware';
 import { AuditModule } from '@modules/audit/audit.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { AuthCleanupModule } from '@modules/auth-cleanup/auth-cleanup.module';
@@ -57,6 +60,7 @@ import { LoggingModule } from '@common/logging/logging.module';
     ShopContextModule,
     StorageModule,
     LoggingModule,
+    ClockModule,
     AuditModule,
     AuthModule,
     AuthCleanupModule,
@@ -76,13 +80,13 @@ import { LoggingModule } from '@common/logging/logging.module';
     MembersModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: ClientThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestContextMiddleware).forRoutes('*');
+    consumer.apply(RequestContextMiddleware, WebClientContextMiddleware).forRoutes('*');
   }
 }

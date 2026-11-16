@@ -10,6 +10,8 @@ describe('environment validation and configuration', () => {
     JWT_ACCESS_SECRET: validSecret,
     WEB_JWT_ACCESS_SECRET: 'W9qL2mN7vR4xK8pT6cF3hJ5sD1zB0yUa',
     AUTH_OTP_HASH_SECRET: 'Q4wE8rT2yU6iO0pA3sD7fG1hJ5kL9zXc',
+    WEB_BFF_CLIENT_CONTEXT_SECRET:
+      '819ef47c61bed08dc2365607ab8d34820f859eaaa8edb02b84de12d5e53885b5',
     RESEND_API_KEY: 're_test_only_not_a_real_key',
     EMAIL_FROM_ADDRESS: 'no-reply@example.test',
     EMAIL_FROM_NAME: 'Kitty Test',
@@ -18,6 +20,7 @@ describe('environment validation and configuration', () => {
   beforeEach(() => {
     process.env = { ...originalEnv };
     process.env.WEB_URL = 'https://shop.example.test';
+    process.env.WEB_BFF_CLIENT_CONTEXT_SECRET = baseConfig.WEB_BFF_CLIENT_CONTEXT_SECRET;
   });
 
   afterAll(() => {
