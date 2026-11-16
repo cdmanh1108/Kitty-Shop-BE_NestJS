@@ -20,44 +20,44 @@ export class CreateDeliveryReqDto {
   method!: DeliveryMethod;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian hẹn phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian hẹn không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   scheduledAt?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tên người nhận phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên người nhận nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   recipientName?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Số điện thoại người nhận phải là chuỗi ký tự.' })
+  @IsString({ message: 'Số điện thoại người nhận nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   recipientPhone?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Địa chỉ phải là chuỗi ký tự.' })
+  @IsString({ message: 'Địa chỉ nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   addressLine?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Phường/xã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Phường/xã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   ward?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Quận/huyện phải là chuỗi ký tự.' })
+  @IsString({ message: 'Quận/huyện nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   district?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Thành phố phải là chuỗi ký tự.' })
+  @IsString({ message: 'Thành phố nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   city?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tỉnh/thành phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tỉnh/thành nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   province?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tên người giao hàng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên người giao hàng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   shipperName?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Số điện thoại người giao hàng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Số điện thoại người giao hàng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   shipperPhone?: string;
   @ApiPropertyOptional({ default: 0 })
@@ -67,11 +67,11 @@ export class CreateDeliveryReqDto {
   @IsOptional()
   shippingFee = 0;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mã vận đơn phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã vận đơn nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   trackingCode?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   notes?: string;
 }
@@ -81,15 +81,15 @@ export class UpdateDeliveryStatusReqDto {
   @IsIn(Object.values(DELIVERY_STATUS), { message: 'Trạng thái không hợp lệ.' })
   status!: DeliveryStatus;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tên người giao hàng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên người giao hàng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   shipperName?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Số điện thoại người giao hàng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Số điện thoại người giao hàng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   shipperPhone?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mã vận đơn phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã vận đơn nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   trackingCode?: string;
 }

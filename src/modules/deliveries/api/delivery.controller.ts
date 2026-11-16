@@ -20,7 +20,7 @@ import { CreateDeliveryReqDto, DeliveryResDto, UpdateDeliveryStatusReqDto } from
 import { toCreateDeliveryInput, toUpdateDeliveryStatusInput } from './delivery.mapper';
 
 class DeliveryListQueryDto {
-  @IsUUID(undefined, { message: 'Mã đơn thuê phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Đơn thuê không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   orderId?: string;
 }

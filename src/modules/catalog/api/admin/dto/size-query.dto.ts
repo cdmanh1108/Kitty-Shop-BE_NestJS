@@ -4,7 +4,7 @@ import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class SizeListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Tìm kiếm theo mã hoặc tên kích thước.' })
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   q?: string;
 

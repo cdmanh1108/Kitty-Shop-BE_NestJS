@@ -48,7 +48,7 @@ export class ConfirmRentalReqDto {
 
   @ApiPropertyOptional({ maxLength: 2000 })
   @IsOptional()
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(2000, { message: 'Ghi chú không được vượt quá 2000 ký tự.' })
   note?: string;
 

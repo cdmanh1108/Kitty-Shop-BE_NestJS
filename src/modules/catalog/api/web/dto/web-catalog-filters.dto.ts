@@ -11,7 +11,7 @@ export class WebCatalogFiltersQueryDto {
   @Transform(({ value }: { value: unknown }) =>
     value === 'true' ? true : value === 'false' ? false : value,
   )
-  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí chưa hợp lệ. Vui lòng chọn lại.' })
   allowFreeAccessory?: boolean;
 
   @ApiPropertyOptional({
@@ -20,7 +20,7 @@ export class WebCatalogFiltersQueryDto {
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString({ message: 'Danh mục phải là chuỗi ký tự.' })
+  @IsString({ message: 'Danh mục nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(100, { message: 'Danh mục không được dài quá 100 ký tự.' })
   category?: string;
 }

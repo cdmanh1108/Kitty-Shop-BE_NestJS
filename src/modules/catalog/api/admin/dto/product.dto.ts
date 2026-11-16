@@ -25,14 +25,14 @@ import { SizeSummaryResDto } from './size.dto';
 
 export class ProductVariantReqDto {
   @ApiProperty({ example: 'AURORA-S-RED' })
-  @IsString({ message: 'Mã biến thể phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã biến thể nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   variantCode!: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã kích thước phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Kích thước không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   sizeId?: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã màu sắc phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Màu sắc không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   colorId?: string;
   @ApiPropertyOptional()
@@ -48,7 +48,7 @@ export class ProductVariantReqDto {
   @IsOptional()
   inventoryCount = 1;
   @ApiPropertyOptional({ example: 'AUR-S-R' })
-  @IsString({ message: 'Tiền tố SKU phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tiền tố SKU nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   skuPrefix?: string;
 }
@@ -58,11 +58,11 @@ export class ProductMediaReqDto {
   @IsUrl(undefined, { message: 'Liên kết hình ảnh phải là URL hợp lệ.' })
   url!: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mô tả hình ảnh phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mô tả hình ảnh nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   altText?: string;
   @ApiPropertyOptional({ type: Boolean, default: false })
-  @IsBoolean({ message: 'Tùy chọn ảnh đại diện phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn ảnh đại diện chưa hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   isPrimary = false;
   @ApiPropertyOptional({ type: Number, default: 0 })
@@ -74,7 +74,7 @@ export class ProductMediaReqDto {
 
 export class ProductMediaUploadReqDto {
   @ApiPropertyOptional()
-  @IsString({ message: 'Mô tả hình ảnh phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mô tả hình ảnh nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   altText?: string;
 
@@ -82,7 +82,7 @@ export class ProductMediaUploadReqDto {
   @Transform(({ value }: { value: unknown }) =>
     value === 'true' ? true : value === 'false' ? false : value,
   )
-  @IsBoolean({ message: 'Tùy chọn ảnh đại diện phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn ảnh đại diện chưa hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   isPrimary = false;
 
@@ -115,20 +115,20 @@ export class CreateProductReqDto {
     description: 'Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.',
   })
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
-  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí chưa hợp lệ. Vui lòng chọn lại.' })
   allowFreeAccessory?: boolean;
 
   @ApiProperty({ example: 'DRESS-AURORA' })
-  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   code!: string;
   @ApiProperty({ example: 'Váy Aurora Satin' })
-  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   name!: string;
   @ApiProperty()
-  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Danh mục không hợp lệ. Vui lòng chọn lại.' })
   categoryId!: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mô tả nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   description?: string;
   @ApiPropertyOptional({ type: Number, default: 0, minimum: 0 })
@@ -163,7 +163,7 @@ export class CreateProductReqDto {
   @IsOptional()
   facebookPostUrl?: string | null;
   @ApiPropertyOptional({ type: Boolean, default: false })
-  @IsBoolean({ message: 'Tùy chọn hiển thị công khai phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn hiển thị công khai chưa hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   isPublic = false;
   @ApiProperty({ type: [ProductVariantReqDto] })
@@ -202,19 +202,19 @@ export class UpdateProductReqDto {
     description: 'Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.',
   })
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
-  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí chưa hợp lệ. Vui lòng chọn lại.' })
   allowFreeAccessory?: boolean;
 
   @ApiPropertyOptional()
-  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   name?: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Danh mục không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   categoryId?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mô tả nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   description?: string;
   @ApiPropertyOptional({ type: Number, minimum: 0 })
@@ -249,11 +249,11 @@ export class UpdateProductReqDto {
   @IsOptional()
   facebookPostUrl?: string | null;
   @ApiPropertyOptional()
-  @IsBoolean({ message: 'Tùy chọn hiển thị công khai phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn hiển thị công khai chưa hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   isPublic?: boolean;
   @ApiPropertyOptional()
-  @IsBoolean({ message: 'Tùy chọn cho phép thuê phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn cho phép thuê chưa hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   isRentable?: boolean;
   @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
@@ -266,19 +266,19 @@ export class AddVariantReqDto extends ProductVariantReqDto {}
 export class UpdateProductVariantReqDto {
   @ApiPropertyOptional({ example: 'AURORA-S-RED', maxLength: 100 })
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString({ message: 'Mã biến thể phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã biến thể nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsNotEmpty({ message: 'Mã biến thể không được để trống.' })
   @MaxLength(100, { message: 'Mã biến thể không được vượt quá 100 ký tự.' })
   @ValidateIf((_object: UpdateProductVariantReqDto, value: unknown) => value !== undefined)
   variantCode?: string;
 
   @ApiPropertyOptional({ nullable: true, type: String })
-  @IsUUID(undefined, { message: 'Mã kích thước phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Kích thước không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   sizeId?: string | null;
 
   @ApiPropertyOptional({ nullable: true, type: String })
-  @IsUUID(undefined, { message: 'Mã màu sắc phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Màu sắc không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   colorId?: string | null;
 
@@ -292,7 +292,7 @@ export class UpdateProductVariantReqDto {
 
 export class SetProductVariantArchivedReqDto {
   @ApiProperty({ description: 'true để lưu trữ, false để kích hoạt lại.' })
-  @IsBoolean({ message: 'Trạng thái lưu trữ phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Trạng thái lưu trữ chưa hợp lệ. Vui lòng chọn lại.' })
   archived!: boolean;
 }
 

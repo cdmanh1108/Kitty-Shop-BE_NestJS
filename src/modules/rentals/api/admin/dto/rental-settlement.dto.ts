@@ -15,7 +15,7 @@ import { RentalItemFeeOverrideReqDto } from './rental-return.dto';
 
 export class SettlementItemFeeOverrideReqDto extends RentalItemFeeOverrideReqDto {
   @ApiProperty()
-  @IsUUID('4', { message: 'Mã món đồ phải là UUID hợp lệ.' })
+  @IsUUID('4', { message: 'Món đồ không hợp lệ. Vui lòng chọn lại.' })
   inventoryItemId!: string;
 }
 
@@ -67,7 +67,7 @@ export class SettleRentalOrderReqDto {
   @IsIn(['CASH', 'BANK_TRANSFER'], { message: 'Phương thức thanh toán không hợp lệ.' })
   paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   @ApiPropertyOptional({ example: 'Đã hoàn cọc qua tiền mặt' })
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   note?: string;
 
@@ -78,7 +78,7 @@ export class SettleRentalOrderReqDto {
   @Transform(({ value }: { value: unknown }) =>
     value === 'true' ? true : value === 'false' ? false : value,
   )
-  @IsBoolean({ message: 'Xác nhận trả giấy tờ phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Xác nhận trả giấy tờ chưa hợp lệ. Vui lòng chọn lại.' })
   returnDocumentCollateral?: boolean;
 }
 

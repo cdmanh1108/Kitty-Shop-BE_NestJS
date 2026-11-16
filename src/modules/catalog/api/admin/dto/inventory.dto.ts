@@ -19,18 +19,18 @@ import { SizeSummaryResDto } from './size.dto';
 
 export class AddInventoryReqDto {
   @ApiProperty()
-  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Size hoặc màu không hợp lệ. Vui lòng chọn lại.' })
   variantId!: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã địa điểm phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Vị trí kho không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   locationId?: string;
   @ApiPropertyOptional({ example: 'AUR-S-R-001' })
-  @IsString({ message: 'Mã SKU phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã SKU nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   sku?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mã vạch phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã vạch nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   barcode?: string;
   @ApiPropertyOptional()
@@ -40,11 +40,11 @@ export class AddInventoryReqDto {
   @IsOptional()
   purchasePrice?: number;
   @ApiPropertyOptional()
-  @IsDateString(undefined, { message: 'Ngày mua phải là ngày giờ hợp lệ theo định dạng ISO 8601.' })
+  @IsDateString(undefined, { message: 'Ngày mua không hợp lệ. Vui lòng chọn lại ngày giờ.' })
   @IsOptional()
   purchaseDate?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   notes?: string;
 }
@@ -60,37 +60,37 @@ export class UpdateInventoryStatusReqDto {
   @IsOptional()
   expectedFromStatus?: InventoryStatus;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tình trạng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tình trạng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   condition?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Lý do phải là chuỗi ký tự.' })
+  @IsString({ message: 'Lý do nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   reason?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   notes?: string;
 }
 
 export class ArchiveInventoryItemReqDto {
   @ApiPropertyOptional()
-  @IsString({ message: 'Lý do phải là chuỗi ký tự.' })
+  @IsString({ message: 'Lý do nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   reason?: string;
 }
 
 export class InventoryListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Size hoặc màu không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   variantId?: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Sản phẩm không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   productId?: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Danh mục không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   categoryId?: string;
   @ApiPropertyOptional({ enum: Object.values(INVENTORY_STATUS) })
@@ -98,23 +98,23 @@ export class InventoryListQueryDto extends PaginationQueryDto {
   @IsOptional()
   status?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   search?: string;
 }
 
 export class AvailabilityQueryDto {
   @ApiProperty()
-  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Size hoặc màu không hợp lệ. Vui lòng chọn lại.' })
   variantId!: string;
   @ApiProperty()
   @IsDateString(undefined, {
-    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian bắt đầu không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   from!: string;
   @ApiProperty()
   @IsDateString(undefined, {
-    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian kết thúc không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   until!: string;
 }
@@ -227,11 +227,11 @@ export class InventorySummaryResDto {
 
 export class InventoryHistoryQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Sản phẩm không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   productId?: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã món đồ phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Món đồ không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   inventoryItemId?: string;
   @ApiPropertyOptional({ type: Number, maximum: 100, default: 20 })

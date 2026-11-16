@@ -32,7 +32,7 @@ export class RentalItemFeeOverrideReqDto {
   amount!: number;
   @ApiProperty({ maxLength: 2000 })
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString({ message: 'Lý do ghi đè phải là chuỗi ký tự.' })
+  @IsString({ message: 'Lý do ghi đè nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(1, { message: 'Vui lòng nhập lý do ghi đè phí.' })
   @MaxLength(2000, { message: 'Lý do ghi đè không được vượt quá 2.000 ký tự.' })
   reason!: string;
@@ -59,7 +59,7 @@ export class ReturnPreviewQueryDto {
 
 export class ReturnInspectionItemReqDto {
   @ApiProperty({ description: 'ID của món đồ (physical inventory item)' })
-  @IsUUID('4', { message: 'Mã món đồ phải là UUID hợp lệ.' })
+  @IsUUID('4', { message: 'Món đồ không hợp lệ. Vui lòng chọn lại.' })
   inventoryItemId!: string;
 
   @ApiProperty({
@@ -72,7 +72,7 @@ export class ReturnInspectionItemReqDto {
   condition!: string;
 
   @ApiPropertyOptional({ description: 'Ghi chú hiện trạng' })
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   note?: string;
 
@@ -124,7 +124,7 @@ export class ReturnRentalOrderReqDto {
   manualCharges?: RentalChargeReqDto[];
 
   @ApiPropertyOptional({ description: 'Ghi chú trả hàng' })
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   note?: string;
 }

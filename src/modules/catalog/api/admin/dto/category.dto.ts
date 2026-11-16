@@ -29,26 +29,26 @@ export class CreateCategoryReqDto {
     format: 'uuid',
     example: 'd1964177-3e91-4475-ab1b-2661001a1829',
   })
-  @IsUUID(undefined, { message: 'Mã danh mục cha phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Danh mục cha không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   parentId?: string | null;
 
   @ApiPropertyOptional({ example: 'DRESS' })
   @Transform(normalizeCode)
-  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @Matches(/^[A-Z0-9_]+$/, { message: 'Mã chỉ được chứa chữ in hoa, chữ số và dấu gạch dưới.' })
   @MaxLength(50, { message: 'Mã không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   code?: string;
   @ApiProperty()
   @Transform(trimString)
-  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsNotEmpty({ message: 'Tên không được để trống.' })
   @MaxLength(255, { message: 'Tên không được vượt quá $constraint1 ký tự.' })
   name!: string;
   @ApiPropertyOptional()
   @Transform(trimString)
-  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mô tả nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(2000, { message: 'Mô tả không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   description?: string;
@@ -71,13 +71,13 @@ export class UpdateCategoryReqDto {
     format: 'uuid',
     example: 'd1964177-3e91-4475-ab1b-2661001a1829',
   })
-  @IsUUID(undefined, { message: 'Mã danh mục cha phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Danh mục cha không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   parentId?: string | null;
 
   @ApiPropertyOptional({ example: 'DRESS' })
   @Transform(normalizeCode)
-  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @Matches(/^[A-Z0-9_]+$/, { message: 'Mã chỉ được chứa chữ in hoa, chữ số và dấu gạch dưới.' })
   @MaxLength(50, { message: 'Mã không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
@@ -85,14 +85,14 @@ export class UpdateCategoryReqDto {
 
   @ApiPropertyOptional()
   @Transform(trimString)
-  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsNotEmpty({ message: 'Tên không được để trống.' })
   @MaxLength(255, { message: 'Tên không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   name?: string;
   @ApiPropertyOptional({ nullable: true, type: String })
   @Transform(trimString)
-  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mô tả nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(2000, { message: 'Mô tả không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   description?: string | null;
@@ -110,7 +110,7 @@ export class UpdateCategoryReqDto {
 
 export class CategoryListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   search?: string;
   @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] })
@@ -149,7 +149,9 @@ export class CategoryOptionResDto {
 export class CategoryOptionsQueryDto {
   @ApiPropertyOptional({ type: Boolean, default: false })
   @Transform(({ value }: TransformFnParams) => value === true || value === 'true')
-  @IsBoolean({ message: 'Tùy chọn bao gồm dữ liệu ngừng hoạt động phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({
+    message: 'Tùy chọn bao gồm dữ liệu ngừng hoạt động chưa hợp lệ. Vui lòng chọn lại.',
+  })
   @IsOptional()
   includeInactive = false;
 }

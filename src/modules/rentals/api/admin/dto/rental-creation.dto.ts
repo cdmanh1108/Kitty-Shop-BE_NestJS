@@ -21,7 +21,7 @@ import {
 
 export class CreateRentalItemReqDto {
   @ApiProperty()
-  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Size hoặc màu không hợp lệ. Vui lòng chọn lại.' })
   variantId!: string;
   @ApiProperty({ type: Number, default: 1, minimum: 1, maximum: 20 })
   @Type(() => Number)
@@ -69,7 +69,7 @@ export class RentalChargeReqDto {
   @IsIn(Object.values(CHARGE_TYPE), { message: 'Loại phụ phí không hợp lệ.' })
   chargeType!: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mô tả nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   description?: string;
   @ApiProperty({ example: 50000 })
@@ -94,36 +94,36 @@ export class RentalDeliveryReqDto {
   method!: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian hẹn phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian hẹn không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   scheduledAt?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tên người nhận phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên người nhận nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   recipientName?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Số điện thoại người nhận phải là chuỗi ký tự.' })
+  @IsString({ message: 'Số điện thoại người nhận nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   recipientPhone?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Địa chỉ phải là chuỗi ký tự.' })
+  @IsString({ message: 'Địa chỉ nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   addressLine?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Phường/xã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Phường/xã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   ward?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Quận/huyện phải là chuỗi ký tự.' })
+  @IsString({ message: 'Quận/huyện nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   district?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Thành phố phải là chuỗi ký tự.' })
+  @IsString({ message: 'Thành phố nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   city?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tỉnh/thành phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tỉnh/thành nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   province?: string;
   @ApiPropertyOptional({ type: Number, default: 0 })
@@ -146,20 +146,20 @@ export class RentalCollateralReqDto {
 
 export class CreateRentalOrderReqDto {
   @ApiProperty()
-  @IsUUID(undefined, { message: 'Mã khách hàng phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Khách hàng không hợp lệ. Vui lòng chọn lại.' })
   customerId!: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã địa điểm phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Vị trí kho không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   locationId?: string;
   @ApiProperty({ example: '2026-09-12T03:00:00.000Z' })
   @IsDateString(undefined, {
-    message: 'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian bắt đầu thuê không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   rentalStartAt!: string;
   @ApiProperty({ example: '2026-09-14T03:00:00.000Z' })
   @IsDateString(undefined, {
-    message: 'Thời gian kết thúc thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian kết thúc thuê không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   rentalEndAt!: string;
   @ApiProperty({ type: [CreateRentalItemReqDto] })
@@ -199,11 +199,11 @@ export class CreateRentalOrderReqDto {
   @Min(0, { message: 'Giá một lượt thuê ghi đè của đơn không được âm.' })
   cyclePriceOverride?: number;
   @ApiPropertyOptional()
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   note?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Ghi chú nội bộ phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nội bộ nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   internalNote?: string;
   @ApiPropertyOptional({ type: RentalDeliveryReqDto })

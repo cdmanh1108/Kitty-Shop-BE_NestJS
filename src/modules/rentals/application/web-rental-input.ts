@@ -58,6 +58,8 @@ export function throwForInvalidWebRentalSelection(reason: WebRentalSelectionFail
     throw new InvalidRentalItemSelectionError('Vui lòng chọn phân loại sản phẩm.');
   }
   if (reason === 'PRODUCT_VARIANT_MISMATCH') {
-    throw new InvalidRentalItemSelectionError('productId không khớp với variantId đã chọn.');
+    throw new InvalidRentalItemSelectionError(
+      'Sản phẩm và size/màu đã chọn không khớp. Vui lòng chọn lại.',
+    );
   }
 }

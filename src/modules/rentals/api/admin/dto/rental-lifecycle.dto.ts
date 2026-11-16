@@ -4,7 +4,7 @@ import { RentalChargeReqDto } from './rental-creation.dto';
 
 export class TransitionRentalReqDto {
   @ApiPropertyOptional()
-  @IsString({ message: 'Lý do phải là chuỗi ký tự.' })
+  @IsString({ message: 'Lý do nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   reason?: string;
 }
@@ -12,12 +12,12 @@ export class TransitionRentalReqDto {
 export class RescheduleRentalReqDto {
   @ApiProperty()
   @IsDateString(undefined, {
-    message: 'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian bắt đầu thuê không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   rentalStartAt!: string;
   @ApiProperty()
   @IsDateString(undefined, {
-    message: 'Thời gian kết thúc thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian kết thúc thuê không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   rentalEndAt!: string;
 }

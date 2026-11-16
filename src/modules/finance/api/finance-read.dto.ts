@@ -14,7 +14,7 @@ export class FinanceFilterDto {
     description: 'First local date, inclusive; custom preset only',
   })
   @IsOptional()
-  @IsString({ message: 'Ngày phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ngày nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Ngày bắt đầu phải có định dạng YYYY-MM-DD.' })
   from?: string;
   @ApiPropertyOptional({
@@ -22,7 +22,7 @@ export class FinanceFilterDto {
     description: 'Last local date, inclusive; custom preset only',
   })
   @IsOptional()
-  @IsString({ message: 'Ngày phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ngày nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Ngày kết thúc phải có định dạng YYYY-MM-DD.' })
   to?: string;
   @ApiPropertyOptional({ enum: ['INCOME', 'EXPENSE'] })

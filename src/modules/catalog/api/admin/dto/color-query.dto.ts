@@ -4,7 +4,7 @@ import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class ColorListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ description: 'Tìm kiếm theo mã hoặc tên màu.' })
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   q?: string;
 

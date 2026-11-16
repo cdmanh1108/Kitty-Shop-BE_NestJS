@@ -18,7 +18,7 @@ import { RENTAL_PRICING_LIMITS } from '../domain/rental-pricing-policy';
 
 export class CategoryDepositOverrideDto {
   @ApiProperty({ example: '11111111-1111-1111-1111-111111111111' })
-  @IsString({ message: 'Mã danh mục phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã danh mục nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   categoryId!: string;
 
   @ApiProperty({ example: 300000, description: 'Cash deposit amount for this category in VND' })
@@ -220,7 +220,7 @@ export class SpecialCleaningPolicyDto {
 
 export class LoyaltyPolicyDto {
   @ApiProperty({ example: true, description: 'Whether customer loyalty program is enabled' })
-  @IsBoolean({ message: 'Trạng thái bật tích điểm phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Trạng thái bật tích điểm chưa hợp lệ. Vui lòng chọn lại.' })
   enabled!: boolean;
 
   @ApiProperty({
@@ -243,7 +243,7 @@ export class LoyaltyPolicyDto {
     description: 'Whether loyalty reward can be stacked with other promotions',
   })
   @IsBoolean({
-    message: 'Tùy chọn kết hợp tích điểm với khuyến mãi phải là giá trị đúng hoặc sai.',
+    message: 'Tùy chọn kết hợp tích điểm với khuyến mãi chưa hợp lệ. Vui lòng chọn lại.',
   })
   stackableWithPromotions!: boolean;
 }

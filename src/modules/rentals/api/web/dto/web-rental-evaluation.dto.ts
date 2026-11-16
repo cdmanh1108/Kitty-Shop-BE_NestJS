@@ -27,7 +27,7 @@ import {
 export class WebAvailabilityQueryDto {
   @ApiPropertyOptional({ format: 'uuid', description: 'ID sản phẩm dùng để xác nhận phân loại.' })
   @IsOptional()
-  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Sản phẩm không hợp lệ. Vui lòng chọn lại.' })
   productId?: string;
 
   @ApiProperty({ format: 'uuid', description: 'ID phân loại đã chọn.' })
@@ -41,7 +41,7 @@ export class WebAvailabilityQueryDto {
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
-    message: 'pickupDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+    message: 'Ngày giờ nhận không hợp lệ. Vui lòng chọn lại.',
   })
   pickupDate!: string;
 
@@ -52,7 +52,7 @@ export class WebAvailabilityQueryDto {
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
-    message: 'returnDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+    message: 'Ngày giờ trả không hợp lệ. Vui lòng chọn lại.',
   })
   returnDate!: string;
 }
@@ -77,12 +77,12 @@ export class WebRentalItemInputDto {
   })
   billingRole?: RentalBillingRole;
   @ApiProperty({ format: 'uuid', description: 'ID phân loại đã chọn' })
-  @IsUUID(undefined, { message: 'Mã biến thể phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Size hoặc màu không hợp lệ. Vui lòng chọn lại.' })
   variantId!: string;
 
   @ApiPropertyOptional({ format: 'uuid', description: 'ID sản phẩm' })
   @IsOptional()
-  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Sản phẩm không hợp lệ. Vui lòng chọn lại.' })
   productId?: string;
 
   @ApiProperty({ example: 1, minimum: 1, maximum: WEB_RENTAL_MAX_QUANTITY_PER_ITEM })
@@ -100,7 +100,7 @@ export class WebRentalQuoteReqDto {
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
-    message: 'pickupDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+    message: 'Ngày giờ nhận không hợp lệ. Vui lòng chọn lại.',
   })
   pickupDate!: string;
 
@@ -111,7 +111,7 @@ export class WebRentalQuoteReqDto {
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
-    message: 'returnDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+    message: 'Ngày giờ trả không hợp lệ. Vui lòng chọn lại.',
   })
   returnDate!: string;
 

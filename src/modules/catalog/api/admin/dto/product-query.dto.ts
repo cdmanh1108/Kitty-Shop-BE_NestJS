@@ -15,16 +15,16 @@ export class ProductListQueryDto extends PaginationQueryDto {
   @Transform(({ value }: { value: unknown }) =>
     value === 'true' ? true : value === 'false' ? false : value,
   )
-  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí chưa hợp lệ. Vui lòng chọn lại.' })
   allowFreeAccessory?: boolean;
 
   @ApiPropertyOptional()
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   search?: string;
 
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Danh mục không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   categoryId?: string;
 
@@ -36,7 +36,7 @@ export class ProductListQueryDto extends PaginationQueryDto {
 
 export class ProductLookupQueryDto extends ProductListQueryDto {
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã sản phẩm phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Sản phẩm không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   productId?: string;
 

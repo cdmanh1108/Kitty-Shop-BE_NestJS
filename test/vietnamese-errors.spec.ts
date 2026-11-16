@@ -91,7 +91,7 @@ describe('Vietnamese API error messages', () => {
     expect(response.body).toHaveProperty(
       'details.message',
       expect.arrayContaining([
-        'Mã biến thể phải là UUID hợp lệ.',
+        'Size hoặc màu không hợp lệ. Vui lòng chọn lại.',
         'Số lượng phải lớn hơn hoặc bằng 1.',
         'Trường "items.0.unexpected" không được phép gửi trong yêu cầu.',
       ]),
@@ -137,7 +137,7 @@ describe('Vietnamese API error messages', () => {
       .send('{"email":')
       .expect(400);
     expect(response.body).toMatchObject({
-      message: 'Nội dung yêu cầu không đúng định dạng JSON. Vui lòng kiểm tra và gửi lại.',
+      message: 'Thông tin gửi chưa hợp lệ. Vui lòng tải lại trang và thử lại.',
     });
   });
 

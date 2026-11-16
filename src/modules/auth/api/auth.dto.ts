@@ -7,7 +7,7 @@ export class LoginReqDto {
   email!: string;
 
   @ApiProperty({ example: 'ChangeMe123!' })
-  @IsString({ message: 'Mật khẩu phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mật khẩu nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(8, { message: 'Mật khẩu phải có ít nhất $constraint1 ký tự.' })
   password!: string;
 }
@@ -33,12 +33,12 @@ export class LoginResDto {
 
 export class ChangePasswordReqDto {
   @ApiProperty()
-  @IsString({ message: 'Mật khẩu hiện tại phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mật khẩu hiện tại nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(8, { message: 'Mật khẩu hiện tại phải có ít nhất $constraint1 ký tự.' })
   currentPassword!: string;
 
   @ApiProperty({ minLength: 12, description: 'Use a unique passphrase/password for production.' })
-  @IsString({ message: 'Mật khẩu mới phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mật khẩu mới nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(12, { message: 'Mật khẩu mới phải có ít nhất $constraint1 ký tự.' })
   newPassword!: string;
 }

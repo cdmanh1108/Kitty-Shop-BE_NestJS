@@ -42,20 +42,20 @@ export class CreatePaymentReqDto {
   @Min(0.01, { message: 'Số tiền phải lớn hơn hoặc bằng $constraint1.' })
   amount!: number;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mã tham chiếu bên ngoài phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã tham chiếu bên ngoài nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   externalReference?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Mã tham chiếu ngân hàng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã tham chiếu ngân hàng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   bankReference?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   note?: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian thanh toán phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian thanh toán không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   paidAt?: string;
@@ -63,18 +63,18 @@ export class CreatePaymentReqDto {
 
 export class PaymentListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã đơn thuê phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Đơn thuê không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   orderId?: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian bắt đầu không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   from?: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian kết thúc không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   until?: string;
@@ -86,18 +86,18 @@ export class PaymentListQueryDto extends PaginationQueryDto {
 
 export class CreateExpenseReqDto {
   @ApiProperty()
-  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Danh mục không hợp lệ. Vui lòng chọn lại.' })
   categoryId!: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã đơn thuê phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Đơn thuê không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   orderId?: string;
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã món đồ phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Món đồ không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   inventoryItemId?: string;
   @ApiProperty({ maxLength: 2000 })
-  @IsString({ message: 'Mô tả phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mô tả nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(3, { message: 'Nội dung khoản chi cần ít nhất 3 ký tự.' })
   @MaxLength(2000, { message: 'Nội dung khoản chi không vượt quá 2.000 ký tự.' })
   description!: string;
@@ -111,16 +111,16 @@ export class CreateExpenseReqDto {
   @IsOptional()
   paymentMethod?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tên nhà cung cấp phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhà cung cấp nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   vendorName?: string;
   @ApiProperty({ example: '2026-09-10' })
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Ngày chi phải có định dạng YYYY-MM-DD.' })
-  @IsDateString(undefined, { message: 'Ngày chi phải là ngày giờ hợp lệ theo định dạng ISO 8601.' })
+  @IsDateString(undefined, { message: 'Ngày chi không hợp lệ. Vui lòng chọn lại ngày giờ.' })
   expenseDate!: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian thanh toán phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian thanh toán không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   paidAt?: string;
@@ -132,18 +132,18 @@ export class CreateExpenseReqDto {
 
 export class ExpenseListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã danh mục phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Danh mục không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   categoryId?: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian bắt đầu không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   from?: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian kết thúc không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   until?: string;

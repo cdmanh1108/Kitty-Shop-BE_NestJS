@@ -85,7 +85,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             exception.message,
           )
         ) {
-          message = 'Nội dung yêu cầu không đúng định dạng JSON. Vui lòng kiểm tra và gửi lại.';
+          message = 'Thông tin gửi chưa hợp lệ. Vui lòng tải lại trang và thử lại.';
         } else if (typeof body === 'string') {
           message = body;
         } else if (record) {

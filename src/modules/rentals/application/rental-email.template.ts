@@ -9,7 +9,7 @@ const copy = {
     intro: 'Lịch thuê của bạn đã được xác nhận. Hẹn gặp bạn vào ngày nhận đồ!',
   },
   COMPLETED: {
-    title: 'Đơn thuê đã được tất toán',
+    title: 'Đơn thuê đã hoàn tất',
     intro: 'Đơn thuê của bạn đã hoàn tất. Cảm ơn bạn đã chọn KITTY và hẹn gặp lại!',
   },
 } as const;
@@ -37,9 +37,10 @@ const collateralLabels = new Set([
 ]);
 const settlementLabels = new Set(['Đã thu thêm khi tất toán', 'Đã hoàn lại khi tất toán']);
 const shortLabels = new Map([
+  ['Múi giờ', 'Giờ hiển thị'],
   ['Phí phát sinh / giao nhận', 'Phụ phí / giao nhận'],
   ['Đã thanh toán cho đơn', 'Đã thanh toán'],
-  ['Tiền đơn còn phải thanh toán', 'Còn thanh toán'],
+  ['Tiền đơn còn phải thanh toán', 'Còn cần thanh toán'],
   ['Cọc dự kiến khi đặt đơn', 'Cọc dự kiến'],
   ['Tổng cọc đã nhận', 'Cọc đã nhận'],
   ['Giấy tờ đặt cọc', 'Giấy tờ'],
@@ -103,7 +104,7 @@ function renderSchedule(rows: Detail[]): string {
   const timezone = rows.find((row) => row.label === 'Múi giờ');
   const timezoneLabel = timezone
     ? ['Asia/Ho_Chi_Minh', 'Asia/Saigon'].includes(timezone.value)
-      ? 'Giờ Việt Nam (UTC+7)'
+      ? 'Giờ Việt Nam'
       : `Giờ cửa hàng (${timezone.value})`
     : '';
   const delivery = rows.filter(
@@ -169,14 +170,14 @@ function renderPayment(rows: Detail[]): string {
 function renderSettlement(rows: Detail[]): string {
   if (!rows.length) return '';
   return renderSection(
-    'Kết quả tất toán',
+    'Thu thêm và hoàn tiền',
     `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fcf8f9;border:1px solid #eddde4;border-radius:12px">
       <tr>${rows
         .map(
           (
             row,
             index,
-          ) => `<td valign="top" width="50%" style="padding:12px 16px;${index > 0 ? 'border-left:1px solid #eddde4;' : ''}">
+          ) => `<td class="settlement-amount" valign="top" width="50%" style="padding:12px 16px;${index > 0 ? 'border-left:1px solid #eddde4;' : ''}">
         <div style="font-size:12px;line-height:18px;color:#77636c">${escape(shortLabels.get(row.label) ?? row.label)}</div>
         <div style="margin-top:3px;font-size:18px;line-height:25px;font-weight:700;color:#8f3d59;overflow-wrap:anywhere;word-break:break-word">${multiline(row.value)}</div>
       </td>`,
@@ -219,7 +220,12 @@ export function renderRentalEmail(
     `${snapshot.shopName}\n${title}\nĐơn ${snapshot.orderCode}`,
     `Xin chào ${snapshot.customerName},\n${intro}`,
     snapshot.items.length ? `ĐỒ THUÊ\n${snapshot.items.map(itemLabel).join('\n')}` : '',
-    snapshot.details.map((row) => `${row.label}: ${row.value}`).join('\n'),
+    snapshot.details
+      .map(
+        (row) =>
+          `${shortLabels.get(row.label) ?? row.label}: ${row.label === 'Múi giờ' && ['Asia/Ho_Chi_Minh', 'Asia/Saigon'].includes(row.value) ? 'Giờ Việt Nam' : row.value}`,
+      )
+      .join('\n'),
     orderUrl
       ? `Xem chi tiết đơn thuê: ${orderUrl}`
       : `Vui lòng giữ mã đơn ${snapshot.orderCode} và liên hệ KITTY nếu cần hỗ trợ.`,
@@ -239,7 +245,7 @@ export function renderRentalEmail(
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light">
     <title>${escape(title)}</title>
-    <style>@media only screen and (max-width:600px){.email-shell{padding:20px 12px!important}.email-card{padding:24px 20px!important}}</style>
+    <style>@media only screen and (max-width:600px){.email-shell{padding:16px 10px!important}.email-card{padding:20px 16px!important}}@media only screen and (max-width:380px){.settlement-amount{display:block!important;width:100%!important;box-sizing:border-box}.settlement-amount+.settlement-amount{border-left:0!important;border-top:1px solid #eddde4}}</style>
   </head>
   <body style="margin:0;padding:0;background:#fcf8f9;color:#30252a;font-family:Arial,Helvetica,sans-serif">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all">${escape(`${title} · ${snapshot.orderCode}. ${intro}`)}</div>

@@ -5,13 +5,13 @@ import { IsDateString, IsInt, IsOptional, Max, Min } from 'class-validator';
 export class ReportRangeQueryDto {
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian bắt đầu không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   from?: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian kết thúc không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   until?: string;

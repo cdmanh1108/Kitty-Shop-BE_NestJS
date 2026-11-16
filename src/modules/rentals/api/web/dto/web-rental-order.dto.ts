@@ -106,7 +106,7 @@ export class WebCreateOrderReqDto {
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
-    message: 'pickupDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+    message: 'Ngày giờ nhận không hợp lệ. Vui lòng chọn lại.',
   })
   pickupDate!: string;
 
@@ -117,7 +117,7 @@ export class WebCreateOrderReqDto {
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
-    message: 'returnDate phải là ngày hoặc mốc thời gian ISO 8601 có múi giờ.',
+    message: 'Ngày giờ trả không hợp lệ. Vui lòng chọn lại.',
   })
   returnDate!: string;
 

@@ -7,7 +7,7 @@ import type { WebAccountVerification } from '../domain/admin-web-account-reader'
 export class AdminWebAccountListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ maxLength: 254 })
   @IsOptional()
-  @IsString({ message: 'Từ khóa phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(254, { message: 'Từ khóa tối đa 254 ký tự.' })
   search?: string;
 
@@ -21,7 +21,7 @@ export class AdminWebAccountListQueryDto extends PaginationQueryDto {
     description: 'Tài khoản từng đặt đơn cho khách hàng này.',
   })
   @IsOptional()
-  @IsUUID(undefined, { message: 'Mã khách hàng phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Khách hàng không hợp lệ. Vui lòng chọn lại.' })
   customerId?: string;
 }
 

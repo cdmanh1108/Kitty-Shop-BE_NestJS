@@ -19,7 +19,7 @@ import { mapAuditLogPage } from './audit.mapper';
 
 class AuditQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
-  @IsString({ message: 'Loại đối tượng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Loại đối tượng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   entityType?: string;
   @ApiPropertyOptional()

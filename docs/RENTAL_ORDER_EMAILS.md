@@ -46,6 +46,14 @@ blindly resend after the provider's deduplication window.
 
 ## Content
 
+Release presentation uses the customer-facing title “Đơn thuê đã hoàn tất” and
+separate “Thu thêm và hoàn tiền” amounts. Both HTML and plain text map captured
+internal labels to readable labels without modifying snapshot data or queue keys.
+Vietnam time is labelled “Giờ Việt Nam”; zero collections and refunds remain
+visible. Settlement amount cells stack at narrow phone widths. The regression
+test in `test/unit/release-presentation.spec.ts` also checks escaping, the account
+order link, and immutable source snapshots.
+
 Financial labels separate the order total from expected deposit, actual net rental
 payment and held deposit from the ledger.
 Confirmed email does not infer payment from status. Settlement includes the actual

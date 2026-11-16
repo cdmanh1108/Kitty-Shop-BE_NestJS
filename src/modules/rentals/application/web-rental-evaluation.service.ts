@@ -66,7 +66,9 @@ export class WebRentalEvaluationService {
       storefrontEligibility: true,
     });
     if (variant && query.productId && variant.productId !== query.productId)
-      throw new InvalidRentalItemSelectionError('productId không khớp với variantId đã chọn.');
+      throw new InvalidRentalItemSelectionError(
+        'Sản phẩm và size/màu đã chọn không khớp. Vui lòng chọn lại.',
+      );
     const availableQuantity = variant?.availableInventory.length ?? 0;
     return { available: availableQuantity > 0, availableQuantity };
   }

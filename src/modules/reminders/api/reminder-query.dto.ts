@@ -17,7 +17,7 @@ export class ReminderFiltersDto {
 
   @ApiPropertyOptional({ maxLength: 100, description: 'Tìm theo nội dung, khách hoặc mã đơn.' })
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(100, { message: 'Từ khóa tìm kiếm không được vượt quá 100 ký tự.' })
   @IsOptional()
   search?: string;

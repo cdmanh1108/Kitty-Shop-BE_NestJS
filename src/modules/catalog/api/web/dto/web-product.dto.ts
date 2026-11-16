@@ -176,7 +176,7 @@ export class WebProductListQueryDto {
   @Transform(({ value }: { value: unknown }) =>
     value === 'true' ? true : value === 'false' ? false : value,
   )
-  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí chưa hợp lệ. Vui lòng chọn lại.' })
   allowFreeAccessory?: boolean;
 
   @ApiPropertyOptional({ description: 'Từ khóa tìm kiếm theo tên, mã hoặc mô tả' })
@@ -196,14 +196,14 @@ export class WebProductListQueryDto {
   @ApiPropertyOptional({ example: 'S', description: 'Lọc theo tên kích cỡ', maxLength: 100 })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString({ message: 'Kích thước phải là chuỗi ký tự.' })
+  @IsString({ message: 'Kích thước nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(100, { message: 'Tên kích thước không được dài quá 100 ký tự.' })
   size?: string;
 
   @ApiPropertyOptional({ example: 'Trắng', description: 'Lọc theo tên màu sắc', maxLength: 100 })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString({ message: 'Màu sắc phải là chuỗi ký tự.' })
+  @IsString({ message: 'Màu sắc nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(100, { message: 'Tên màu sắc không được dài quá 100 ký tự.' })
   color?: string;
 

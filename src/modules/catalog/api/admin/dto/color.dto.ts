@@ -8,20 +8,20 @@ export class CreateColorReqDto {
     description:
       'Được trim rồi chuyển thành chữ in hoa; mã sau chuẩn hóa chỉ gồm A-Z, 0-9, dấu gạch dưới và tối đa 50 ký tự.',
   })
-  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   code!: string;
   @ApiProperty({
     example: ' Đỏ đô ',
     description:
       'Khoảng trắng đầu/cuối sẽ được loại bỏ; tên sau chuẩn hóa không rỗng và tối đa 100 ký tự.',
   })
-  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   name!: string;
   @ApiPropertyOptional({
     example: '#000000',
     description: 'Để trống tương đương null; nếu có giá trị thì phải theo dạng #RRGGBB.',
   })
-  @IsString({ message: 'Mã màu phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã màu nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   hexColor?: string;
 }
@@ -41,7 +41,7 @@ export class UpdateColorReqDto {
       'Được trim rồi chuyển thành chữ in hoa; mã sau chuẩn hóa chỉ gồm A-Z, 0-9, dấu gạch dưới và tối đa 50 ký tự.',
   })
   @ValidateIf((_object, value) => value !== undefined)
-  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   code?: string;
 
   @ApiPropertyOptional({
@@ -50,7 +50,7 @@ export class UpdateColorReqDto {
       'Khoảng trắng đầu/cuối sẽ được loại bỏ; tên sau chuẩn hóa không rỗng và tối đa 100 ký tự.',
   })
   @ValidateIf((_object, value) => value !== undefined)
-  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsNotEmpty({ message: 'Tên không được để trống.' })
   name?: string;
 
@@ -60,14 +60,14 @@ export class UpdateColorReqDto {
     example: '#ff00aa',
     description: 'Bỏ trường này để giữ nguyên; gửi null hoặc chuỗi rỗng để xóa mã màu.',
   })
-  @IsString({ message: 'Mã màu phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã màu nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   hexColor?: string | null;
 }
 
 export class UpdateColorStatusReqDto {
   @ApiProperty({ description: 'Bật hoặc ngừng sử dụng màu.' })
-  @IsBoolean({ message: 'isActive phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'isActive chưa hợp lệ. Vui lòng chọn lại.' })
   isActive!: boolean;
 }
 

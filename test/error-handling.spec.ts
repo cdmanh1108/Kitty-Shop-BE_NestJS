@@ -344,7 +344,7 @@ describe('AllExceptionsFilter', () => {
       const validationError = new BadRequestException({
         statusCode: 400,
         message: [
-          'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+          'Thời gian bắt đầu thuê không hợp lệ. Vui lòng chọn lại ngày giờ.',
           'Mã khách hàng không được để trống.',
         ],
         error: 'Bad Request',
@@ -356,11 +356,11 @@ describe('AllExceptionsFilter', () => {
         statusCode: 400,
         code: 'HTTP_400',
         message:
-          'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601., Mã khách hàng không được để trống.',
+          'Thời gian bắt đầu thuê không hợp lệ. Vui lòng chọn lại ngày giờ., Mã khách hàng không được để trống.',
         details: {
           statusCode: 400,
           message: [
-            'Thời gian bắt đầu thuê phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+            'Thời gian bắt đầu thuê không hợp lệ. Vui lòng chọn lại ngày giờ.',
             'Mã khách hàng không được để trống.',
           ],
           error: 'Bad Request',

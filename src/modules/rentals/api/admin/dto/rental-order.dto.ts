@@ -13,7 +13,7 @@ import { RentalSettlementDetailsResDto, RentalSettlementResDto } from './rental-
 
 export class RentalListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
-  @IsUUID(undefined, { message: 'Mã khách hàng phải là UUID hợp lệ.' })
+  @IsUUID(undefined, { message: 'Khách hàng không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   customerId?: string;
   @ApiPropertyOptional({
@@ -24,7 +24,7 @@ export class RentalListQueryDto extends PaginationQueryDto {
   @IsOptional()
   webAccountId?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   search?: string;
   @ApiPropertyOptional({ enum: Object.values(RENTAL_STATUS) })
@@ -37,13 +37,13 @@ export class RentalListQueryDto extends PaginationQueryDto {
   paymentStatus?: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian bắt đầu phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian bắt đầu không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   from?: string;
   @ApiPropertyOptional()
   @IsDateString(undefined, {
-    message: 'Thời gian kết thúc phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Thời gian kết thúc không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   until?: string;

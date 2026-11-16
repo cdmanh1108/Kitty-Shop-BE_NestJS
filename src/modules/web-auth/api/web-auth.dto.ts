@@ -20,7 +20,7 @@ export class WebCredentialsDto extends WebEmailDto {
     format: 'password',
     description: '8-64 characters, at most 72 UTF-8 bytes',
   })
-  @IsString({ message: 'Mật khẩu phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mật khẩu nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @Length(8, 64, { message: 'Mật khẩu phải có từ 8 đến 64 ký tự.' })
   password!: string;
 }
@@ -30,7 +30,7 @@ export class WebVerifyOtpDto {
   @IsUUID('4', { message: 'Yêu cầu xác minh không hợp lệ.' })
   challengeId!: string;
   @ApiProperty({ pattern: '^\\d{6}$', minLength: 6, maxLength: 6 })
-  @IsString({ message: 'Mã xác minh phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã xác minh nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(6, { message: 'Mã xác minh phải gồm 6 chữ số.' })
   @Matches(/^\d{6}$/, { message: 'Mã xác minh phải gồm 6 chữ số.' })
   otp!: string;
@@ -74,12 +74,12 @@ export class WebProfileDto {
 export class WebUpdateProfileDto {
   @ApiProperty({ example: 'Nguyễn Minh Anh', minLength: 2, maxLength: 100 })
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString({ message: 'Họ tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Họ tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @Length(2, 100, { message: 'Họ tên phải có từ 2 đến 100 ký tự.' })
   fullName!: string;
 
   @ApiProperty({ example: '0939505378', maxLength: 30 })
-  @IsString({ message: 'Số điện thoại phải là chuỗi ký tự.' })
+  @IsString({ message: 'Số điện thoại nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(30, { message: 'Số điện thoại tối đa 30 ký tự.' })
   @Matches(/^(0|\+84)[0-9\s().-]{8,20}$/, { message: 'Số điện thoại không đúng định dạng.' })
   phone!: string;

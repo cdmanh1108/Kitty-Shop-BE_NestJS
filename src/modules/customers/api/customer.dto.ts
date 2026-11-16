@@ -19,13 +19,13 @@ import { PaginationMetaResDto } from '@common/dto/response.dto';
 
 export class CreateCustomerReqDto {
   @ApiProperty({ example: 'Nguyễn Thị A' })
-  @IsString({ message: 'Họ tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Họ tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(1, { message: 'Họ tên phải có ít nhất $constraint1 ký tự.' })
   @MaxLength(255, { message: 'Họ tên không được vượt quá $constraint1 ký tự.' })
   fullName!: string;
 
   @ApiProperty({ example: '0901234567' })
-  @IsString({ message: 'Số điện thoại phải là chuỗi ký tự.' })
+  @IsString({ message: 'Số điện thoại nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(8, { message: 'Số điện thoại phải có ít nhất $constraint1 ký tự.' })
   @MaxLength(30, { message: 'Số điện thoại không được vượt quá $constraint1 ký tự.' })
   phone!: string;
@@ -35,33 +35,33 @@ export class CreateCustomerReqDto {
   @IsOptional()
   email?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Facebook phải là chuỗi ký tự.' })
+  @IsString({ message: 'Facebook nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   facebook?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Zalo phải là chuỗi ký tự.' })
+  @IsString({ message: 'Zalo nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   zalo?: string;
   @ApiPropertyOptional({ example: '2000-01-30' })
   @IsDateString(undefined, {
-    message: 'Ngày sinh phải là ngày giờ hợp lệ theo định dạng ISO 8601.',
+    message: 'Ngày sinh không hợp lệ. Vui lòng chọn lại ngày giờ.',
   })
   @IsOptional()
   birthday?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Giới tính phải là chuỗi ký tự.' })
+  @IsString({ message: 'Giới tính nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   gender?: string;
   @ApiPropertyOptional({ example: 'NORMAL' })
-  @IsString({ message: 'Loại khách hàng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Loại khách hàng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   customerType?: string;
   @ApiPropertyOptional({ example: 'Facebook' })
-  @IsString({ message: 'Nguồn khách hàng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Nguồn khách hàng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   source?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Ghi chú phải là chuỗi ký tự.' })
+  @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MaxLength(2000, { message: 'Ghi chú không được vượt quá $constraint1 ký tự.' })
   @IsOptional()
   note?: string;
@@ -76,22 +76,22 @@ export class UpdateCustomerReqDto extends PartialType(CreateCustomerReqDto) {
 
 export class CustomerListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   search?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Trạng thái phải là chuỗi ký tự.' })
+  @IsString({ message: 'Trạng thái nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   status?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Loại khách hàng phải là chuỗi ký tự.' })
+  @IsString({ message: 'Loại khách hàng nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   customerType?: string;
 }
 
 export class CustomerLookupQueryDto {
   @ApiPropertyOptional()
-  @IsString({ message: 'Từ khóa tìm kiếm phải là chuỗi ký tự.' })
+  @IsString({ message: 'Từ khóa tìm kiếm nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   search?: string;
   @ApiPropertyOptional({ type: Number, default: 20, minimum: 1, maximum: 20 })
@@ -105,12 +105,12 @@ export class CustomerLookupQueryDto {
 
 export class AddCustomerNoteReqDto {
   @ApiProperty()
-  @IsString({ message: 'Nội dung phải là chuỗi ký tự.' })
+  @IsString({ message: 'Nội dung nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(1, { message: 'Nội dung phải có ít nhất $constraint1 ký tự.' })
   content!: string;
   @ApiPropertyOptional({ type: Boolean, default: false })
   @Type(() => Boolean)
-  @IsBoolean({ message: 'Tùy chọn ghim ghi chú phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn ghim ghi chú chưa hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   isPinned?: boolean;
 }
@@ -149,40 +149,40 @@ export class CustomerLookupItemResDto {
 
 export class CustomerAddressReqDto {
   @ApiPropertyOptional()
-  @IsString({ message: 'Nhãn địa chỉ phải là chuỗi ký tự.' })
+  @IsString({ message: 'Nhãn địa chỉ nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   label?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tên người nhận phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên người nhận nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   recipientName?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Số điện thoại phải là chuỗi ký tự.' })
+  @IsString({ message: 'Số điện thoại nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   phone?: string;
   @ApiProperty()
-  @IsString({ message: 'Địa chỉ phải là chuỗi ký tự.' })
+  @IsString({ message: 'Địa chỉ nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @MinLength(1, { message: 'Địa chỉ phải có ít nhất $constraint1 ký tự.' })
   addressLine!: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Phường/xã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Phường/xã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   ward?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Quận/huyện phải là chuỗi ký tự.' })
+  @IsString({ message: 'Quận/huyện nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   district?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Thành phố phải là chuỗi ký tự.' })
+  @IsString({ message: 'Thành phố nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   city?: string;
   @ApiPropertyOptional()
-  @IsString({ message: 'Tỉnh/thành phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tỉnh/thành nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   province?: string;
   @ApiPropertyOptional({ default: false })
   @Type(() => Boolean)
-  @IsBoolean({ message: 'Tùy chọn địa chỉ mặc định phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'Tùy chọn địa chỉ mặc định chưa hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   isDefault = false;
 }

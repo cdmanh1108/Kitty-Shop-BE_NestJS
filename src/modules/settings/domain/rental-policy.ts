@@ -224,7 +224,7 @@ export function validateRentalPolicy(policy: RentalPolicy): void {
   }
 
   if (typeof policy.loyalty.enabled !== 'boolean') {
-    throw new InvalidShopSettingsError('Trạng thái bật tích điểm phải là giá trị đúng hoặc sai.');
+    throw new InvalidShopSettingsError('Trạng thái bật tích điểm chưa hợp lệ. Vui lòng chọn lại.');
   }
 
   if (!Number.isInteger(policy.loyalty.rentalsRequired) || policy.loyalty.rentalsRequired < 1) {
@@ -237,7 +237,7 @@ export function validateRentalPolicy(policy: RentalPolicy): void {
 
   if (typeof policy.loyalty.stackableWithPromotions !== 'boolean') {
     throw new InvalidShopSettingsError(
-      'Tùy chọn kết hợp tích điểm với khuyến mãi phải là giá trị đúng hoặc sai.',
+      'Tùy chọn kết hợp tích điểm với khuyến mãi chưa hợp lệ. Vui lòng chọn lại.',
     );
   }
 }

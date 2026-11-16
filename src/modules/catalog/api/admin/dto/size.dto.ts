@@ -9,14 +9,14 @@ export class CreateSizeReqDto {
     description:
       'Được trim rồi chuyển thành chữ in hoa; mã sau chuẩn hóa chỉ gồm A-Z, 0-9, dấu gạch dưới và tối đa 50 ký tự.',
   })
-  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   code!: string;
   @ApiProperty({
     example: ' Cỡ lớn ',
     description:
       'Khoảng trắng đầu/cuối sẽ được loại bỏ; tên sau chuẩn hóa không rỗng và tối đa 100 ký tự.',
   })
-  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   name!: string;
   @ApiPropertyOptional({ type: Number, default: 0, minimum: 0 })
   @Transform(({ value }: { value: unknown }) => {
@@ -40,13 +40,13 @@ export class SizeSummaryResDto {
 export class UpdateSizeReqDto {
   @ApiPropertyOptional({ example: ' xl ' })
   @ValidateIf((_object, value) => value !== undefined)
-  @IsString({ message: 'Mã phải là chuỗi ký tự.' })
+  @IsString({ message: 'Mã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsNotEmpty({ message: 'Mã không được để trống.' })
   code?: string;
 
   @ApiPropertyOptional({ example: ' Cỡ lớn ' })
   @ValidateIf((_object, value) => value !== undefined)
-  @IsString({ message: 'Tên phải là chuỗi ký tự.' })
+  @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsNotEmpty({ message: 'Tên không được để trống.' })
   name?: string;
 
@@ -63,7 +63,7 @@ export class UpdateSizeReqDto {
 
 export class UpdateSizeStatusReqDto {
   @ApiProperty({ description: 'Bật hoặc ngừng sử dụng kích thước.' })
-  @IsBoolean({ message: 'isActive phải là giá trị đúng hoặc sai.' })
+  @IsBoolean({ message: 'isActive chưa hợp lệ. Vui lòng chọn lại.' })
   isActive!: boolean;
 }
 

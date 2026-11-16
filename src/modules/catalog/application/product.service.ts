@@ -235,7 +235,7 @@ export class ProductService {
 
 function normalizeVariantCode(value: string): string {
   if (typeof value !== 'string') {
-    throw new InvalidCatalogInputError('Mã biến thể phải là chuỗi ký tự.');
+    throw new InvalidCatalogInputError('Mã biến thể nhập chưa hợp lệ. Vui lòng kiểm tra lại.');
   }
   const variantCode = value.trim();
   if (variantCode.length === 0 || variantCode.length > 100) {
