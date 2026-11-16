@@ -7,8 +7,8 @@ import type { CartRepository } from '../../src/modules/cart/domain/cart.reposito
 const productId = '00000000-0000-4000-8000-000000000001';
 const variantId = '00000000-0000-4000-8000-000000000002';
 const draft = {
-  pickupDate: '2026-10-01',
-  returnDate: '2026-10-03',
+  pickupDate: '2026-10-01T08:30:00+07:00',
+  returnDate: '2026-10-03T08:30:00+07:00',
   items: [{ productId, variantId, quantity: 1 }],
 };
 
@@ -43,7 +43,7 @@ describe('CartService', () => {
     const replace = jest.fn();
     const repo = repository({ replace });
     await expect(
-      service(repo).replace('account-id', 0, { ...draft, pickupDate: '2026-02-30' }),
+      service(repo).replace('account-id', 0, { ...draft, pickupDate: '2026-02-30T08:30:00+07:00' }),
     ).rejects.toMatchObject({ code: 'INVALID_CART_PERIOD' });
     await expect(
       service(repo).replace('account-id', 0, { ...draft, items: [...draft.items, ...draft.items] }),

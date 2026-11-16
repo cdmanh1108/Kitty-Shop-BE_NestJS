@@ -1761,52 +1761,6 @@
         "x-api-surface": "admin"
       }
     },
-    "/admin/variants/{id}/rental-rates": {
-      "post": {
-        "operationId": "CatalogController_upsertRentalRate",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpsertRentalRateReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalRateResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Catalog"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
     "/admin/products/{id}/media": {
       "post": {
         "operationId": "CatalogController_addProductMedia",
@@ -5250,7 +5204,7 @@
           },
           "email": {
             "type": "string",
-            "nullable": true
+            "format": "email"
           },
           "fullName": {
             "type": "string",
@@ -5901,12 +5855,6 @@
               "$ref": "#/components/schemas/ProductMediaResDto"
             }
           },
-          "rentalRates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RentalRateResDto"
-            }
-          },
           "createdAt": {
             "type": "string"
           },
@@ -6016,17 +5964,10 @@
           "skuPrefix": {
             "type": "string",
             "example": "AUR-S-R"
-          },
-          "rentalRates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RentalRateReqDto"
-            }
           }
         },
         "required": [
-          "variantCode",
-          "rentalRates"
+          "variantCode"
         ]
       },
       "ProductVariantResDto": {
@@ -6074,12 +6015,6 @@
           "archivedAt": {
             "type": "string",
             "nullable": true
-          },
-          "rentalRates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RentalRateResDto"
-            }
           },
           "_count": {
             "$ref": "#/components/schemas/VariantInventoryCountDto"
@@ -6130,51 +6065,6 @@
         },
         "required": [
           "archived"
-        ]
-      },
-      "UpsertRentalRateReqDto": {
-        "type": "object",
-        "properties": {
-          "durationDays": {
-            "type": "number",
-            "example": 1
-          },
-          "price": {
-            "type": "number",
-            "example": 300000
-          }
-        },
-        "required": [
-          "durationDays",
-          "price"
-        ]
-      },
-      "RentalRateResDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "durationDays": {
-            "type": "number"
-          },
-          "price": {
-            "type": "string",
-            "example": "50000.00"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "isActive": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "durationDays",
-          "price",
-          "currency",
-          "isActive"
         ]
       },
       "ProductMediaReqDto": {
@@ -6594,8 +6484,7 @@
             "type": "string",
             "enum": [
               "cash",
-              "bank_transfer",
-              "momo"
+              "bank_transfer"
             ],
             "nullable": true,
             "description": "Phương thức thanh toán khách mong muốn khi tạo đơn Web; không xác nhận đã thanh toán và không thay thế phương thức trên phiếu thu thực tế."
@@ -8743,14 +8632,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "minPrice": {
-            "type": "string",
-            "nullable": true
-          },
-          "maxPrice": {
-            "type": "string",
-            "nullable": true
           }
         },
         "required": [
@@ -8765,9 +8646,7 @@
           "defaultDepositAmount",
           "variantCount",
           "sizes",
-          "colors",
-          "minPrice",
-          "maxPrice"
+          "colors"
         ]
       },
       "ProductVariantReqDto": {
@@ -8794,17 +8673,10 @@
           "skuPrefix": {
             "type": "string",
             "example": "AUR-S-R"
-          },
-          "rentalRates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RentalRateReqDto"
-            }
           }
         },
         "required": [
-          "variantCode",
-          "rentalRates"
+          "variantCode"
         ]
       },
       "ProductCategorySummaryResDto": {
@@ -8852,12 +8724,6 @@
           "status": {
             "type": "string"
           },
-          "rentalRates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductLookupRateResDto"
-            }
-          },
           "variants": {
             "type": "array",
             "items": {
@@ -8872,23 +8738,6 @@
           "name",
           "status",
           "variants"
-        ]
-      },
-      "RentalRateReqDto": {
-        "type": "object",
-        "properties": {
-          "durationDays": {
-            "type": "number",
-            "example": 1
-          },
-          "price": {
-            "type": "number",
-            "example": 300000
-          }
-        },
-        "required": [
-          "durationDays",
-          "price"
         ]
       },
       "VariantInventoryCountDto": {
@@ -9053,12 +8902,6 @@
                 "$ref": "#/components/schemas/ColorSummaryResDto"
               }
             ]
-          },
-          "rentalRates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RentalRateResDto"
-            }
           }
         },
         "required": [
@@ -9253,12 +9096,6 @@
             "minimum": 0,
             "example": 60000,
             "description": "Giá một lượt thuê cho mỗi món của phân loại (VND), áp dụng lại tại mỗi mốc lượt mới; ưu tiên hơn giá ghi đè của đơn. Giá 0 hợp lệ."
-          },
-          "unitRentalPrice": {
-            "type": "number",
-            "deprecated": true,
-            "description": "Trường tương thích cũ: giá toàn kỳ thuê cho mỗi món (VND), không phải giá một lượt. Không dùng đồng thời với cyclePriceOverride của món hoặc đơn. Client mới dùng cyclePriceOverride.",
-            "example": 150000
           },
           "inventoryItemIds": {
             "description": "Optional physical item selection; otherwise backend auto-allocates.",
@@ -9476,14 +9313,6 @@
               "PAID",
               "FREE_ACCESSORY"
             ]
-          },
-          "productKindSnapshot": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ],
-            "deprecated": true
           },
           "pricing": {
             "description": "Biểu giá được chốt khi tạo đơn. Đơn cũ hoặc giá toàn kỳ tương thích không có trường này.",
@@ -10670,21 +10499,6 @@
           "status"
         ]
       },
-      "ProductLookupRateResDto": {
-        "type": "object",
-        "properties": {
-          "durationDays": {
-            "type": "number"
-          },
-          "price": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "durationDays",
-          "price"
-        ]
-      },
       "ProductLookupVariantResDto": {
         "type": "object",
         "properties": {
@@ -10701,12 +10515,6 @@
           "colorName": {
             "type": "string",
             "nullable": true
-          },
-          "rentalRates": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProductLookupRateResDto"
-            }
           }
         },
         "required": [

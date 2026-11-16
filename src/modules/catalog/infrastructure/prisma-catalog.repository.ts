@@ -55,13 +55,7 @@ import {
   countProductMediaByStorageKey,
   lookupProducts,
 } from './product-queries';
-import {
-  createProduct,
-  addVariant,
-  upsertRentalRate,
-  updateProduct,
-  archiveProduct,
-} from './product-commands';
+import { createProduct, addVariant, updateProduct, archiveProduct } from './product-commands';
 import {
   addProductMedia,
   setPrimaryProductMedia,
@@ -312,12 +306,6 @@ export class PrismaCatalogRepository
     ...args: Parameters<CatalogRepository['deleteProductVariant']>
   ): ReturnType<CatalogRepository['deleteProductVariant']> {
     return deleteProductVariant(this.prisma, ...args);
-  }
-
-  upsertRentalRate(
-    ...args: Parameters<CatalogRepository['upsertRentalRate']>
-  ): ReturnType<CatalogRepository['upsertRentalRate']> {
-    return upsertRentalRate(this.prisma, ...args);
   }
 
   updateProduct(

@@ -114,29 +114,23 @@ describe('WebSessionService', () => {
     );
   });
 
-  it('resolves current account state and keeps existing legacy sessions usable', async () => {
-    const legacy = testAccount('legacy-password', { email: null, emailVerifiedAt: null });
+  it('rejects unverified email accounts for both access and refresh sessions', async () => {
+    const unverified = testAccount('pending-password', {
+      email: 'pending@example.test',
+      emailVerifiedAt: null,
+    });
     await expect(
       sessionService(
-        webAuthRepository({ findAccountById: jest.fn().mockResolvedValue(legacy) }),
-      ).accountForAccessToken(legacy.id),
-    ).resolves.toMatchObject({ id: legacy.id, email: null, emailVerifiedAt: null });
-    await expect(
-      sessionService(
-        webAuthRepository({ findAccountById: jest.fn().mockResolvedValue(null) }),
-      ).accountForAccessToken(legacy.id),
+        webAuthRepository({ findAccountById: jest.fn().mockResolvedValue(unverified) }),
+      ).accountForAccessToken(unverified.id),
     ).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
-  });
 
-  it('continues an existing refresh session for a retained legacy account', async () => {
-    const legacy = testAccount('legacy-password', { email: null, emailVerifiedAt: null });
     const rotateRefreshToken: jest.MockedFunction<WebAuthRepository['rotateRefreshToken']> = jest
       .fn()
-      .mockResolvedValue({ outcome: 'ROTATED', account: legacy });
-
+      .mockResolvedValue({ outcome: 'ROTATED', account: unverified });
     await expect(
       sessionService(webAuthRepository({ rotateRefreshToken })).refresh('a'.repeat(64), {}),
-    ).resolves.toMatchObject({ user: { id: legacy.id, email: null, emailVerifiedAt: null } });
+    ).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
     expect(rotateRefreshToken).toHaveBeenCalledTimes(1);
   });
 });

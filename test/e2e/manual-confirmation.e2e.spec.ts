@@ -38,12 +38,12 @@ describe('Admin confirmation HTTP flow', () => {
     const f = await rentalScenario(prisma);
     const token = generateTestAccessToken(f.principal);
     await request(server)
-      .post('/api/v1/rental-orders')
+      .post('/api/v1/admin/rental-orders')
       .set('Authorization', `Bearer ${token}`)
       .send(f.input)
       .expect(201);
     const order = await prisma.rentalOrder.findFirstOrThrow({ where: { shopId: f.shop.id } });
-    return { ...f, token, order, url: `/api/v1/rental-orders/${order.id}` };
+    return { ...f, token, order, url: `/api/v1/admin/rental-orders/${order.id}` };
   }
 
   it.each(['CASH', 'CCCD', 'GPLX'] as const)(
@@ -98,12 +98,14 @@ describe('Admin confirmation HTTP flow', () => {
         .get(f.url + suffix)
         .set('Authorization', `Bearer ${token}`)
         .expect(403);
-    const other = await rentalScenario(prisma);
     await request(server)
       .post(f.url + '/confirm')
-      .set('Authorization', `Bearer ${generateTestAccessToken(other.principal)}`)
+      .set(
+        'Authorization',
+        `Bearer ${generateTestAccessToken({ ...f.principal, shopId: '00000000-0000-4000-8000-000000000000' })}`,
+      )
       .send({ collateralMethod: 'CASH', collateralAmount: 200000 })
-      .expect(404);
+      .expect(401);
     await request(server)
       .post(f.url + '/confirm')
       .send({})

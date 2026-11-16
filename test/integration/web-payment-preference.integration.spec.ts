@@ -1,7 +1,6 @@
 import { RentalReadPresenter } from '../../src/modules/rentals/application/rental-read.presenter';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
 import { toRentalResponse } from '../../src/modules/rentals/api/rental.response';
-import { ConflictException } from '@nestjs/common';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
@@ -54,8 +53,8 @@ describe('Web payment preference persistence', () => {
       fixture.shop.id,
       {
         customer: { name: fixture.customer.fullName, phone: fixture.customer.phone },
-        pickupDate: '2026-10-10',
-        returnDate: '2026-10-12',
+        pickupDate: '2026-10-10T08:30:00+07:00',
+        returnDate: '2026-10-12T08:30:00+07:00',
         items: [{ variantId: fixture.variant.id, quantity: 1 }],
         delivery: { method: 'self_pickup' },
         paymentMethod: 'bank_transfer',
@@ -90,8 +89,8 @@ describe('Web payment preference persistence', () => {
         fixture.shop.id,
         {
           customer: { name: fixture.customer.fullName, phone: fixture.customer.phone },
-          pickupDate: '2026-10-10',
-          returnDate: '2026-10-12',
+          pickupDate: '2026-10-10T08:30:00+07:00',
+          returnDate: '2026-10-12T08:30:00+07:00',
           items: [{ variantId: fixture.variant.id, quantity: 1 }],
           delivery: { method: 'self_pickup' },
           paymentMethod: 'cash',
@@ -99,6 +98,6 @@ describe('Web payment preference persistence', () => {
         'web-payment-preference',
         owner,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({ kind: 'CONFLICT' });
   });
 });

@@ -62,32 +62,6 @@ export function calculateRentalPaymentTotals(input: {
   };
 }
 
-export function calculateLateCharges(input: {
-  dueAt: Date;
-  returnedAt: Date;
-  itemCount: number;
-  rentalSubtotal: string;
-  policy: RentalPolicy;
-}): { lateDays: number; lateFee: string; additionalRental: string } {
-  const lateDays = Math.max(
-    0,
-    Math.ceil((input.returnedAt.getTime() - input.dueAt.getTime()) / 86_400_000),
-  );
-  const lateFee =
-    BigInt(lateDays) *
-    BigInt(input.itemCount) *
-    cents(input.policy.lateReturn.feePerItemPerDay.toString());
-  return {
-    lateDays,
-    lateFee: money(lateFee),
-    additionalRental: money(
-      lateDays >= input.policy.lateReturn.newRentalChargeFromLateDay
-        ? cents(input.rentalSubtotal)
-        : 0n,
-    ),
-  };
-}
-
 export function rewardForCompletedRental(completedBefore: number, policy: RentalPolicy): number {
   if (!policy.loyalty.enabled) return 0;
   if (!Number.isSafeInteger(completedBefore) || completedBefore < 0)

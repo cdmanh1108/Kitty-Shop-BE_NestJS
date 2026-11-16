@@ -57,15 +57,6 @@ async function main(): Promise<void> {
         content: JSON.stringify(adminDocument, null, 2) + '\n',
         label: 'Admin API',
       });
-      // Keep the ignored compatibility alias available to existing local consumers, but do not
-      // require it in check mode. CI checks only the committed, audience-specific contracts.
-      if (!isCheck) {
-        plannedWrites.push({
-          filename: 'openapi.json',
-          content: JSON.stringify(adminDocument, null, 2) + '\n',
-          label: 'Admin API compatibility',
-        });
-      }
     }
 
     if (isCheck) {

@@ -21,10 +21,10 @@ describe('PrismaFavoriteRepository', () => {
     const shop = await createTestShop(prisma);
     const { product } = await createTestProductWithVariant(prisma, shop.id);
     const first = await prisma.webAccount.create({
-      data: { phone: '+84912345678', passwordHash: 'not-used' },
+      data: { email: 'account-84912345678@example.test', passwordHash: 'not-used' },
     });
     const second = await prisma.webAccount.create({
-      data: { phone: '+84912345679', passwordHash: 'not-used' },
+      data: { email: 'account-84912345679@example.test', passwordHash: 'not-used' },
     });
     const repository = new PrismaFavoriteRepository(prisma);
 
@@ -61,7 +61,7 @@ describe('PrismaFavoriteRepository', () => {
     const { product: visible } = await createTestProductWithVariant(prisma, shop.id);
     const { product: hidden } = await createTestProductWithVariant(prisma, shop.id);
     const account = await prisma.webAccount.create({
-      data: { phone: '+84912345678', passwordHash: 'not-used' },
+      data: { email: 'account-84912345678@example.test', passwordHash: 'not-used' },
     });
     const repository = new PrismaFavoriteRepository(prisma);
 

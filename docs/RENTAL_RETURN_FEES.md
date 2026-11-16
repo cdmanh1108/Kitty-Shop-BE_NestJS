@@ -1,8 +1,7 @@
-# Return fees and per-item overrides (RP13)
+# Return fees and per-item overrides
 
-Formal rental extension (RP11/RP12) is no longer part of this rollout. An active
-order keeps its agreed due time; return processing calculates overtime charges.
-The existing schedule correction endpoint still preserves the priced duration.
+An active order keeps its agreed due time; return processing calculates overtime
+charges. Schedule correction preserves the priced duration.
 
 ## Continuous pricing
 
@@ -25,9 +24,8 @@ to day 5 incurs 50,000, and from day 5 to day 6 incurs 10,000. With at least thr
 paid units, day 7 to day 8 incurs 50,000. Renewal days do not also incur 10,000.
 Free units never increase the quantity tier and always incur zero time fees.
 
-`LEGACY_RATE_V1` and unversioned historical agreements retain the previous return
-policy (per-day fee plus a new full rental charge at its threshold). They are not
-backfilled into cycle agreements. Unknown/corrupt explicit snapshots fail safely.
+Order pricing snapshots use only `CYCLE_V1` or `FREE_ACCESSORY_V1`. Missing,
+unknown, or corrupt snapshots fail safely instead of selecting a fallback policy.
 
 ## Receive return
 
@@ -98,14 +96,11 @@ the transaction. Lifecycle receipts remain protected from generic voids.
 
 ## Persistence and deployment
 
-Migration `202610060003_return_item_fees` adds nullable configured/agreed fee,
-reason and pricing-version fields to `rental_return_inspections`. Existing returns
-remain NULL, without inventing historical per-SKU amounts. These old return records
-cannot use per-SKU settlement overrides; their existing settlement still works.
-
-Apply the migration before running the new writers, then regenerate Prisma Client.
-No live database migration is run by the implementation task. Export BE OpenAPI
-and sync the Admin contract; the storefront contract is unchanged.
+The initial-release baseline creates nullable configured/agreed fee, reason, and
+pricing-version fields on `rental_return_inspections`. It also includes the
+current pricing checks. A new database has no earlier return records to backfill.
+See [Database](DATABASE.md) and the [release runbook](RUNBOOK.md) before applying
+the baseline to the separately provisioned empty database.
 
 Admin receive-return and settlement dialogs expose explicit per-SKU overrides,
 require reasons, show compensation separately and retain input on errors. Settlement

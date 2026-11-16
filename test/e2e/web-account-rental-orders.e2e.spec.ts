@@ -1,11 +1,13 @@
 import type { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { Prisma } from '@prisma/client';
 import type { RentalOrderSource } from '@prisma/client';
 import type { Server } from 'node:http';
 import * as request from 'supertest';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';
 import { rentalScenario } from '../fixtures/rental.fixture';
+import { cyclePricingSnapshot } from '../fixtures/rental-pricing.fixture';
 import { uniqueCode } from '../fixtures/test-factories';
 import {
   connectTestDatabase,
@@ -77,9 +79,13 @@ describe('Web account rental orders', () => {
     await disconnectTestDatabase();
   });
 
-  async function createAccount(phone: string) {
+  async function createAccount(identity: string) {
     return prisma.webAccount.create({
-      data: { phone, passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-' + identity.replace(/\D/g, '') + '@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
   }
 
@@ -128,6 +134,11 @@ describe('Web account rental orders', () => {
             unitRentalPrice: 400000,
             lineTotal: 400000,
             depositAmount: 500000,
+            pricingSnapshot: cyclePricingSnapshot({
+              durationDays: 3,
+              unitRentalPrice: 400000,
+              depositPerItem: 500000,
+            }) as unknown as Prisma.InputJsonValue,
           },
         },
       },
@@ -288,17 +299,17 @@ describe('Web account rental orders', () => {
     }
   });
 
-  it('returns 404 without revealing foreign, guest, offline, or unknown orders', async () => {
+  it('returns 404 without revealing foreign, ownerless, offline, or unknown orders', async () => {
     const fixture = await rentalScenario(prisma);
     const owner = await createAccount('+84912345678');
     const other = await createAccount('+84912345679');
     const foreign = await createOrder(fixture, { webAccountId: other.id });
-    const guest = await createOrder(fixture, { webAccountId: null });
+    const ownerless = await createOrder(fixture, { webAccountId: null });
     const offline = await createOrder(fixture, { webAccountId: owner.id, source: 'OFFLINE' });
 
     for (const orderCode of [
       foreign.orderNumber,
-      guest.orderNumber,
+      ownerless.orderNumber,
       offline.orderNumber,
       'RT-NOT-FOUND',
     ]) {
@@ -367,15 +378,15 @@ describe('Web account rental orders', () => {
     });
   });
 
-  it('does not reveal or mutate foreign, guest, or offline orders through cancellation', async () => {
+  it('does not reveal or mutate foreign, ownerless, or offline orders through cancellation', async () => {
     const fixture = await rentalScenario(prisma);
     const owner = await createAccount('+84912345678');
     const other = await createAccount('+84912345679');
     const foreign = await createOrder(fixture, { webAccountId: other.id });
-    const guest = await createOrder(fixture, { webAccountId: null });
+    const ownerless = await createOrder(fixture, { webAccountId: null });
     const offline = await createOrder(fixture, { webAccountId: owner.id, source: 'OFFLINE' });
 
-    for (const order of [foreign, guest, offline]) {
+    for (const order of [foreign, ownerless, offline]) {
       await request(server)
         .post(`/api/v1/web/account/rental-orders/${order.orderNumber}/cancel`)
         .set('Cookie', accessCookie(owner.id))

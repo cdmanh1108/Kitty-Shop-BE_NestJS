@@ -30,9 +30,8 @@ Generic Finance writes are allowed while an order is open. Once a settlement
 exists or an order is completed, only a new `OUT ORDER_REFUND` may be recorded
 as an independent adjustment; it does not rewrite the settlement snapshot or
 order totals. Generic void never changes lifecycle receipts (`RC-*`/`RS-*`),
-internal deposit-offset transfers, or any payment on a settled order, including
-a legacy manual payment without `receiptKey`. A manual payment may have been
-used by confirmation without a durable payment-to-confirmation link, so generic
-void is conservatively blocked once confirmation exists. C06 intentionally does
-not add a general correction/reversal workflow; cancelled-order refund semantics
+internal deposit-offset transfers, or any payment on a settled order. A manual
+payment may have been used by confirmation without a durable payment-to-confirmation link, so generic
+void is conservatively blocked once confirmation exists. A general
+correction/reversal workflow is not supported; cancelled-order refund semantics
 and voiding a post-completion adjustment remain unsupported.

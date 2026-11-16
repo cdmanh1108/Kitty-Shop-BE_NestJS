@@ -12,6 +12,7 @@ import {
 } from '../helpers/test-database';
 import { fixedClock, rentalScenario } from '../fixtures/rental.fixture';
 import {
+  createVerifiedWebAccount,
   createTestCustomer,
   createTestProductWithVariant,
   createTestShop,
@@ -50,7 +51,6 @@ describe('Web rental shipping persistence', () => {
     const shop = await createTestShop(prisma);
     const customer = await createTestCustomer(prisma, shop.id);
     const catalog = await createTestProductWithVariant(prisma, shop.id, {
-      dailyRate: 150000,
       depositAmount: 200000,
       inventoryCount: input.inventoryCount ?? 1,
     });
@@ -65,9 +65,10 @@ describe('Web rental shipping persistence', () => {
     delivery: 'shop_delivery' | 'self_pickup';
   }) {
     const quantity = input.quantity ?? 1;
+    const account = await createVerifiedWebAccount(prisma);
     const quoteRequest = {
-      pickupDate: '2026-10-10',
-      returnDate: '2026-10-13',
+      pickupDate: '2026-10-10T08:30:00+07:00',
+      returnDate: '2026-10-13T08:30:00+07:00',
       items: [{ variantId: input.variantId, quantity }],
       deliveryMethod: input.delivery,
     };
@@ -86,6 +87,7 @@ describe('Web rental shipping persistence', () => {
         paymentMethod: 'cash',
       },
       'web-shipping-key',
+      { webAccountId: account.id, email: account.email },
     );
     const order = await prisma.rentalOrder.findFirstOrThrow({
       where: { shopId: input.shopId, orderNumber: response.orderCode },

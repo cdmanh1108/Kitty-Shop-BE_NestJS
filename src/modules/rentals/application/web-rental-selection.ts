@@ -87,7 +87,6 @@ export async function evaluateWebRentalSelection(
   const variants = await repository.getBookableVariants({
     shopId: input.shopId,
     variantIds,
-    durationDays: input.durationDays,
     from: input.from,
     until: input.until,
     storefrontEligibility: true,

@@ -1,3 +1,4 @@
+import { cyclePricingSnapshot } from '../fixtures/rental-pricing.fixture';
 import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import {
   connectTestDatabase,
@@ -51,13 +52,12 @@ describe('Finance Payment Lifecycle, State Recomputation & Rollback Integration'
       shop.id,
       {
         inventoryCount: 1,
-        dailyRate: 150000,
         depositAmount: 200000,
       },
     );
     const inventoryItem = inventoryItems[0]!;
 
-    // Create order: 2 days @ 150,000 = 300,000 grandTotal, 200,000 depositRequired
+    // The saved rental line price is the full-period amount, independent of duration.
     const order = await rentalRepo.createOrder({
       orderNumber: uniqueCode('RT'),
       shopId: shop.id,
@@ -74,10 +74,14 @@ describe('Finance Payment Lifecycle, State Recomputation & Rollback Integration'
           productName: product.name,
           variantName: variant.variantCode,
           quantity: 1,
-          unitRentalPrice: 150000,
+          unitRentalPrice: 300000,
           depositAmount: 200000,
           lineTotal: 300000,
-          pricingSnapshot: { durationDays: 2, unitRentalPrice: 150000, depositPerItem: 200000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 2,
+            unitRentalPrice: 300000,
+            depositPerItem: 200000,
+          }),
           inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
         },
       ],
@@ -176,7 +180,6 @@ describe('Finance Payment Lifecycle, State Recomputation & Rollback Integration'
       shop.id,
       {
         inventoryCount: 1,
-        dailyRate: 100000,
         depositAmount: 150000,
       },
     );
@@ -201,7 +204,11 @@ describe('Finance Payment Lifecycle, State Recomputation & Rollback Integration'
           unitRentalPrice: 100000,
           depositAmount: 150000,
           lineTotal: 100000,
-          pricingSnapshot: { durationDays: 1, unitRentalPrice: 100000, depositPerItem: 150000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 1,
+            unitRentalPrice: 100000,
+            depositPerItem: 150000,
+          }),
           inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
         },
       ],

@@ -1,3 +1,4 @@
+import { cyclePricingSnapshot } from '../fixtures/rental-pricing.fixture';
 import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import {
   connectTestDatabase,
@@ -65,10 +66,14 @@ describe('Cross-Shop Data Isolation & Query Filtering Integration', () => {
           productName: prodA.name,
           variantName: varA.variantCode,
           quantity: 1,
-          unitRentalPrice: 100000,
+          unitRentalPrice: 200000,
           depositAmount: 200000,
           lineTotal: 200000,
-          pricingSnapshot: { durationDays: 2, unitRentalPrice: 100000, depositPerItem: 200000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 2,
+            unitRentalPrice: 200000,
+            depositPerItem: 200000,
+          }),
           inventory: [{ id: itemA.id, sku: itemA.sku }],
         },
       ],

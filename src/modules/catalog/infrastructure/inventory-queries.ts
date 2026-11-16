@@ -178,7 +178,6 @@ export async function findInventoryItem(
           product: true,
           size: true,
           color: true,
-          rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
         },
       },
       statusHistory: { orderBy: { changedAt: 'desc' }, take: 100 },

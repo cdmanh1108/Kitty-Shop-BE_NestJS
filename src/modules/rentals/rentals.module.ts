@@ -12,7 +12,6 @@ import { RentalReadService } from './application/rental-read.service';
 import { RentalReturnService } from './application/rental-return.service';
 import { WebRentalEvaluationService } from './application/web-rental-evaluation.service';
 import { WebRentalOrderService } from './application/web-rental-order.service';
-import { WebRentalLookupService } from './application/web-rental-lookup.service';
 import { WebAccountRentalOrdersService } from './application/web-account-rental-orders.service';
 import { RentalConfirmationService } from './application/rental-confirmation.service';
 import { RentalSettlementService } from './application/rental-settlement.service';
@@ -51,7 +50,6 @@ import { RentalEmailJob } from './infrastructure/jobs/rental-email.job';
     RentalReturnService,
     WebRentalEvaluationService,
     WebRentalOrderService,
-    WebRentalLookupService,
     WebAccountRentalOrdersService,
     PrismaRentalRepository,
     { provide: RENTAL_AVAILABILITY_READER, useExisting: PrismaRentalRepository },

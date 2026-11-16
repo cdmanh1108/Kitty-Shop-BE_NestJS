@@ -28,19 +28,17 @@ describe('Rental HTTP command and shop boundaries', () => {
     await disconnectTestDatabase();
   });
 
-  it('creates/replays one rental, denies overlapping booking and isolates cross-shop reads and updates', async () => {
+  it('creates/replays one rental and rejects tokens carrying a foreign shop claim', async () => {
     const a = await rentalScenario(prisma);
-    const b = await rentalScenario(prisma);
     const tokenA = generateTestAccessToken(a.principal);
-    const tokenB = generateTestAccessToken(b.principal);
     const first = await request(server)
-      .post('/api/v1/rental-orders')
+      .post('/api/v1/admin/rental-orders')
       .set('Authorization', 'Bearer ' + tokenA)
       .set('Idempotency-Key', 'http-key')
       .send(a.input)
       .expect(201);
     const replay = await request(server)
-      .post('/api/v1/rental-orders')
+      .post('/api/v1/admin/rental-orders')
       .set('Authorization', 'Bearer ' + tokenA)
       .set('Idempotency-Key', 'http-key')
       .send(a.input)
@@ -55,24 +53,45 @@ describe('Rental HTTP command and shop boundaries', () => {
     );
     const order = await prisma.rentalOrder.findFirstOrThrow({ where: { shopId: a.shop.id } });
     await request(server)
-      .post('/api/v1/rental-orders')
+      .post('/api/v1/admin/rental-orders')
       .set('Authorization', 'Bearer ' + tokenA)
       .send(a.input)
       .expect(409);
     await request(server)
-      .get('/api/v1/rental-orders/' + order.id)
-      .set('Authorization', 'Bearer ' + tokenB)
-      .expect(404);
+      .get('/api/v1/admin/rental-orders/' + order.id)
+      .set(
+        'Authorization',
+        'Bearer ' +
+          generateTestAccessToken({
+            ...a.principal,
+            shopId: '00000000-0000-4000-8000-000000000000',
+          }),
+      )
+      .expect(401);
     await request(server)
-      .patch('/api/v1/rental-orders/' + order.id + '/schedule')
-      .set('Authorization', 'Bearer ' + tokenB)
+      .patch('/api/v1/admin/rental-orders/' + order.id + '/schedule')
+      .set(
+        'Authorization',
+        'Bearer ' +
+          generateTestAccessToken({
+            ...a.principal,
+            shopId: '00000000-0000-4000-8000-000000000000',
+          }),
+      )
       .send({ rentalStartAt: '2026-10-15T00:00:00Z', rentalEndAt: '2026-10-17T00:00:00Z' })
-      .expect(404);
+      .expect(401);
     await request(server)
-      .post('/api/v1/rental-orders')
-      .set('Authorization', 'Bearer ' + tokenB)
-      .send({ ...b.input, shopId: a.shop.id })
-      .expect(400);
+      .post('/api/v1/admin/rental-orders')
+      .set(
+        'Authorization',
+        'Bearer ' +
+          generateTestAccessToken({
+            ...a.principal,
+            shopId: '00000000-0000-4000-8000-000000000000',
+          }),
+      )
+      .send({ ...a.input, shopId: a.shop.id })
+      .expect(401);
     expect(await prisma.rentalOrder.count()).toBe(1);
   });
 });

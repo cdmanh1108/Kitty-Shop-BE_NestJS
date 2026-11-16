@@ -1,93 +1,39 @@
-# Business types and compatibility
+# Business types and persisted values
 
 ## Vocabulary ownership
 
-| Concept                                                | Canonical owner                        | Persistence / API                                                      |
-| ------------------------------------------------------ | -------------------------------------- | ---------------------------------------------------------------------- |
-| Rental lifecycle, item state, allocation state         | `rentals/domain/rental-status.ts`      | Existing uppercase strings; separate concepts even when values overlap |
-| Rental charge type                                     | `rentals/domain/charge-type.ts`        | Existing charge values                                                 |
-| Order payment, deposit, transaction and expense states | `finance/domain/payment-status.ts`     | Separate vocabularies, not one generic payment status                  |
-| Payment direction, purpose and method                  | `finance/domain/payment-types.ts`      | Existing values and validation                                         |
-| Product and inventory state                            | `catalog/domain/catalog-status.ts`     | Product and physical inventory remain separate                         |
-| Delivery state, direction and method                   | `deliveries/domain/delivery-status.ts` | Existing values and validation                                         |
-| Customer state                                         | `customers/domain/customer-status.ts`  | ACTIVE / BLOCKED                                                       |
+| Concept | Owner |
+| --- | --- |
+| Rental lifecycle, order item and allocation state | `rentals/domain` |
+| Rental charge type | `rentals/domain/charge-type.ts` |
+| Order payment, transaction and expense state | `finance/domain` |
+| Product and inventory state | `catalog/domain/catalog-status.ts` |
+| Delivery state, direction and method | `deliveries/domain` |
+| Customer state | `customers/domain/customer-status.ts` |
 
-DTO validation and Swagger reuse these constants without changing enum ordering or
-defaults. Validated payment creation, delivery and inventory mutation inputs carry
-the corresponding literal unions through application and repository contracts.
-Rental transition targets use RentalStatus. Long persistence inputs reuse the named
-P0 port contracts through `Parameters<Repository['operation']>` rather than duplicating
-their shapes. Existing report/dashboard read models remain sufficient.
+Status columns intentionally remain `VARCHAR` where the application supports
+persisted values beyond a closed PostgreSQL enum. Do not narrow a read type with
+an assertion or invent a fallback for an unknown stored value. Rental `OVERDUE`
+is derived from the schedule; it is not a separate lifecycle status.
 
-The schema stores statuses as VARCHAR, not Prisma enums. Read records and legacy
-unrestricted filters deliberately retain string types: narrowing unvalidated persisted
-values by assertion would be unsound, while rejecting them would change behavior.
-Auth/member vocabulary is outside this change. OVERDUE remains derived; it is not a
-new rental lifecycle status. SQL literals and some persistence defaults remain literal
-at the storage boundary; they must match their feature's vocabulary.
+## Money and pricing
 
-`rental-policy.ts` owns the existing transition source lists and reschedule eligibility.
-In particular, cancellation still accepts RESERVED and CONFIRMED, and completion still
-sends inventory to CLEANING. This cleanup does not implement different client policies.
+- PostgreSQL money columns use `NUMERIC(18,2)` and Prisma `Decimal`.
+- Rental cycle arithmetic uses integer cents internally. The API keeps its
+  established numeric fields; persisted order items retain the amounts charged.
+- Deposits are held money, not rental revenue. `calculateOrderPaymentState`
+  owns transaction-history payment and deposit state.
+- Rental policy exposes two editable shop prices: the first cycle price and the
+  additional-day fee. Quantity threshold, renewal days, and the online duration
+  limit are release rules owned by backend code.
+- A paid order item stores a complete `CYCLE_V1` snapshot with the effective
+  policy and any order/item override. A complimentary line stores
+  `FREE_ACCESSORY_V1`; unknown or incomplete versions are rejected.
+- Product catalog rows do not contain rental-rate schedules. Quotes and new
+  orders calculate prices from the shared cycle policy. Historical amounts are
+  read from the order item snapshot, never from today's catalog or settings.
 
-## Money convention
-
-- PostgreSQL monetary columns remain NUMERIC/DECIMAL(18,2). Prisma supplies Decimal.
-- Commands and existing calculations use JavaScript numbers. There is no Money alias,
-  wrapper, new rounding, currency conversion or change to deposit/revenue separation.
-- Read contracts use the structural `DecimalValue` interface; their runtime Decimal
-  values remain intact and JSON-serialize as strings. Raw report SQL deliberately
-  returns monetary aggregates as text, also unchanged.
-- Existing computed numeric outputs (bookable price/deposit, dashboard totals,
-  customer payment summaries and reminder deposit requirements) remain numbers.
-- `database/prisma/decimal-mapping.ts` centralizes the existing `Number(value)` conversion
-  at those persistence boundaries. It accepts Decimal or an already numeric fallback,
-  not null. Call sites retain their existing null/zero decisions. No implicit rounding
-  is performed. PostgreSQL's existing column scale behavior is unchanged.
-- `calculateOrderPaymentState` remains the sole transaction-history payment/deposit
-  resolver. Its refund precedence and exact thresholds are unchanged. Creation-time
-  zero-total defaults remain as before. Other calculations with different semantics
-  (charges, discounts, refund limits) remain with their owning operations.
-
-JavaScript number arithmetic retains its existing precision limits; this refactor
-does not make the full DECIMAL(18,2) range lossless after numeric conversion. A future
-precision redesign needs an explicit API/business decision, not a silent helper change.
-
-## Rental cycle pricing foundation (RP01)
-
-Settings owns `domain/rental-pricing-policy.ts` and publishes the typed policy and
-its pure validator through `settings/public/rental-policy.ts`. Only the two
-shop-editable prices and the default cash deposit are stored in the existing
-`app_settings` JSON entry `rental_policy`:
-
-| Field                   | Default | Meaning                                                   |
-| ----------------------- | ------: | --------------------------------------------------------- |
-| `defaultRentalPrice`    |   50000 | Price of the first rental cycle and each subsequent cycle |
-| `additionalDayFee`      |   10000 | Fee for a day that does not begin a new cycle             |
-| `defaultCashDeposit`    |  200000 | Default deposit suggested when creating a product         |
-
-The rental quantity threshold (3), renewal days (5 and 8), website duration limit
-(9 days) and other operational policies are fixed in backend code. They are not
-shop settings. Migration `202610070004_simplify_rental_policy_setting` removes
-those legacy fields from stored policy JSON while preserving the three editable
-values; it does not delete the `app_settings` row or touch the historical
-`rental_rates` table. Old order pricing snapshots remain unchanged.
-
-Rental pricing PATCH accepts only the two editable rental prices and default
-cash deposit. Omitted values retain their current value, zero remains valid, and
-explicit null is rejected. Only changed editable values are written and audited.
-
-Money settings are nonnegative whole VND up to 100,000,000. Settings validation
-runs before saving, including for application callers.
-
-Rentals owns the separate pure `domain/rental-cycle-pricing.ts` resolver. Its
-`billableQuantity` is the total number of ordinary physical units in the order,
-including paid accessories, regardless of product/variant grouping or a zero
-price override. Complimentary accessories do not contribute. The result is the
-price of **one unit for the entire duration**; the caller applies line quantity.
-Inventory, deposits, shipping and charges are outside this calculation.
-
-For duration `d` and renewal day `r`, the cycle length is `r - 1`:
+For a duration `d` and renewal day `r`, the cycle length is `r - 1` days:
 
 ```text
 cycleCount = 1 + floor((d - 1) / (r - 1))
@@ -95,113 +41,27 @@ additionalDayCount = d - cycleCount
 unitRentalPrice = cycleCount * cyclePrice + additionalDayCount * additionalDayFee
 ```
 
-Defaults therefore produce renewal days 1, 5, 9, 13 for orders below three units,
-and 1, 8, 15, 22 for orders with at least three. The new cycle price replaces the
-10,000 daily fee on those days. At 50,000 per cycle, a below-threshold unit costs
-130,000 on day 5 and 210,000 on day 9; an at-threshold unit costs 160,000 on day 8
-and 170,000 on day 9. Explicit item price overrides take precedence over order
-overrides, then the shop price, and apply to every cycle. Zero is a valid override.
-Both supplied override levels are validated, even when the item level wins.
+Defaults are 50,000 VND per cycle and 10,000 VND per additional day. Orders with
+at least three paid physical units use the longer renewal interval. Complimentary
+accessories do not contribute to that quantity and carry zero rental and deposit.
 
-The resolver accepts up to two decimal places for explicit price overrides to
-retain existing command money precision. Arithmetic uses integer cents internally,
-then returns the existing computed-number API convention. Unsafe numeric totals
-and invalid durations, quantities or prices raise safe Vietnamese domain errors.
-It does not clamp an invalid duration into a one-day booking.
+## Date and time
 
-`domain/rental-pricing-version.ts` identifies unversioned historical snapshots
-as `LEGACY_RATE_V1` and new resolver results as `CYCLE_V1`. Unknown explicit
-versions fail rather than silently choosing a pricing formula. RP01 introduced
-this version and calculation breakdown; RP03 persists complete order snapshots.
-The Admin no longer displays or edits legacy catalog rates. Existing rows and
-read/write contracts remain for compatibility; the Admin product form does not
-send rate values. Historical orders retain their saved pricing semantics. RP03
-applies the cycle resolver to storefront quotes and new bookings, and RP13 applies
-it to continuous return fees and per-SKU overrides; see
-[Return fees](RENTAL_RETURN_FEES.md). Formal extension APIs are no longer part of
-the rollout.
+Rental requests and persisted rental periods use full timestamps with timezone
+offsets. User-facing shop time is Vietnam time (`UTC+07:00`). Date-only API
+values are invalid; see [web rental input validation](WEB_RENTAL_INPUT_VALIDATION.md).
 
-## Cycle-priced quotes and booking (RP03)
+## Complimentary accessory rules
 
-The storefront availability, quote and create paths enforce the shop's
-`maxOnlineRentalDays` (9 by default). Exceeding it raises the safe Vietnamese
-`WEB_RENTAL_DURATION_EXCEEDED` error with instructions to contact the shop.
-Manual Admin creation is not subject to this cap. The booking persistence boundary
-also rejects oversized ONLINE orders. Calendar parsing, half-open allocation
-intervals and elapsed-24-hour duration rounding are unchanged.
+`Product.allowFreeAccessory` is the catalog eligibility flag and is independent
+of category. An order item captures that eligibility. A free line is valid only
+when eligibility is true and rental price, deposit, discount, and line total are
+zero. Paid and free selections of the same variant remain distinct order lines.
 
-Quotes and both booking services use `resolveRentalCyclePricing` through the
-same line-pricing helper. Quantity is the sum of physical units across all lines,
-including duplicate Web selections before their canonical variant aggregation.
-The current inputs contain ordinary lines only; RP08 will introduce complimentary
-roles and exclude those from this count. Legacy product/variant rates no longer
-decide booking rental amounts or block a Web selection because a rate is missing.
-Deposits still follow the existing variant override/product default rules.
+## Application and database checks
 
-Admin creation accepts optional `cyclePriceOverride` on the order and each item.
-The item value takes precedence; zero is valid, and the effective cycle value is
-charged again at every renewal. Values must be finite, nonnegative and have at
-most two decimal places. Null is rejected at the new DTO fields. The existing
-`unitRentalPrice` request remains a deprecated **full-period** override for older
-Admin clients; it is not silently reinterpreted as a cycle price. Such a line has
-an explicit `LEGACY_RATE_V1` snapshot. Combining that old field with a cycle
-override on the same item or its order is rejected as
-`RENTAL_PRICE_OVERRIDE_CONFLICT`. Response `unitRentalPrice` always remains the
-price of one physical unit for the full priced duration.
-
-Every new cycle line stores `CYCLE_V1`, a copy of all six pricing policy fields,
-order/item overrides, price source, quantity context, renewal day, cycle counts,
-priced duration, per-unit amount and deposit. Settings changes do not rewrite the
-snapshot. The serializable booking transaction checks cycle snapshots and line
-amounts against this captured policy before writing. Allocation overlap checks,
-required outbox insertion and owner-fenced idempotency completion remain atomic.
-Existing unversioned persistence fixtures and historical orders retain legacy
-semantics. Unknown explicit pricing versions are rejected.
-
-Money multiplication and rental/deposit sums use integer cents before returning
-the existing computed-number representation; unsafe totals are rejected. Shipping,
-discounts and deposit/revenue separation retain their existing semantics. Web quote
-items now include per-unit rental price, line total and line deposit when their
-selection can be resolved; the quote also exposes the cycle breakdown. Admin detail
-exposes a safe `pricing` breakdown for cycle lines, reconstructed from the captured
-policy; raw `pricingSnapshot` remains private. `/web/policies` publishes the common
-pricing rules for storefront integration.
-
-Completed idempotent requests replay the retained response before any current
-policy read or price/duration-limit validation. Web command hashes continue to
-include the validated checkout command and ownership; Admin hashes include both
-new override fields through the mapped command. Pricing settings are not part of
-the request hash. Failed, uncommitted writes release only their owned claim; retry
-uses the same command/key, while a changed command with a retained key conflicts.
-Neither path automatically retries a write after a committed result.
-
-## Business time and reference numbers
-
-`common/clock/clock.ts` declares the framework-free Clock port and CLOCK token.
-SystemClock implements system time; ClockModule exports its provider and is explicitly
-imported by Reminders, Dashboard and Reports. Fixed-clock tests cover reminder boundary
-classification, shop-local day/month windows and the default preceding 30-day report.
-
-Date parsing still uses Date directly. Auth/security, idempotency expiry, health,
-logging and persistence/history timestamps remain unchanged. Finance's default paidAt
-records an event timestamp rather than a time-based decision and remains system time.
-
-`generateDatedReference` shares the existing RT/PAY/EXP generation algorithm:
-`PREFIX-YYYYMMDD-XXXXXX`, using UTC date and three random bytes in uppercase hex.
-Customer codes deliberately keep `CUS-<base36 timestamp>-<4 hex characters>` because
-their format differs and is not duplicated. Random codes are not collision-proof;
-database unique constraints and existing error handling remain authoritative.
-
-## Errors and verification
-
-Invalid rental intervals now raise InvalidRentalIntervalError with the same message.
-RentalOverlapError, CatalogInvariantError and FinanceInvariantError are reused with
-their existing application-to-HTTP mappings. Application HTTP exceptions remain in
-place to preserve response behavior; no global exception filter redesign is included.
-
-`test/business-primitives.spec.ts` covers monetary serialization/conversion, payment
-thresholds/refunds, rental policy, typed interval errors, reference format and all three
-Clock consumers. The existing persistence and architecture tests continue to guard
-transaction delegation and inner-layer import boundaries. No database is mutated by
-these tests; PostgreSQL integration/concurrency coverage runs through the existing
-guarded test harness described in [TESTING.md](TESTING.md).
+Application validation gives safe domain errors. The initial-release migration
+also retains PostgreSQL checks for core money, quantity, profile, order, payment,
+settlement, and pricing invariants. The GiST exclusion constraint on
+`RentalItemAllocation` protects overlapping reservations for the same physical
+item even under concurrent booking transactions.

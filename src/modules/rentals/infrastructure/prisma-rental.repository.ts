@@ -26,11 +26,7 @@ import {
   getBookableVariant,
   getBookableVariants,
 } from './rental-availability';
-import {
-  lookupStorefrontOrder,
-  listWebAccountOrders,
-  getWebAccountOrder,
-} from './rental-web-order.queries';
+import { listWebAccountOrders, getWebAccountOrder } from './rental-web-order.queries';
 import { createOrder } from './rental-booking';
 import { receiveReturn } from './rental-return.lifecycle';
 import { settleOrder } from './rental-settlement.lifecycle';
@@ -181,13 +177,6 @@ export class PrismaRentalRepository
     ...args: Parameters<RentalCreationRepository['releaseIdempotency']>
   ): ReturnType<RentalCreationRepository['releaseIdempotency']> {
     return releaseIdempotencyClaim(this.prisma, ...args);
-  }
-
-  lookupStorefrontOrder(
-    shopId: string,
-    orderNumber: string,
-  ): ReturnType<RentalOrderReader['lookupStorefrontOrder']> {
-    return lookupStorefrontOrder(this.prisma, shopId, orderNumber);
   }
 
   listWebAccountOrders(

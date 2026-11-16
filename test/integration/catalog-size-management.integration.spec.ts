@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import { SizeService } from '../../src/modules/catalog/application/size.service';
 import { CATALOG_ERROR_CODE } from '../../src/modules/catalog/domain/catalog-errors';
@@ -125,6 +126,7 @@ describe('Admin Size management persistence', () => {
 
   it('returns inactive details and treats missing or cross-shop Size IDs as not found', async () => {
     const f = await rentalScenario(prisma);
+    const missingId = randomUUID();
     const otherShop = await createTestShop(prisma);
     const size = await makeSize(f.shop.id, {
       code: 'XL',
@@ -137,18 +139,18 @@ describe('Admin Size management persistence', () => {
       id: size.id,
       isActive: false,
     });
-    await expect(sizes.getSize(f.principal, 'missing')).rejects.toMatchObject({
+    await expect(sizes.getSize(f.principal, missingId)).rejects.toMatchObject({
       code: CATALOG_ERROR_CODE.SIZE_NOT_FOUND,
     });
     await expect(
-      sizes.updateSize(f.principal, 'missing', { name: 'Changed' }),
+      sizes.updateSize(f.principal, missingId, { name: 'Changed' }),
     ).rejects.toMatchObject({
       code: CATALOG_ERROR_CODE.SIZE_NOT_FOUND,
     });
-    await expect(sizes.updateSizeStatus(f.principal, 'missing', false)).rejects.toMatchObject({
+    await expect(sizes.updateSizeStatus(f.principal, missingId, false)).rejects.toMatchObject({
       code: CATALOG_ERROR_CODE.SIZE_NOT_FOUND,
     });
-    await expect(sizes.deleteSize(f.principal, 'missing')).rejects.toMatchObject({
+    await expect(sizes.deleteSize(f.principal, missingId)).rejects.toMatchObject({
       code: CATALOG_ERROR_CODE.SIZE_NOT_FOUND,
     });
     await expect(sizes.getSize(otherPrincipal, size.id)).rejects.toMatchObject({

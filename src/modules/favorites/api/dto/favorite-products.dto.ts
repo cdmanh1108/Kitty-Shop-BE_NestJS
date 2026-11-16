@@ -1,15 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 
-// Keep the existing OpenAPI component names while Favorites owns these DTOs.
-@ApiSchema({ name: 'WebRentalPriceDto' })
-export class FavoriteRentalPriceDto {
-  @ApiProperty({ example: 3, description: 'Số ngày thuê' })
-  days!: number;
-
-  @ApiProperty({ example: 150000, description: 'Giá thuê (VND)' })
-  amount!: number;
-}
-
 @ApiSchema({ name: 'WebProductListItemDto' })
 export class FavoriteProductListItemDto {
   @ApiPropertyOptional({ type: Boolean })
@@ -41,9 +31,6 @@ export class FavoriteProductListItemDto {
 
   @ApiProperty({ example: 'Trắng' })
   color!: string;
-
-  @ApiProperty({ type: [FavoriteRentalPriceDto] })
-  rentalPrices!: FavoriteRentalPriceDto[];
 
   @ApiProperty({ example: 500000, description: 'Tiền cọc dự kiến (VND)' })
   depositAmount!: number;

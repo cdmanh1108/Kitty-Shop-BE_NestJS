@@ -9,6 +9,7 @@ import {
   resetTestDatabase,
 } from '../helpers/test-database';
 import { createTestApp } from '../helpers/test-app';
+import { createVerifiedWebAccount, webAccessCookie } from '../helpers/web-session';
 
 describe('Web booking customer resolution HTTP boundary', () => {
   let app: INestApplication;
@@ -31,9 +32,9 @@ describe('Web booking customer resolution HTTP boundary', () => {
   });
 
   const webOrderInput = (variantId: string, phone: string) => ({
-    customer: { name: 'Guest supplied recipient', phone, email: 'guest@example.test' },
-    pickupDate: '2026-10-10',
-    returnDate: '2026-10-12',
+    customer: { name: 'Guest supplied recipient', phone },
+    pickupDate: '2026-10-10T08:30:00+07:00',
+    returnDate: '2026-10-12T08:30:00+07:00',
     items: [{ variantId, quantity: 1 }],
     delivery: { method: 'self_pickup' },
     paymentMethod: 'cash',
@@ -41,6 +42,7 @@ describe('Web booking customer resolution HTTP boundary', () => {
 
   it('reuses an active customer without leaking or overwriting its profile', async () => {
     const fixture = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
     const original = await prisma.customer.update({
       where: { id: fixture.customer.id },
       data: { fullName: 'Existing profile', email: 'existing@example.test' },
@@ -48,6 +50,7 @@ describe('Web booking customer resolution HTTP boundary', () => {
 
     const response = await request(server)
       .post('/api/v1/web/rental-orders')
+      .set('Cookie', webAccessCookie(account.id))
       .set('Idempotency-Key', 'web-customer-active-key')
       .send(webOrderInput(fixture.variant.id, `+84${original.phone.slice(1)}`))
       .expect(201);
@@ -66,6 +69,7 @@ describe('Web booking customer resolution HTTP boundary', () => {
 
   it('returns the controlled policy error for a blocked phone owner without exposing profile data', async () => {
     const fixture = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
     const blocked = await prisma.customer.update({
       where: { id: fixture.customer.id },
       data: { status: 'BLOCKED' },
@@ -73,6 +77,7 @@ describe('Web booking customer resolution HTTP boundary', () => {
 
     const response = await request(server)
       .post('/api/v1/web/rental-orders')
+      .set('Cookie', webAccessCookie(account.id))
       .set('Idempotency-Key', 'web-customer-blocked-key')
       .send(webOrderInput(fixture.variant.id, blocked.phone))
       .expect(409);

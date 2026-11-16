@@ -48,13 +48,13 @@ describe('Dashboard HTTP authorization', () => {
         userId: identity.user.id,
         memberId: identity.member.id,
       });
-    await request(server).get('/api/v1/dashboard/summary').expect(401);
+    await request(server).get('/api/v1/admin/dashboard/summary').expect(401);
     await request(server)
-      .get('/api/v1/dashboard/summary')
+      .get('/api/v1/admin/dashboard/summary')
       .set('Authorization', `Bearer ${token(denied)}`)
       .expect(403);
     const result = await request(server)
-      .get('/api/v1/dashboard/summary')
+      .get('/api/v1/admin/dashboard/summary')
       .set('Authorization', `Bearer ${token(allowed)}`)
       .expect(200);
     expect(result.body).toMatchObject({ revenueToday: 0, upcomingOrders: [], attentionOrders: [] });

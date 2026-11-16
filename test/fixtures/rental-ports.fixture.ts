@@ -19,7 +19,6 @@ export function rentalAvailabilityReaderMock(): jest.Mocked<RentalAvailabilityRe
           (await reader.getBookableVariant({
             shopId: input.shopId,
             variantId,
-            durationDays: input.durationDays,
             from: input.from,
             until: input.until,
             ...(input.storefrontEligibility ? { storefrontEligibility: true as const } : {}),
@@ -53,7 +52,6 @@ export function rentalOrderReaderMock(): jest.Mocked<RentalOrderReader> {
     getStatus: jest.fn(),
     getSchedule: jest.fn(),
     getReturnPreview: jest.fn(),
-    lookupStorefrontOrder: jest.fn(),
   };
 }
 

@@ -110,8 +110,5 @@ export class WebStorefrontSelectionResolveResDto {
       ],
     },
   })
-  items!: Array<
-    | WebResolvedStorefrontSelectionDto
-    | WebUnavailableStorefrontSelectionDto
-  >;
+  items!: Array<WebResolvedStorefrontSelectionDto | WebUnavailableStorefrontSelectionDto>;
 }

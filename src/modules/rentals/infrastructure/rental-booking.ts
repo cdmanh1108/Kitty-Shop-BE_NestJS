@@ -85,7 +85,6 @@ export async function createOrder(
               where: {
                 id: data.webAccountId,
                 disabledAt: null,
-                email: { not: null },
                 emailVerifiedAt: { not: null },
               },
               select: { email: true },

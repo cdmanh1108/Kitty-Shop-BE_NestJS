@@ -9,9 +9,8 @@ export const WEB_RENTAL_MAX_ITEM_COUNT = 20;
 export const WEB_RENTAL_MAX_QUANTITY_PER_ITEM = 20;
 export const WEB_RENTAL_MAX_TOTAL_QUANTITY = 50;
 export const WEB_RENTAL_MAX_ADDRESS_LENGTH = 500;
-/** Date-only values remain accepted for clients predating precise rental times. */
 export const WEB_RENTAL_DATE_TIME_PATTERN =
-  /^(?:\d{4}-\d{2}-\d{2}|\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d))$/;
+  /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
 
 export type WebRentalInputValidationCode =
   | 'INVALID_CALENDAR_DATE'
@@ -43,7 +42,6 @@ type WebRentalItemValidationCandidate = {
   quantity?: number;
 };
 
-/** Parses legacy date-only input or a timezone-explicit Web date-time. */
 export function parseWebRentalDateRange(input: WebRentalDateRangeInput): WebRentalDateRange {
   const from = parseRentalDateTime(input.pickupDate);
   const until = parseRentalDateTime(input.returnDate);
@@ -109,10 +107,6 @@ function assertCalendarDate(value: string): void {
 
 function parseRentalDateTime(value: string): Date {
   if (typeof value !== 'string') throw new WebRentalInputValidationError('INVALID_CALENDAR_DATE');
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    assertCalendarDate(value);
-    return new Date(`${value}T08:30:00+07:00`);
-  }
   const match = value.match(
     /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,9})?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/,
   );

@@ -38,7 +38,7 @@ export async function getBookableVariant(
     },
     include: bookableVariantInclude(input),
   });
-  return toBookableVariant(variant, input.durationDays);
+  return toBookableVariant(variant);
 }
 
 export async function getBookableVariants(
@@ -65,7 +65,7 @@ export async function getBookableVariants(
   // Prisma does not promise findMany ordering. Preserve caller order for stable line correlation.
   return variantIds.flatMap((variantId) => {
     const variant = variantById.get(variantId);
-    const bookable = toBookableVariant(variant ?? null, input.durationDays);
+    const bookable = toBookableVariant(variant ?? null);
     return bookable ? [bookable] : [];
   });
 }

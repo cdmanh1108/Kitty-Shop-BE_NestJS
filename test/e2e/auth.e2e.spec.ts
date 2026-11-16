@@ -34,7 +34,14 @@ describe('Auth & Security End-to-End Tests', () => {
 
   beforeAll(async () => {
     prisma = await connectTestDatabase();
-    app = await createTestApp();
+    const originalLimit = process.env.RATE_LIMIT_LIMIT;
+    process.env.RATE_LIMIT_LIMIT = '10';
+    try {
+      app = await createTestApp();
+    } finally {
+      if (originalLimit === undefined) delete process.env.RATE_LIMIT_LIMIT;
+      else process.env.RATE_LIMIT_LIMIT = originalLimit;
+    }
     server = app.getHttpServer() as Server;
   });
 
@@ -67,7 +74,7 @@ describe('Auth & Security End-to-End Tests', () => {
     };
 
     it('returns 401 when accessing protected endpoint with no auth token', async () => {
-      const res = await request(server).get('/api/v1/customers').expect(401);
+      const res = await request(server).get('/api/v1/admin/customers').expect(401);
 
       expect(res.body).toHaveProperty('statusCode', 401);
       expect(res.body).toHaveProperty('code', 'HTTP_401');
@@ -76,7 +83,7 @@ describe('Auth & Security End-to-End Tests', () => {
 
     it('returns 401 when accessing protected endpoint with invalid token format or signature', async () => {
       const res = await request(server)
-        .get('/api/v1/customers')
+        .get('/api/v1/admin/customers')
         .set('Authorization', 'Bearer invalid.token.payload')
         .expect(401);
 
@@ -102,7 +109,7 @@ describe('Auth & Security End-to-End Tests', () => {
       });
 
       const res = await request(server)
-        .get('/api/v1/customers')
+        .get('/api/v1/admin/customers')
         .set('Authorization', `Bearer ${tokenWithoutPermissions}`)
         .expect(403);
 
@@ -113,8 +120,9 @@ describe('Auth & Security End-to-End Tests', () => {
 
     it('returns 200 when user has valid token and required permission', async () => {
       const shop = await createTestShop(prisma);
-      // createTestUserAndMember seeds all permissions by default
-      const { user, member } = await createTestUserAndMember(prisma, shop.id);
+      const { user, member } = await createTestUserAndMember(prisma, shop.id, {
+        permissions: ['customers.view'],
+      });
 
       const validToken = generateTestAccessToken({
         userId: user.id,
@@ -123,7 +131,7 @@ describe('Auth & Security End-to-End Tests', () => {
       });
 
       const res = await request(server)
-        .get('/api/v1/customers')
+        .get('/api/v1/admin/customers')
         .set('Authorization', `Bearer ${validToken}`)
         .expect(200);
 
@@ -145,6 +153,7 @@ describe('Auth & Security End-to-End Tests', () => {
     it('returns 400 Bad Request with validation details on invalid login payload', async () => {
       const res = await request(server)
         .post('/api/v1/admin/auth/login')
+        .set('Origin', adminOrigin)
         .send({
           email: 'not-an-email',
           password: '',
@@ -255,6 +264,7 @@ describe('Auth & Security End-to-End Tests', () => {
     });
   });
   it('returns 429 for repeated unauthenticated login attempts through the global throttler', async () => {
+    await createTestShop(prisma);
     const statuses: number[] = [];
     for (let attempt = 0; attempt < 11; attempt++) {
       const response = await request(server)
@@ -264,7 +274,7 @@ describe('Auth & Security End-to-End Tests', () => {
       statuses.push(response.status);
     }
     expect(statuses).toContain(429);
-    expect(statuses.every((status) => status === 401 || status === 429)).toBe(true);
+    expect(statuses.filter((status) => status !== 401 && status !== 429)).toEqual([]);
     await request(server).get('/api/v1/health/live').expect(200);
   });
 });

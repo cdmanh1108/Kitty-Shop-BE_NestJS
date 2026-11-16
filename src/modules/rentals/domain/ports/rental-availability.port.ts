@@ -7,7 +7,6 @@ export interface BookableVariant {
   sizeName: string | null;
   colorName: string | null;
   depositPerItem: number;
-  ratePrice: number | null;
   availableInventory: Array<{ id: string; sku: string }>;
 }
 
@@ -21,7 +20,6 @@ export interface RentalAvailabilityReader {
 export interface RentalGetBookableVariantData {
   shopId: string;
   variantId: string;
-  durationDays: number;
   from: Date;
   until: Date;
   /** Server-owned context set only by the Web rental application service. */

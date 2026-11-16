@@ -1,4 +1,3 @@
-import { ConflictException } from '@nestjs/common';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -8,7 +7,7 @@ import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure
 import { SettingsService } from '../../src/modules/settings/application/settings.service';
 import { PrismaSettingsRepository } from '../../src/modules/settings/infrastructure/prisma-settings.repository';
 import { fixedClock, rentalScenario } from '../fixtures/rental.fixture';
-import { uniqueCode } from '../fixtures/test-factories';
+import { createVerifiedWebAccount, uniqueCode } from '../fixtures/test-factories';
 import {
   connectTestDatabase,
   disconnectTestDatabase,
@@ -43,7 +42,10 @@ describe('Storefront rental selection and allocation', () => {
 
   afterAll(disconnectTestDatabase);
 
-  const interval = { pickupDate: '2026-10-10', returnDate: '2026-10-12' };
+  const interval = {
+    pickupDate: '2026-10-10T08:30:00+07:00',
+    returnDate: '2026-10-12T08:30:00+07:00',
+  };
 
   function createWebOrderInput(productId: string) {
     return {
@@ -57,6 +59,7 @@ describe('Storefront rental selection and allocation', () => {
 
   it('requires an explicit variant for quotes and order creation', async () => {
     const f = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
 
     await expect(
       evaluation.calculateQuote(f.shop.id, {
@@ -67,17 +70,29 @@ describe('Storefront rental selection and allocation', () => {
     ).rejects.toThrow();
 
     await expect(
-      web.createOrder(f.shop.id, createWebOrderInput(f.product.id) as never, 'web-selection-key'),
+      web.createOrder(f.shop.id, createWebOrderInput(f.product.id) as never, 'web-selection-key', {
+        webAccountId: account.id,
+        email: account.email,
+      }),
     ).rejects.toThrow();
   });
 
   it('does not choose a first variant for product-only quote or create input', async () => {
     const f = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
+    const secondColor = await prisma.color.create({
+      data: {
+        shopId: f.shop.id,
+        code: uniqueCode('COLOR'),
+        name: 'Second color',
+      },
+    });
     await prisma.productVariant.create({
       data: {
         shopId: f.shop.id,
         productId: f.product.id,
         variantCode: uniqueCode('SECOND-VARIANT'),
+        colorId: secondColor.id,
         status: 'ACTIVE',
       },
     });
@@ -90,12 +105,16 @@ describe('Storefront rental selection and allocation', () => {
       }),
     ).rejects.toThrow();
     await expect(
-      web.createOrder(f.shop.id, createWebOrderInput(f.product.id) as never, 'web-selection-key'),
+      web.createOrder(f.shop.id, createWebOrderInput(f.product.id) as never, 'web-selection-key', {
+        webAccountId: account.id,
+        email: account.email,
+      }),
     ).rejects.toThrow();
   });
 
   it('aggregates duplicate explicit demand before quote and allocation', async () => {
     const f = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
     const duplicateItems = [
       { variantId: f.variant.id, quantity: 1 },
       { productId: f.product.id, variantId: f.variant.id, quantity: 1 },
@@ -116,12 +135,14 @@ describe('Storefront rental selection and allocation', () => {
           items: duplicateItems,
         },
         'web-selection-key',
+        { webAccountId: account.id, email: account.email },
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({ kind: 'CONFLICT' });
   });
 
   it('creates one line with distinct inventory allocations for merged demand', async () => {
     const f = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
     await prisma.inventoryItem.create({
       data: {
         shopId: f.shop.id,
@@ -142,6 +163,7 @@ describe('Storefront rental selection and allocation', () => {
         ],
       },
       'web-selection-key',
+      { webAccountId: account.id, email: account.email },
     );
 
     const order = await prisma.rentalOrder.findFirstOrThrow({

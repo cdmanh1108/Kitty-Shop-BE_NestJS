@@ -1,3 +1,4 @@
+import { cyclePricingSnapshot } from '../fixtures/rental-pricing.fixture';
 import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import {
   connectTestDatabase,
@@ -69,7 +70,11 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
           unitRentalPrice: 100000,
           depositAmount: 200000,
           lineTotal: 100000,
-          pricingSnapshot: { durationDays: 2, unitRentalPrice: 100000, depositPerItem: 200000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 2,
+            unitRentalPrice: 100000,
+            depositPerItem: 200000,
+          }),
           inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
         },
       ],
@@ -83,7 +88,6 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
     const batchAvailability = await repo.getBookableVariants({
       shopId: shop.id,
       variantIds: [otherProduct.variant.id, variant.id],
-      durationDays: 2,
       from: baseStart,
       until: baseEnd,
     });
@@ -106,7 +110,6 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
     const bookablePreceding = await repo.getBookableVariant({
       shopId: shop.id,
       variantId: variant.id,
-      durationDays: 1,
       from: precedingStart,
       until: precedingEnd,
     });
@@ -131,7 +134,11 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
           unitRentalPrice: 100000,
           depositAmount: 200000,
           lineTotal: 100000,
-          pricingSnapshot: { durationDays: 1, unitRentalPrice: 100000, depositPerItem: 200000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 1,
+            unitRentalPrice: 100000,
+            depositPerItem: 200000,
+          }),
           inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
         },
       ],
@@ -148,7 +155,6 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
     const bookableSucceeding = await repo.getBookableVariant({
       shopId: shop.id,
       variantId: variant.id,
-      durationDays: 1,
       from: succeedingStart,
       until: succeedingEnd,
     });
@@ -173,7 +179,11 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
           unitRentalPrice: 100000,
           depositAmount: 200000,
           lineTotal: 100000,
-          pricingSnapshot: { durationDays: 1, unitRentalPrice: 100000, depositPerItem: 200000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 1,
+            unitRentalPrice: 100000,
+            depositPerItem: 200000,
+          }),
           inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
         },
       ],
@@ -189,7 +199,6 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
     const bookableOverlap1 = await repo.getBookableVariant({
       shopId: shop.id,
       variantId: variant.id,
-      durationDays: 1,
       from: overlap1Start,
       until: overlap1End,
     });
@@ -215,7 +224,11 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
             unitRentalPrice: 100000,
             depositAmount: 200000,
             lineTotal: 100000,
-            pricingSnapshot: { durationDays: 1, unitRentalPrice: 100000, depositPerItem: 200000 },
+            pricingSnapshot: cyclePricingSnapshot({
+              durationDays: 1,
+              unitRentalPrice: 100000,
+              depositPerItem: 200000,
+            }),
             inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
           },
         ],
@@ -230,7 +243,6 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
     const bookableOverlap2 = await repo.getBookableVariant({
       shopId: shop.id,
       variantId: variant.id,
-      durationDays: 1,
       from: overlap2Start,
       until: overlap2End,
     });
@@ -256,7 +268,11 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
             unitRentalPrice: 100000,
             depositAmount: 200000,
             lineTotal: 100000,
-            pricingSnapshot: { durationDays: 1, unitRentalPrice: 100000, depositPerItem: 200000 },
+            pricingSnapshot: cyclePricingSnapshot({
+              durationDays: 1,
+              unitRentalPrice: 100000,
+              depositPerItem: 200000,
+            }),
             inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
           },
         ],
@@ -298,7 +314,11 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
           unitRentalPrice: 100000,
           depositAmount: 200000,
           lineTotal: 100000,
-          pricingSnapshot: { durationDays: 2, unitRentalPrice: 100000, depositPerItem: 200000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 2,
+            unitRentalPrice: 100000,
+            depositPerItem: 200000,
+          }),
           inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
         },
       ],
@@ -326,7 +346,11 @@ describe('Rental Availability & Exclusion Constraint Integration', () => {
           unitRentalPrice: 100000,
           depositAmount: 200000,
           lineTotal: 100000,
-          pricingSnapshot: { durationDays: 2, unitRentalPrice: 100000, depositPerItem: 200000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 2,
+            unitRentalPrice: 100000,
+            depositPerItem: 200000,
+          }),
           inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
         },
       ],

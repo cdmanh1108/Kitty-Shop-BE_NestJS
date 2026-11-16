@@ -48,16 +48,11 @@ describe('Catalog purpose-specific reads', () => {
     const lookups = await repo.listLookups(shop.id);
     expect(lookups.categories[0]?.productCount).toBe(205);
     expect((await repo.listLookups(other.id)).categories[0]?.productCount).toBe(1);
-    const priceQuery = jest.spyOn(prisma.rentalRate, 'groupBy');
     const page = await repo.listProducts({ shopId: shop.id, page: 3, limit: 100 });
-    expect(priceQuery).toHaveBeenCalledTimes(1);
-    priceQuery.mockRestore();
     expect(page.meta).toEqual({ page: 3, limit: 100, total: 205, totalPages: 3 });
     expect(page.items).toHaveLength(5);
     expect(page.items[0]).not.toHaveProperty('variants');
-    expect(page.items[0]).not.toHaveProperty('rentalRates');
     expect(page.items[0]).not.toHaveProperty('media');
-    expect(page.items[0]?.minPrice).toBeNull();
     const bounded = await repo.lookupProducts({ shopId: shop.id, page: 1, limit: 100 });
     expect(bounded.items).toHaveLength(50);
     expect(bounded.meta.total).toBe(205);
@@ -90,31 +85,6 @@ describe('Catalog purpose-specific reads', () => {
         })
       ).items,
     ).toEqual([]);
-  });
-
-  it('aggregates active prices including zero and returns only small lookup variants', async () => {
-    const shop = await createTestShop(prisma);
-    const { product, variant } = await createTestProductWithVariant(prisma, shop.id, {
-      dailyRate: 0,
-    });
-    await prisma.rentalRate.create({
-      data: { shopId: shop.id, productId: product.id, durationDays: 10, price: 900 },
-    });
-    const page = await repo.listProducts({ shopId: shop.id, page: 1, limit: 20 });
-    expect(String(page.items[0]?.minPrice)).toBe('0');
-    expect(String(page.items[0]?.maxPrice)).toBe('900');
-    expect(page.items[0]?.variantCount).toBe(1);
-    const lookup = await repo.lookupProducts({ shopId: shop.id, page: 1, limit: 20 });
-    expect(lookup.items[0]?.variants).toEqual([
-      {
-        id: variant.id,
-        variantCode: variant.variantCode,
-        sizeName: null,
-        colorName: null,
-        rentalRates: [1, 2, 3, 4, 5].map((durationDays) => ({ durationDays, price: 0 })),
-      },
-    ]);
-    expect(lookup.items[0]).not.toHaveProperty('defaultDepositAmount');
   });
 
   it('summarizes the entire shop, counts occupied items once and keeps operational status separate', async () => {

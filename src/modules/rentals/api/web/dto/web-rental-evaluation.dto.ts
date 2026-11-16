@@ -37,8 +37,7 @@ export class WebAvailabilityQueryDto {
   @ApiProperty({
     example: '2026-09-20T01:30:00.000Z',
     format: 'date-time',
-    description:
-      'Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.',
+    description: 'Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00).',
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
@@ -49,8 +48,7 @@ export class WebAvailabilityQueryDto {
   @ApiProperty({
     example: '2026-09-23T01:30:00.000Z',
     format: 'date-time',
-    description:
-      'Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.',
+    description: 'Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00).',
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
@@ -98,7 +96,7 @@ export class WebRentalQuoteReqDto {
   @ApiProperty({
     example: '2026-09-20T01:30:00.000Z',
     format: 'date-time',
-    description: 'Mốc nhận ISO 8601 có múi giờ; ngày thuần chỉ dành cho client cũ.',
+    description: 'Mốc nhận ISO 8601 có múi giờ',
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
@@ -109,7 +107,7 @@ export class WebRentalQuoteReqDto {
   @ApiProperty({
     example: '2026-09-23T01:30:00.000Z',
     format: 'date-time',
-    description: 'Mốc trả ISO 8601 có múi giờ; ngày thuần chỉ dành cho client cũ.',
+    description: 'Mốc trả ISO 8601 có múi giờ',
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {

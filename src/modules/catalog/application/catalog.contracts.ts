@@ -18,11 +18,6 @@ export interface AddInventoryInput {
 
 export type AddVariantInput = CreateProductData['variants'][number];
 
-export interface RentalRateInput {
-  durationDays: number;
-  price: number;
-}
-
 export interface AvailabilityQuery {
   variantId: string;
   from: string;
@@ -128,5 +123,3 @@ export interface UpdateInventoryStatusInput {
 }
 
 export type UpdateProductInput = UpdateProductData;
-
-export type UpsertRentalRateInput = RentalRateInput;

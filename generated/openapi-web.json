@@ -1025,8 +1025,6 @@
               "type": "string",
               "enum": [
                 "newest",
-                "price_asc",
-                "price_desc",
                 "name_asc",
                 "name_desc"
               ]
@@ -1272,7 +1270,7 @@
             "name": "pickupDate",
             "required": true,
             "in": "query",
-            "description": "Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.",
+            "description": "Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00).",
             "schema": {
               "format": "date-time",
               "example": "2026-09-20T01:30:00.000Z",
@@ -1283,7 +1281,7 @@
             "name": "returnDate",
             "required": true,
             "in": "query",
-            "description": "Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.",
+            "description": "Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00).",
             "schema": {
               "format": "date-time",
               "example": "2026-09-23T01:30:00.000Z",
@@ -1465,59 +1463,6 @@
           }
         ],
         "summary": "Tạo đơn đặt thuê từ Web Storefront",
-        "tags": [
-          "Web - Rental Orders"
-        ],
-        "x-api-surface": "web"
-      }
-    },
-    "/web/rental-orders/lookup": {
-      "post": {
-        "operationId": "lookupWebRentalOrder",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/WebOrderLookupReqDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Thông tin tóm tắt đơn thuê",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebOrderLookupResDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Mã đơn hoặc số điện thoại không hợp lệ",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Không tìm thấy đơn thuê hoặc số điện thoại không khớp",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Tra cứu trạng thái đơn thuê bảo mật bằng mã đơn và SĐT",
         "tags": [
           "Web - Rental Orders"
         ],
@@ -2018,8 +1963,7 @@
           "email": {
             "type": "string",
             "format": "email",
-            "nullable": true,
-            "description": "Null only for retained accounts created before email identity migration."
+            "description": "Verified email address used as the account identity."
           },
           "fullName": {
             "type": "string",
@@ -2035,7 +1979,7 @@
             "type": "string",
             "format": "date-time",
             "nullable": true,
-            "description": "Null only for unverified or retained pre-migration accounts."
+            "description": "Null until email verification is complete."
           },
           "createdAt": {
             "type": "string",
@@ -2395,12 +2339,6 @@
             "type": "string",
             "example": "Trắng"
           },
-          "rentalPrices": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WebRentalPriceDto"
-            }
-          },
           "depositAmount": {
             "type": "number",
             "example": 500000,
@@ -2437,7 +2375,6 @@
           "gallery",
           "size",
           "color",
-          "rentalPrices",
           "depositAmount",
           "isRentable",
           "variants"
@@ -2466,13 +2403,13 @@
             "type": "string",
             "example": "2026-09-20T01:30:00.000Z",
             "format": "date-time",
-            "description": "Mốc nhận ISO 8601 có múi giờ; ngày thuần chỉ dành cho client cũ."
+            "description": "Mốc nhận ISO 8601 có múi giờ"
           },
           "returnDate": {
             "type": "string",
             "example": "2026-09-23T01:30:00.000Z",
             "format": "date-time",
-            "description": "Mốc trả ISO 8601 có múi giờ; ngày thuần chỉ dành cho client cũ."
+            "description": "Mốc trả ISO 8601 có múi giờ"
           },
           "items": {
             "maxItems": 20,
@@ -2592,13 +2529,13 @@
             "type": "string",
             "example": "2026-09-20T01:30:00.000Z",
             "format": "date-time",
-            "description": "Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ."
+            "description": "Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00)."
           },
           "returnDate": {
             "type": "string",
             "example": "2026-09-23T01:30:00.000Z",
             "format": "date-time",
-            "description": "Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ."
+            "description": "Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00)."
           },
           "items": {
             "maxItems": 20,
@@ -2672,87 +2609,6 @@
           "depositAmount",
           "status",
           "paymentStatus"
-        ]
-      },
-      "WebOrderLookupReqDto": {
-        "type": "object",
-        "properties": {
-          "orderCode": {
-            "type": "string",
-            "example": "KT260920-001",
-            "description": "Mã đơn thuê đã được cấp"
-          },
-          "phone": {
-            "type": "string",
-            "example": "0912345678",
-            "description": "Số điện thoại đặt thuê để xác thực"
-          }
-        },
-        "required": [
-          "orderCode",
-          "phone"
-        ]
-      },
-      "WebOrderLookupResDto": {
-        "type": "object",
-        "properties": {
-          "orderCode": {
-            "type": "string",
-            "example": "KT260920-001"
-          },
-          "customerName": {
-            "type": "string",
-            "example": "Nguyễn Văn A"
-          },
-          "phoneMasked": {
-            "type": "string",
-            "example": "091****678"
-          },
-          "pickupDate": {
-            "type": "string",
-            "example": "2026-09-20T01:30:00.000Z",
-            "format": "date-time"
-          },
-          "returnDate": {
-            "type": "string",
-            "example": "2026-09-23T01:30:00.000Z",
-            "format": "date-time"
-          },
-          "status": {
-            "type": "string",
-            "example": "pending"
-          },
-          "totalAmount": {
-            "type": "number",
-            "example": 480000
-          },
-          "depositAmount": {
-            "type": "number",
-            "example": 500000
-          },
-          "paidAmount": {
-            "type": "number",
-            "example": 450000,
-            "description": "Net completed, non-voided non-deposit payment amount: inbound payments less outbound refunds. Deposit movements are excluded; a deposit offset contributes only its rental-payment leg."
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WebOrderLookupItemDto"
-            }
-          }
-        },
-        "required": [
-          "orderCode",
-          "customerName",
-          "phoneMasked",
-          "pickupDate",
-          "returnDate",
-          "status",
-          "totalAmount",
-          "depositAmount",
-          "paidAmount",
-          "items"
         ]
       },
       "WebAccountRentalOrdersListResDto": {
@@ -3109,12 +2965,6 @@
             "type": "string",
             "example": "Trắng"
           },
-          "rentalPrices": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WebRentalPriceDto"
-            }
-          },
           "depositAmount": {
             "type": "number",
             "example": 500000,
@@ -3135,7 +2985,6 @@
           "imageUrl",
           "size",
           "color",
-          "rentalPrices",
           "depositAmount",
           "isRentable"
         ]
@@ -3313,25 +3162,6 @@
           "index",
           "quantity",
           "status"
-        ]
-      },
-      "WebRentalPriceDto": {
-        "type": "object",
-        "properties": {
-          "days": {
-            "type": "number",
-            "example": 3,
-            "description": "Số ngày thuê"
-          },
-          "amount": {
-            "type": "number",
-            "example": 150000,
-            "description": "Giá thuê (VND)"
-          }
-        },
-        "required": [
-          "days",
-          "amount"
         ]
       },
       "WebProductVariantSummaryDto": {
@@ -3647,42 +3477,6 @@
           }
         }
       },
-      "WebOrderLookupItemDto": {
-        "type": "object",
-        "properties": {
-          "billingRole": {
-            "type": "string",
-            "enum": [
-              "PAID",
-              "FREE_ACCESSORY"
-            ]
-          },
-          "productKindSnapshot": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
-            ]
-          },
-          "name": {
-            "type": "string",
-            "example": "Đầm dạ hội trắng lụa cao cấp"
-          },
-          "imageUrl": {
-            "type": "string",
-            "example": "https://images.unsplash.com/photo-1"
-          },
-          "quantity": {
-            "type": "number",
-            "example": 1
-          }
-        },
-        "required": [
-          "name",
-          "imageUrl",
-          "quantity"
-        ]
-      },
       "WebAccountRentalOrderListItemResDto": {
         "type": "object",
         "properties": {
@@ -3820,13 +3614,6 @@
             "enum": [
               "PAID",
               "FREE_ACCESSORY"
-            ]
-          },
-          "productKindSnapshot": {
-            "type": "string",
-            "enum": [
-              "PRODUCT",
-              "ACCESSORY"
             ]
           },
           "productId": {

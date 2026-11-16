@@ -1,4 +1,3 @@
-import { NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -8,6 +7,7 @@ import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure
 import { SettingsService } from '../../src/modules/settings/application/settings.service';
 import { PrismaSettingsRepository } from '../../src/modules/settings/infrastructure/prisma-settings.repository';
 import { fixedClock, rentalScenario } from '../fixtures/rental.fixture';
+import { createVerifiedWebAccount } from '../fixtures/test-factories';
 import {
   connectTestDatabase,
   disconnectTestDatabase,
@@ -42,10 +42,14 @@ describe('Storefront rental eligibility boundary', () => {
 
   afterAll(disconnectTestDatabase);
 
-  const interval = { pickupDate: '2026-10-10', returnDate: '2026-10-12' };
+  const interval = {
+    pickupDate: '2026-10-10T08:30:00+07:00',
+    returnDate: '2026-10-12T08:30:00+07:00',
+  };
 
   it('does not expose a private but otherwise rentable variant through availability, quote, or create', async () => {
     const f = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
     await prisma.product.update({ where: { id: f.product.id }, data: { isPublic: false } });
 
     await expect(
@@ -70,8 +74,9 @@ describe('Storefront rental eligibility boundary', () => {
           paymentMethod: 'cash',
         },
         'web-eligibility-key',
+        { webAccountId: account.id, email: account.email },
       ),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    ).rejects.toMatchObject({ kind: 'NOT_FOUND' });
     expect(await prisma.rentalOrder.count({ where: { shopId: f.shop.id } })).toBe(0);
   });
 

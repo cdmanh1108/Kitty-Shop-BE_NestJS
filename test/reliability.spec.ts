@@ -1,3 +1,4 @@
+import { cyclePricingSnapshot } from './fixtures/rental-pricing.fixture';
 import { Prisma, type IdempotencyRecord } from '@prisma/client';
 import type { Clock } from '../src/common/clock/clock';
 import {
@@ -428,7 +429,11 @@ function bookingInput(): CreateRentalOrderData {
         unitRentalPrice: 50000,
         depositAmount: 0,
         lineTotal: 50000,
-        pricingSnapshot: { durationDays: 1, unitRentalPrice: 50000, depositPerItem: 0 },
+        pricingSnapshot: cyclePricingSnapshot({
+          durationDays: 1,
+          unitRentalPrice: 50000,
+          depositPerItem: 0,
+        }),
         inventory: [{ id: 'inventory', sku: 'SKU-1' }],
       },
     ],
@@ -506,7 +511,6 @@ function bookingTransaction(prisma: PrismaService) {
     variantId: 'variant',
     quantity: 1,
     billingRole: 'PAID',
-    productKindSnapshot: null,
     allowFreeAccessorySnapshot: false,
     rentalStartAt: now,
     rentalEndAt: new Date(now.getTime() + 86400000),
@@ -517,7 +521,11 @@ function bookingTransaction(prisma: PrismaService) {
     depositAmount: new Prisma.Decimal(0),
     discountAmount: new Prisma.Decimal(0),
     lineTotal: new Prisma.Decimal(50000),
-    pricingSnapshot: { durationDays: 1, unitRentalPrice: 50000, depositPerItem: 0 },
+    pricingSnapshot: JSON.parse(
+      JSON.stringify(
+        cyclePricingSnapshot({ durationDays: 1, unitRentalPrice: 50000, depositPerItem: 0 }),
+      ),
+    ) as Prisma.JsonValue,
     status: 'RESERVED',
     notes: null,
     createdAt: now,
@@ -645,7 +653,6 @@ function rentalServiceWithPorts(
     sizeName: null,
     colorName: null,
     depositPerItem: 0,
-    ratePrice: 50000,
     availableInventory: [{ id: 'inventory', sku: 'SKU-1' }],
   });
   return new RentalCreationService(

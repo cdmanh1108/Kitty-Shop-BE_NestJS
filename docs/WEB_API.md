@@ -1,65 +1,54 @@
-# Kitty Backend — Web Sale API Reference
+# Storefront API
 
-## 1. Purpose & Scope
+The Web surface is mounted under `/api/v1/web`. It serves public-safe catalog,
+availability and quote requests, plus signed-in storefront account flows.
 
-The **Web Sale API** serves the public customer storefront (`kitty-web-nextjs`). It exposes only public-safe endpoints needed for storefront browsing, checking real-time availability, calculating authoritative rental quotes, booking rental orders, and looking up order statuses.
+## Security and ownership
 
----
+- `ShopResolver` selects the deployment's active shop; browser headers cannot
+  choose a shop.
+- Public DTOs exclude internal cost, physical inventory IDs, warehouse
+  locations, staff audit data, and operator notes.
+- The browser never supplies authoritative price, deposit, shipping, or line
+  totals. Quotes and orders resolve these on the server.
+- Creating an order requires a signed-in account with a verified email. The
+  account email is captured inside the booking transaction.
 
-## 2. Security & Public Boundary
+## Catalog and pricing
 
-- **Public Access**: Catalog, availability, quote and guest booking/lookup do not require a storefront session. Account endpoints use the web JWT cookie and dedicated guards; `@Public()` bypasses only the staff authentication layer.
-- **Shop Scope**: `ShopResolver` resolves the deployment's one persisted active shop. Browser-controlled headers and shop-code configuration cannot select a shop; downstream services continue to use the resolved internal `shopId`.
-- **Isolated Read Models**: DTOs expose only customer-safe data. Internal cost prices, physical inventory item IDs, warehouse bin locations, staff audit trails, and internal operator notes are strictly excluded.
-- **Authoritative Server Calculations**:
-  - The frontend never dictates prices, deposits, shipping fees, or line totals.
-  - Availability and duration are calculated strictly on the server using domain policy (`calculateRentalDurationDays`) and rates.
+- `GET /api/v1/web/categories` lists active storefront categories.
+- `GET /api/v1/web/products` and `/products/latest` return eligible products,
+  variants, and primary media. Product records do not contain rental-rate
+  schedules.
+- `GET /api/v1/web/catalog/filters` returns eligible size/color choices.
+- `GET /api/v1/web/products/:slug` returns the public product detail.
+- `GET /api/v1/web/availability` checks a selected variant for a requested
+  rental interval.
+- `POST /api/v1/web/rental/quote` returns the authoritative quote, resolved
+  from the shared cycle pricing policy.
+- `GET /api/v1/web/policies` publishes storefront terms and current rental
+  policy.
 
----
+Rental periods use full date-time values with an explicit timezone offset. The
+storefront sends Vietnam time (`+07:00`). Date-only requests are rejected.
+Rental selection identifies a variant; if `productId` is also supplied, the
+backend verifies it is the selected variant's parent. Duplicate variant lines
+are merged before pricing and allocation.
 
-## 3. Web Storefront Endpoints
+## Orders and accounts
 
-All endpoints are mounted under the `/web` prefix:
+- `POST /api/v1/web/rental-orders` creates an order from a verified signed-in
+  account. It requires an `Idempotency-Key` and revalidates eligibility,
+  entitlement, and physical availability in the booking transaction.
+- `/api/v1/web/account/rental-orders` provides signed-in order history and
+  account-owned order details/actions.
+- `/api/v1/web/auth/*` handles email registration, verification, sign-in,
+  refresh, profile, and logout. Refresh credentials are HttpOnly cookies.
+- `/api/v1/web/cart` and `/api/v1/web/favorites/*` are account-owned. Guest cart
+  state stays in the browser and is not merged into the account cart.
 
-### 3.1 Catalog
+## OpenAPI
 
-- **`GET /api/v1/web/categories`**: Lists active categories for storefront navigation.
-- **`GET /api/v1/web/products`**: Lists rentable, active products with primary thumbnail, sizes, colors, and rate options.
-- **`GET /api/v1/web/products/latest`**: Returns up to 8 newest public, active, rentable products with `allowFreeAccessory=false` for the home collection. Filtering happens before the database limit, ordered by creation time descending with ID descending as a stable tie-breaker. No caller-controlled filters or pagination; the standard list response retains `{ items, meta }` with page 1 and limit 8.
-- **`GET /api/v1/web/products/:slug`**: Retrieves product details, image gallery, description, available variants, and rental rates.
-
-### 3.2 Availability & Quoting
-
-- **`GET /api/v1/web/availability`**: Checks whether a storefront-eligible product or specific variant has rentable inventory available during `pickupDate` to `returnDate`.
-- **`POST /api/v1/web/rental/quote`**: Computes authoritative rental subtotal, deposit, delivery fee, and grand total only for storefront-eligible variants.
-
-Rental selection requires an explicit `variantId`. If a request also sends `productId`, it must be the selected variant's parent. Availability can be queried for that selected variant, and pricing is evaluated by the quote endpoint; duplicate request lines for the same variant are merged into one quantity before pricing and allocation.
-
-### 3.3 Orders & Lookup
-
-- **`POST /api/v1/web/rental-orders`**: Places a rental reservation from the storefront. It revalidates storefront eligibility and inventory stock inside the booking transaction, then resolves or creates the customer record, creates physical item allocations, and generates a reference order code.
-- **`POST /api/v1/web/rental-orders/lookup`**: Tra cứu đơn thuê bảo mật.
-  - **Security Requirement**: Requires both `orderCode` and the customer's `phone`.
-  - Rejects with `404 Not Found` if either does not exist or if the phone does not match the order owner.
-  - Returns masked phone (`091****678`), status, sanitized item list, and payment totals.
-
-### 3.4 Policies
-
-- **`GET /api/v1/web/policies`**: Returns public store terms, accepted deposit collateral types (e.g. cash, citizen ID), daily late fees, and standard delivery fees.
-
-### 3.5 Account Cart and Favorites
-
-- **`GET /api/v1/web/cart`**: Reads the signed-in account's separate saved cart; `{ cart: null }` means an empty account cart.
-- **`PUT /api/v1/web/cart`**: Replaces that account's snapshot with optimistic version validation. Guest selections are not imported at login. Guest cart use stays local to the browser; no guest-import endpoint is exposed.
-- **`GET /api/v1/web/favorites`**, **`GET /api/v1/web/favorites/summary`** and **`GET /api/v1/web/favorites/status`**: Read only the authenticated account's favorites.
-- **`PUT` / `DELETE /api/v1/web/favorites/:productId`**: Change account favorites idempotently. No guest favorites or login import are supported; see [Favorites](FAVORITES.md).
-
-Cart and Favorites derive account identity from the authenticated web principal. Cart snapshot writes and Favorite mutations also require the origin guard. Existing account data is retained.
-
----
-
-## 4. Swagger Documentation & Code Generation
-
-- **Swagger UI**: `/docs/web`
-- **OpenAPI JSON**: `/docs/web-json` and `generated/openapi-web.json`
-- **Client Consumer**: `kitty-web-nextjs` consumes `generated/openapi-web.json` via `npm run generate`.
+Swagger UI is at `/docs/web`; JSON is at `/docs/web-json` and
+`generated/openapi-web.json`. The storefront syncs generated types from the Web
+contract rather than the Admin contract. See [API architecture](API_ARCHITECTURE.md).

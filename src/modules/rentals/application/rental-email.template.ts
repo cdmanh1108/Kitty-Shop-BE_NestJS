@@ -191,10 +191,9 @@ export function renderRentalEmail(
   options: { webUrl: string; from: string; recipient: string },
 ): RentalEmailMessage {
   const { title, intro } = copy[snapshot.event];
-  const path = snapshot.accountOwned
-    ? `/tai-khoan/don-hang/${encodeURIComponent(snapshot.orderCode)}`
-    : `/tra-cuu-don?code=${encodeURIComponent(snapshot.orderCode)}`;
-  const url = new URL(path, options.webUrl).href;
+  const orderUrl = snapshot.accountOwned
+    ? new URL(`/tai-khoan/don-hang/${encodeURIComponent(snapshot.orderCode)}`, options.webUrl).href
+    : null;
   const logoUrl = new URL('/brand/kitty-logo.jpg', options.webUrl).href;
   const footer = renderShopEmailFooter({
     shopName: snapshot.shopName,
@@ -221,12 +220,18 @@ export function renderRentalEmail(
     `Xin chào ${snapshot.customerName},\n${intro}`,
     snapshot.items.length ? `ĐỒ THUÊ\n${snapshot.items.map(itemLabel).join('\n')}` : '',
     snapshot.details.map((row) => `${row.label}: ${row.value}`).join('\n'),
-    `Xem chi tiết đơn thuê: ${url}${!snapshot.accountOwned ? '\nNhập số điện thoại đã đặt đơn để tra cứu.' : ''}`,
+    orderUrl
+      ? `Xem chi tiết đơn thuê: ${orderUrl}`
+      : `Vui lòng giữ mã đơn ${snapshot.orderCode} và liên hệ KITTY nếu cần hỗ trợ.`,
     footer.text,
   ]
     .filter(Boolean)
     .join('\n\n');
-  const buttonLabel = snapshot.accountOwned ? 'Xem chi tiết đơn thuê' : 'Tra cứu đơn thuê';
+  const orderLink = orderUrl
+    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px">
+              <tr><td align="center" bgcolor="#a34865" style="padding:13px 16px;border-radius:9px"><a href="${escape(orderUrl)}" style="display:block;font-size:14px;line-height:22px;font-weight:700;color:#fff;text-decoration:none">Xem chi tiết đơn thuê</a></td></tr>
+            </table>`
+    : `<p style="margin:24px 0 0;text-align:center;font-size:13px;line-height:20px;color:#77636c">Vui lòng giữ mã đơn <strong>${escape(snapshot.orderCode)}</strong> và liên hệ KITTY nếu cần hỗ trợ.</p>`;
   const html = `<!doctype html>
 <html lang="vi">
   <head>
@@ -263,10 +268,7 @@ export function renderRentalEmail(
             ${renderSection('Đặt cọc', renderRows(collateral))}
             ${renderSettlement(settlement)}
             ${renderSection('Thông tin khác', renderRows(other))}
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px">
-              <tr><td align="center" bgcolor="#a34865" style="padding:13px 16px;border-radius:9px"><a href="${escape(url)}" style="display:block;font-size:14px;line-height:22px;font-weight:700;color:#fff;text-decoration:none">${buttonLabel}</a></td></tr>
-            </table>
-            ${!snapshot.accountOwned ? '<p style="margin:9px 0 0;text-align:center;font-size:12px;line-height:18px;color:#77636c">Dùng số điện thoại đã đặt đơn để tra cứu.</p>' : ''}
+            ${orderLink}
           </td></tr>
           ${footer.html}
         </table>

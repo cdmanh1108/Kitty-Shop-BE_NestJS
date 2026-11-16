@@ -1,7 +1,4 @@
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { returnAndSettle } from '../fixtures/return.fixture';
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { RentalConfirmationService } from '../../src/modules/rentals/application/rental-confirmation.service';
 import type { ObjectStoragePort } from '../../src/common/storage/object-storage.port';
@@ -165,66 +162,6 @@ describe('Atomic manual rental confirmation', () => {
     },
   );
 
-  it.each([false, true])(
-    'backfills historical receipts without duplicates (settled: %s)',
-    async (settled) => {
-      const f = await fixture();
-      await f.service.confirm(f.user, f.order.id, {
-        collateralMethod: 'CASH',
-        collateralAmount: 50000,
-      });
-      if (settled) {
-        await repository.transition({
-          shopId: f.shop.id,
-          orderId: f.order.id,
-          fromStatuses: ['CONFIRMED'],
-          toStatus: 'ACTIVE',
-          changedBy: f.member.id,
-        });
-        await returnAndSettle(
-          repository,
-          { ...f, user: { id: f.user.userId, fullName: f.user.fullName } },
-          f.order.id,
-        );
-      }
-      // Simulate historical confirmation/settlement with only a separate rental receipt.
-      await prisma.paymentTransaction.deleteMany({
-        where: { orderId: f.order.id, purpose: { in: ['DEPOSIT', 'DEPOSIT_REFUND'] } },
-      });
-      await prisma.paymentTransaction.updateMany({
-        where: { orderId: f.order.id },
-        data: { source: 'LEGACY', receiptKey: null },
-      });
-      const sql = readFileSync(
-        join(process.cwd(), 'prisma/migrations/202609140002_manual_payment_ledger/migration.sql'),
-        'utf8',
-      );
-      const dataMigration = sql.slice(
-        sql.indexOf('-- Preserve historical'),
-        sql.indexOf('ALTER TABLE rental_settlements'),
-      );
-      await prisma.$transaction(async (tx) => {
-        for (const statement of dataMigration
-          .replace(/--[^\n]*/g, '')
-          .split(';')
-          .map((s) => s.trim())
-          .filter(Boolean)) {
-          await tx.$executeRawUnsafe(statement);
-        }
-      });
-      const payments = await prisma.paymentTransaction.findMany({ where: { orderId: f.order.id } });
-      expect(payments).toHaveLength(settled ? 3 : 2);
-      expect(payments.find((p) => p.purpose === 'DEPOSIT')).toMatchObject({
-        source: 'LEGACY',
-        paymentMethod: 'UNSPECIFIED',
-      });
-      expect(
-        payments.reduce((sum, p) => sum + Number(p.amount) * (p.direction === 'IN' ? 1 : -1), 0),
-      ).toBe(settled ? 200000 : 250000);
-      expect((await repository.get(f.shop.id, f.order.id))?.paymentStatus).toBe('PAID');
-    },
-  );
-
   const image = {
     buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]),
     originalname: 'receipt.jpg',
@@ -249,11 +186,11 @@ describe('Atomic manual rental confirmation', () => {
     expect((await f.service.evidence(f.user, f.order.id)).body).toEqual(image.buffer);
     await expect(
       f.service.evidence({ ...f.user, permissions: [] }, f.order.id),
-    ).rejects.toMatchObject({ status: 403 });
+    ).rejects.toMatchObject({ kind: 'FORBIDDEN' });
     const other = await createTestShop(prisma);
     await expect(
       f.service.evidence({ ...f.user, shopId: other.id }, f.order.id),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({ kind: 'NOT_FOUND' });
   });
 
   it('has one winner under concurrent confirms and creates one audit/history/evidence', async () => {
@@ -334,7 +271,7 @@ describe('Atomic manual rental confirmation', () => {
         collateralMethod: 'CASH',
         collateralAmount: 200000,
       }),
-    ).rejects.toMatchObject({ status: 403 });
+    ).rejects.toMatchObject({ kind: 'FORBIDDEN' });
     await expect(
       f.service.confirm(f.user, f.order.id, { collateralMethod: 'CASH', collateralAmount: -1 }),
     ).rejects.toMatchObject({ code: 'INVALID_COLLATERAL_AMOUNT' });
@@ -345,7 +282,7 @@ describe('Atomic manual rental confirmation', () => {
         { collateralMethod: 'CASH', collateralAmount: 200000 },
         { ...image, buffer: Buffer.from('<html>') },
       ),
-    ).rejects.toMatchObject({ status: 400 });
+    ).rejects.toMatchObject({ kind: 'VALIDATION' });
     await expect(
       repository.transition({
         shopId: f.shop.id,
@@ -365,6 +302,6 @@ describe('Atomic manual rental confirmation', () => {
     });
     await expect(
       f.service.confirm(f.user, f.order.id, { collateralMethod: 'CASH', collateralAmount: 200000 }),
-    ).rejects.toMatchObject({ status: 400 });
+    ).rejects.toMatchObject({ kind: 'VALIDATION' });
   });
 });

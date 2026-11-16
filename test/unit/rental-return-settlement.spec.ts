@@ -1,16 +1,12 @@
 import { RENTAL_STATUS } from '../../src/modules/rentals/domain/rental-status';
 import { canTransitionRental } from '../../src/modules/rentals/domain/rental-policy';
-import {
-  calculateLateCharges,
-  calculateRentalSettlement,
-} from '../../src/modules/rentals/domain/rental-settlement';
+import { calculateRentalSettlement } from '../../src/modules/rentals/domain/rental-settlement';
 import {
   ITEM_INSPECTION_CONDITION,
   INSPECTION_TO_INVENTORY_STATUS,
   assertReturnInspection,
 } from '../../src/modules/rentals/domain/rental-return';
 import { INVENTORY_STATUS } from '../../src/modules/catalog/domain/catalog-status';
-import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 import { RentalSettlementService } from '../../src/modules/rentals/application/rental-settlement.service';
 import { RentalReturnService } from '../../src/modules/rentals/application/rental-return.service';
 import {
@@ -48,8 +44,6 @@ function rentalReturnServiceForGuards(
 }
 
 describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
-  const policy = DEFAULT_RENTAL_POLICY;
-
   describe('1. State Machine: Generic Transition Invariant', () => {
     it('never allows direct ACTIVE -> COMPLETED transition via generic transition', () => {
       expect(canTransitionRental('ACTIVE', 'COMPLETED')).toBe(false);
@@ -62,92 +56,6 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
     it('allows CONFIRMED -> ACTIVE but not RESERVED -> ACTIVE', () => {
       expect(canTransitionRental('CONFIRMED', 'ACTIVE')).toBe(true);
       expect(canTransitionRental('RESERVED', 'ACTIVE')).toBe(false);
-    });
-  });
-
-  describe('2. Late Fee & Extra Rental Calculations', () => {
-    const dueAt = new Date('2026-10-10T18:00:00.000Z');
-    const rentalSubtotal = '300000.00';
-
-    it('calculates 0 late fee and 0 additional rental when returned on time', () => {
-      const returnedAt = new Date('2026-10-10T17:30:00.000Z');
-      const result = calculateLateCharges({
-        dueAt,
-        returnedAt,
-        itemCount: 2,
-        rentalSubtotal,
-        policy,
-      });
-      expect(result).toEqual({
-        lateDays: 0,
-        lateFee: '0.00',
-        additionalRental: '0.00',
-      });
-    });
-
-    it('calculates 10.000/set/day: 1 day late for 2 items = 20.000đ', () => {
-      const returnedAt = new Date('2026-10-11T18:00:00.000Z');
-      const result = calculateLateCharges({
-        dueAt,
-        returnedAt,
-        itemCount: 2,
-        rentalSubtotal,
-        policy,
-      });
-      expect(result).toEqual({
-        lateDays: 1,
-        lateFee: '20000.00',
-        additionalRental: '0.00',
-      });
-    });
-
-    it('calculates 2 days late for 2 items = 40.000đ, no extra rental yet', () => {
-      const returnedAt = new Date('2026-10-12T18:00:00.000Z');
-      const result = calculateLateCharges({
-        dueAt,
-        returnedAt,
-        itemCount: 2,
-        rentalSubtotal,
-        policy,
-      });
-      expect(result).toEqual({
-        lateDays: 2,
-        lateFee: '40000.00',
-        additionalRental: '0.00',
-      });
-    });
-
-    it('adds 1 extra rental cycle starting from late day 3 (rule: 3 days late)', () => {
-      const returnedAt = new Date('2026-10-13T18:00:00.000Z');
-      const result = calculateLateCharges({
-        dueAt,
-        returnedAt,
-        itemCount: 2,
-        rentalSubtotal,
-        policy,
-      });
-      // 3 days * 2 items * 10.000 = 60.000 late fee + 300.000 additional rental
-      expect(result).toEqual({
-        lateDays: 3,
-        lateFee: '60000.00',
-        additionalRental: '300000.00',
-      });
-    });
-
-    it('maintains extra rental cycle on day 4 and beyond', () => {
-      const returnedAt = new Date('2026-10-14T18:00:00.000Z');
-      const result = calculateLateCharges({
-        dueAt,
-        returnedAt,
-        itemCount: 2,
-        rentalSubtotal,
-        policy,
-      });
-      expect(result).toEqual({
-        lateDays: 4,
-        lateFee: '80000.00',
-        additionalRental: '300000.00',
-      });
     });
   });
 

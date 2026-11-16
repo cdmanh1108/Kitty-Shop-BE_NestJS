@@ -66,10 +66,6 @@ export const WebCatalogMapper = {
       imageUrl: product.imageUrl,
       size: product.size,
       color: product.color,
-      rentalPrices: product.rentalPrices.map((r) => ({
-        days: r.days,
-        amount: r.amount,
-      })),
       depositAmount: product.depositAmount,
       isRentable: product.isRentable,
     };
@@ -107,10 +103,6 @@ export const WebCatalogMapper = {
       gallery: product.gallery,
       size: product.size,
       color: product.color,
-      rentalPrices: product.rentalPrices.map((r) => ({
-        days: r.days,
-        amount: r.amount,
-      })),
       depositAmount: product.depositAmount,
       isRentable: product.isRentable,
       description: product.description ?? undefined,
@@ -131,15 +123,3 @@ export const WebCatalogMapper = {
     return { items };
   },
 };
-
-// Standalone function aliases for backwards compatibility
-export const toWebCategory = (category: StorefrontCategory): WebCategoryDto =>
-  WebCatalogMapper.toCategory(category);
-export const toWebCategoryList = (categories: StorefrontCategory[]): WebCategoryDto[] =>
-  WebCatalogMapper.toCategoryList(categories);
-export const toWebProductListItem = (product: StorefrontProductItem): WebProductListItemDto =>
-  WebCatalogMapper.toProductListItem(product);
-export const toWebProductListResponse = (page: StorefrontProductPage): WebProductListResDto =>
-  WebCatalogMapper.toProductListResponse(page);
-export const toWebProductDetail = (product: StorefrontProductDetails): WebProductDetailDto =>
-  WebCatalogMapper.toProductDetail(product);

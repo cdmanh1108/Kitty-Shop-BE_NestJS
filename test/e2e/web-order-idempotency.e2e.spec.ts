@@ -9,6 +9,7 @@ import {
   resetTestDatabase,
 } from '../helpers/test-database';
 import { createTestApp } from '../helpers/test-app';
+import { createVerifiedWebAccount, webAccessCookie } from '../helpers/web-session';
 
 describe('Web order idempotency HTTP contract', () => {
   let app: INestApplication;
@@ -32,8 +33,8 @@ describe('Web order idempotency HTTP contract', () => {
 
   const command = (variantId: string, phone: string) => ({
     customer: { name: 'HTTP guest', phone },
-    pickupDate: '2026-10-10',
-    returnDate: '2026-10-12',
+    pickupDate: '2026-10-10T08:30:00+07:00',
+    returnDate: '2026-10-12T08:30:00+07:00',
     items: [{ variantId, quantity: 1 }],
     delivery: { method: 'self_pickup' },
     paymentMethod: 'cash',
@@ -41,19 +42,27 @@ describe('Web order idempotency HTTP contract', () => {
 
   it('requires a key and replays the completed response with no-store', async () => {
     const fixture = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
+    const cookie = webAccessCookie(account.id);
     const body = command(fixture.variant.id, fixture.customer.phone);
 
-    const missing = await request(server).post('/api/v1/web/rental-orders').send(body).expect(400);
+    const missing = await request(server)
+      .post('/api/v1/web/rental-orders')
+      .set('Cookie', cookie)
+      .send(body)
+      .expect(400);
     expect(missing.body).toMatchObject({ code: 'IDEMPOTENCY_KEY_REQUIRED' });
     await expect(prisma.rentalOrder.count({ where: { shopId: fixture.shop.id } })).resolves.toBe(0);
 
     const first = await request(server)
       .post('/api/v1/web/rental-orders')
+      .set('Cookie', cookie)
       .set('Idempotency-Key', 'http-replay-key')
       .send(body)
       .expect(201);
     const replay = await request(server)
       .post('/api/v1/web/rental-orders')
+      .set('Cookie', cookie)
       .set('Idempotency-Key', 'http-replay-key')
       .send(body)
       .expect(201);

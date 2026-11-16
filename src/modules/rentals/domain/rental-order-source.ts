@@ -1,9 +1,9 @@
 /**
  * Immutable provenance of a rental order's creation channel.
  *
- * This is intentionally independent from customer authentication and CRM identity:
- * a guest checkout is ONLINE, while an order entered by staff remains OFFLINE even
- * when its customer also owns a storefront account.
+ * This is intentionally independent from CRM identity: storefront checkouts are
+ * ONLINE, while orders entered by staff remain OFFLINE even when the customer
+ * also owns a storefront account.
  */
 export const RENTAL_ORDER_SOURCE = {
   ONLINE: 'ONLINE',

@@ -40,11 +40,9 @@ import {
   ProductPageResDto,
   ProductResDto,
   ProductVariantResDto,
-  RentalRateResDto,
   UpdateProductReqDto,
   UpdateProductVariantReqDto,
   SetProductVariantArchivedReqDto,
-  UpsertRentalRateReqDto,
 } from './dto/product.dto';
 import { ProductListQueryDto, ProductLookupQueryDto } from './dto/product-query.dto';
 import {
@@ -55,7 +53,6 @@ import {
   toProductMediaUploadInput,
   toUpdateProductInput,
   toUpdateProductVariantInput,
-  toUpsertRentalRateInput,
 } from '../catalog.mapper';
 import { ProductMediaUploadInterceptor } from './product-media-upload.interceptor';
 
@@ -168,17 +165,6 @@ export class AdminProductController {
     @Param('variantId') variantId: string,
   ) {
     return this.service.deleteProductVariant(user, productId, variantId);
-  }
-
-  @Post('variants/:id/rental-rates')
-  @Permissions(PERMISSIONS.CATALOG_MANAGE)
-  @ApiCreatedResponse({ type: RentalRateResDto })
-  upsertRentalRate(
-    @CurrentUser() user: CurrentUserType,
-    @Param('id') id: string,
-    @Body() body: UpsertRentalRateReqDto,
-  ) {
-    return this.service.upsertRentalRate(user, id, toUpsertRentalRateInput(body));
   }
 
   @Patch('products/:id')

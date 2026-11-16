@@ -22,14 +22,6 @@ export interface RentalCyclePricingSnapshot extends ResolvedRentalCyclePricing {
   depositPerItem: number;
 }
 
-/** Historical inputs and the deprecated full-period Admin override remain supported. */
-export interface LegacyRentalPricingSnapshot {
-  version?: typeof RENTAL_PRICING_VERSION.LEGACY;
-  durationDays: number;
-  unitRentalPrice: number;
-  depositPerItem: number;
-}
-
 export interface FreeAccessoryPricingSnapshot {
   version: typeof RENTAL_PRICING_VERSION.FREE_ACCESSORY;
   durationDays: number;
@@ -37,10 +29,7 @@ export interface FreeAccessoryPricingSnapshot {
   unitRentalPrice: 0;
   depositPerItem: 0;
 }
-export type RentalPricingSnapshot =
-  | RentalCyclePricingSnapshot
-  | LegacyRentalPricingSnapshot
-  | FreeAccessoryPricingSnapshot;
+export type RentalPricingSnapshot = RentalCyclePricingSnapshot | FreeAccessoryPricingSnapshot;
 
 const PRICING_FIELDS = [
   'durationDays',
@@ -65,14 +54,13 @@ export function resolveRentalLinePricing(
   input: ResolveRentalCyclePricingInput & {
     quantity: number;
     depositPerItem: number;
-    legacyUnitRentalPrice?: number;
     billingRole?: RentalBillingRole;
   },
 ) {
-  // Resolve even legacy overrides so invalid policies or supplied cycle overrides cannot pass.
+  // Resolve at the booking boundary so invalid policies or cycle overrides cannot pass.
   const pricing = resolveRentalCyclePricing(input);
   if (rentalBillingRole(input.billingRole) === RENTAL_BILLING_ROLE.FREE_ACCESSORY) {
-    if (input.itemCyclePriceOverride !== undefined || input.legacyUnitRentalPrice !== undefined)
+    if (input.itemCyclePriceOverride !== undefined)
       throw new RentalInvariantError(
         'FREE_ACCESSORY_PRICE_OVERRIDE_NOT_ALLOWED',
         'Phụ kiện miễn phí không được nhập giá thuê riêng.',
@@ -86,29 +74,13 @@ export function resolveRentalLinePricing(
     };
     return { unitRentalPrice: 0, lineTotal: 0, depositAmount: 0, pricingSnapshot };
   }
-  let pricingSnapshot: RentalPricingSnapshot;
-  if (input.legacyUnitRentalPrice != null) {
-    if (input.itemCyclePriceOverride != null || input.orderCyclePriceOverride != null) {
-      throw new RentalInvariantError(
-        'RENTAL_PRICE_OVERRIDE_CONFLICT',
-        'Không thể dùng đồng thời giá ghi đè cho toàn kỳ và giá ghi đè một lượt thuê.',
-      );
-    }
-    pricingSnapshot = {
-      version: RENTAL_PRICING_VERSION.LEGACY,
-      durationDays: input.durationDays,
-      unitRentalPrice: input.legacyUnitRentalPrice,
-      depositPerItem: input.depositPerItem,
-    };
-  } else {
-    pricingSnapshot = {
-      ...pricing,
-      policy: { ...input.policy },
-      orderCyclePriceOverride: input.orderCyclePriceOverride ?? null,
-      itemCyclePriceOverride: input.itemCyclePriceOverride ?? null,
-      depositPerItem: input.depositPerItem,
-    };
-  }
+  const pricingSnapshot: RentalPricingSnapshot = {
+    ...pricing,
+    policy: { ...input.policy },
+    orderCyclePriceOverride: input.orderCyclePriceOverride ?? null,
+    itemCyclePriceOverride: input.itemCyclePriceOverride ?? null,
+    depositPerItem: input.depositPerItem,
+  };
   return {
     unitRentalPrice: pricingSnapshot.unitRentalPrice,
     lineTotal: multiplyRentalPricingAmount(pricingSnapshot.unitRentalPrice, input.quantity),
@@ -147,7 +119,6 @@ export function assertRentalPricingLineSnapshot(
     return;
   }
   if (free) throw invalidSnapshot();
-  if (snapshot.version === undefined || snapshot.version === RENTAL_PRICING_VERSION.LEGACY) return;
   if (snapshot.version !== RENTAL_PRICING_VERSION.CYCLE) throw invalidSnapshot();
   const pricing = resolveRentalCyclePricing({
     durationDays,
@@ -167,10 +138,9 @@ export function assertRentalPricingLineSnapshot(
 
 /** Reconstruct a safe public breakdown from the immutable snapshot, never today's settings. */
 export function readRentalCyclePricing(
-  snapshot: JsonValue | null,
+  snapshot: JsonValue,
 ): ResolvedRentalCyclePricing | undefined {
   const version = getRentalPricingVersion(snapshot);
-  if (version === RENTAL_PRICING_VERSION.LEGACY) return undefined;
   if (version === RENTAL_PRICING_VERSION.FREE_ACCESSORY) {
     const record = objectValue(snapshot);
     if (

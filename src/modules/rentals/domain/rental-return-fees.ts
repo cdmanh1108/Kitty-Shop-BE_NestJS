@@ -50,8 +50,7 @@ export function calculateRentalReturnFees(input: {
     id: string;
     quantity: number;
     billingRole?: string;
-    unitRentalPrice: { toString(): string };
-    pricingSnapshot: JsonValue | null;
+    pricingSnapshot: JsonValue;
     allocations: readonly { inventoryItemId: string }[];
   }[];
   overrides?: readonly { inventoryItemId: string; lateFeeOverride?: RentalReturnFeeOverride }[];
@@ -122,16 +121,6 @@ export function calculateRentalReturnFees(input: {
           : 0;
       calculatedAdditionalRentalFee =
         newCycles > 0 ? multiplyRentalPricingAmount(pricing.cyclePrice, newCycles) : 0;
-    } else if (!free) {
-      // Historical agreements retain the previous late-return policy; no cycle backfill.
-      calculatedLateFee =
-        lateDays > 0
-          ? multiplyRentalPricingAmount(input.policy.lateReturn.feePerItemPerDay, lateDays)
-          : 0;
-      calculatedAdditionalRentalFee =
-        lateDays >= input.policy.lateReturn.newRentalChargeFromLateDay
-          ? multiplyRentalPricingAmount(Number(item.unitRentalPrice.toString()), 1)
-          : 0;
     }
     for (const allocation of item.allocations) {
       if (inventoryIds.has(allocation.inventoryItemId)) {

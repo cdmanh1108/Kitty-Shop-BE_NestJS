@@ -193,7 +193,6 @@ export class RentalReadPresenter {
         variantNameSnapshot: item.variantNameSnapshot,
         quantity: item.quantity,
         billingRole: rentalBillingRole(item.billingRole),
-        productKindSnapshot: item.productKindSnapshot ?? undefined,
         status: item.status,
         imageUrl: this.resolveItemImage(item),
         unitRentalPrice: money(item.unitRentalPrice),

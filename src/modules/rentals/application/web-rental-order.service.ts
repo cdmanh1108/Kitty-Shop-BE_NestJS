@@ -55,7 +55,7 @@ import {
   RentalNotFoundError,
   UnsupportedRentalCollateralError,
 } from './rental.errors';
-import { WEB_CHECKOUT_PAYMENT_PREFERENCES } from '../domain/web-payment-preference';
+import { WEB_PAYMENT_PREFERENCES } from '../domain/web-payment-preference';
 
 const WEB_CREATE_IDEMPOTENCY_SCOPE = 'web-rental-order.create.v1';
 const WEB_CREATE_IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -95,11 +95,11 @@ export class WebRentalOrderService {
   async createOrder(
     shopId: string,
     req: WebCreateOrderInput,
-    rawIdempotencyKey?: string | string[],
-    owner: WebCheckoutOwnerContext = { webAccountId: null },
+    rawIdempotencyKey: string | string[] | undefined,
+    owner: WebCheckoutOwnerContext,
   ): Promise<WebCreateOrderResult> {
     if (!owner.webAccountId || !owner.email) throw new RentalAuthenticationRequiredError();
-    if (!WEB_CHECKOUT_PAYMENT_PREFERENCES.includes(req.paymentMethod))
+    if (!WEB_PAYMENT_PREFERENCES.includes(req.paymentMethod))
       throw new InvalidRentalInputError(
         'Vui lòng chọn chuyển khoản hoặc tiền mặt.',
         'INVALID_PAYMENT_PREFERENCE',
@@ -325,7 +325,7 @@ export class WebRentalOrderService {
 
   private webCommandIdentity(req: WebCreateOrderInput): StableJsonValue {
     return {
-      version: 2,
+      version: 1,
       command: {
         customer: {
           name: req.customer.name,
@@ -338,10 +338,7 @@ export class WebRentalOrderService {
           productId: item.productId ?? null,
           variantId: item.variantId ?? null,
           quantity: item.quantity,
-          // Preserve hashes for old paid-only requests; free/paid intent is never interchangeable.
-          ...(item.billingRole === RENTAL_BILLING_ROLE.FREE_ACCESSORY
-            ? { billingRole: item.billingRole }
-            : {}),
+          billingRole: item.billingRole ?? RENTAL_BILLING_ROLE.PAID,
         })),
         delivery: {
           method: req.delivery.method,
@@ -357,7 +354,7 @@ export class WebRentalOrderService {
     };
   }
 
-  private ownerScope(webAccountId: string | null): string {
-    return webAccountId ? `web-account:${webAccountId}` : 'guest';
+  private ownerScope(webAccountId: string): string {
+    return `web-account:${webAccountId}`;
   }
 }

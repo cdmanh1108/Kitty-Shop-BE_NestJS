@@ -1,32 +1,29 @@
-# Web order idempotency (C14)
+# Storefront order idempotency
 
-`POST /api/v1/web/rental-orders` requires exactly one `Idempotency-Key` header.
-It is an opaque, case-sensitive ASCII value of 1–255 non-whitespace characters.
-The server neither trims nor generates the key. Missing, empty, malformed, or
-multi-value headers are rejected before a claim or customer write.
+`POST /api/v1/web/rental-orders` requires exactly one `Idempotency-Key`
+header. The value is opaque, case-sensitive ASCII with 1–255 non-whitespace
+characters. The server does not trim or generate it. Missing, empty, malformed
+or repeated headers are rejected before a claim or customer write.
 
-| Header/format                     | Required | Scope identity                                      | Same / different command                                                                                                                                                                                                              | Success and replay                                                                         | In-progress / conflict                                             | Lease / retention                                                                | Caller action                                                                                                             |
-| --------------------------------- | -------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `Idempotency-Key: <opaque ASCII>` | Yes      | `(trusted shopId, web-rental-order.create.v1, key)` | Stable JSON object-key ordering is ignored. All accepted command fields, including contact, dates, ordered items, delivery, collateral and payment method, are hashed. Array ordering and recipient phone formatting remain distinct. | HTTP 201 with the original five-field Web creation snapshot and `Cache-Control: no-store`. | `IDEMPOTENCY_IN_PROGRESS` or `IDEMPOTENCY_KEY_REUSED` returns 409. | Five-minute processing lease; 24-hour retention measured from claim acquisition. | Create once per checkout intent; retry with the same key and unchanged body. Change a real intent and generate a new key. |
+| Header | Scope | Same/different command | Result | Retention |
+| --- | --- | --- | --- | --- |
+| `Idempotency-Key: <opaque ASCII>` | Trusted shop, Web create command and authenticated account | Stable object-key ordering is ignored; accepted fields are hashed. Array order and phone formatting remain significant. | First success returns HTTP 201. Identical retries replay the original safe result. A changed command returns 409. In-progress requests return 409. | Five-minute processing lease; 24 hours from claim acquisition. |
 
-Web uses guest capability-key semantics: possession of the opaque key plus an
-identical bound command, shop, and Web scope permits replay. It does not identify
-or authorize a customer account, and it is not an order lookup API. Web and Admin
-claims use different scopes, so the same raw key never crosses their response
-boundaries.
+The key is not an authentication credential. The signed-in account is part of
+the claim hash, so one account cannot replay another account's result. Admin
+claims use a separate scope.
 
-The claim is acquired before selection and C13 customer resolution. A completed
-claim replays its stored Web-safe snapshot without calling customer resolution,
-pricing, availability, booking, or outbox creation. For a claimed request, the
-existing fenced booking transaction locks the claim and writes order, allocations,
-outbox event, and Web replay snapshot atomically. C13 customer persistence remains
-independent: a late booking failure may retain one valid customer profile, while
-the incomplete claim is owner-safely released or later recovered.
+The claim is acquired before customer resolution. A completed claim replays its
+stored Web-safe result without invoking customer resolution, pricing,
+availability, booking or outbox creation. A new request validates account,
+selection, pricing and inventory before resolving the CRM customer. The fenced
+booking transaction locks the claim and writes the order, allocations, outbox
+event and replay result atomically. Customer contact creation is intentionally
+separate; a later booking failure can leave a valid reusable CRM profile, but
+never a partial rental order.
 
-## C15 handoff
-
-The storefront/BFF must generate a cryptographically random opaque key once per
-checkout intent and forward it unchanged to `/api/orders` and then to the upstream
-Web endpoint. It must retain the same key and exact body after a lost response or
-`IDEMPOTENCY_IN_PROGRESS`; it must not substitute `x-request-id`, phone, quote ID,
-or a new key. C16 payment/receipt idempotency is a separate scope and protocol.
+The storefront creates one cryptographically random key per checkout intent
+and forwards it unchanged to the API. It reuses that key and the exact request
+body after an uncertain response or an in-progress result. A changed checkout
+intent gets a new key. Request IDs, account IDs, phone numbers and quote IDs are
+not substitutes for the idempotency key.

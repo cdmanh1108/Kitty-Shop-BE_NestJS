@@ -182,13 +182,6 @@ const routeContracts: RouteContract[] = [
     permission: PERMISSIONS.CATALOG_MANAGE,
   },
   {
-    path: '/admin/variants/{id}/rental-rates',
-    method: 'post',
-    controller: AdminProductController,
-    handler: 'upsertRentalRate',
-    permission: PERMISSIONS.CATALOG_MANAGE,
-  },
-  {
     path: '/admin/products/{id}',
     method: 'patch',
     controller: AdminProductController,

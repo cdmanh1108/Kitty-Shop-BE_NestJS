@@ -95,7 +95,6 @@ export interface RentalDetailsResult extends RentalOrderSummaryResult {
     variantNameSnapshot: string;
     quantity: number;
     billingRole: string;
-    productKindSnapshot?: string;
     status: string;
     imageUrl: string | null;
     unitRentalPrice: string;

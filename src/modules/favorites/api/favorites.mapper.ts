@@ -19,10 +19,6 @@ export const FavoritesMapper = {
           imageUrl: product.imageUrl,
           size: product.size,
           color: product.color,
-          rentalPrices: product.rentalPrices.map((price) => ({
-            days: price.days,
-            amount: price.amount,
-          })),
           depositAmount: product.depositAmount,
           isRentable: product.isRentable,
         }),

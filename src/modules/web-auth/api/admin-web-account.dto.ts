@@ -27,7 +27,7 @@ export class AdminWebAccountListQueryDto extends PaginationQueryDto {
 
 export class AdminWebAccountResDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
-  @ApiProperty({ type: String, nullable: true }) email!: string | null;
+  @ApiProperty({ type: String, format: 'email' }) email!: string;
   @ApiProperty({ type: String, nullable: true }) fullName!: string | null;
   @ApiProperty({ type: String, nullable: true }) phone!: string | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) emailVerifiedAt!:

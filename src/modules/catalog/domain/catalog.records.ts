@@ -111,21 +111,6 @@ export interface InventoryItemRecord {
   archivedAt: Date | null;
 }
 
-export interface RentalRateRecord {
-  id: string;
-  shopId: string;
-  productId: string;
-  variantId: string | null;
-  durationDays: number;
-  price: DecimalValue;
-  currency: string;
-  validFrom: Date | null;
-  validUntil: Date | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface InventoryStatusHistoryRecord {
   id: string;
   shopId: string;
@@ -134,26 +119,7 @@ export interface InventoryStatusHistoryRecord {
   toStatus: string;
   reason: string | null;
   orderId: string | null;
-  serviceRecordId: string | null;
   notes: string | null;
   changedBy: string | null;
   changedAt: Date;
-}
-
-export interface InventoryServiceRecord {
-  id: string;
-  shopId: string;
-  inventoryItemId: string;
-  orderId: string | null;
-  serviceType: string;
-  status: string;
-  description: string | null;
-  vendorName: string | null;
-  cost: DecimalValue;
-  currency: string;
-  startedAt: Date;
-  completedAt: Date | null;
-  createdBy: string | null;
-  createdAt: Date;
-  updatedAt: Date;
 }

@@ -12,14 +12,6 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-export class WebRentalPriceDto {
-  @ApiProperty({ example: 3, description: 'Số ngày thuê' })
-  days!: number;
-
-  @ApiProperty({ example: 150000, description: 'Giá thuê (VND)' })
-  amount!: number;
-}
-
 export class WebCategoryDto {
   @ApiProperty({ example: 'b6e82c18-9717-484d-a915-c26663f721d6' })
   id!: string;
@@ -94,9 +86,6 @@ export class WebProductListItemDto {
   @ApiProperty({ example: 'Trắng' })
   color!: string;
 
-  @ApiProperty({ type: [WebRentalPriceDto] })
-  rentalPrices!: WebRentalPriceDto[];
-
   @ApiProperty({ example: 500000, description: 'Tiền cọc dự kiến (VND)' })
   depositAmount!: number;
 
@@ -135,9 +124,6 @@ export class WebProductDetailDto {
 
   @ApiProperty({ example: 'Trắng' })
   color!: string;
-
-  @ApiProperty({ type: [WebRentalPriceDto] })
-  rentalPrices!: WebRentalPriceDto[];
 
   @ApiProperty({ example: 500000, description: 'Tiền cọc dự kiến (VND)' })
   depositAmount!: number;
@@ -219,12 +205,12 @@ export class WebProductListQueryDto {
 
   @ApiPropertyOptional({
     example: 'newest',
-    enum: ['newest', 'price_asc', 'price_desc', 'name_asc', 'name_desc'],
+    enum: ['newest', 'name_asc', 'name_desc'],
     description: 'Thứ tự sắp xếp sản phẩm',
   })
   @IsOptional()
-  @IsIn(['newest', 'price_asc', 'price_desc', 'name_asc', 'name_desc'])
-  sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
+  @IsIn(['newest', 'name_asc', 'name_desc'])
+  sort?: 'newest' | 'name_asc' | 'name_desc';
 
   @ApiPropertyOptional({ example: 1, default: 1 })
   @IsOptional()

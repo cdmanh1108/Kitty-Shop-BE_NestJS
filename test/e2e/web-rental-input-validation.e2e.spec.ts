@@ -10,6 +10,7 @@ import {
   resetTestDatabase,
 } from '../helpers/test-database';
 import { createTestApp } from '../helpers/test-app';
+import { createVerifiedWebAccount, webAccessCookie } from '../helpers/web-session';
 
 describe('Web rental input validation HTTP boundary', () => {
   let app: INestApplication;
@@ -33,8 +34,8 @@ describe('Web rental input validation HTTP boundary', () => {
 
   const command = (variantId: string) => ({
     customer: { name: 'HTTP guest', phone: '0912345678' },
-    pickupDate: '2026-10-10',
-    returnDate: '2026-10-12',
+    pickupDate: '2026-10-10T08:30:00+07:00',
+    returnDate: '2026-10-12T08:30:00+07:00',
     items: [{ variantId, quantity: 1 }],
     delivery: { method: 'self_pickup' },
     paymentMethod: 'cash',
@@ -47,16 +48,16 @@ describe('Web rental input validation HTTP boundary', () => {
       .get('/api/v1/web/availability')
       .query({
         variantId: 'not-a-uuid',
-        pickupDate: '2026-10-10',
-        returnDate: '2026-10-12',
+        pickupDate: '2026-10-10T08:30:00+07:00',
+        returnDate: '2026-10-12T08:30:00+07:00',
       })
       .expect(400);
 
     await request(server)
       .post('/api/v1/web/rental/quote')
       .send({
-        pickupDate: '2026-02-30',
-        returnDate: '2026-03-02',
+        pickupDate: '2026-02-30T08:30:00+07:00',
+        returnDate: '2026-03-02T08:30:00+07:00',
         items: [{ variantId: fixture.variant.id, quantity: 1 }],
       })
       .expect(400);
@@ -64,6 +65,7 @@ describe('Web rental input validation HTTP boundary', () => {
 
   it('rejects malformed nested create payloads before customer, order, or idempotency writes', async () => {
     const fixture = await rentalScenario(prisma);
+    const account = await createVerifiedWebAccount(prisma);
     const customerCount = await prisma.customer.count({ where: { shopId: fixture.shop.id } });
     const invalid = {
       ...command(fixture.variant.id),
@@ -73,6 +75,7 @@ describe('Web rental input validation HTTP boundary', () => {
 
     await request(server)
       .post('/api/v1/web/rental-orders')
+      .set('Cookie', webAccessCookie(account.id))
       .set('Idempotency-Key', 'invalid-web-input')
       .send(invalid)
       .expect(400);
@@ -89,18 +92,20 @@ describe('Web rental input validation HTTP boundary', () => {
   it('accepts a valid C09 product/variant pair and rejects a mismatched pair without a write', async () => {
     const fixture = await rentalScenario(prisma);
     const other = await createTestProductWithVariant(prisma, fixture.shop.id);
+    const account = await createVerifiedWebAccount(prisma);
 
     await request(server)
       .post('/api/v1/web/rental/quote')
       .send({
-        pickupDate: '2026-10-10',
-        returnDate: '2026-10-12',
+        pickupDate: '2026-10-10T08:30:00+07:00',
+        returnDate: '2026-10-12T08:30:00+07:00',
         items: [{ productId: fixture.product.id, variantId: fixture.variant.id, quantity: 1 }],
       })
       .expect(200);
 
     await request(server)
       .post('/api/v1/web/rental-orders')
+      .set('Cookie', webAccessCookie(account.id))
       .set('Idempotency-Key', 'mismatched-web-selection')
       .send({
         ...command(fixture.variant.id),

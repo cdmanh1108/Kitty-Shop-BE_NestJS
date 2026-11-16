@@ -9,7 +9,6 @@ import type {
   ProductMediaRecord,
   ProductRecord,
   ProductVariantRecord,
-  RentalRateRecord,
   SizeRecord,
 } from '@modules/catalog/domain/catalog.records';
 
@@ -96,9 +95,6 @@ export type ProductVariantDetails = Pick<
   size: null | Pick<SizeRecord, 'id' | 'code' | 'name' | 'sortOrder' | 'isActive'>;
   color: null | Pick<ColorRecord, 'id' | 'code' | 'name' | 'hexColor' | 'isActive'>;
   _count: { inventoryItems: number };
-  rentalRates: Array<
-    Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>
-  >;
 };
 
 export type ProductDetails =
@@ -125,18 +121,10 @@ export type ProductDetails =
       };
       variants: ProductVariantDetails[];
       media: Array<Pick<ProductMediaRecord, 'id' | 'url' | 'altText' | 'isPrimary' | 'sortOrder'>>;
-      rentalRates: Array<
-        Pick<RentalRateRecord, 'id' | 'durationDays' | 'price' | 'currency' | 'isActive'>
-      >;
     });
 
 export type CreateProductResult = ProductRecord & {
-  variants: Array<
-    ProductVariantRecord & {
-      inventoryItems: Array<InventoryItemRecord>;
-      rentalRates: Array<RentalRateRecord>;
-    }
-  >;
+  variants: Array<ProductVariantRecord & { inventoryItems: Array<InventoryItemRecord> }>;
   media: Array<ProductMediaRecord>;
 };
 
@@ -146,7 +134,6 @@ export type AddVariantResult =
       size: null | SizeRecord;
       color: null | ColorRecord;
       inventoryItems: Array<InventoryItemRecord>;
-      rentalRates: Array<RentalRateRecord>;
     });
 
 export interface ProductVariantMutationResult {
@@ -160,8 +147,6 @@ export type DeleteProductVariantResult =
   | { kind: 'NOT_FOUND' }
   | { kind: 'IN_USE'; variant: ProductVariantRecord }
   | { kind: 'DELETED'; variant: ProductVariantRecord };
-
-export type UpsertRentalRateResult = null | RentalRateRecord;
 
 export type UpdateProductResult = null | ProductRecord;
 
@@ -213,7 +198,6 @@ export type InventoryDetails =
         size: null | SizeRecord;
         color: null | ColorRecord;
         product: ProductRecord;
-        rentalRates: Array<RentalRateRecord>;
       };
       location: null | ShopLocationDetails;
       occupancyStatus: InventoryOccupancyStatus;
@@ -270,11 +254,6 @@ export interface StorefrontCatalogFiltersCriteria {
   category?: string;
 }
 
-export interface StorefrontRentalPrice {
-  days: number;
-  amount: number;
-}
-
 export interface StorefrontProductVariant {
   id: string;
   code: string;
@@ -294,7 +273,6 @@ export interface StorefrontProductItem {
   imageUrl: string;
   size: string;
   color: string;
-  rentalPrices: StorefrontRentalPrice[];
   depositAmount: number;
   isRentable: boolean;
 }
@@ -311,7 +289,6 @@ export interface StorefrontProductDetails {
   gallery: string[];
   size: string;
   color: string;
-  rentalPrices: StorefrontRentalPrice[];
   depositAmount: number;
   isRentable: boolean;
   description?: string | null;
@@ -330,7 +307,7 @@ export interface StorefrontProductListCriteria {
   category?: string;
   size?: string;
   color?: string;
-  sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
+  sort?: 'newest' | 'name_asc' | 'name_desc';
 }
 
 /** A selected cart identity always names the exact variant chosen by the visitor. */

@@ -28,8 +28,6 @@ export interface CreateRentalItemInput {
   quantity: number;
   billingRole?: RentalBillingRole;
   cyclePriceOverride?: number;
-  /** Deprecated full-period override, retained for existing Admin clients. */
-  unitRentalPrice?: number;
   inventoryItemIds?: Array<string>;
 }
 

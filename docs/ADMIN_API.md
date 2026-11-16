@@ -34,6 +34,6 @@ Admin endpoints support dual route mounting to avoid breaking existing clients:
 
 ## 4. Swagger Documentation
 
-- **Swagger UI**: `/docs/admin` (also mirrored at `/docs` for legacy access)
+- **Swagger UI**: `/docs/admin` (also available at `/docs`)
 - **OpenAPI JSON**: `/docs/admin-json` and `generated/openapi-admin.json`
-- **Client Consumer**: `kitty-admin-fe` consumes `generated/openapi.json` (identical to `openapi-admin.json`) via `npm run api:sync`.
+- **Client Consumer**: `kitty-admin-fe` consumes the Admin audience contract via `npm run api:sync`.

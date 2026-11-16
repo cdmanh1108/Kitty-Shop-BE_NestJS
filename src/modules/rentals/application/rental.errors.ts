@@ -19,8 +19,6 @@ export class InvalidRentalPeriodError extends InvalidRentalInputError {}
 
 export class InvalidRentalItemSelectionError extends InvalidRentalInputError {}
 
-export class RentalPricingUnavailableError extends InvalidRentalInputError {}
-
 export class InvalidRentalIdempotencyKeyError extends InvalidRentalInputError {}
 
 export class UnsupportedRentalCollateralError extends InvalidRentalInputError {}

@@ -49,7 +49,7 @@ if ((env.DB_AUTO_START ?? 'false').toLowerCase() === 'true') {
   const dockerAvailable = spawnSync('docker', ['--version'], { stdio: 'ignore', shell: process.platform === 'win32' }).status === 0;
   if (dockerAvailable) {
     console.log('Starting local PostgreSQL with Docker Compose...');
-    if (!run('docker', ['compose', 'up', '-d', 'postgres'])) {
+    if (!run('npm', ['run', 'db:up'])) {
       console.warn('Docker Compose could not start PostgreSQL. Continuing with DATABASE_URL from .env.');
     }
   } else {
@@ -86,5 +86,5 @@ if (!run('npm', ['run', 'openapi:export'])) process.exit(1);
 console.log('\nBootstrap complete.');
 console.log('Run: npm run start:dev');
 console.log(`Swagger: http://localhost:${env.PORT ?? '3000'}/docs`);
-console.log('OpenAPI JSON: generated/openapi.json');
+console.log('Admin OpenAPI JSON: generated/openapi-admin.json');
 console.log(`Default admin: ${env.DEFAULT_ADMIN_EMAIL ?? 'admin@example.com'}`);

@@ -38,18 +38,13 @@ enum WebOtpDeliveryStatus {
 // Storefront identity is separate from staff membership and shop CRM records.
 model WebAccount {
   id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  // Nullable while pre-email accounts are retained without inventing addresses.
-  email                 String?                 @unique @db.VarChar(254)
+  email                 String                  @unique @db.VarChar(254)
   emailVerifiedAt       DateTime?               @map("email_verified_at") @db.Timestamptz(6)
   fullName              String?                 @map("full_name") @db.VarChar(100)
   contactPhone          String?                 @map("contact_phone") @db.VarChar(10)
-  // Legacy identity columns remain for existing account rows; Web Auth no longer reads them.
-  phone                 String?                 @unique @db.VarChar(30)
   passwordHash          String                  @map("password_hash") @db.Text
   pendingPasswordHash   String?                 @map("pending_password_hash") @db.Text
   registrationAttemptId String?                 @map("registration_attempt_id") @db.Uuid
-  /// @deprecated Legacy phone verification state. Kept for data retention only.
-  phoneVerifiedAt       DateTime?               @map("phone_verified_at") @db.Timestamptz(6)
   disabledAt            DateTime?               @map("disabled_at") @db.Timestamptz(6)
   createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   challenges            WebOtpChallenge[]
@@ -184,7 +179,6 @@ model Shop {
   members                ShopMember[]
   roles                  Role[]
   customers              Customer[]
-  tags                   Tag[]
   categories             Category[]
   sizes                  Size[]
   colors                 Color[]
@@ -192,7 +186,6 @@ model Shop {
   variants               ProductVariant[]
   media                  ProductMedia[]
   inventoryItems         InventoryItem[]
-  rentalRates            RentalRate[]
   rentalOrders           RentalOrder[]
   loyaltyEntries         CustomerLoyaltyEntry[]
   loyaltyRewards         CustomerLoyaltyReward[]
@@ -201,7 +194,6 @@ model Shop {
   rentalCharges          RentalOrderCharge[]
   orderStatusHistory     RentalOrderStatusHistory[]
   inventoryStatusHistory InventoryStatusHistory[]
-  inventoryServices      InventoryServiceRecord[]
   paymentTransactions    PaymentTransaction[]
   expenseCategories      ExpenseCategory[]
   expenses               Expense[]
@@ -414,7 +406,6 @@ model Customer {
   shop                Shop                    @relation(fields: [shopId], references: [id], onDelete: Restrict)
   addresses           CustomerAddress[]
   notes               CustomerNote[]
-  tags                CustomerTag[]
   rentalOrders        RentalOrder[]
   loyaltyEntries      CustomerLoyaltyEntry[]
   loyaltyRewards      CustomerLoyaltyReward[]
@@ -466,31 +457,6 @@ model CustomerNote {
 
   @@index([customerId, isPinned])
   @@map("customer_notes")
-}
-
-model Tag {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shopId    String   @map("shop_id") @db.Uuid
-  name      String   @db.VarChar(100)
-  color     String?  @db.VarChar(20)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  shop      Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  customers CustomerTag[]
-
-  @@unique([shopId, name])
-  @@map("tags")
-}
-
-model CustomerTag {
-  customerId String @map("customer_id") @db.Uuid
-  tagId      String @map("tag_id") @db.Uuid
-
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([customerId, tagId])
-  @@map("customer_tags")
 }
 
 model Category {
@@ -577,7 +543,6 @@ model Product {
   category    Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   variants    ProductVariant[]
   media       ProductMedia[]
-  rentalRates RentalRate[]
   orderItems  RentalOrderItem[]
   favorites   Favorite[]
 
@@ -610,7 +575,6 @@ model ProductVariant {
   size           Size?             @relation(fields: [sizeId], references: [id], onDelete: Restrict)
   color          Color?            @relation(fields: [colorId], references: [id], onDelete: Restrict)
   inventoryItems InventoryItem[]
-  rentalRates    RentalRate[]
   media          ProductMedia[]
   orderItems     RentalOrderItem[]
 
@@ -671,7 +635,6 @@ model InventoryItem {
   location       ShopLocation?            @relation(fields: [locationId], references: [id], onDelete: SetNull)
   allocations    RentalItemAllocation[]
   statusHistory  InventoryStatusHistory[]
-  serviceRecords InventoryServiceRecord[]
   expenses       Expense[]
   inspections    RentalReturnInspection[]
 
@@ -682,37 +645,13 @@ model InventoryItem {
   @@map("inventory_items")
 }
 
-/// SQL partial indexes in 202609110004: one active rate per shop/product/variant/duration.
-/// NULL variantId has its own product-level index; inactive history is unrestricted.
-model RentalRate {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shopId       String    @map("shop_id") @db.Uuid
-  productId    String    @map("product_id") @db.Uuid
-  variantId    String?   @map("variant_id") @db.Uuid
-  durationDays Int       @map("duration_days")
-  price        Decimal   @db.Decimal(18, 2)
-  currency     String    @default("VND") @db.Char(3)
-  validFrom    DateTime? @map("valid_from") @db.Date
-  validUntil   DateTime? @map("valid_until") @db.Date
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  shop    Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-  @@index([productId, variantId, durationDays, isActive])
-  @@map("rental_rates")
-}
-
 model RentalOrder {
   id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   shopId                 String             @map("shop_id") @db.Uuid
   orderNumber            String             @map("order_number") @db.VarChar(50)
   customerId             String             @map("customer_id") @db.Uuid
-  /// Nullable for legacy orders whose origin cannot be reconstructed safely. New orders set this explicitly.
-  source                 RentalOrderSource?
+  /// Immutable creation channel: storefront or Admin/manual.
+  source                 RentalOrderSource
   /// Storefront ownership is separate from the shop CRM customer relation.
   webAccountId           String?            @map("web_account_id") @db.Uuid
   /// Immutable checkout contact; never inferred from mutable CRM customer data.
@@ -759,7 +698,6 @@ model RentalOrder {
   deliveries              DeliveryJob[]
   reminders               Reminder[]
   notificationLogs        NotificationLog[]
-  serviceRecords          InventoryServiceRecord[]
   inventoryStatusHistory  InventoryStatusHistory[]
   expenses                Expense[]
   loyaltyEntries          CustomerLoyaltyEntry[]
@@ -936,7 +874,6 @@ model RentalOrderItem {
   variantId                  String   @map("variant_id") @db.Uuid
   quantity                   Int      @default(1)
   billingRole                String   @default("PAID") @map("billing_role") @db.VarChar(30)
-  productKindSnapshot        String?  @map("product_kind_snapshot") @db.VarChar(20)
   allowFreeAccessorySnapshot Boolean? @map("allow_free_accessory_snapshot")
   rentalStartAt              DateTime @map("rental_start_at") @db.Timestamptz(6)
   rentalEndAt                DateTime @map("rental_end_at") @db.Timestamptz(6)
@@ -947,7 +884,7 @@ model RentalOrderItem {
   depositAmount              Decimal  @default(0) @map("deposit_amount") @db.Decimal(18, 2)
   discountAmount             Decimal  @default(0) @map("discount_amount") @db.Decimal(18, 2)
   lineTotal                  Decimal  @map("line_total") @db.Decimal(18, 2)
-  pricingSnapshot            Json?    @map("pricing_snapshot")
+  pricingSnapshot            Json     @map("pricing_snapshot")
   status                     String   @default("RESERVED") @db.VarChar(30)
   notes                      String?  @db.Text
   createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -1041,7 +978,6 @@ model InventoryStatusHistory {
   toStatus        String   @map("to_status") @db.VarChar(30)
   reason          String?  @db.VarChar(100)
   orderId         String?  @map("order_id") @db.Uuid
-  serviceRecordId String?  @map("service_record_id") @db.Uuid
   notes           String?  @db.Text
   changedBy       String?  @map("changed_by") @db.Uuid
   changedAt       DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
@@ -1049,36 +985,9 @@ model InventoryStatusHistory {
   shop          Shop                    @relation(fields: [shopId], references: [id], onDelete: Restrict)
   inventoryItem InventoryItem           @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
   order         RentalOrder?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  serviceRecord InventoryServiceRecord? @relation(fields: [serviceRecordId], references: [id], onDelete: SetNull)
 
   @@index([inventoryItemId, changedAt])
   @@map("inventory_status_history")
-}
-
-model InventoryServiceRecord {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shopId          String    @map("shop_id") @db.Uuid
-  inventoryItemId String    @map("inventory_item_id") @db.Uuid
-  orderId         String?   @map("order_id") @db.Uuid
-  serviceType     String    @map("service_type") @db.VarChar(30)
-  status          String    @default("OPEN") @db.VarChar(30)
-  description     String?   @db.Text
-  vendorName      String?   @map("vendor_name") @db.VarChar(255)
-  cost            Decimal   @default(0) @db.Decimal(18, 2)
-  currency        String    @default("VND") @db.Char(3)
-  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
-  completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
-  createdBy       String?   @map("created_by") @db.Uuid
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  shop            Shop                     @relation(fields: [shopId], references: [id], onDelete: Restrict)
-  inventoryItem   InventoryItem            @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
-  order           RentalOrder?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  statusHistories InventoryStatusHistory[]
-
-  @@index([inventoryItemId, status])
-  @@map("inventory_service_records")
 }
 
 model PaymentTransaction {

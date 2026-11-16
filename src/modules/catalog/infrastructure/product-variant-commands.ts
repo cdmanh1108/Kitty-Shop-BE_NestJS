@@ -97,11 +97,6 @@ async function findVariantDetails(
       archivedAt: true,
       size: { select: { id: true, code: true, name: true, sortOrder: true, isActive: true } },
       color: { select: { id: true, code: true, name: true, hexColor: true, isActive: true } },
-      rentalRates: {
-        where: { isActive: true },
-        orderBy: { durationDays: 'asc' },
-        select: { id: true, durationDays: true, price: true, currency: true, isActive: true },
-      },
       _count: { select: { inventoryItems: { where: { isActive: true } } } },
     },
   });

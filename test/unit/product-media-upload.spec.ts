@@ -61,7 +61,6 @@ describe('ProductMediaService', () => {
       updateProductVariant: jest.fn(),
       setProductVariantArchived: jest.fn(),
       deleteProductVariant: jest.fn(),
-      upsertRentalRate: jest.fn(),
       updateProduct: jest.fn(),
       archiveProduct: jest.fn(),
       addProductMedia: addMedia,

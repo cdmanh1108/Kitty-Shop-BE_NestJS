@@ -8,12 +8,13 @@ import {
 import { createTestShop } from '../fixtures/test-factories';
 
 const account = {
-  phone: '+84912345678',
+  email: 'cart@example.test',
+  emailVerifiedAt: new Date(),
   passwordHash: '$2b$12$C6UzMDM.H6dfI/f/IKcEe.5bH5XmGYWlkJKMYRnHX4CILJQUPB6eW',
 };
 const draft = {
-  pickupDate: '2026-10-01',
-  returnDate: '2026-10-03',
+  pickupDate: '2026-10-01T08:30:00+07:00',
+  returnDate: '2026-10-03T08:30:00+07:00',
   items: [
     {
       productId: '00000000-0000-4000-8000-000000000001',
@@ -42,16 +43,42 @@ describe('PrismaCartRepository', () => {
     const repository = new PrismaCartRepository(prisma);
 
     const first = await repository.replace(webAccount.id, shop.id, 0, draft);
-    expect(first).toEqual({ kind: 'updated', cart: { version: 1, ...draft } });
+    expect(first).toEqual({
+      kind: 'updated',
+      cart: {
+        ...draft,
+        pickupDate: new Date(draft.pickupDate).toISOString(),
+        returnDate: new Date(draft.returnDate).toISOString(),
+        version: 1,
+      },
+    });
 
     const secondDraft = { ...draft, items: [{ ...draft.items[0]!, quantity: 2 }] };
     const second = await repository.replace(webAccount.id, shop.id, 1, secondDraft);
-    expect(second).toEqual({ kind: 'updated', cart: { version: 2, ...secondDraft } });
+    expect(second).toEqual({
+      kind: 'updated',
+      cart: {
+        ...secondDraft,
+        pickupDate: new Date(secondDraft.pickupDate).toISOString(),
+        returnDate: new Date(secondDraft.returnDate).toISOString(),
+        version: 2,
+      },
+    });
 
     await expect(repository.replace(webAccount.id, shop.id, 1, draft)).resolves.toEqual({
       kind: 'conflict',
-      cart: { version: 2, ...secondDraft },
+      cart: {
+        ...secondDraft,
+        pickupDate: new Date(secondDraft.pickupDate).toISOString(),
+        returnDate: new Date(secondDraft.returnDate).toISOString(),
+        version: 2,
+      },
     });
-    expect(await repository.find(webAccount.id, shop.id)).toEqual({ version: 2, ...secondDraft });
+    expect(await repository.find(webAccount.id, shop.id)).toEqual({
+      ...secondDraft,
+      pickupDate: new Date(secondDraft.pickupDate).toISOString(),
+      returnDate: new Date(secondDraft.returnDate).toISOString(),
+      version: 2,
+    });
   });
 });

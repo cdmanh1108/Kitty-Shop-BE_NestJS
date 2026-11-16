@@ -15,13 +15,11 @@ import type {
   ProductMediaInput,
   ProductMediaUploadInput,
   ProductVariantInput,
-  RentalRateInput,
   SizeListQuery,
   UpdateInventoryStatusInput,
   UpdateProductInput,
   UpdateProductVariantInput,
   UpdateSizeInput,
-  UpsertRentalRateInput,
 } from '../application/catalog.contracts';
 import type {
   CreateCategoryReqDto,
@@ -39,10 +37,8 @@ import type {
   ProductMediaReqDto,
   ProductMediaUploadReqDto,
   ProductVariantReqDto,
-  RentalRateReqDto,
   UpdateProductReqDto,
   UpdateProductVariantReqDto,
-  UpsertRentalRateReqDto,
 } from './admin/dto/product.dto';
 import type {
   AddInventoryReqDto,
@@ -59,14 +55,6 @@ export function toAddInventoryInput(dto: AddInventoryReqDto): AddInventoryInput 
   return { ...dto };
 }
 export function toAddVariantInput(dto: AddVariantReqDto): AddVariantInput {
-  return {
-    ...dto,
-    rentalRates: Array.isArray(dto.rentalRates)
-      ? dto.rentalRates.map(toRentalRateInput)
-      : dto.rentalRates,
-  };
-}
-export function toRentalRateInput(dto: RentalRateReqDto): RentalRateInput {
   return { ...dto };
 }
 export function toAvailabilityQuery(dto: AvailabilityQueryDto): AvailabilityQuery {
@@ -109,12 +97,7 @@ export function toCreateProductInput(dto: CreateProductReqDto): CreateProductInp
   };
 }
 export function toProductVariantInput(dto: ProductVariantReqDto): ProductVariantInput {
-  return {
-    ...dto,
-    rentalRates: Array.isArray(dto.rentalRates)
-      ? dto.rentalRates.map(toRentalRateInput)
-      : dto.rentalRates,
-  };
+  return { ...dto };
 }
 export function toProductMediaInput(dto: ProductMediaReqDto): ProductMediaInput {
   return { ...dto };
@@ -167,8 +150,5 @@ export function toUpdateProductInput(dto: UpdateProductReqDto): UpdateProductInp
 export function toUpdateProductVariantInput(
   dto: UpdateProductVariantReqDto,
 ): UpdateProductVariantInput {
-  return { ...dto };
-}
-export function toUpsertRentalRateInput(dto: UpsertRentalRateReqDto): UpsertRentalRateInput {
   return { ...dto };
 }

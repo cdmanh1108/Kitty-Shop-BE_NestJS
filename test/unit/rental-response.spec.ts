@@ -2,6 +2,7 @@ import type { RentalDetailsResult } from '../../src/modules/rentals/application/
 import { RentalReadPresenter } from '../../src/modules/rentals/application/rental-read.presenter';
 import { toRentalResponse } from '../../src/modules/rentals/api/rental.response';
 import type { RentalOrderDetails } from '../../src/modules/rentals/domain/rental.models';
+import { cyclePricingSnapshot } from '../fixtures/rental-pricing.fixture';
 
 const decimal = (value: string) => ({ toString: () => value, toJSON: () => value });
 
@@ -15,7 +16,7 @@ function rental(): RentalDetailsResult {
     status: 'RETURNED',
     paymentStatus: 'PARTIAL',
     depositStatus: 'RECEIVED',
-    preferredPaymentMethod: 'momo',
+    preferredPaymentMethod: 'bank_transfer',
     grandTotal: '120000',
     itemCount: 1,
     productCount: 1,
@@ -52,7 +53,6 @@ function rental(): RentalDetailsResult {
         productNameSnapshot: 'Dress',
         variantNameSnapshot: 'M / Red',
         billingRole: 'PAID',
-        productKindSnapshot: 'PRODUCT',
         quantity: 1,
         status: 'RETURNED',
         imageUrl: 'https://assets.example.com/dress.jpg',
@@ -78,7 +78,7 @@ describe('rental response mapper', () => {
       grandTotal: '120000',
       paidAmount: '100000',
       remainingAmount: '20000',
-      preferredPaymentMethod: 'momo',
+      preferredPaymentMethod: 'bank_transfer',
       items: [{ imageUrl: 'https://assets.example.com/dress.jpg' }],
       rentalStartAt: '2026-09-01T00:00:00.000Z',
     });
@@ -115,6 +115,11 @@ describe('rental response mapper', () => {
           unitRentalPrice: decimal('100000.00'),
           depositAmount: decimal('50000.00'),
           lineTotal: decimal('100000.00'),
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 2,
+            unitRentalPrice: 100000,
+            depositPerItem: 50000,
+          }),
           imageUrl: 'https://drive.google.com/legacy-thumbnail',
           variant: {
             media: [

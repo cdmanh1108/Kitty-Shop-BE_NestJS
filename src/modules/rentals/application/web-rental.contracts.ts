@@ -96,30 +96,6 @@ export interface WebCreateOrderResult {
 
 /** Trusted verified account context, never supplied by a checkout transport DTO. */
 export interface WebCheckoutOwnerContext {
-  webAccountId: string | null;
-  email?: string | null;
-}
-
-export interface WebOrderLookupInput {
-  orderCode: string;
-  phone: string;
-}
-
-export interface WebOrderLookupResult {
-  orderCode: string;
-  customerName: string;
-  phoneMasked: string;
-  pickupDate: string;
-  returnDate: string;
-  status: string;
-  totalAmount: number;
-  depositAmount: number;
-  paidAmount: number;
-  items: Array<{
-    name: string;
-    imageUrl: string;
-    quantity: number;
-    billingRole?: string;
-    productKindSnapshot?: string;
-  }>;
+  webAccountId: string;
+  email: string;
 }

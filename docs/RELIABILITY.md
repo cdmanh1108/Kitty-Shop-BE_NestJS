@@ -2,8 +2,8 @@
 
 ## Side-effect inventory
 
-The previous AuditService explicitly documented best-effort behavior and caught/logged
-persistence failures. This policy is preserved; no post-commit audit becomes mandatory.
+Post-commit application audit remains best-effort; required business histories, ledgers
+and the listed outbox events commit with their owning transactions.
 
 | Command / module                     | Transactional business records                                            | audit_logs                                                 | Required outbox                                   |
 | ------------------------------------ | ------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------- |
@@ -12,7 +12,7 @@ persistence failures. This policy is preserved; no post-commit audit becomes man
 | Rental reschedule                    | Order/items/allocations dates                                             | Best effort after commit                                   | RENTAL_ORDER_RESCHEDULED in the same transaction  |
 | Rental charge                        | Charge/totals/payment state                                               | Best effort after commit                                   | None currently                                    |
 | Manual keyed payment creation        | Payment and payment/deposit recomputation                                 | Durable CREATE audit in the same transaction               | PAYMENT_RECORDED and completion snapshot together |
-| Legacy/internal payment creation     | Payment and payment/deposit recomputation                                 | Best effort after commit where its caller uses AuditPort   | PAYMENT_RECORDED in the same transaction          |
+| Internal payment creation            | Payment and payment/deposit recomputation                                 | Best effort after commit where its caller uses AuditPort   | PAYMENT_RECORDED in the same transaction          |
 | Payment void                         | Void and payment/deposit recomputation                                    | Best effort after commit                                   | None currently                                    |
 | Expense create/void                  | Existing expense persistence boundaries                                   | Best effort after success                                  | None currently                                    |
 | Product/variant/media                | Existing aggregate/media transactions                                     | Existing audited commands remain best effort after success | None currently                                    |
@@ -110,7 +110,7 @@ invariants remain in the pure Rentals domain policy.
 
 ## Failure windows
 
-RP13 receive-return and settlement share the shop-scoped monetary order lock.
+Receive-return and settlement share the shop-scoped monetary order lock.
 Per-SKU fee calculation, reasoned overrides, charge replacement/void, inspection
 snapshots, order totals, receipts, audit and the required lifecycle outbox remain
 atomic. Freshness tokens are not authorization or idempotency keys; they detect
@@ -132,11 +132,10 @@ order is guessed to be a stale request's result by matching a business reference
 
 ## Deployment
 
-Only schema change: audit_logs.request_id UUID -> VARCHAR(100), in migration
-202609110001_audit_request_id_text. Middleware already accepts non-UUID IDs. Widening
-preserves existing UUID strings and stores the same correlation ID instead of failing
-inserts or generating a second ID. Apply this migration before new audit enrichment.
-There are no idempotency/outbox schema changes.
+The initial-release schema stores `audit_logs.request_id` as `VARCHAR(100)` so
+middleware can retain the same correlation ID without generating a second one.
+Idempotency and outbox guarantees are implemented by their existing persistence
+records and transaction boundaries.
 
 Manual Admin receipts use the same fenced record table with their own actor-scoped
 `finance.manual-payment.create.v1:<memberId>` namespace. Their 30-day result
@@ -152,21 +151,14 @@ transaction client as the payment and audit writes. Any failure rolls those writ
 the application then conditionally releases only that claim token. A replay returns the
 stored Finance response without repeating any business write.
 
-Drain/stop all old backend instances and in-flight rentals before enabling recovery.
-Old code completes/releases by key without fencing; a mixed-version rolling deployment
-is unsafe. Likewise drain new work before rolling back to an unfenced implementation.
-Legacy incomplete claims may be recovered once no old executor remains.
-
-Run npm run db:generate during preparation and npm run db:migrate against the verified
-deployment database. Startup does not apply this change automatically. A locked Windows
-Prisma engine DLL requires releasing the process holding that DLL before generation;
-do not terminate unrelated processes automatically.
+Generate the Prisma client with `npm run db:generate`, then deploy the single
+`202610230001_initial_release` migration only to a newly provisioned, empty database.
+This baseline is not an upgrade path for an existing database. Provision required
+PostgreSQL extensions before applying it. Startup does not apply migrations automatically.
 
 ## Verification limits
 
-Tests cover audit enrichment/isolation/failure, typed AuditPort, same-key/shop/hash/replay,
-atomic compare-and-swap claim races, old-token fencing, and transaction ordering/error
-propagation. The small in-memory claim model is not PostgreSQL: it does not prove lock
-waits, unique-index arbitration, real rollback or cross-process execution. The repository
-has no PostgreSQL integration/e2e harness; tests do not mutate a live database. Add actual
-DB contention, crash-window and outbox rollback checks when that harness exists.
+Unit tests cover audit enrichment/isolation/failure, typed AuditPort, same-key/shop/hash/replay,
+claim races, fencing and transaction ordering. PostgreSQL integration and HTTP end-to-end
+tests exercise real constraints, transactions and repository behavior against the explicitly
+configured disposable test database. They must never point at a deployment database.

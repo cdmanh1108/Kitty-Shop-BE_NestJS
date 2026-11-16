@@ -132,7 +132,6 @@ describe('Product Slug Identity Integration', () => {
           {
             variantCode: uniqueCode('V1'),
             inventoryCount: 1,
-            rentalRates: [{ durationDays: 1, price: 50000 }],
           },
         ],
         media: [],
@@ -150,7 +149,6 @@ describe('Product Slug Identity Integration', () => {
             {
               variantCode: uniqueCode('V2'),
               inventoryCount: 1,
-              rentalRates: [{ durationDays: 1, price: 50000 }],
             },
           ],
           media: [],
@@ -176,7 +174,6 @@ describe('Product Slug Identity Integration', () => {
           {
             variantCode: uniqueCode('VA'),
             inventoryCount: 1,
-            rentalRates: [{ durationDays: 1, price: 50000 }],
           },
         ],
         media: [],
@@ -194,7 +191,6 @@ describe('Product Slug Identity Integration', () => {
           {
             variantCode: uniqueCode('VB'),
             inventoryCount: 1,
-            rentalRates: [{ durationDays: 1, price: 50000 }],
           },
         ],
         media: [],
@@ -222,7 +218,6 @@ describe('Product Slug Identity Integration', () => {
           {
             variantCode: uniqueCode('V_RENAME'),
             inventoryCount: 1,
-            rentalRates: [{ durationDays: 1, price: 50000 }],
           },
         ],
         media: [],
@@ -259,7 +254,6 @@ describe('Product Slug Identity Integration', () => {
           {
             variantCode: uniqueCode('V_ARCHIVE'),
             inventoryCount: 1,
-            rentalRates: [{ durationDays: 1, price: 50000 }],
           },
         ],
         media: [],
@@ -281,7 +275,6 @@ describe('Product Slug Identity Integration', () => {
             {
               variantCode: uniqueCode('V_NEW'),
               inventoryCount: 1,
-              rentalRates: [{ durationDays: 1, price: 50000 }],
             },
           ],
           media: [],

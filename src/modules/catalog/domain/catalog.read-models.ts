@@ -14,13 +14,6 @@ export interface ProductListItem {
   variantCount: number;
   sizes: string[];
   colors: string[];
-  minPrice: DecimalValue | null;
-  maxPrice: DecimalValue | null;
-}
-
-export interface ProductLookupRate {
-  durationDays: number;
-  price: number;
 }
 
 export interface ProductLookupItem {
@@ -29,13 +22,11 @@ export interface ProductLookupItem {
   code: string;
   name: string;
   status: string;
-  rentalRates?: ProductLookupRate[];
   variants: Array<{
     id: string;
     variantCode: string;
     sizeName: string | null;
     colorName: string | null;
-    rentalRates?: ProductLookupRate[];
   }>;
 }
 

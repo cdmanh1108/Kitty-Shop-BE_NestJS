@@ -135,7 +135,7 @@ describe('Reminder refresh lease coordination', () => {
     expect(successor.acquired).toBe(true);
 
     release.resolve();
-    await expect(first).rejects.toThrow('lease ownership was lost');
+    await expect(first).rejects.toThrow('Đã mất quyền sở hữu khóa làm mới lời nhắc.');
   });
 
   it('releases an owner-token-fenced lease after a callback error', async () => {

@@ -10,4 +10,6 @@ Rotation runs in one Serializable transaction with a row lock. A serialization c
 
 Logout marks only its presented current token `LOGOUT`; it does not compromise sibling sessions. Admin password change revokes every active admin family and token with `PASSWORD_CHANGED`. Expired, manually logged-out, legacy-invalidated, and already-compromised tokens are rejected without creating a new reuse event.
 
-Migration `202609280001_refresh_token_families` invalidates all refresh tokens that existed before lineage was available (`LEGACY_INVALIDATED`). Existing users sign in again; the migration does not infer or merge families from ambiguous historical `revoked_at` values.
+Refresh tokens are stored as token hashes in families. Rotation and revocation
+operate on the active family; the initial-release database starts without prior
+token rows or inferred token lineage.

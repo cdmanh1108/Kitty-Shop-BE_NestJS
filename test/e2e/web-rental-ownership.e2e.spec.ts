@@ -22,8 +22,8 @@ function accessCookie(accountId: string, expiresIn = 900, tokenMarker?: string):
 function checkoutRequest(variantId: string, phone: string) {
   return {
     customer: { name: 'Web checkout owner', phone },
-    pickupDate: '2026-10-10',
-    returnDate: '2026-10-12',
+    pickupDate: '2026-10-10T08:30:00+07:00',
+    returnDate: '2026-10-12T08:30:00+07:00',
     items: [{ variantId, quantity: 1 }],
     delivery: { method: 'self_pickup' },
     paymentMethod: 'cash',
@@ -60,29 +60,14 @@ describe('Web rental checkout ownership', () => {
     await disconnectTestDatabase();
   });
 
-  it('keeps guest checkout available and persists ONLINE with no account ownership', async () => {
-    const fixture = await rentalScenario(prisma);
-    const response = await request(server)
-      .post('/api/v1/web/rental-orders')
-      .set('Idempotency-Key', 'guest-ownerless-checkout')
-      .send(checkoutRequest(fixture.variant.id, fixture.customer.phone))
-      .expect(201);
-
-    const order = await prisma.rentalOrder.findUniqueOrThrow({
-      where: {
-        shopId_orderNumber: {
-          shopId: fixture.shop.id,
-          orderNumber: responseStringField(response.text, 'orderCode'),
-        },
-      },
-    });
-    expect(order).toMatchObject({ source: 'ONLINE', webAccountId: null });
-  });
-
   it('attaches only the authenticated WebAccount while keeping the CRM customer independent', async () => {
     const fixture = await rentalScenario(prisma);
     const account = await prisma.webAccount.create({
-      data: { phone: '+84912345678', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345678@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
     const response = await request(server)
       .post('/api/v1/web/rental-orders')
@@ -107,10 +92,18 @@ describe('Web rental checkout ownership', () => {
   it('rejects client-supplied ownership and does not create an order for a spoofed account', async () => {
     const fixture = await rentalScenario(prisma);
     const owner = await prisma.webAccount.create({
-      data: { phone: '+84912345678', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345678@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
     const spoofed = await prisma.webAccount.create({
-      data: { phone: '+84912345679', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345679@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
 
     await request(server)
@@ -126,7 +119,7 @@ describe('Web rental checkout ownership', () => {
     await expect(prisma.rentalOrder.count({ where: { shopId: fixture.shop.id } })).resolves.toBe(0);
   });
 
-  it('rejects a supplied invalid access credential rather than creating a guest order', async () => {
+  it('rejects a supplied invalid access credential before checkout', async () => {
     const fixture = await rentalScenario(prisma);
 
     await request(server)
@@ -139,10 +132,14 @@ describe('Web rental checkout ownership', () => {
     await expect(prisma.rentalOrder.count({ where: { shopId: fixture.shop.id } })).resolves.toBe(0);
   });
 
-  it('rejects an expired access credential rather than silently creating a guest order', async () => {
+  it('rejects an expired access credential before checkout', async () => {
     const fixture = await rentalScenario(prisma);
     const account = await prisma.webAccount.create({
-      data: { phone: '+84912345678', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345678@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
 
     await request(server)
@@ -158,10 +155,18 @@ describe('Web rental checkout ownership', () => {
   it('binds an idempotency key to stable owner identity without leaking another owner order', async () => {
     const fixture = await rentalScenario(prisma);
     const first = await prisma.webAccount.create({
-      data: { phone: '+84912345678', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345678@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
     const second = await prisma.webAccount.create({
-      data: { phone: '+84912345679', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345679@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
     const body = checkoutRequest(fixture.variant.id, fixture.customer.phone);
     const key = 'owner-bound-idempotency-key';
@@ -195,10 +200,7 @@ describe('Web rental checkout ownership', () => {
       .post('/api/v1/web/rental-orders')
       .set('Idempotency-Key', key)
       .send(body)
-      .expect(409)
-      .expect((response) =>
-        expect(responseStringField(response.text, 'code')).toBe('IDEMPOTENCY_KEY_REUSED'),
-      );
+      .expect(401);
 
     await expect(prisma.rentalOrder.count({ where: { shopId: fixture.shop.id } })).resolves.toBe(1);
     await expect(

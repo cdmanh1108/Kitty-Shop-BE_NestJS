@@ -49,11 +49,12 @@ blindly resend after the provider's deduplication window.
 Financial labels separate the order total from expected deposit, actual net rental
 payment and held deposit from the ledger.
 Confirmed email does not infer payment from status. Settlement includes the actual
-additional collection/refund from the settlement record.
-Free accessory lines are labelled explicitly. Dates use the captured shop timezone;
-the template escapes all customer-controlled strings. Guest links prefill only the
-order code on `/tra-cuu-don`; the existing phone check is still required. Owned orders
-link to `/tai-khoan/don-hang/:orderCode`, retaining account authorization.
+additional collection/refund from the settlement record. Free accessory lines are
+labelled explicitly. Dates use the captured shop timezone; the template escapes
+all customer-controlled strings. An order link is included only while the account
+ownership snapshot is available, and it opens the authenticated
+`/tai-khoan/don-hang/:orderCode` route. If the account was deleted, the email shows
+the order code and shop contact details instead of linking to a removed guest lookup.
 
 The compact 560px layout follows the verification email's Dusty Rose palette,
 typography and rounded card. Pickup/return dates, items, payment and collateral
@@ -80,7 +81,8 @@ rewritten or sent again.
 
 ## Deployment
 
-1. Apply migration `202610070002_rental_order_emails` before starting new writers.
+1. Provision a new database and apply the backend baseline using
+   [the release runbook](RUNBOOK.md).
 2. Generate Prisma Client with `npm run db:generate`; Windows requires releasing an
    existing Prisma engine DLL lock before replacing the engine file.
 3. Set `WEB_URL` to the storefront origin, and configure existing `RESEND_API_KEY`,
@@ -90,5 +92,5 @@ rewritten or sent again.
    tasks, so enabling later resumes them. Automated tests default to disabled, and
    OpenAPI export explicitly disables dispatch. No real emails are sent by contract export.
 
-No migrations, production services or real email sends are executed by implementing
-this change. No API contract shape changes are required for the existing optional email.
+The initial-release baseline includes the email queue schema. No API contract
+shape changes are required for the optional email delivery behavior.

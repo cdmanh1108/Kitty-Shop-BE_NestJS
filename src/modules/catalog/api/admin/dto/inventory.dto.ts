@@ -16,7 +16,6 @@ import {
 import { ColorSummaryResDto } from './color.dto';
 import { ShopLocationSummaryResDto } from './category.dto';
 import { SizeSummaryResDto } from './size.dto';
-import { RentalRateResDto } from './product.dto';
 
 export class AddInventoryReqDto {
   @ApiProperty()
@@ -136,7 +135,6 @@ export class InventoryVariantSummaryResDto {
   @ApiPropertyOptional({ nullable: true, type: SizeSummaryResDto }) size!: SizeSummaryResDto | null;
   @ApiPropertyOptional({ nullable: true, type: ColorSummaryResDto })
   color!: ColorSummaryResDto | null;
-  @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
 }
 
 export class InventoryStatusHistoryResDto {

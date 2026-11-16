@@ -1,20 +1,20 @@
 # Booking customer resolution
 
-`CustomerRepository.resolveForBooking` is the only Web booking capability that
-resolves a customer identity. It receives server-established `shopId` and the
-guest contact fields, canonicalizes the phone with `normalizeCustomerPhone`,
-and uses the exact `(shopId, normalizedPhone)` key.
+`CustomerRepository.resolveForBooking` links a verified storefront order to the
+shop CRM. It receives the server-resolved `shopId` and checkout contact fields,
+normalizes the phone, and uses the exact `(shopId, normalizedPhone)` key.
 
-| Caller                         | Canonical input                                         | Outcome                                                          | Transaction owner                                                              | Committed writes                                                                                   | Conflict/policy behavior                                                                                                                                                            |
-| ------------------------------ | ------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WebRentalOrderService.createOrder` | Server shop plus guest phone normalized by the resolver | Reuse one active, unarchived customer or create one WEB customer | Independent customer persistence, then the existing rental booking transaction | A valid customer profile may remain if a late booking write fails; no partial booking is committed | A phone-key `P2002` is reread and eligible winner reused. Archived, BLOCKED, or unknown status produces `BOOKING_CUSTOMER_UNAVAILABLE`. Other database errors are not reclassified. |
+| Caller | Input | Outcome | Persistence boundary |
+| --- | --- | --- | --- |
+| `WebRentalOrderService.createOrder` | Authenticated account, verified account email and checkout name/phone | Reuse an eligible active CRM customer or create one | CRM resolution happens after selection/pricing/availability preflight and before the fenced rental-order transaction. |
 
-The resolver is invoked only after the no-write selection, price, and inventory
-preflight. Reuse never updates the existing profile; delivery contact remains
-the contact submitted for that order. No guest flow restores an archived
-profile or reactivates a blocked profile.
+The existing CRM profile is not overwritten; delivery details remain the
+contact supplied for the order. If a phone-key uniqueness race occurs, the
+winning record is reread and reused only if eligible. Archived, blocked or
+otherwise invalid customers are rejected. Other persistence errors keep their
+original error meaning.
 
-For C14, order idempotency remains separate from customer identity: two valid
-booking intents can reference the same resolved customer. A replay mechanism
-must avoid invoking this side-effecting resolver after it has determined that
-the original order response is already complete.
+Order idempotency is separate from CRM identity. A completed retry replays its
+stored response before customer resolution, so it cannot create a duplicate
+profile or order. If a later booking write fails, a valid CRM customer may
+remain, but no partial rental order is committed.

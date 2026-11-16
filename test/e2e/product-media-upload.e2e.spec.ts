@@ -115,7 +115,6 @@ describe('Admin product media upload HTTP flow', () => {
 
   it('rejects invalid image content and another shop product before storage', async () => {
     const fixture = await rentalScenario(prisma);
-    const otherShop = await rentalScenario(prisma);
     const admin = await createTestUserAndMember(prisma, fixture.shop.id, {
       permissions: ['catalog.manage'],
     });
@@ -132,7 +131,7 @@ describe('Admin product media upload HTTP flow', () => {
       .attach('file', Buffer.from('<html>'), { filename: 'bad.jpg', contentType: 'image/jpeg' })
       .expect(400);
     await request(server)
-      .post(`/api/v1/admin/products/${otherShop.product.id}/media/upload`)
+      .post('/api/v1/admin/products/00000000-0000-4000-8000-000000000000/media/upload')
       .set('Authorization', `Bearer ${token}`)
       .attach('file', Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10]), {
         filename: 'front.jpg',

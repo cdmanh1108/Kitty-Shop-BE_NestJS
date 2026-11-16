@@ -1,11 +1,4 @@
-import {
-  WebCatalogMapper,
-  toWebCategory,
-  toWebCategoryList,
-  toWebProductDetail,
-  toWebProductListItem,
-  toWebProductListResponse,
-} from '../../src/modules/catalog/api/web/web-catalog.mapper';
+import { WebCatalogMapper } from '../../src/modules/catalog/api/web/web-catalog.mapper';
 import { WebCatalogController } from '../../src/modules/catalog/api/web/web-catalog.controller';
 import { WebCatalogService } from '../../src/modules/catalog/application/web-catalog.service';
 import { CatalogResourceNotFoundError } from '../../src/modules/catalog/application/catalog-application.errors';
@@ -46,7 +39,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(result).not.toHaveProperty('shopId');
       expect(result).not.toHaveProperty('archivedAt');
       expect(result).not.toHaveProperty('isActive');
-      expect(toWebCategory(entity)).toEqual(result);
+      expect(WebCatalogMapper.toCategory(entity)).toEqual(result);
     });
 
     it('maps an array of categories via toCategoryList and alias toWebCategoryList', () => {
@@ -62,7 +55,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       ];
 
       const res1 = WebCatalogMapper.toCategoryList(entities);
-      const res2 = toWebCategoryList(entities);
+      const res2 = WebCatalogMapper.toCategoryList(entities);
       expect(res1).toHaveLength(1);
       expect(res1[0]?.id).toBe('cat-1');
       expect(res2).toEqual(res1);
@@ -82,7 +75,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         imageUrl: 'https://img.com/main.jpg',
         size: 'S, M',
         color: 'Trắng',
-        rentalPrices: [{ days: 3, amount: 400000 }],
         depositAmount: 500000,
         isRentable: true,
       };
@@ -95,7 +87,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(result.slug).toBe('dam-da-hoi-lua-anh-kim');
       expect(result.imageUrl).toBe('https://img.com/main.jpg');
       expect(result.categoryName).toBe('Đầm tiệc');
-      expect(result.rentalPrices).toEqual([{ days: 3, amount: 400000 }]);
       expect(result.depositAmount).toBe(500000);
       expect(result.isRentable).toBe(true);
       expect(result.size).toBe('S, M');
@@ -109,7 +100,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(result).not.toHaveProperty('featured');
       expect(result).not.toHaveProperty('tags');
       expect(result).not.toHaveProperty('shopId');
-      expect(toWebProductListItem(product)).toEqual(result);
+      expect(WebCatalogMapper.toProductListItem(product)).toEqual(result);
     });
 
     it('maps paginated product page via toProductListResponse and alias toWebProductListResponse', () => {
@@ -126,7 +117,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             imageUrl: 'https://img.com/1.jpg',
             size: 'Free size',
             color: 'Hồng',
-            rentalPrices: [{ days: 1, amount: 50000 }],
             depositAmount: 100000,
             isRentable: true,
           },
@@ -149,12 +139,12 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         total: 25,
         totalPages: 3,
       });
-      expect(toWebProductListResponse(page)).toEqual(res);
+      expect(WebCatalogMapper.toProductListResponse(page)).toEqual(res);
     });
   });
 
   describe('WebCatalogMapper.toProductDetail', () => {
-    it('maps full product details including variants, pricing rates, and images', () => {
+    it('maps full product details including variants and images', () => {
       const product: StorefrontProductDetails = {
         allowFreeAccessory: false,
         id: 'prod-1',
@@ -167,10 +157,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         gallery: ['https://img.com/1.jpg', 'https://img.com/2.jpg'],
         size: 'S',
         color: 'Đỏ',
-        rentalPrices: [
-          { days: 1, amount: 150000 },
-          { days: 3, amount: 350000 },
-        ],
         depositAmount: 500000,
         isRentable: true,
         description: 'Váy dạ hội sang trọng.',
@@ -191,7 +177,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(result.id).toBe('prod-1');
       expect(result.gallery).toEqual(['https://img.com/1.jpg', 'https://img.com/2.jpg']);
       expect(result.imageUrl).toBe('https://img.com/1.jpg');
-      expect(result.rentalPrices.length).toBe(2);
       expect(result.description).toBe('Váy dạ hội sang trọng.');
       expect(result.facebookPostUrl).toBe('https://facebook.com/post/1');
       expect(result.variants.length).toBe(1);
@@ -208,7 +193,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
       expect(result).not.toHaveProperty('shopId');
 
       // Verify backwards compatible function alias
-      expect(toWebProductDetail(product)).toEqual(result);
+      expect(WebCatalogMapper.toProductDetail(product)).toEqual(result);
     });
   });
 
@@ -287,7 +272,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             imageUrl: 'https://img.com/1.jpg',
             size: 'S, M',
             color: 'Đỏ',
-            rentalPrices: [{ days: 3, amount: 250000 }],
             depositAmount: 500000,
             isRentable: true,
           },
@@ -305,7 +289,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         limit: 20,
         size: 'S',
         color: 'Đỏ',
-        sort: 'price_asc',
+        sort: 'newest',
       });
 
       expect(res.items.length).toBe(1);
@@ -324,7 +308,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         category: undefined,
         size: 'S',
         color: 'Đỏ',
-        sort: 'price_asc',
+        sort: 'newest',
       });
     });
 
@@ -341,7 +325,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         gallery: ['https://img.com/1.jpg'],
         size: 'S',
         color: 'Đỏ',
-        rentalPrices: [{ days: 3, amount: 250000 }],
         depositAmount: 500000,
         isRentable: true,
         variants: [
@@ -436,7 +419,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
               imageUrl: 'https://img.com/ad.jpg',
               size: 'M',
               color: 'Đỏ',
-              rentalPrices: [{ days: 3, amount: 200000 }],
               depositAmount: 300000,
               isRentable: true,
             },
@@ -455,7 +437,6 @@ describe('Web Catalog Presenters, Service and Controller', () => {
           gallery: ['https://img.com/ad.jpg'],
           size: 'M',
           color: 'Đỏ',
-          rentalPrices: [{ days: 3, amount: 200000 }],
           depositAmount: 300000,
           isRentable: true,
           description: 'Mô tả chi tiết',

@@ -23,7 +23,7 @@ export interface RentalOrderRecord {
   shopId: string;
   orderNumber: string;
   customerId: string;
-  source: RentalOrderSource | null;
+  source: RentalOrderSource;
   webAccountId: string | null;
   locationId: string | null;
   rentalStartAt: Date;
@@ -76,7 +76,6 @@ export interface RentalOrderItemRecord {
   variantId: string;
   quantity: number;
   billingRole: string;
-  productKindSnapshot: string | null;
   rentalStartAt: Date;
   rentalEndAt: Date;
   productNameSnapshot: string;
@@ -86,7 +85,7 @@ export interface RentalOrderItemRecord {
   depositAmount: DecimalValue;
   discountAmount: DecimalValue;
   lineTotal: DecimalValue;
-  pricingSnapshot: JsonValue | null;
+  pricingSnapshot: JsonValue;
   status: string;
   notes: string | null;
   createdAt: Date;

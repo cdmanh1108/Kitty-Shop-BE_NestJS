@@ -44,7 +44,7 @@ describe('Catalog persistence invariants', () => {
       const order = await rentals.createOrder({
         ...f.data,
         rentalStartAt: new Date('2000-01-01T00:00:00Z'),
-        rentalEndAt: new Date('2000-01-02T00:00:00Z'),
+        rentalEndAt: new Date('2000-01-03T00:00:00Z'),
       });
       if (!order) throw new Error('Expected order');
       if (status !== 'RESERVED') {
@@ -172,46 +172,6 @@ describe('Catalog persistence invariants', () => {
     },
   );
 
-  it('rejects stale booking candidates and rate writes after product archive', async () => {
-    const f = await rentalScenario(prisma);
-    expect(await catalog.archiveProduct(f.shop.id, f.product.id)).toBe(true);
-    await expect(rentals.createOrder(f.data)).rejects.toBeInstanceOf(
-      RentalInventoryUnavailableError,
-    );
-    expect(await prisma.rentalOrder.count()).toBe(0);
-    expect(
-      await catalog.upsertRentalRate(f.shop.id, f.variant.id, { durationDays: 9, price: 10 }),
-    ).toBeNull();
-  });
-
-  it('rejects cross-shop archive and rate mutations', async () => {
-    const f = await rentalScenario(prisma);
-    const other = await createTestShop(prisma);
-    expect(await catalog.archiveProduct(other.id, f.product.id)).toBe(false);
-    expect(await catalog.archiveInventoryItem(other.id, f.inventory.id)).toBe(false);
-    expect(
-      await catalog.upsertRentalRate(other.id, f.variant.id, { durationDays: 9, price: 10 }),
-    ).toBeNull();
-  });
-
-  it.each([3, 9])(
-    'concurrent rate upserts for duration %s both succeed with one active row',
-    async (durationDays) => {
-      const f = await rentalScenario(prisma);
-      const results = await Promise.all(
-        [100000, 120000].map((price) =>
-          catalog.upsertRentalRate(f.shop.id, f.variant.id, { durationDays, price }),
-        ),
-      );
-      expect(results[0]?.id).toBe(results[1]?.id);
-      const rates = await prisma.rentalRate.findMany({
-        where: { variantId: f.variant.id, durationDays, isActive: true },
-      });
-      expect(rates).toHaveLength(1);
-      expect([100000, 120000]).toContain(Number(rates[0]?.price));
-    },
-  );
-
   describe('ProductVariant update, archive and deletion lifecycle', () => {
     async function createSize(shopId: string, name: string, isActive = true) {
       return prisma.size.create({
@@ -240,7 +200,6 @@ describe('Catalog persistence invariants', () => {
         sizeId: otherSize.id,
         colorId: otherColor.id,
         inventoryCount: 0,
-        rentalRates: [{ durationDays: 1, price: 100000 }],
       });
       if (!second) throw new Error('Expected second variant');
 
@@ -337,7 +296,6 @@ describe('Catalog persistence invariants', () => {
 
     it('archives idempotently without changing inventory/rates and keeps archived variants in Admin detail', async () => {
       const f = await rentalScenario(prisma);
-      const ratesBefore = await prisma.rentalRate.count({ where: { variantId: f.variant.id } });
       const inventoryBefore = await prisma.inventoryItem.count({
         where: { variantId: f.variant.id },
       });
@@ -353,9 +311,6 @@ describe('Catalog persistence invariants', () => {
       const adminProduct = await catalog.findProduct(f.shop.id, f.product.id);
       expect(adminProduct?.variants[0]?.id).toBe(f.variant.id);
       expect(adminProduct?.variants[0]?.archivedAt).toBeInstanceOf(Date);
-      expect(await prisma.rentalRate.count({ where: { variantId: f.variant.id } })).toBe(
-        ratesBefore,
-      );
       expect(await prisma.inventoryItem.count({ where: { variantId: f.variant.id } })).toBe(
         inventoryBefore,
       );
@@ -383,14 +338,12 @@ describe('Catalog persistence invariants', () => {
     it('hard deletes an unused variant with owned rates, but historical inventory blocks deletion', async () => {
       const shop = await createTestShop(prisma);
       const unused = await createTestProductWithVariant(prisma, shop.id, { inventoryCount: 0 });
-      expect(await prisma.rentalRate.count({ where: { variantId: unused.variant.id } })).toBe(5);
       expect(
         await catalog.deleteProductVariant(shop.id, unused.product.id, unused.variant.id),
       ).toMatchObject({ kind: 'DELETED', variant: { id: unused.variant.id } });
       expect(
         await prisma.productVariant.findUnique({ where: { id: unused.variant.id } }),
       ).toBeNull();
-      expect(await prisma.rentalRate.count({ where: { variantId: unused.variant.id } })).toBe(0);
 
       const used = await rentalScenario(prisma);
       await prisma.inventoryItem.update({
@@ -401,105 +354,6 @@ describe('Catalog persistence invariants', () => {
         await catalog.deleteProductVariant(used.shop.id, used.product.id, used.variant.id),
       ).toMatchObject({ kind: 'IN_USE', variant: { id: used.variant.id } });
     });
-  });
-
-  it('DB admits only one concurrent product-level active rate with a NULL variant', async () => {
-    const f = await rentalScenario(prisma);
-    const data = {
-      shopId: f.shop.id,
-      productId: f.product.id,
-      variantId: null,
-      durationDays: 27,
-      price: 100000,
-    };
-    const results = await Promise.allSettled([
-      prisma.rentalRate.create({ data }),
-      prisma.rentalRate.create({ data }),
-    ]);
-    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-    const failures = results.filter((r) => r.status === 'rejected');
-    expect(failures).toHaveLength(1);
-    expect(failures[0]?.reason).toMatchObject({ code: 'P2002' });
-
-    expect(
-      await prisma.rentalRate.count({
-        where: {
-          shopId: f.shop.id,
-          productId: f.product.id,
-          variantId: null,
-          durationDays: 27,
-          isActive: true,
-        },
-      }),
-    ).toBe(1);
-  });
-
-  it.each([false, true])(
-    'DB protects active rate scope (product-level=%s) while preserving inactive history',
-    async (productLevel) => {
-      const f = await rentalScenario(prisma);
-      const data = {
-        shopId: f.shop.id,
-        productId: f.product.id,
-        variantId: productLevel ? null : f.variant.id,
-        durationDays: 9,
-        price: 100000,
-      };
-      await prisma.rentalRate.create({ data });
-      await expect(prisma.rentalRate.create({ data })).rejects.toMatchObject({ code: 'P2002' });
-      await prisma.rentalRate.createMany({
-        data: [
-          { ...data, isActive: false },
-          { ...data, isActive: false },
-        ],
-      });
-      expect(await prisma.rentalRate.count({ where: { ...data, isActive: false } })).toBe(2);
-      await prisma.rentalRate.create({ data: { ...data, durationDays: 10 } });
-    },
-  );
-
-  it('variant pricing overrides the product fallback; other variants keep independent prices', async () => {
-    const f = await rentalScenario(prisma);
-    const size = await prisma.size.create({
-      data: { shopId: f.shop.id, code: uniqueCode('SIZE'), name: 'Other' },
-    });
-    const other = await catalog.addVariant(f.shop.id, f.product.id, {
-      variantCode: uniqueCode('V'),
-      sizeId: size.id,
-      inventoryCount: 0,
-      rentalRates: [],
-    });
-    if (!other) throw new Error('Expected variant');
-    await prisma.rentalRate.create({
-      data: { shopId: f.shop.id, productId: f.product.id, durationDays: 9, price: 50000 },
-    });
-    await prisma.rentalRate.create({
-      data: {
-        shopId: f.shop.id,
-        productId: f.product.id,
-        variantId: f.variant.id,
-        durationDays: 9,
-        price: 90000,
-        isActive: false,
-      },
-    });
-    const query = {
-      shopId: f.shop.id,
-      durationDays: 9,
-      from: f.data.rentalStartAt,
-      until: f.data.rentalEndAt,
-    };
-    expect(
-      (await rentals.getBookableVariant({ ...query, variantId: f.variant.id }))?.ratePrice,
-    ).toBe(50000);
-    await catalog.upsertRentalRate(f.shop.id, f.variant.id, { durationDays: 9, price: 70000 });
-    await catalog.upsertRentalRate(f.shop.id, other.id, { durationDays: 9, price: 80000 });
-    expect(
-      (await rentals.getBookableVariant({ ...query, variantId: f.variant.id }))?.ratePrice,
-    ).toBe(70000);
-    expect((await rentals.getBookableVariant({ ...query, variantId: other.id }))?.ratePrice).toBe(
-      80000,
-    );
   });
 
   it('DB protects nullable variant combinations while allowing archived history', async () => {
@@ -520,7 +374,6 @@ describe('Catalog persistence invariants', () => {
           variantCode: uniqueCode('V'),
           sizeId: size.id,
           inventoryCount: 0,
-          rentalRates: [],
         }),
       ),
     );
@@ -555,73 +408,15 @@ describe('Catalog persistence invariants', () => {
     ).toBe(1);
   });
 
-  const migrationPath =
-    'prisma/migrations/202609110004_harden_rental_rate_and_media_uniqueness/migration.sql';
-  const indexes = [
-    'rental_rates_variant_active_unique',
-    'rental_rates_product_active_unique',
-    'product_variants_unarchived_combination_unique',
-    'product_media_product_id_primary_unique',
-  ];
-  it.each(['none', 'variant-rate', 'product-rate', 'variant', 'media'] as const)(
-    'migration from prior schema is atomic, duplicate scope=%s',
-    async (duplicate) => {
-      const f = await rentalScenario(prisma);
-      const rollback = new Error('Rollback migration verification');
-      const operation = prisma.$transaction(async (tx) => {
-        for (const name of indexes) await tx.$executeRawUnsafe(`DROP INDEX "${name}"`);
-        if (duplicate === 'variant-rate')
-          await tx.rentalRate.create({
-            data: {
-              shopId: f.shop.id,
-              productId: f.product.id,
-              variantId: f.variant.id,
-              durationDays: 1,
-              price: 123,
-            },
-          });
-        if (duplicate === 'product-rate') {
-          await tx.rentalRate.createMany({
-            data: [1, 2].map((price) => ({
-              shopId: f.shop.id,
-              productId: f.product.id,
-              durationDays: 9,
-              price,
-            })),
-          });
-        }
-        if (duplicate === 'variant') {
-          await tx.productVariant.create({
-            data: {
-              shopId: f.shop.id,
-              productId: f.product.id,
-              variantCode: uniqueCode('DUP'),
-            },
-          });
-        }
-        if (duplicate === 'media') {
-          await tx.productMedia.createMany({
-            data: [1, 2].map((id) => ({
-              shopId: f.shop.id,
-              productId: f.product.id,
-              url: `https://example.com/${id}.jpg`,
-              isPrimary: true,
-            })),
-          });
-        }
-        for (const statement of readFileSync(join(process.cwd(), migrationPath), 'utf8').split(
-          '-- statement-breakpoint',
-        )) {
-          if (!['BEGIN;', 'COMMIT;'].includes(statement.trim()))
-            await tx.$executeRawUnsafe(statement);
-        }
-        expect(await tx.rentalRate.count({ where: { variantId: f.variant.id } })).toBe(5);
-        throw rollback;
-      });
-      if (duplicate !== 'none')
-        await expect(operation).rejects.toMatchObject({ code: 'P2010', meta: { code: 'P0001' } });
-      else await expect(operation).rejects.toBe(rollback);
-      expect(await prisma.rentalRate.count({ where: { variantId: f.variant.id } })).toBe(5);
-    },
-  );
+  it('ships the custom PostgreSQL invariants in the single release baseline', () => {
+    const migration = readFileSync(
+      join(process.cwd(), 'prisma/migrations/202610230001_initial_release/migration.sql'),
+      'utf8',
+    );
+    expect(migration).toContain('CREATE EXTENSION IF NOT EXISTS btree_gist');
+    expect(migration).toContain('EXCLUDE USING gist');
+    expect(migration).toContain('product_variants_unarchived_combination_unique');
+    expect(migration).toContain('product_media_product_id_primary_unique');
+    expect(migration).not.toContain('rental_rates');
+  });
 });

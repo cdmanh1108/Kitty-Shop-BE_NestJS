@@ -4,27 +4,15 @@ import type {
   BookableVariant,
   RentalGetBookableVariantData,
 } from '../domain/ports/rental-availability.port';
-import { resolveRentalPricing } from '../domain/rental-pricing';
 import { availableInventoryWhere } from './rental-availability.query';
 
 export function bookableVariantInclude(
   input: Pick<RentalGetBookableVariantData, 'from' | 'until'>,
 ) {
   return {
-    product: {
-      include: {
-        rentalRates: {
-          where: { variantId: null, isActive: true },
-          orderBy: { durationDays: 'asc' },
-        },
-      },
-    },
+    product: true,
     size: true,
     color: true,
-    rentalRates: {
-      where: { isActive: true },
-      orderBy: { durationDays: 'asc' },
-    },
     inventoryItems: {
       where: availableInventoryWhere(input),
       orderBy: [{ totalRentalCount: 'asc' }, { sku: 'asc' }],
@@ -36,27 +24,11 @@ type BookableVariantRecord = Prisma.ProductVariantGetPayload<{
   include: ReturnType<typeof bookableVariantInclude>;
 }>;
 
-export function toBookableVariant(
-  variant: BookableVariantRecord | null,
-  durationDays = 1,
-): BookableVariant | null {
+export function toBookableVariant(variant: BookableVariantRecord | null): BookableVariant | null {
   if (!variant) return null;
-  const pricing = resolveRentalPricing({
-    durationDays,
-    variantRates: variant.rentalRates.map((rate) => ({
-      durationDays: rate.durationDays,
-      price: decimalToNumber(rate.price),
-    })),
-    productRates: variant.product.rentalRates.map((rate) => ({
-      durationDays: rate.durationDays,
-      price: decimalToNumber(rate.price),
-    })),
-    variantDepositOverride:
-      variant.depositAmountOverride === null
-        ? null
-        : decimalToNumber(variant.depositAmountOverride),
-    productDefaultDeposit: decimalToNumber(variant.product.defaultDepositAmount),
-  });
+  const depositPerItem = decimalToNumber(
+    variant.depositAmountOverride ?? variant.product.defaultDepositAmount,
+  );
 
   return {
     id: variant.id,
@@ -66,8 +38,7 @@ export function toBookableVariant(
     allowFreeAccessory: variant.product.allowFreeAccessory,
     sizeName: variant.size?.name ?? null,
     colorName: variant.color?.name ?? null,
-    depositPerItem: pricing.depositPerItem,
-    ratePrice: pricing.ratePrice,
+    depositPerItem,
     availableInventory: variant.inventoryItems.map((item) => ({ id: item.id, sku: item.sku })),
   };
 }

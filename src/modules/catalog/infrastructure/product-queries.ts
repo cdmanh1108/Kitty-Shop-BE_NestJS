@@ -1,7 +1,6 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
-import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { CatalogProductRepository } from '../domain/catalog-product.repository';
 import type { ProductMediaUploadTarget } from '../domain/catalog.models';
 
@@ -61,22 +60,6 @@ export async function listProducts(
     }),
     prisma.product.count({ where }),
   ]);
-  // One aggregation for the page, never one query per product. Preserve the
-  // existing list's range over active rates, without transmitting rate rows.
-  const prices = items.length
-    ? await prisma.rentalRate.groupBy({
-        by: ['productId'],
-        where: {
-          shopId: input.shopId,
-          productId: { in: items.map((p) => p.id) },
-          isActive: true,
-          OR: [{ variantId: null }, { variant: { archivedAt: null } }],
-        },
-        _min: { price: true },
-        _max: { price: true },
-      })
-    : [];
-  const priceMap = new Map(prices.map((p) => [p.productId, p]));
   return {
     items: items.map(({ category, media, variants, ...product }) => ({
       ...product,
@@ -86,8 +69,6 @@ export async function listProducts(
       variantCount: variants.length,
       sizes: [...new Set(variants.flatMap((v) => (v.size ? [v.size.name] : [])))],
       colors: [...new Set(variants.flatMap((v) => (v.color ? [v.color.name] : [])))],
-      minPrice: priceMap.get(product.id)?._min.price ?? null,
-      maxPrice: priceMap.get(product.id)?._max.price ?? null,
     })),
     meta: paginateMeta(input.page, input.limit, total),
   };
@@ -125,10 +106,6 @@ export async function lookupProducts(
         allowFreeAccessory: true,
         name: true,
         status: true,
-        rentalRates: {
-          where: { isActive: true },
-          select: { durationDays: true, price: true },
-        },
         variants: {
           where: { archivedAt: null },
           orderBy: { variantCode: 'asc' },
@@ -137,10 +114,6 @@ export async function lookupProducts(
             variantCode: true,
             size: { select: { name: true } },
             color: { select: { name: true } },
-            rentalRates: {
-              where: { isActive: true },
-              select: { durationDays: true, price: true },
-            },
           },
         },
       },
@@ -151,28 +124,15 @@ export async function lookupProducts(
     prisma.product.count({ where }),
   ]);
   return {
-    items: items.map((p) => {
-      const productRates = p.rentalRates.map((r) => ({
-        durationDays: r.durationDays,
-        price: decimalToNumber(r.price),
-      }));
-      return {
-        ...p,
-        allowFreeAccessory: p.allowFreeAccessory,
-        rentalRates: productRates,
-        variants: p.variants.map(({ size, color, rentalRates, ...v }) => ({
-          ...v,
-          sizeName: size?.name ?? null,
-          colorName: color?.name ?? null,
-          rentalRates: rentalRates.length
-            ? rentalRates.map((r) => ({
-                durationDays: r.durationDays,
-                price: decimalToNumber(r.price),
-              }))
-            : productRates,
-        })),
-      };
-    }),
+    items: items.map((p) => ({
+      ...p,
+      allowFreeAccessory: p.allowFreeAccessory,
+      variants: p.variants.map(({ size, color, ...v }) => ({
+        ...v,
+        sizeName: size?.name ?? null,
+        colorName: color?.name ?? null,
+      })),
+    })),
     meta: paginateMeta(input.page, limit, total),
   };
 }
@@ -212,11 +172,6 @@ export async function findProduct(
           sortOrder: true,
         },
       },
-      rentalRates: {
-        where: { isActive: true },
-        orderBy: { durationDays: 'asc' },
-        select: { id: true, durationDays: true, price: true, currency: true, isActive: true },
-      },
       variants: {
         select: {
           id: true,
@@ -228,11 +183,6 @@ export async function findProduct(
           archivedAt: true,
           size: { select: { id: true, code: true, name: true, sortOrder: true, isActive: true } },
           color: { select: { id: true, code: true, name: true, hexColor: true, isActive: true } },
-          rentalRates: {
-            where: { isActive: true },
-            orderBy: { durationDays: 'asc' },
-            select: { id: true, durationDays: true, price: true, currency: true, isActive: true },
-          },
           _count: { select: { inventoryItems: { where: { isActive: true } } } },
         },
       },

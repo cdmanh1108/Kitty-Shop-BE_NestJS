@@ -1,18 +1,18 @@
 # Project context
 
-This backend serves an admin system for a clothing/accessory rental shop.
+This backend serves Kitty's Admin application and customer storefront for a
+clothing and accessory rental shop.
 
-Current admin responsibilities:
+Current capabilities include catalog and physical inventory, rental booking,
+availability, order lifecycle, account authentication/history, favorites and
+carts, delivery/return, reminders, customer loyalty, finance, reports and
+transactional email notifications.
 
-- dashboard: revenue/order/overdue/near-return KPIs.
-- rental calendar: day/week/month data with customer/order/items/status.
-- catalog: product, size, color, rental prices, deposit, images.
-- physical inventory: AVAILABLE/CLEANING/REPAIRING/DAMAGED/LOST/RETIRED operational condition + history; rental allocations own reservation/occupancy.
-- customer CRM: contact data, history and notes.
-- rental orders: date range, allocated physical items, charges, deposit/payment state.
-- finance: rental money, accessories, late/cleaning/damage/shipping fees, expenses/profit.
-- delivery/return tracking.
-- operational reminders.
-- reports for revenue, products and customers.
+The storefront uses verified-email accounts for checkout. Admin/manual and
+storefront orders share the rental lifecycle while retaining distinct immutable
+creation sources and separate CRM/customer-account identities.
 
-Future direction: public landing/catalog, customer booking and online payments. Changes should not couple the current admin transport to that future UI.
+PostgreSQL is the source of truth. This release's migration history is one
+initial baseline for a new, empty database. See `docs/DATABASE.md` and
+`docs/RUNBOOK.md`; do not use this baseline to upgrade a database containing
+data or another Prisma migration history.

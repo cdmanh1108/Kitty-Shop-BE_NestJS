@@ -25,21 +25,12 @@ describe('Rental order source and storefront ownership integration', () => {
     await disconnectTestDatabase();
   });
 
-  it('persists an ONLINE guest order without a WebAccount owner', async () => {
-    const fixture = await rentalScenario(prisma);
-    const order = await rentals.createOrder({ ...fixture.data, source: 'ONLINE' });
-    if (!order) throw new Error('Expected persisted rental order');
-
-    const persisted = await prisma.rentalOrder.findUniqueOrThrow({ where: { id: order.id } });
-    expect(persisted).toMatchObject({ source: 'ONLINE', webAccountId: null });
-  });
-
   it('keeps a rental order after its optional WebAccount owner is deleted', async () => {
     const fixture = await rentalScenario(prisma);
     const order = await rentals.createOrder({ ...fixture.data, source: 'OFFLINE' });
     if (!order) throw new Error('Expected persisted rental order');
     const account = await prisma.webAccount.create({
-      data: { phone: '+84912345678', passwordHash: 'test-password-hash' },
+      data: { email: 'account-84912345678@example.test', passwordHash: 'test-password-hash' },
     });
 
     const owned = await prisma.rentalOrder.update({

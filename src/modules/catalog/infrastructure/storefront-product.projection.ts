@@ -1,7 +1,7 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { Prisma } from '@prisma/client';
-import type { StorefrontProductItem, StorefrontRentalPrice } from '../domain/catalog.models';
+import type { StorefrontProductItem } from '../domain/catalog.models';
 import {
   storefrontProductEligibility,
   storefrontVariantEligibility,
@@ -36,33 +36,6 @@ export function storefrontVariantBaseWhere(): Prisma.ProductVariantWhereInput {
   };
 }
 
-export function extractRentalPrices(
-  productRates?: Array<{ durationDays: number; price: unknown }>,
-  variantRates?: Array<Array<{ durationDays: number; price: unknown }>>,
-): StorefrontRentalPrice[] {
-  const map = new Map<number, number>();
-
-  if (productRates?.length) {
-    for (const r of productRates) {
-      if (!map.has(r.durationDays)) {
-        map.set(r.durationDays, decimalToNumber(r.price as number | Prisma.Decimal));
-      }
-    }
-  } else if (variantRates?.length) {
-    for (const vrList of variantRates) {
-      for (const r of vrList) {
-        if (!map.has(r.durationDays)) {
-          map.set(r.durationDays, decimalToNumber(r.price as number | Prisma.Decimal));
-        }
-      }
-    }
-  }
-
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([days, amount]) => ({ days, amount }));
-}
-
 export const storefrontProductSelect = {
   id: true,
   code: true,
@@ -79,24 +52,11 @@ export const storefrontProductSelect = {
     take: 1,
     select: { storageKey: true, url: true, isPrimary: true },
   },
-  rentalRates: {
-    where: {
-      isActive: true,
-      OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
-    },
-    orderBy: { durationDays: 'asc' as const },
-    select: { durationDays: true, price: true },
-  },
   variants: {
     where: storefrontVariantBaseWhere(),
     select: {
       size: { select: { name: true } },
       color: { select: { name: true } },
-      rentalRates: {
-        where: { isActive: true },
-        orderBy: { durationDays: 'asc' as const },
-        select: { durationDays: true, price: true },
-      },
     },
   },
 };
@@ -128,10 +88,6 @@ export function toStorefrontProductItem(
     imageUrl,
     size: sizes.join(', ') || 'Free size',
     color: colors.join(', ') || 'Nhiều màu',
-    rentalPrices: extractRentalPrices(
-      product.rentalRates,
-      product.variants.map((v) => v.rentalRates),
-    ),
     depositAmount: decimalToNumber(product.defaultDepositAmount),
     isRentable: product.isRentable,
   };

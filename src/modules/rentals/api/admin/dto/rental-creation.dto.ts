@@ -55,18 +55,6 @@ export class CreateRentalItemReqDto {
   @Min(0, { message: 'Giá một lượt thuê ghi đè không được âm.' })
   cyclePriceOverride?: number;
   @ApiPropertyOptional({
-    type: Number,
-    deprecated: true,
-    description:
-      'Trường tương thích cũ: giá toàn kỳ thuê cho mỗi món (VND), không phải giá một lượt. Không dùng đồng thời với cyclePriceOverride của món hoặc đơn. Client mới dùng cyclePriceOverride.',
-    example: 150000,
-  })
-  @Type(() => Number)
-  @IsNumber(undefined, { message: 'Đơn giá thuê ghi đè phải là số hợp lệ.' })
-  @Min(0, { message: 'Đơn giá thuê ghi đè phải lớn hơn hoặc bằng $constraint1.' })
-  @IsOptional()
-  unitRentalPrice?: number;
-  @ApiPropertyOptional({
     type: [String],
     description: 'Optional physical item selection; otherwise backend auto-allocates.',
   })

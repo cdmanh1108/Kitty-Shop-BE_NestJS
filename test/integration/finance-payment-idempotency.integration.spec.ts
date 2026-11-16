@@ -1,4 +1,3 @@
-import { ConflictException } from '@nestjs/common';
 import type { Clock } from '../../src/common/clock/clock';
 import { FinanceService } from '../../src/modules/finance/application/finance.service';
 import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';
@@ -110,7 +109,7 @@ describe('manual receipt idempotency', () => {
 
     await expect(
       finance.createPayment(fixture.principal, order.id, { ...input, amount: 100001 }, key),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({ kind: 'CONFLICT', code: 'IDEMPOTENCY_KEY_REUSED' });
     expect(await prisma.paymentTransaction.count({ where: { orderId: order.id } })).toBe(1);
   });
 });

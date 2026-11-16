@@ -54,9 +54,9 @@ describe('auth ephemeral-data cleanup', () => {
     accountId = (
       await prisma.webAccount.create({
         data: {
-          phone: '+84912345678',
+          email: 'cleanup@example.test',
           passwordHash: 'hash',
-          phoneVerifiedAt: now,
+          emailVerifiedAt: now,
         },
       })
     ).id;
@@ -153,9 +153,9 @@ describe('auth ephemeral-data cleanup', () => {
   async function otp(terminalAt: Date | null, consumed = false): Promise<string> {
     const otpAccount = await prisma.webAccount.create({
       data: {
-        phone: `+8492234567${++otpAccountSequence}`,
+        email: `otp-${++otpAccountSequence}@example.test`,
         passwordHash: 'hash',
-        phoneVerifiedAt: now,
+        emailVerifiedAt: now,
       },
     });
     return (

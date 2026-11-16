@@ -86,4 +86,4 @@ Sync remains dry-run by default, supports local cache/resume, bounded concurrenc
 
 Current download implementation validates the 15 MB limit after buffering and keeps its timeout active through body consumption. The post-buffer size limit does not guarantee bounded streaming memory; changing the downloader is outside this boundary cleanup.
 
-See [Task 6 report](STORAGE_CLI_BOUNDARIES.md) for verification and remaining limitations.
+See [Storage CLI boundaries](STORAGE_CLI_BOUNDARIES.md) for verification and remaining limitations.

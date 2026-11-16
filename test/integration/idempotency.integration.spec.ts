@@ -289,7 +289,7 @@ describe('Idempotency Integration with PostgreSQL', () => {
     ]);
     expect(results.some((result) => result.status === 'fulfilled')).toBe(true);
     for (const result of results)
-      if (result.status === 'rejected') expect(result.reason).toBeInstanceOf(ConflictException);
+      if (result.status === 'rejected') expect(result.reason).toMatchObject({ kind: 'CONFLICT' });
     expect(await prisma.rentalOrder.count()).toBe(1);
     expect(await prisma.rentalItemAllocation.count()).toBe(1);
     expect(await prisma.outboxEvent.count()).toBe(1);

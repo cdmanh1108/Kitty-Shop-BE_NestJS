@@ -17,7 +17,6 @@ import { PrismaCustomerRepository } from '../../src/modules/customers/infrastruc
 import { CustomerService } from '../../src/modules/customers/application/customer.service';
 import { AuditService } from '../../src/modules/audit/application/audit.service';
 import { PrismaAuditRepository } from '../../src/modules/audit/infrastructure/prisma-audit.repository';
-import { ConflictException } from '@nestjs/common';
 import { PrismaFinanceRepository } from '../../src/modules/finance/infrastructure/prisma-finance.repository';
 
 describe('Catalog and customer persistence boundaries', () => {
@@ -30,7 +29,7 @@ describe('Catalog and customer persistence boundaries', () => {
   });
   afterAll(disconnectTestDatabase);
 
-  it('creates product variants, physical inventory and rates, preserves decimal JSON and scopes reads/updates', async () => {
+  it('creates product variants and physical inventory while scoping reads and updates', async () => {
     const shop = await createTestShop(prisma);
     const other = await createTestShop(prisma);
     const category = await createTestCategory(prisma, shop.id);
@@ -48,7 +47,6 @@ describe('Catalog and customer persistence boundaries', () => {
         {
           variantCode: uniqueCode('V'),
           inventoryCount: 2,
-          rentalRates: [{ durationDays: 1, price: 50000 }],
         },
       ],
       media: [],
@@ -59,8 +57,6 @@ describe('Catalog and customer persistence boundaries', () => {
     expect(detail?.variants[0]).not.toHaveProperty('inventoryItems');
     expect(detail).not.toHaveProperty('metadata');
     expect(detail?.media).toEqual([]);
-    expect(detail?.variants[0]?.rentalRates[0]?.price.toString()).toBe('50000');
-    expect(JSON.stringify(detail)).toContain('"price":"50000"');
     expect(await repo.findProduct(other.id, product.id)).toBeNull();
     expect((await repo.listProducts({ shopId: other.id, page: 1, limit: 10 })).items).toEqual([]);
     expect(await repo.updateProduct(other.id, product.id, { name: 'Spoof' })).toBeNull();
@@ -126,7 +122,7 @@ describe('Catalog and customer persistence boundaries', () => {
 
     await expect(
       service.create(f.principal, { fullName: 'Duplicate Alice', phone: '+84 939 505 378' }),
-    ).rejects.toThrow(ConflictException);
+    ).rejects.toMatchObject({ code: 'CUSTOMER_PHONE_ALREADY_EXISTS' });
     await expect(
       createTestCustomer(prisma, other.id, {
         phone: '+84 939 505 378',
@@ -140,7 +136,7 @@ describe('Catalog and customer persistence boundaries', () => {
     });
     await expect(
       service.update(f.principal, second.id, { phone: '+84 939 505 378' }),
-    ).rejects.toThrow(ConflictException);
+    ).rejects.toMatchObject({ code: 'CUSTOMER_PHONE_ALREADY_EXISTS' });
 
     expect(await repo.lookup({ shopId: f.shop.id, search: '+84 939', limit: 20 })).toEqual([
       { id: customer.id, fullName: 'Alice Updated', phone: '0939 505 378' },

@@ -1,15 +1,11 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
-import { TRANSACTION_STATUS } from '@modules/finance/public/payment-status';
 import { paginateMeta } from '@common/types/pagination';
 import type { PrismaService } from '@database/prisma/prisma.service';
-import type { StorefrontOrderLookupRecord } from '../domain/ports/rental-order-reader.port';
 import type {
   WebAccountRentalOrderDetail,
   WebAccountRentalOrderListCriteria,
 } from '../domain/ports/web-account-rental-orders.reader';
 import type { RentalStatus } from '../domain/rental-status';
-import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
-import { calculateRentalPaymentTotals } from '../domain/rental-settlement';
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 
 type OrderItemMedia = { storageKey: string | null; url: string };
@@ -22,82 +18,6 @@ function resolveOrderItemImage(
   const image = variantMedia[0] ?? productMedia[0];
   if (!image) return null;
   return mediaUrls?.resolve(image) ?? image.url;
-}
-
-export async function lookupStorefrontOrder(
-  prisma: PrismaService,
-  shopId: string,
-  orderNumber: string,
-): Promise<StorefrontOrderLookupRecord | null> {
-  const order = await prisma.rentalOrder.findFirst({
-    where: {
-      shopId,
-      orderNumber: orderNumber.trim(),
-      source: RENTAL_ORDER_SOURCE.ONLINE,
-    },
-    include: {
-      customer: true,
-      items: {
-        include: {
-          product: {
-            include: {
-              media: {
-                where: { isPrimary: true },
-                take: 1,
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!order) {
-    return null;
-  }
-
-  // Keep the public projection on the same ledger semantics as the admin
-  // presenter.  The shared calculator deliberately excludes collateral
-  // movements and signs all other completed payment directions.
-  const payments = await prisma.paymentTransaction.findMany({
-    where: {
-      shopId,
-      orderId: order.id,
-      status: TRANSACTION_STATUS.COMPLETED,
-      voidedAt: null,
-    },
-    select: { amount: true, direction: true, purpose: true },
-  });
-
-  const paymentTotals = calculateRentalPaymentTotals({
-    grandTotal: order.grandTotal.toString(),
-    payments: payments.map((payment) => ({
-      amount: payment.amount.toString(),
-      direction: payment.direction,
-      purpose: payment.purpose,
-    })),
-  });
-  const paidAmount = Number(paymentTotals.paidAmount);
-
-  return {
-    orderNumber: order.orderNumber,
-    customerFullName: order.customer.fullName,
-    customerPhone: order.customer.phone,
-    customerNormalizedPhone: order.customer.normalizedPhone,
-    rentalStartAt: order.rentalStartAt,
-    rentalEndAt: order.rentalEndAt,
-    status: order.status.toLowerCase(),
-    grandTotal: decimalToNumber(order.grandTotal),
-    depositRequired: decimalToNumber(order.depositRequired),
-    paidAmount,
-    items: order.items.map((item) => ({
-      name: item.productNameSnapshot,
-      billingRole: item.billingRole,
-      productKindSnapshot: item.productKindSnapshot ?? undefined,
-      imageUrl: item.product?.media?.[0]?.url ?? '',
-      quantity: item.quantity,
-    })),
-  };
 }
 
 const accountOrderWhere = (shopId: string, webAccountId: string, status?: RentalStatus) => ({
@@ -233,7 +153,6 @@ export async function getWebAccountOrder(
           quantity: true,
           unitRentalPrice: true,
           billingRole: true,
-          productKindSnapshot: true,
           lineTotal: true,
           depositAmount: true,
           product: {
@@ -312,7 +231,6 @@ export async function getWebAccountOrder(
       quantity: item.quantity,
       unitRentalPrice: decimalToNumber(item.unitRentalPrice),
       billingRole: item.billingRole,
-      productKindSnapshot: item.productKindSnapshot ?? undefined,
       lineTotal: decimalToNumber(item.lineTotal),
       depositAmount: decimalToNumber(item.depositAmount),
     })),

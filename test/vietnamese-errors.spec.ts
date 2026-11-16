@@ -117,8 +117,8 @@ describe('Vietnamese API error messages', () => {
       .post('/api/v1/validation/web-rental')
       .send({
         customer: { name: 'Nguyá»…n VÄƒn A', phone: '0912345678' },
-        pickupDate: '2026-10-01',
-        returnDate: '2026-10-02',
+        pickupDate: '2026-10-01T08:30:00+07:00',
+        returnDate: '2026-10-02T08:30:00+07:00',
         items: [{ variantId: '4d767d42-c065-4457-939f-8b30a9c9b28b', quantity: 1 }],
         delivery: { method: 'self_pickup' },
         paymentMethod: 'cash',

@@ -1,10 +1,10 @@
 # Delivery status lifecycle
 
-## Source facts and C34 decision
+## Status transitions
 
 The status endpoint previously accepted every `DeliveryStatus` enum member and wrote it by id. No Admin or storefront caller, test, or operational document in this repository relies on a backward transition, a `FAILED` retry, or a same-status metadata edit.
 
-C34 therefore adopts this conservative normal-operation matrix:
+The supported normal-operation matrix is:
 
 | From         | Allowed targets                     |
 | ------------ | ----------------------------------- |
@@ -24,7 +24,7 @@ The repository reads the delivery scoped by `shopId`, checks this policy against
 
 `pickedUpAt` is set only by a committed transition into `PICKED_UP`. It remains unchanged for later forward transitions. `deliveredAt` is set only by a committed transition into `DELIVERED`. Normal transitions never clear either timestamp. `FAILED` and `CANCELLED` do not set either timestamp.
 
-The status command does not create or remove shipping charges, recompute rental totals, or impose C05's closed-order monetary creation guard. Delivery creation remains the owner of that boundary.
+The status command does not create or remove shipping charges, recompute rental totals, or impose the closed-order monetary creation guard. Delivery creation remains the owner of that boundary.
 
 ## Audit and rollout
 

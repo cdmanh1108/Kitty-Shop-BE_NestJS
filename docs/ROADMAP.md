@@ -1,27 +1,30 @@
-# Roadmap / deliberate extension points
+# Deliberate extension points
 
-The current codebase focuses on the admin system. These are intentionally not forced into V1, but the schema/architecture leaves room for them.
+Current released capabilities are documented in the API, architecture and
+runbook guides. The items below are optional product/platform work and are not
+required for the current release.
 
-## Public/customer web
+## External integrations
 
-Potential modules: customer accounts, public collections/lookbook, favorites, carts, booking requests, reviews, promotions and online payment sessions. Reuse the existing Product → Variant → Inventory availability and Rental Order engine.
+The outbox supports reliable asynchronous side effects. Email delivery is
+implemented; new providers such as Zalo, SMS, payment webhooks, search indexing
+or analytics should use dedicated consumers and must not make network calls
+inside rental transactions.
 
-## Integrations
+## Accounting
 
-Use `outbox_events` + a retrying dispatcher for Zalo, SMS, Messenger, email, webhooks, search indexing or analytics. Do not perform external network calls in the core order transaction.
+If formal bookkeeping requirements are introduced, design a double-entry
+accounting ledger instead of overloading rental payment transactions and
+operating expenses.
 
-## Advanced finance
+## Multi-shop SaaS
 
-If bookkeeping/accounting requirements become formal, add a double-entry ledger rather than overloading `payment_transactions` and `expenses`.
-
-## Future multi-shop SaaS readiness
-
-Before offering Kitty as a shared SaaS for unrelated shops: PostgreSQL RLS or composite shop foreign keys, per-shop quotas, plan/billing domain, shop-aware background workers and a security review.
-
-## Storage
-
-`product_media` already stores storage keys/URLs. A provider-neutral S3-compatible adapter and public URL resolver are implemented. Admin upload UX and private authorized document access remain future work; see OBJECT_STORAGE.md.
+Before offering Kitty as shared SaaS for unrelated shops, review row-level or
+composite shop isolation, per-shop quotas, billing, background-worker scope and
+the complete authorization model.
 
 ## Observability
 
-Add OpenTelemetry traces/metrics and an error-tracking provider when deployment infrastructure is selected. The code already propagates a request ID for log correlation.
+The application propagates request IDs for log correlation. Add tracing,
+metrics and an error-tracking provider when deployment infrastructure and
+operational ownership are selected.

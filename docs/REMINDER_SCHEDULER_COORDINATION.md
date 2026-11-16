@@ -1,18 +1,21 @@
-# Reminder scheduler coordination (C40)
+# Reminder scheduler coordination
 
-## Topology decision
+## Deployment topology
 
-| Environment         | Evidence in this repository                                                                                                            | Scheduler conclusion                   |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Local/test          | `AppModule` registers `ScheduleModule.forRoot()` and `ReminderService` registers the cron. Tests explicitly disable cron registration. | Not production evidence.               |
-| Production compose  | `docker-compose.yml` has one `api` service, but has no scheduler role, replica policy or scale guard.                                  | A singleton scheduler is not enforced. |
-| Production DB/proxy | The application receives one `DATABASE_URL`; this repository has no proxy/pooling configuration.                                       | `UNVERIFIED` for G04.                  |
+| Environment | Repository evidence | Conclusion |
+| --- | --- | --- |
+| Local/test | The application registers the scheduler; tests disable cron registration. | Not production evidence. |
+| Production compose | Compose has one API service but no scheduler role, replica policy or scale guard. | A singleton scheduler is not enforced. |
+| Production database | The application receives one `DATABASE_URL`; this repository has no proxy/pooling configuration. | Connection mode is unverified. |
 
-The source therefore implements the multi-worker-safe path rather than claiming a deployment singleton. Before scaling production, G04 must record the actual replica policy, DB/proxy mode, connection limits and the owner of that deployment configuration.
+The implementation is safe for multiple workers. Before scaling production,
+record the actual replica policy, database/proxy mode, connection limits and
+the owner of deployment configuration.
 
 ## Coordination model
 
-`SchedulerJobLease` is a narrow scheduler-owned table. It has no shop relation and uses a primary key only:
+`SchedulerJobLease` is a scheduler-owned table with a primary key and no shop
+relation:
 
 ```text
 jobKey      = reminders.refresh:<shopId>
@@ -20,54 +23,80 @@ ownerToken  = random UUID, never logged
 leaseUntil  = database timestamp + 2 minutes
 ```
 
-Lease acquisition is one parameterized `INSERT ... ON CONFLICT ... DO UPDATE ... WHERE lease_until <= CURRENT_TIMESTAMP RETURNING` statement. It uses PostgreSQL's clock, avoiding host clock skew. Renewal runs every 30 seconds and release is fenced by both `jobKey` and `ownerToken`; a stale owner cannot delete a successor's lease.
+Lease acquisition is one parameterized
+`INSERT ... ON CONFLICT ... DO UPDATE ... WHERE lease_until <= CURRENT_TIMESTAMP RETURNING`
+statement. It uses PostgreSQL's clock to avoid host clock skew. Renewal runs
+every 30 seconds; release is fenced by both `jobKey` and `ownerToken`, so a
+stale owner cannot delete a successor's lease.
 
-This is deliberately a DB-backed lease rather than a session advisory lock. The coordinator uses short independent statements, so it does not assume Prisma pool session affinity or a session-pooling proxy. It consumes one ordinary database connection only while an individual statement executes, not a permanently pinned connection per shop.
+The coordinator uses short independent statements rather than a session
+advisory lock. It does not assume Prisma pool session affinity or a
+session-pooling proxy, and it consumes a connection only while each statement
+runs.
 
-The owner holds the lease across the complete C39 critical section:
+The lease spans the full per-shop refresh:
 
 ```text
 claim lease
 → capture evaluation window
-→ read all C39 cursor pages
-→ write same-key C33 reminder intents
-→ resolveMissing after successful full scan
+→ read all due-workset pages
+→ write same-key reminder intents
+→ resolve stale reminders after a successful full scan
 → emit completion log
 → fenced release
 ```
 
-Cron acquisition is non-blocking. A busy shop emits `reminders.refresh.skipped_busy` and no candidate-page, upsert or stale-resolution query is run by that worker. An infrastructure error while claiming is a refresh failure, not a busy skip.
-
-The coordinator keeps a process-local held-key guard as well as the database claim, preventing same-process overlapping callbacks from entering the same shop. Different shop keys may run concurrently on different workers.
+Cron acquisition is non-blocking. A busy shop emits
+`reminders.refresh.skipped_busy` and does not read candidate pages, upsert
+reminders or resolve stale rows. An infrastructure error while claiming is a
+refresh failure, not a busy skip. A process-local held-key guard also prevents
+overlapping callbacks in the same process; different shops may refresh in
+parallel.
 
 ## Lease loss and recovery
 
-Heartbeat renewal means a normal refresh may exceed the two-minute lease duration. If renewal is rejected or fails, `assertActive()` stops the owner before its next C39 page, upsert or final resolution boundary; the failure is logged through the existing per-shop refresh failure path. A process crash stops renewals, so another worker can take over after expiry. Restart/takeover can reprocess pages from the beginning; C33 same-key upserts preserve terminal lifecycle state and this is not an exactly-once guarantee.
+If renewal is rejected or fails, `assertActive()` stops the owner before its
+next page, write or final resolution boundary. A process crash stops renewals,
+allowing another worker to take over after expiry. A takeover can rescan from
+the beginning; same-key upserts preserve terminal lifecycle state, but this is
+not an exactly-once guarantee.
 
-There remains a bounded failure window if a worker loses database connectivity immediately after a boundary while an already-issued query is in flight. The next ownership check aborts subsequent writes/final resolution. G04 should monitor DB disconnects and refresh durations; no deployment claim should describe this as an exactly-once scheduler.
+There is a bounded failure window if connectivity is lost just after a
+ownership check while a query is already in flight. The next ownership check
+stops later writes or resolution. Monitor database disconnects and refresh
+duration; do not describe this as exactly-once processing.
 
-## Manual refresh
-
-`POST /admin/reminders/refresh` uses the same per-shop lease. If another refresh owns the shop, it returns HTTP 409 rather than incorrectly reporting `{ refreshed: true }`. Dismissing a reminder is intentionally not serialized behind a long scheduler lease; C33's atomic same-key upsert continues to preserve a concurrent dismissal.
+`POST /admin/reminders/refresh` uses the same lease. If another worker owns the
+shop, it returns HTTP 409. Dismissing a reminder is not serialized behind a
+long scheduler lease; atomic same-key upsert behavior preserves a concurrent
+dismissal.
 
 ## Instrumentation
 
-Successful refresh logs retain the C39 workset fields and add:
+Successful refresh logs include the workset fields and:
 
 ```text
 coordinationMode=database_lease
 ownerAcquired=true
 ```
 
-Busy cron attempts log `reminders.refresh.skipped_busy` with `shopId` and coordination mode. Lease-release infrastructure failures log a safe job key and error class/message through Nest's error logger. No customer, order content, owner token, SQL or connection string is logged.
+Busy cron attempts log `reminders.refresh.skipped_busy` with `shopId` and the
+coordination mode. Lease-release failures log a safe job key and error class or
+message. Customer data, order content, owner tokens, SQL and connection strings
+are not logged.
 
-## Migration and verification
+## Database and verification
 
-Migration `202609230002_reminder_refresh_leases` creates `scheduler_job_leases`. A disposable PostgreSQL 17 verification database successfully applied all 21 migrations with `prisma migrate deploy`, including this migration. G01 remains a deployment requirement: rehearse the same command on a representative staging database before production deployment, then monitor migration completion and the first scheduler cycles.
+`scheduler_job_leases` is part of the fresh-database baseline. Apply it only as
+part of that baseline on a new, empty database. See [Database](DATABASE.md) and
+[Testing](TESTING.md); never apply the baseline to a database with existing
+data or migration history.
 
-Real PostgreSQL tests in `test/integration/reminder-refresh-coordination.integration.spec.ts` cover independent workers on the same shop, different shops, same-process reentrancy, expired-owner fencing, callback-error release, and a second cron worker blocked from a real 101-order/two-page C39 scan. These passed after that disposable migration run.
-
-The empty, unapplied `202609230001_audit_log_timeline_index` directory was intentionally removed. It contained no `migration.sql` and was not part of the migration history, so it must not be restored. To repeat the disposable verification:
+`test/integration/reminder-refresh-coordination.integration.spec.ts` covers
+independent workers on the same shop, different shops, same-process
+reentrancy, expired-owner fencing, callback-error release, and a second cron
+worker blocked from a two-page refresh. Run it only with a dedicated test
+database:
 
 ```powershell
 $env:TEST_DATABASE_URL = 'postgresql://.../kitty_test?schema=public'
@@ -75,12 +104,19 @@ npm run test:db:migrate
 npm run test:integration -- --runTestsByPath test/integration/reminder-refresh-coordination.integration.spec.ts
 ```
 
-## G04 runbook before scale
+## Operations before scale
 
-1. Confirm the deployed image contains migration `202609230002_reminder_refresh_leases` and the migration job completed.
-2. Record API replica count and verify two replicas can boot without two owners for the same shop.
-3. Record whether the database path is direct, session pooled or transaction pooled. The lease does not require session affinity, but database connectivity and ordinary atomic statements must be supported.
-4. Alert on repeated `reminders.refresh.skipped_busy`, `reminders.refresh.failed`, lease release failures, and refresh duration approaching the ten-minute cadence.
-5. During an intentional API restart, verify the old lease expires and a later cron run resumes; do not manually delete production lease rows as a normal recovery procedure.
+1. Confirm the fresh-database baseline migration completed successfully.
+2. Record API replica count and verify two replicas cannot own the same shop
+   refresh concurrently.
+3. Record whether database access is direct or pooled. The lease does not
+   require session affinity, but atomic statements must be supported.
+4. Alert on repeated busy skips, failed refreshes, lease-release failures and
+   refresh duration approaching the ten-minute cadence.
+5. During an intentional API restart, verify the old lease expires and a later
+   cron run resumes. Do not manually delete production lease rows as routine
+   recovery.
 
-C40 coordinates active refresh workers only. It does not provide leader election, exactly-once notification delivery, or a replacement for C33/C39 idempotency.
+The lease coordinates active refresh workers only. It does not provide leader
+election, exactly-once notification delivery, or a replacement for idempotent
+reminder upserts.

@@ -7,10 +7,6 @@ export class PaginationMetaResDto {
   @ApiProperty() totalPages!: number;
 }
 
-export class DeleteResDto {
-  @ApiProperty({ example: true }) deleted!: boolean;
-}
-
 export class ErrorResDto {
   @ApiProperty({ example: 400 }) statusCode!: number;
   @ApiProperty({ example: 'HTTP_400' }) code!: string;

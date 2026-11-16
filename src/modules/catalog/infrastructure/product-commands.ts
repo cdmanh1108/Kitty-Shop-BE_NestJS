@@ -2,10 +2,7 @@ import type { PrismaService } from '@database/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { activeOccupyingAllocationWhere } from './catalog-rental-allocation.query';
-import type {
-  CreateProductData,
-  UpdateProductData,
-} from '../domain/catalog-product.inputs';
+import type { CreateProductData, UpdateProductData } from '../domain/catalog-product.inputs';
 import type { CatalogProductRepository } from '../domain/catalog-product.repository';
 import {
   CATALOG_ERROR_CODE,
@@ -74,17 +71,6 @@ export async function createProduct(
           );
         }
         seenCombinations.add(key);
-
-        const seenDurations = new Set<number>();
-        for (const rate of variant.rentalRates) {
-          if (seenDurations.has(rate.durationDays)) {
-            throw new CatalogInvariantError(
-              CATALOG_ERROR_CODE.RENTAL_RATE_DURATION_DUPLICATE,
-              'Mức giá thuê cho số ngày này đã tồn tại trong biến thể.',
-            );
-          }
-          seenDurations.add(rate.durationDays);
-        }
       }
       if (input.media.filter((m) => m.isPrimary).length > 1) {
         throw new CatalogInvariantError(
@@ -129,7 +115,7 @@ export async function createProduct(
       const created = await tx.product.findUniqueOrThrow({
         where: { id: product.id },
         include: {
-          variants: { include: { inventoryItems: true, rentalRates: true } },
+          variants: { include: { inventoryItems: true } },
           media: true,
         },
       });
@@ -167,51 +153,13 @@ export async function addVariant(
       const variant = await createVariantWithInventory(tx, shopId, productId, input);
       return tx.productVariant.findUnique({
         where: { id: variant.id },
-        include: { rentalRates: true, inventoryItems: true, size: true, color: true },
+        include: { inventoryItems: true, size: true, color: true },
       });
     });
   } catch (error) {
     handleProductUniqueViolation(error);
   }
 }
-export async function upsertRentalRate(
-  prisma: PrismaService,
-  shopId: string,
-  variantId: string,
-  input: { durationDays: number; price: number },
-): ReturnType<CatalogProductRepository['upsertRentalRate']> {
-  return prisma.$transaction(async (tx) => {
-    const variant = await tx.productVariant.findFirst({
-      where: {
-        id: variantId,
-        shopId,
-        product: { shopId, archivedAt: null, status: { not: 'ARCHIVED' } },
-      },
-      select: { productId: true, archivedAt: true },
-    });
-    if (!variant) return null;
-    if (variant.archivedAt) {
-      throw new CatalogInvariantError(
-        CATALOG_ERROR_CODE.PRODUCT_VARIANT_ARCHIVED,
-        'Không thể thiết lập giá thuê cho biến thể đã lưu trữ.',
-      );
-    }
-    // Partial uniqueness is SQL-owned: ON CONFLICT atomically inserts or updates
-    // the single active price without touching inactive historical rows.
-    const [saved] = await tx.$queryRaw<{ id: string }[]>`
-      INSERT INTO rental_rates (shop_id, product_id, variant_id, duration_days, price, updated_at)
-      VALUES (${shopId}::uuid, ${variant.productId}::uuid, ${variantId}::uuid,
-              ${input.durationDays}, ${input.price}, NOW())
-      ON CONFLICT (shop_id, product_id, variant_id, duration_days)
-        WHERE is_active = true AND variant_id IS NOT NULL
-      DO UPDATE SET price = EXCLUDED.price, updated_at = NOW()
-      RETURNING id
-    `;
-    if (!saved) throw new Error('Không thể lưu mức giá thuê.');
-    return tx.rentalRate.findUniqueOrThrow({ where: { id: saved.id } });
-  });
-}
-
 export async function updateProduct(
   prisma: PrismaService,
   shopId: string,
@@ -363,15 +311,6 @@ async function createVariantWithInventory(
       colorId: input.colorId,
       depositAmountOverride: input.depositAmountOverride,
     },
-  });
-  await tx.rentalRate.createMany({
-    data: input.rentalRates.map((rate) => ({
-      shopId,
-      productId,
-      variantId: variant.id,
-      durationDays: rate.durationDays,
-      price: rate.price,
-    })),
   });
   const prefix = input.skuPrefix ?? input.variantCode;
   for (let index = 1; index <= input.inventoryCount; index += 1) {

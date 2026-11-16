@@ -20,7 +20,6 @@ interface ProductItemResponse {
   name: string;
   size: string;
   color: string;
-  rentalPrices: Array<{ days: number; amount: number }>;
 }
 
 interface ProductListResponse {
@@ -477,19 +476,9 @@ describe('Storefront Product Visibility Boundary Integration', () => {
         status: 'ACTIVE',
       },
     });
-    await prisma.rentalRate.create({
-      data: {
-        shopId: shop.id,
-        productId: product.id,
-        variantId: varActive.id,
-        durationDays: 1,
-        price: new Prisma.Decimal(100000),
-        isActive: true,
-      },
-    });
 
     // 2. Inactive variant (status = INACTIVE, should be excluded)
-    const varInactive = await prisma.productVariant.create({
+    await prisma.productVariant.create({
       data: {
         shopId: shop.id,
         productId: product.id,
@@ -499,19 +488,9 @@ describe('Storefront Product Visibility Boundary Integration', () => {
         status: 'INACTIVE',
       },
     });
-    await prisma.rentalRate.create({
-      data: {
-        shopId: shop.id,
-        productId: product.id,
-        variantId: varInactive.id,
-        durationDays: 1,
-        price: new Prisma.Decimal(99000),
-        isActive: true,
-      },
-    });
 
     // 3. Archived variant (archivedAt != null, should be excluded)
-    const varArchived = await prisma.productVariant.create({
+    await prisma.productVariant.create({
       data: {
         shopId: shop.id,
         productId: product.id,
@@ -520,16 +499,6 @@ describe('Storefront Product Visibility Boundary Integration', () => {
         colorId: colorGreen.id,
         status: 'ACTIVE',
         archivedAt: new Date(),
-      },
-    });
-    await prisma.rentalRate.create({
-      data: {
-        shopId: shop.id,
-        productId: product.id,
-        variantId: varArchived.id,
-        durationDays: 1,
-        price: new Prisma.Decimal(88000),
-        isActive: true,
       },
     });
 
@@ -544,7 +513,6 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     expect(item.size).toBe('M');
     expect(item.color).toBe('Đỏ');
     // Rental price must only reflect the active variant (100000, not 99000 or 88000)
-    expect(item.rentalPrices).toEqual([{ days: 1, amount: 100000 }]);
 
     // Filtering by inactive variant's size/color must NOT match this product
     const filterInactiveSize = await request(server)
@@ -564,6 +532,5 @@ describe('Storefront Product Visibility Boundary Integration', () => {
     expect(detailBody.variants[0]?.code).toBe(`${product.code}-V_ACT`);
     expect(detailBody.size).toBe('M');
     expect(detailBody.color).toBe('Đỏ');
-    expect(detailBody.rentalPrices).toEqual([{ days: 1, amount: 100000 }]);
   });
 });

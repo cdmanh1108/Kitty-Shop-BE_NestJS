@@ -14,7 +14,6 @@ import {
   IsString,
   IsUrl,
   IsUUID,
-  Max,
   MaxLength,
   Min,
   ValidateIf,
@@ -22,20 +21,6 @@ import {
 } from 'class-validator';
 import { ColorSummaryResDto } from './color.dto';
 import { SizeSummaryResDto } from './size.dto';
-
-export class RentalRateReqDto {
-  @ApiProperty({ example: 1 })
-  @Type(() => Number)
-  @IsInt({ message: 'Số ngày thuê phải là số nguyên.' })
-  @Min(1, { message: 'Số ngày thuê phải lớn hơn hoặc bằng $constraint1.' })
-  @Max(365, { message: 'Số ngày thuê phải nhỏ hơn hoặc bằng $constraint1.' })
-  durationDays!: number;
-  @ApiProperty({ example: 300000 })
-  @Type(() => Number)
-  @IsNumber(undefined, { message: 'Giá thuê phải là số hợp lệ.' })
-  @Min(0, { message: 'Giá thuê phải lớn hơn hoặc bằng $constraint1.' })
-  price!: number;
-}
 
 export class ProductVariantReqDto {
   @ApiProperty({ example: 'AURORA-S-RED' })
@@ -65,12 +50,6 @@ export class ProductVariantReqDto {
   @IsString({ message: 'Tiền tố SKU phải là chuỗi ký tự.' })
   @IsOptional()
   skuPrefix?: string;
-  @ApiProperty({ type: [RentalRateReqDto] })
-  @IsArray({ message: 'Danh sách giá thuê phải là danh sách.' })
-  @ArrayMinSize(1, { message: 'Danh sách giá thuê phải có ít nhất $constraint1 phần tử.' })
-  @ValidateNested({ each: true, message: 'Danh sách giá thuê có dữ liệu không hợp lệ.' })
-  @Type(() => RentalRateReqDto)
-  rentalRates!: RentalRateReqDto[];
 }
 
 export class ProductMediaReqDto {
@@ -284,15 +263,6 @@ export class SetProductVariantArchivedReqDto {
   archived!: boolean;
 }
 
-export class UpsertRentalRateReqDto extends RentalRateReqDto {}
-export class RentalRateResDto {
-  @ApiProperty() id!: string;
-  @ApiProperty() durationDays!: number;
-  @ApiProperty({ type: String, example: '50000.00' }) price!: string;
-  @ApiProperty() currency!: string;
-  @ApiProperty() isActive!: boolean;
-}
-
 export class ProductMediaResDto {
   @ApiProperty() id!: string;
   @ApiProperty() url!: string;
@@ -323,7 +293,6 @@ export class ProductVariantResDto {
   @ApiPropertyOptional({ nullable: true, type: String }) depositAmountOverride!: string | null;
   @ApiProperty() status!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) archivedAt!: string | null;
-  @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
   @ApiPropertyOptional({ type: VariantInventoryCountDto }) _count?: VariantInventoryCountDto;
   @ApiPropertyOptional({ type: [ProductVariantInventoryResDto] })
   inventoryItems?: ProductVariantInventoryResDto[];
@@ -360,7 +329,6 @@ export class ProductResDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiProperty({ type: [ProductVariantResDto] }) variants!: ProductVariantResDto[];
   @ApiProperty({ type: [ProductMediaResDto] }) media!: ProductMediaResDto[];
-  @ApiPropertyOptional({ type: [RentalRateResDto] }) rentalRates?: RentalRateResDto[];
   @ApiPropertyOptional() createdAt?: string;
   @ApiPropertyOptional() updatedAt?: string;
 }
@@ -378,8 +346,6 @@ export class ProductListItemResDto {
   @ApiProperty() variantCount!: number;
   @ApiProperty({ type: [String] }) sizes!: string[];
   @ApiProperty({ type: [String] }) colors!: string[];
-  @ApiProperty({ type: String, nullable: true }) minPrice!: string | null;
-  @ApiProperty({ type: String, nullable: true }) maxPrice!: string | null;
 }
 
 export class ProductPageResDto {

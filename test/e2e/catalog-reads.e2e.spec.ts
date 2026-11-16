@@ -32,7 +32,11 @@ describe('Catalog read HTTP contracts', () => {
   it('routes static reads before detail IDs, validates bounds and enforces read permissions', async () => {
     const fixture = await rentalScenario(prisma);
     const token = generateTestAccessToken(fixture.principal);
-    for (const path of ['/products/lookup', '/inventory/summary', '/inventory/history']) {
+    for (const path of [
+      '/admin/products/lookup',
+      '/admin/inventory/summary',
+      '/admin/inventory/history',
+    ]) {
       await request(server)
         .get('/api/v1' + path)
         .set('Authorization', 'Bearer ' + token)
@@ -42,12 +46,12 @@ describe('Catalog read HTTP contracts', () => {
         .expect(401);
     }
     for (const path of [
-      '/products/lookup?limit=51',
-      '/products/lookup?page=0',
-      '/inventory/history?limit=101',
-      '/inventory/history?productId=bad',
-      '/products?limit=101',
-      '/inventory?limit=101',
+      '/admin/products/lookup?limit=51',
+      '/admin/products/lookup?page=0',
+      '/admin/inventory/history?limit=101',
+      '/admin/inventory/history?productId=bad',
+      '/admin/products?limit=101',
+      '/admin/inventory?limit=101',
     ]) {
       await request(server)
         .get('/api/v1' + path)
@@ -61,15 +65,15 @@ describe('Catalog read HTTP contracts', () => {
       memberId: restricted.member.id,
     });
     await request(server)
-      .get('/api/v1/inventory/summary')
+      .get('/api/v1/admin/inventory/summary')
       .set('Authorization', 'Bearer ' + denied)
       .expect(403);
     await request(server)
-      .get('/api/v1/products/lookup')
+      .get('/api/v1/admin/products/lookup')
       .set('Authorization', 'Bearer ' + denied)
       .expect(403);
     await request(server)
-      .get('/api/v1/inventory/history?shopId=' + fixture.shop.id)
+      .get('/api/v1/admin/inventory/history?shopId=' + fixture.shop.id)
       .set('Authorization', 'Bearer ' + token)
       .expect(400);
   });

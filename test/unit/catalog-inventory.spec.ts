@@ -228,7 +228,6 @@ describe('InventoryService', () => {
             updatedAt: new Date(),
             archivedAt: null,
           },
-          rentalRates: [],
         },
         location: null,
         occupancyStatus: 'FREE' as const,

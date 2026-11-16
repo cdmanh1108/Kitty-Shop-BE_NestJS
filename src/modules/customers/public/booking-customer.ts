@@ -3,10 +3,7 @@ import type {
   BookingCustomerResolutionInput,
 } from '../domain/customer.repository';
 
-export {
-  InvalidCustomerPhoneError,
-  normalizeCustomerPhone,
-} from '../domain/customer-phone';
+export { InvalidCustomerPhoneError, normalizeCustomerPhone } from '../domain/customer-phone';
 export type {
   BookingCustomerResolution,
   BookingCustomerResolutionInput,

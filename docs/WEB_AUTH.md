@@ -23,16 +23,15 @@ There are no Admin profile mutations or CRM/account merges in this directory.
 phone; `/me`, login and refresh return these optional nullable fields. The phone is
 contact information, not a login, verification or ownership key, and multiple accounts
 may use the same contact phone. The endpoint accepts only `fullName` and `phone`,
-normalizes Vietnamese numbers to ten digits and audits the account actor. It does not
-change email, legacy identity columns, CRM contacts or past orders.
-
-Migration `202610070003_web_account_contact_profile` adds the nullable contact defaults
-without backfill. Apply it and regenerate Prisma Client before deploying these reads.
+normalizes Vietnamese numbers to ten digits and audits the account actor. It does
+not change email, CRM contacts, or past orders. The release baseline creates
+these nullable contact defaults for a new database.
 New storefront booking requires a signed-in verified email account; its email is read
 and captured inside the booking transaction rather than accepted from the frontend.
 Contact details can differ for each order; saving an order contact as default is an
-explicit independent profile PATCH. New payment preferences are bank transfer or cash;
-historical MoMo preferences remain readable.
+explicit independent profile PATCH. Checkout payment preferences are cash or bank
+transfer. They are not recorded payments; actual receipts remain in the rental
+payment ledger.
 
 The storefront account lifecycle is `register by email -> verify email -> sign in`. Registration
 does not create a session. Email identity is trimmed and lowercased before lookup or persistence;
@@ -63,12 +62,10 @@ can issue one replacement after that deadline. Normal successful deliveries keep
 resend cooldown. `VerificationCodeGenerator` uses the configured test code only in bypass mode and
 cryptographic randomness otherwise. Production startup rejects the bypass setting.
 
-The email migration retains existing account IDs and their order, cart, favorite, audit, and
-refresh-token relations. Existing phone-only accounts have no safe email source, so their legacy
-phone columns remain nullable/unique and are not used by new Web Auth flows. Pending old phone
-challenges are invalidated. A legacy account can continue an already-issued session, but cannot
-sign in again until a future account email recovery/claim flow is implemented; its associated
-orders remain tied to the retained account ID.
+Email is the required unique storefront account identity. The current database
+schema has no phone-based login identity or phone verification column.
+`contact_phone` is optional profile data and is not used to resolve account
+ownership.
 
 Web access uses a short-lived HS256 JWT with `iss=kitty-api`, `aud=kitty-web` and `surface=web`.
 Its signing key differs from Admin Auth. A 384-bit opaque refresh token is rotated atomically; only

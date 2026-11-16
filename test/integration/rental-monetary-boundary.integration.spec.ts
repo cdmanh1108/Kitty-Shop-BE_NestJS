@@ -29,7 +29,15 @@ describe('Rental monetary mutation boundary', () => {
     const f = await rentalScenario(prisma);
     const order = await rentals.createOrder({
       ...f.data,
-      lines: f.data.lines.map((line) => ({ ...line, depositAmount: 300000 })),
+      lines: f.data.lines.map((line) => {
+        if (line.pricingSnapshot.version !== 'CYCLE_V1')
+          throw new Error('Expected a paid rental line');
+        return {
+          ...line,
+          depositAmount: 300000,
+          pricingSnapshot: { ...line.pricingSnapshot, depositPerItem: 300000 },
+        };
+      }),
     });
     if (!order) throw new Error('Expected rental order');
     const finance = new PrismaFinanceRepository(prisma);

@@ -9,6 +9,7 @@ import {
 } from '../helpers/test-database';
 import { rentalScenario } from '../fixtures/rental.fixture';
 import { uniqueCode } from '../fixtures/test-factories';
+import { cyclePricingSnapshot } from '../fixtures/rental-pricing.fixture';
 
 describe('Dashboard PostgreSQL read model', () => {
   let prisma: PrismaService;
@@ -175,6 +176,11 @@ describe('Dashboard PostgreSQL read model', () => {
         variantNameSnapshot: 'Variant',
         unitRentalPrice: 0,
         lineTotal: 0,
+        pricingSnapshot: cyclePricingSnapshot({
+          durationDays: 3,
+          unitRentalPrice: 0,
+          depositPerItem: 0,
+        }) as unknown as Prisma.InputJsonValue,
       },
     });
     const reads = jest.spyOn(prisma, '$queryRaw');

@@ -16,7 +16,6 @@ export interface CreateProductData {
     depositAmountOverride?: number;
     inventoryCount: number;
     skuPrefix?: string;
-    rentalRates: Array<{ durationDays: number; price: number }>;
   }>;
   media: Array<{ url: string; altText?: string; isPrimary: boolean; sortOrder: number }>;
 }

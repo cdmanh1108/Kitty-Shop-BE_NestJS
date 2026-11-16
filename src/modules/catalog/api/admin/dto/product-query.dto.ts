@@ -45,18 +45,11 @@ export class ProductLookupQueryDto extends ProductListQueryDto {
   override limit = 20;
 }
 
-export class ProductLookupRateResDto {
-  @ApiProperty() durationDays!: number;
-  @ApiProperty() price!: number;
-}
-
 export class ProductLookupVariantResDto {
   @ApiProperty() id!: string;
   @ApiProperty() variantCode!: string;
   @ApiProperty({ type: String, nullable: true }) sizeName!: string | null;
   @ApiProperty({ type: String, nullable: true }) colorName!: string | null;
-  @ApiPropertyOptional({ type: [ProductLookupRateResDto] })
-  rentalRates?: ProductLookupRateResDto[];
 }
 
 export class ProductLookupItemResDto {
@@ -65,8 +58,6 @@ export class ProductLookupItemResDto {
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
   @ApiProperty() status!: string;
-  @ApiPropertyOptional({ type: [ProductLookupRateResDto] })
-  rentalRates?: ProductLookupRateResDto[];
   @ApiProperty({ type: [ProductLookupVariantResDto] }) variants!: ProductLookupVariantResDto[];
 }
 

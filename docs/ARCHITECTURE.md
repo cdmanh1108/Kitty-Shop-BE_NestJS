@@ -103,7 +103,7 @@ The current application and deployment model manages exactly one active Shop. Bu
 - `auth`: login, access JWT, refresh token rotation/revocation.
 - `members`: admin users and shop roles.
 - `customers`: customer CRUD/search and internal notes.
-- `catalog`: categories/sizes/colors, products, variants, physical inventory, rental rates and availability.
+- `catalog`: categories/sizes/colors, products, variants, physical inventory and availability.
 - `rentals`: order lifecycle, pricing snapshots, allocations, charges, calendar querying and idempotency.
 - `finance`: money movements and expenses; recomputes order payment/deposit state.
 - `deliveries`: outbound and return delivery jobs.
@@ -260,14 +260,12 @@ booking versus product archive races even when candidates were selected earlier.
 The repository also guards internal updateProduct calls requesting ARCHIVED;
 transport DTOs retain their existing allowed statuses.
 
-Active rental-rate writes use a parameterized INSERT ON CONFLICT within the owning
-Prisma transaction, targeting the SQL partial unique index. Both concurrent
-upserts can succeed and return the same active row, with the last update winning.
-Prisma still loads the returned record to preserve Decimal/date mapping. Variant
-creation and primary-media replacement use Serializable transactions; unique
-indexes remain the final protection for direct writes. Unique conflicts use the
-existing sanitized 409 mapping. Competing inserts can fail the aggregate
-transaction under these indexes rather than create duplicates.
+Rental prices are resolved from the shared cycle policy at quote and booking
+time, then stored with the order item as a complete immutable pricing snapshot.
+Product and variant writes do not create rental-rate rows. Variant creation and
+primary-media replacement use Serializable transactions; unique indexes remain
+the final protection for direct writes. Unique conflicts use the existing
+sanitized 409 mapping.
 
 ## Storage and import boundaries
 

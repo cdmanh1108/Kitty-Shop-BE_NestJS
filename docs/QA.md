@@ -20,7 +20,11 @@ npm run test:integration
 npm run test:e2e
 ```
 
-The existing GitHub Actions workflow is manual-only (workflow_dispatch). It runs install, Prisma generation, migration/seed and quality; it does not currently execute integration/E2E. Those gates must be run explicitly before merging relevant changes. No CI behavior was changed by this stabilization.
+`.github/workflows/ci.yml` is retained. Direct `push` runs are commented out;
+pull requests targeting `main` or `master` and manual `workflow_dispatch` still
+run the workflow. It provisions an isolated PostgreSQL service, applies the
+initial-release baseline, seeds, runs quality, and executes integration tests.
+It does not run E2E or coverage.
 
 ## Test database & test suites
 

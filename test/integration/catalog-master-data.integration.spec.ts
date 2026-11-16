@@ -124,7 +124,6 @@ describe('Catalog Color and Size persistence invariants', () => {
     ]);
     const variantInput = {
       variantCode: uniqueCode('VAR'),
-      rentalRates: [{ durationDays: 1, price: 1000 }],
       inventoryCount: 0,
     };
 
@@ -149,26 +148,6 @@ describe('Catalog Color and Size persistence invariants', () => {
         colorId: inactiveColor.id,
       }),
     ).rejects.toMatchObject({ code: CATALOG_ERROR_CODE.COLOR_INACTIVE });
-  });
-
-  it('keeps unrelated rate updates available for a variant with inactive historical references', async () => {
-    const f = await rentalScenario(prisma);
-    const size = await prisma.size.create({
-      data: { shopId: f.shop.id, code: 'HIST_SIZE', name: 'Historical size' },
-    });
-    const color = await prisma.color.create({
-      data: { shopId: f.shop.id, code: 'HIST_COLOR', name: 'Historical color' },
-    });
-    await prisma.productVariant.update({
-      where: { id: f.variant.id },
-      data: { sizeId: size.id, colorId: color.id },
-    });
-    await prisma.size.update({ where: { id: size.id }, data: { isActive: false } });
-    await prisma.color.update({ where: { id: color.id }, data: { isActive: false } });
-
-    await expect(
-      catalog.upsertRentalRate(f.shop.id, f.variant.id, { durationDays: 7, price: 7000 }),
-    ).resolves.toMatchObject({ durationDays: 7 });
   });
 
   it('blocks Color and Size deletes for active and archived variants and preserves DB references', async () => {

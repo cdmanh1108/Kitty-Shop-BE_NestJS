@@ -1,6 +1,6 @@
 # API guide
 
-Base prefix: `/api/v1`. Swagger UI is served at `/docs` and `npm run openapi:export` writes `generated/openapi.json` for the frontend.
+Base prefix: `/api/v1`. Swagger UI is served at `/docs` and `npm run openapi:export` writes separate `generated/openapi-admin.json` and `generated/openapi-web.json` contracts.
 
 ## Authentication
 
@@ -43,11 +43,11 @@ Use `GET /inventory/availability/search?variantId=<uuid>&from=<ISO>&until=<ISO>`
 
 `POST /rental-orders` accepts product variant quantities and optional physical `inventoryItemIds`. When omitted, the backend chooses available physical items.
 
-Send an `Idempotency-Key` header for retries. The backend creates the order, historical price snapshot, physical allocations, charges, optional delivery, status history and outbox event atomically.
+Send an `Idempotency-Key` header for retries. The backend creates the order, immutable price snapshot, physical allocations, charges, optional delivery, status history and outbox event atomically.
 
 ## FE code generation
 
-The committed artifacts are `generated/openapi-web.json`, `generated/openapi-admin.json`, and the Admin compatibility copy `generated/openapi.json`. In this workspace:
+The committed artifacts are `generated/openapi-web.json` and `generated/openapi-admin.json`. In this workspace:
 
 ```bash
 # kitty-be
@@ -59,7 +59,7 @@ npm run api:sync
 npm run api:check
 ```
 
-Do not hand-edit BE generated/openapi.json, FE openapi/kitty-api.json or FE src/api/generated/schema.ts. The FE uses openapi-typescript and openapi-fetch. api:check validates snapshot-to-TypeScript consistency; compare parsed BE/FE JSON or sync to verify cross-repository equality. Swagger HTTP exposure is controlled by SWAGGER_ENABLED and defaults off in production.
+Do not hand-edit BE generated/openapi-admin.json or generated/openapi-web.json, FE openapi/admin-api.json and contracts/openapi-web.json or FE src/api/generated/schema.ts. The FE uses openapi-typescript and openapi-fetch. api:check validates snapshot-to-TypeScript consistency; compare parsed BE/FE JSON or sync to verify cross-repository equality. Swagger HTTP exposure is controlled by SWAGGER_ENABLED and defaults off in production.
 
 When a backend DTO/controller changes, run `npm run openapi:check`. If it reports a stale contract, run `npm run openapi:export`, review and commit the generated artifacts, then run the check again. `openapi:check` generates current documents in memory and compares their canonical content with the committed files; it never updates them.
 

@@ -10,17 +10,6 @@ import {
 } from '../helpers/test-database';
 import { createTestApp } from '../helpers/test-app';
 
-function orderCodeFrom(body: unknown): string {
-  if (
-    !body ||
-    typeof body !== 'object' ||
-    !('orderCode' in body) ||
-    typeof body.orderCode !== 'string'
-  )
-    throw new Error('Expected a Web create-order response with an orderCode');
-  return body.orderCode;
-}
-
 describe('Web rental response statuses', () => {
   let app: INestApplication;
   let server: Server;
@@ -41,63 +30,28 @@ describe('Web rental response statuses', () => {
     await disconnectTestDatabase();
   });
 
-  it('uses documented statuses for query-like Web POSTs while create remains 201', async () => {
+  it('uses the documented success status for quote POSTs', async () => {
     const fixture = await rentalScenario(prisma);
     const quoteRequest = {
-      pickupDate: '2026-10-10',
-      returnDate: '2026-10-12',
+      pickupDate: '2026-10-10T10:00:00+07:00',
+      returnDate: '2026-10-12T10:00:00+07:00',
       items: [{ productId: fixture.product.id, variantId: fixture.variant.id, quantity: 1 }],
       deliveryMethod: 'self_pickup',
     };
 
     await request(server).post('/api/v1/web/rental/quote').send(quoteRequest).expect(200);
-
-    const create = await request(server)
-      .post('/api/v1/web/rental-orders')
-      .set('Idempotency-Key', 'web-status-matrix-create')
-      .send({
-        customer: { name: 'Status guest', phone: fixture.customer.phone },
-        pickupDate: quoteRequest.pickupDate,
-        returnDate: quoteRequest.returnDate,
-        items: quoteRequest.items,
-        delivery: { method: 'self_pickup' },
-        paymentMethod: 'cash',
-      })
-      .expect(201);
-    const orderCode = orderCodeFrom(JSON.parse(create.text) as unknown);
-
-    await request(server)
-      .post('/api/v1/web/rental-orders/lookup')
-      .send({ orderCode, phone: fixture.customer.phone })
-      .expect(200);
   });
 
-  it('keeps validation and private lookup errors out of the 200 success path', async () => {
+  it('rejects invalid date-time values before quote calculation', async () => {
     const fixture = await rentalScenario(prisma);
-    const order = await prisma.rentalOrder.create({
-      data: {
-        shopId: fixture.shop.id,
-        customerId: fixture.customer.id,
-        orderNumber: 'WEB_STATUS_PRIVATE',
-        source: 'ONLINE',
-        rentalStartAt: new Date('2026-10-10T00:00:00.000Z'),
-        rentalEndAt: new Date('2026-10-12T00:00:00.000Z'),
-        grandTotal: 100000,
-      },
-    });
 
     await request(server)
       .post('/api/v1/web/rental/quote')
       .send({
-        pickupDate: '2026-02-30',
-        returnDate: '2026-03-02',
+        pickupDate: '2026-02-30T10:00:00+07:00',
+        returnDate: '2026-03-02T10:00:00+07:00',
         items: [{ variantId: fixture.variant.id, quantity: 1 }],
       })
       .expect(400);
-
-    await request(server)
-      .post('/api/v1/web/rental-orders/lookup')
-      .send({ orderCode: order.orderNumber, phone: '0999999999' })
-      .expect(404);
   });
 });

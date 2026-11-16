@@ -68,7 +68,6 @@ describe('ProductService', () => {
       updateProductVariant: updateProductVariantMock,
       setProductVariantArchived: setProductVariantArchivedMock,
       deleteProductVariant: deleteProductVariantMock,
-      upsertRentalRate: jest.fn(),
       updateProduct: updateProductMock,
       archiveProduct: archiveProductMock,
       addProductMedia: jest.fn(),
@@ -142,14 +141,12 @@ describe('ProductService', () => {
             sizeId: 'size-m',
             colorId: 'color-white',
             inventoryCount: 2,
-            rentalRates: [{ durationDays: 1, price: 50000 }],
           },
           {
             variantCode: 'DRESS-01-M-PINK',
             sizeId: 'size-m',
             colorId: 'color-pink',
             inventoryCount: 1,
-            rentalRates: [{ durationDays: 1, price: 50000 }],
           },
         ],
         media: [{ url: 'https://example.com/img.jpg', isPrimary: true, sortOrder: 0 }],
@@ -184,14 +181,12 @@ describe('ProductService', () => {
               sizeId: 'size-m',
               colorId: 'color-white',
               inventoryCount: 1,
-              rentalRates: [{ durationDays: 1, price: 50000 }],
             },
             {
               variantCode: 'DRESS-02-M-WHITE-2',
               sizeId: 'size-m',
               colorId: 'color-white',
               inventoryCount: 1,
-              rentalRates: [{ durationDays: 1, price: 50000 }],
             },
           ],
           media: [],
@@ -212,13 +207,11 @@ describe('ProductService', () => {
               variantCode: 'DUP-CODE',
               sizeId: 'size-s',
               inventoryCount: 1,
-              rentalRates: [{ durationDays: 1, price: 50000 }],
             },
             {
               variantCode: 'DUP-CODE',
               sizeId: 'size-m',
               inventoryCount: 1,
-              rentalRates: [{ durationDays: 1, price: 50000 }],
             },
           ],
           media: [],
@@ -238,7 +231,6 @@ describe('ProductService', () => {
             {
               variantCode: 'DRESS-04-S',
               inventoryCount: 1,
-              rentalRates: [{ durationDays: 1, price: 50000 }],
             },
           ],
           media: [
@@ -264,7 +256,6 @@ describe('ProductService', () => {
             {
               variantCode: 'PROD-COLLIDE-S',
               inventoryCount: 1,
-              rentalRates: [{ durationDays: 1, price: 50000 }],
             },
           ],
           media: [],
@@ -435,7 +426,6 @@ describe('ProductService', () => {
       size: null,
       color: null,
       _count: { inventoryItems: 0 },
-      rentalRates: [],
     });
 
     it('keeps omitted fields unchanged and allows explicit nulls in a partial update', async () => {

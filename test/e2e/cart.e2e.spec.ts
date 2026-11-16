@@ -12,8 +12,8 @@ import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { createTestShop } from '../fixtures/test-factories';
 
 const draft = {
-  pickupDate: '2026-10-01',
-  returnDate: '2026-10-03',
+  pickupDate: '2026-10-01T08:30:00+07:00',
+  returnDate: '2026-10-03T08:30:00+07:00',
   items: [
     {
       productId: '00000000-0000-4000-8000-000000000001',
@@ -45,9 +45,9 @@ describe('Account cart end-to-end', () => {
     await createTestShop(prisma);
     const account = await prisma.webAccount.create({
       data: {
-        phone: '+84912345678',
+        email: 'account-84912345678@example.test',
         passwordHash: 'not-used-by-this-session-test',
-        phoneVerifiedAt: new Date(),
+        emailVerifiedAt: new Date(),
       },
     });
     const token = new JwtService({ secret: process.env.WEB_JWT_ACCESS_SECRET }).sign(
@@ -69,6 +69,11 @@ describe('Account cart end-to-end', () => {
       .set('Content-Type', 'application/json')
       .send({ ...draft, version: 0 })
       .expect(200)
-      .expect({ ...draft, version: 1 });
+      .expect({
+        ...draft,
+        pickupDate: '2026-10-01T01:30:00.000Z',
+        returnDate: '2026-10-03T01:30:00.000Z',
+        version: 1,
+      });
   });
 });

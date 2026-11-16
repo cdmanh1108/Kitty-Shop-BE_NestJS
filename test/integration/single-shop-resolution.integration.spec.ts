@@ -42,7 +42,11 @@ describe('single-shop runtime resolution (PostgreSQL)', () => {
   it('fails clearly when no shop exists', async () => {
     const response = await request(server).get('/api/v1/web/categories').expect(503);
 
-    expect(JSON.stringify(response.body)).toContain('chưa có cửa hàng nào');
+    expect(response.body).toMatchObject({
+      statusCode: 503,
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
+    });
   });
 
   it('fails clearly when more than one shop exists instead of selecting one', async () => {
@@ -50,6 +54,10 @@ describe('single-shop runtime resolution (PostgreSQL)', () => {
     await createTestShop(prisma, { code: 'SHOP_B' });
 
     const response = await request(server).get('/api/v1/web/categories').expect(503);
-    expect(JSON.stringify(response.body)).toContain('nhiều cửa hàng');
+    expect(response.body).toMatchObject({
+      statusCode: 503,
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.',
+    });
   });
 });

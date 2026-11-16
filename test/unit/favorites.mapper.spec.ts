@@ -16,10 +16,6 @@ describe('FavoritesMapper', () => {
           imageUrl: 'https://images.example/product-1.jpg',
           size: 'S',
           color: 'Trắng',
-          rentalPrices: [
-            { days: 3, amount: 150000 },
-            { days: 7, amount: 300000 },
-          ],
           depositAmount: 500000,
           isRentable: true,
         },
@@ -40,10 +36,6 @@ describe('FavoritesMapper', () => {
           imageUrl: 'https://images.example/product-1.jpg',
           size: 'S',
           color: 'Trắng',
-          rentalPrices: [
-            { days: 3, amount: 150000 },
-            { days: 7, amount: 300000 },
-          ],
           depositAmount: 500000,
           isRentable: true,
         },

@@ -22,7 +22,11 @@ describe('Web Account Rental Orders OpenAPI response fields', () => {
       { schema: 'WebAccountRentalOrderDeliveryResDto', name: 'recipientPhone' },
       { schema: 'WebAccountRentalOrderDeliveryResDto', name: 'addressLine' },
       { schema: 'WebAccountRentalOrderDetailResDto', name: 'documentType' },
-      { schema: 'WebAccountRentalOrderDetailResDto', name: 'actualReturnedAt', format: 'date-time' },
+      {
+        schema: 'WebAccountRentalOrderDetailResDto',
+        name: 'actualReturnedAt',
+        format: 'date-time',
+      },
     ];
 
     for (const expected of expectedProperties) {

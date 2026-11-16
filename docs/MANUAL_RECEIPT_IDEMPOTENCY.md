@@ -1,4 +1,4 @@
-# Manual receipt idempotency (C16)
+# Manual receipt idempotency
 
 `POST /admin/rental-orders/:orderId/payments` requires exactly one `Idempotency-Key`: an opaque non-whitespace ASCII value of at most 255 characters. The key is not a payment reference, is never logged or stored in the audit snapshot, and must be created once per intentional manual receipt. Retries preserve the original body and key; a distinct real receipt requires a new key even if amount and references match.
 
@@ -8,6 +8,6 @@ The SHA-256 command hash uses a stable, sorted projection of order ID, direction
 
 Finance keeps a 30-day completion record for this operation. A five-minute fenced processing lease is supplied by the shared claim primitive; it is not extended by reads or replays. After retention expires, callers must reconcile through authorized Finance reads before deliberately creating another receipt. `IDEMPOTENCY_IN_PROGRESS` means retry the same key/body later; `IDEMPOTENCY_KEY_REUSED` means the key/body mismatch and must not be rotated automatically. Missing or invalid keys return `IDEMPOTENCY_KEY_REQUIRED` or `IDEMPOTENCY_KEY_INVALID`.
 
-For an execution owner, the repository fences the claim before taking the C04 monetary order lock. Payment insertion, recomputed payment state, `PAYMENT_RECORDED`, a sanitized `AuditLog(CREATE, payment_transaction)`, and the typed completion snapshot commit in one serializable transaction. A database failure in any later operation rolls all of them back. Replay returns only the stored public receipt projection (`id`, order/customer IDs, transaction number, direction/purpose/method, decimal string amount, status and ISO `paidAt`); it never re-evaluates refund ceilings, emits another event, writes another audit row, or observes a later void/state change.
+For an execution owner, the repository fences the claim before taking the monetary order lock. Payment insertion, recomputed payment state, `PAYMENT_RECORDED`, a sanitized `AuditLog(CREATE, payment_transaction)`, and the typed completion snapshot commit in one serializable transaction. A database failure in any later operation rolls all of them back. Replay returns only the stored public receipt projection (`id`, order/customer IDs, transaction number, direction/purpose/method, decimal string amount, status and ISO `paidAt`); it never re-evaluates refund ceilings, emits another event, writes another audit row, or observes a later void/state change.
 
-The Admin client rollout is G02: external admin/CLI callers were not present in this repository and must send a generated key/header before this required-header endpoint is released. C16 does not change Web checkout, void receipts, expenses, bank/webhook delivery, or real-world money movement.
+Admin clients must send a generated idempotency key in the required header. This does not change Web checkout, void receipts, expenses, bank/webhook delivery or real-world money movement.

@@ -1,4 +1,5 @@
-﻿import type { PrismaService } from '../../src/database/prisma/prisma.service';
+import { cyclePricingSnapshot } from './rental-pricing.fixture';
+import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import type { Clock } from '../../src/common/clock/clock';
 import type { CurrentUser } from '../../src/common/types/current-user';
 import type { CreateRentalOrderData } from '../../src/modules/rentals/domain/ports/rental-creation.port';
@@ -88,7 +89,11 @@ export async function rentalScenario(prisma: PrismaService) {
         unitRentalPrice: 200000,
         depositAmount: 200000,
         lineTotal: 200000,
-        pricingSnapshot: { durationDays: 2, unitRentalPrice: 200000, depositPerItem: 200000 },
+        pricingSnapshot: cyclePricingSnapshot({
+          durationDays: 2,
+          unitRentalPrice: 200000,
+          depositPerItem: 200000,
+        }),
         inventory: [{ id: inventory.id, sku: inventory.sku }],
       },
     ],

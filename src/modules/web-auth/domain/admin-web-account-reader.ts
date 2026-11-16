@@ -5,7 +5,7 @@ export type WebAccountVerification = 'verified' | 'unverified';
 /** Read projection only. Credentials and sessions never enter the Admin read model. */
 export interface AdminWebAccountRecord {
   id: string;
-  email: string | null;
+  email: string;
   fullName: string | null;
   phone: string | null;
   emailVerifiedAt: Date | null;

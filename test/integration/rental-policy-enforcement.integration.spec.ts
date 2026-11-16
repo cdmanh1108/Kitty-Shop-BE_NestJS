@@ -224,14 +224,14 @@ describe('Rental policy transaction enforcement', () => {
       orderBy: { chargeType: 'asc' },
     });
     expect(charges.map((charge) => [charge.chargeType, charge.amount.toString()])).toEqual([
-      ['LATE', '30000'],
-      ['RENTAL_EXTRA', '200000'],
+      ['LATE', '20000'],
+      ['RENTAL_EXTRA', '190000'],
     ]);
     expect(
       (
         await prisma.rentalOrder.findUniqueOrThrow({ where: { id: order.id } })
       ).grandTotal.toString(),
-    ).toBe('430000');
+    ).toBe('410000');
     expect(
       await prisma.customerLoyaltyEntry.count({
         where: { customerId: f.customer.id, orderId: order.id },

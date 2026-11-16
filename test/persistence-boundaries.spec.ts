@@ -1,3 +1,4 @@
+import { cyclePricingSnapshot } from './fixtures/rental-pricing.fixture';
 import { rentalPolicies } from './fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../src/common/storage/public-url.resolver';
 import { Prisma } from '@prisma/client';
@@ -30,7 +31,6 @@ function variant(): NonNullable<Parameters<typeof toBookableVariant>[0]> {
     size: null,
     color: null,
     inventoryItems: [],
-    rentalRates: [],
     product: {
       allowFreeAccessory: false,
       id: 'product',
@@ -51,71 +51,28 @@ function variant(): NonNullable<Parameters<typeof toBookableVariant>[0]> {
       createdAt: now,
       updatedAt: now,
       archivedAt: null,
-      rentalRates: [
-        {
-          id: 'rate',
-          shopId: 'shop',
-          productId: 'product',
-          variantId: null,
-          durationDays: 1,
-          price: new Prisma.Decimal('50000.25'),
-          currency: 'VND',
-          validFrom: null,
-          validUntil: null,
-          isActive: true,
-          createdAt: now,
-          updatedAt: now,
-        },
-      ],
     },
   };
 }
 
 describe('persistence mapping and availability', () => {
-  it('preserves missing variants and missing rate semantics', () => {
+  it('preserves missing variants and resolves the current deposit precedence', () => {
     expect(toBookableVariant(null)).toBeNull();
     const record = variant();
-    record.product.rentalRates = [];
     expect(toBookableVariant(record)).toMatchObject({
-      ratePrice: null,
-      sizeName: null,
-      colorName: null,
-      availableInventory: [],
-    });
-  });
-  it('maps fallback Decimal prices without rounding or mutating the source', () => {
-    const record = variant();
-    const before = JSON.stringify(record);
-    expect(toBookableVariant(record)).toEqual({
-      id: 'variant',
-      variantCode: 'BB-01',
-      productId: 'product',
-      productName: 'Ba ba',
-      allowFreeAccessory: false,
       sizeName: null,
       colorName: null,
       depositPerItem: 300000,
-      ratePrice: 50000.25,
       availableInventory: [],
     });
-    expect(JSON.stringify(record)).toBe(before);
-    expect(record.createdAt).toBe(now);
-  });
-  it('keeps zero overrides and prefers variant rates over product rates', () => {
-    const record = variant();
     record.depositAmountOverride = new Prisma.Decimal(0);
-    record.rentalRates = record.product.rentalRates.map((rate) => ({
-      ...rate,
-      variantId: 'variant',
-      price: new Prisma.Decimal(0),
-    }));
-    expect(toBookableVariant(record)).toMatchObject({ depositPerItem: 0, ratePrice: 0 });
+    expect(toBookableVariant(record)).toMatchObject({ depositPerItem: 0 });
   });
-  it('uses strict overlap endpoints and blocks only live allocations and unavailable inventory', () => {
+
+  it('uses strict overlap endpoints and loads only inventory required for availability', () => {
     const input = {
       shopId: 'shop',
       variantId: 'variant',
-      durationDays: 2,
       from: now,
       until: new Date('2026-09-13T01:30:00Z'),
     };
@@ -127,27 +84,18 @@ describe('persistence mapping and availability', () => {
           reservedFrom: { lt: input.until },
           reservedUntil: { gt: input.from },
         },
-        {
-          status: 'ACTIVE',
-          releasedAt: null,
-        },
+        { status: 'ACTIVE', releasedAt: null },
       ],
     });
     expect(where.currentStatus).toBe('AVAILABLE');
     expect(where).toMatchObject({ isActive: true, archivedAt: null });
     const include = bookableVariantInclude(input);
     expect(include.inventoryItems.where).toEqual(where);
-    expect(include.product.include.rentalRates.where).toEqual({
-      variantId: null,
-      isActive: true,
-    });
-    expect(include.rentalRates.where).toEqual({
-      isActive: true,
-    });
+    expect(include.product).toBe(true);
+    expect(include).not.toHaveProperty('rentalRates');
     expect(include.inventoryItems.orderBy).toEqual([{ totalRentalCount: 'asc' }, { sku: 'asc' }]);
   });
 });
-
 // Delegate spies only: these tests never connect to a database and do not prove DB rollback.
 describe('repository persistence boundaries', () => {
   let prisma: PrismaService;
@@ -194,12 +142,10 @@ describe('repository persistence boundaries', () => {
     expect(find.mock.calls[0]?.[0]?.select).toMatchObject({
       category: { select: { id: true, code: true, name: true, isActive: true } },
       media: { orderBy: { sortOrder: 'asc' }, select: { storageKey: true, url: true } },
-      rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
       variants: {
         select: {
           size: { select: { name: true } },
           color: { select: { name: true, hexColor: true } },
-          rentalRates: { where: { isActive: true }, orderBy: { durationDays: 'asc' } },
           _count: { select: { inventoryItems: { where: { isActive: true } } } },
         },
       },
@@ -315,7 +261,11 @@ describe('repository persistence boundaries', () => {
             unitRentalPrice: 50000,
             depositAmount: 0,
             lineTotal: 50000,
-            pricingSnapshot: { durationDays: 1, unitRentalPrice: 50000, depositPerItem: 0 },
+            pricingSnapshot: cyclePricingSnapshot({
+              durationDays: 1,
+              unitRentalPrice: 50000,
+              depositPerItem: 0,
+            }),
             inventory: [{ id: 'inventory', sku: 'BB-01-001' }],
           },
         ],

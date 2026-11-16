@@ -11,7 +11,6 @@ import type {
   ProductListQuery,
   UpdateProductInput,
   UpdateProductVariantInput,
-  UpsertRentalRateInput,
 } from './catalog.contracts';
 import type { ProductVariantRecord } from '../domain/catalog.records';
 import { CATALOG_ERROR_CODE, CatalogInvariantError } from '../domain/catalog-errors';
@@ -62,14 +61,6 @@ export class ProductService {
         );
       }
       seenCombinations.add(key);
-      const durations = variant.rentalRates.map((rate) => rate.durationDays);
-      if (new Set(durations).size !== durations.length) {
-        throw new InvalidCatalogInputError(
-          'Số ngày trong các mức giá thuê của biến thể ' +
-            variant.variantCode +
-            ' không được trùng nhau.',
-        );
-      }
     }
     if (input.media.filter((item) => item.isPrimary).length > 1) {
       throw new InvalidCatalogInputError('Chỉ được chọn một ảnh đại diện cho sản phẩm.');
@@ -101,12 +92,6 @@ export class ProductService {
       newValues: { productId, variantCode: normalizedInput.variantCode },
     });
     return variant;
-  }
-
-  async upsertRentalRate(user: CurrentUser, variantId: string, input: UpsertRentalRateInput) {
-    const rate = await this.repository.upsertRentalRate(user.shopId, variantId, input);
-    if (!rate) throw new CatalogResourceNotFoundError('Không tìm thấy biến thể sản phẩm.');
-    return rate;
   }
 
   async updateProductVariant(
@@ -240,7 +225,6 @@ export class ProductService {
     });
     return { success: true as const };
   }
-
 }
 
 function normalizeVariantCode(value: string): string {

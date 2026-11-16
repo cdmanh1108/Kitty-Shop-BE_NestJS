@@ -77,7 +77,7 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
 
     const result = await repository.issueVerificationChallenge({
       kind: 'register',
-      email: account.email!,
+      email: account.email,
       passwordHash: 'replacement-password-hash',
       attemptId: newChallenge.registrationAttemptId,
       challenge: newChallenge,
@@ -100,7 +100,7 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
 
     const result = await repository.issueVerificationChallenge({
       kind: 'register',
-      email: account.email!,
+      email: account.email,
       passwordHash: 'replacement-password-hash',
       attemptId: newChallenge.registrationAttemptId,
       challenge: newChallenge,
@@ -222,34 +222,5 @@ describe('PrismaWebAuthRepository verification challenge issuance', () => {
       where: { accountId: account.id, consumedAt: null },
       data: { consumedAt: now },
     });
-  });
-
-  it('does not resend to a legacy account without an email destination', async () => {
-    const { tx, repository } = setup();
-    tx.webOtpChallenge.findUnique.mockResolvedValueOnce({ accountId: account.id });
-    tx.webAccount.findUniqueOrThrow.mockResolvedValue({ ...account, email: null });
-
-    const result = await repository.issueVerificationChallenge({
-      kind: 'resend',
-      challengeId: oldChallenge.id,
-      challenge: { ...newChallenge, registrationAttemptId: undefined },
-      now,
-    });
-
-    expect(result).toEqual({ error: 'OTP_CHALLENGE_NOT_FOUND' });
-    expect(tx.webOtpChallenge.create).not.toHaveBeenCalled();
-  });
-
-  it('does not let a legacy phone challenge verify an email account', async () => {
-    const { tx, repository } = setup();
-    tx.webOtpChallenge.findUnique.mockResolvedValueOnce({ accountId: account.id });
-    tx.webOtpChallenge.findUniqueOrThrow.mockResolvedValue({
-      ...oldChallenge,
-      account: { ...account, email: null },
-    });
-
-    const result = await repository.verify(oldChallenge.id, 'a'.repeat(64), now, 5);
-
-    expect(result).toEqual({ error: 'OTP_CONSUMED' });
   });
 });

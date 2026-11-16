@@ -48,7 +48,9 @@ describe('cross-context transaction capabilities', () => {
   });
 
   it('keeps Catalog return inspection history and inventory update in the same transaction', async () => {
-    const findUniqueOrThrow = jest.fn().mockResolvedValue({ id: 'inventory', currentStatus: 'RENTED' });
+    const findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'inventory', currentStatus: 'RENTED' });
     const update = jest.fn().mockResolvedValue(undefined);
     const create = jest.fn().mockResolvedValue(undefined);
     const tx = {
@@ -156,7 +158,9 @@ describe('cross-context transaction capabilities', () => {
     const updateMany = jest.fn().mockResolvedValue({ count: 1 });
     const tx = { deliveryJob: { findMany, updateMany } } as unknown as Prisma.TransactionClient;
 
-    await expect(canCancelRentalDeliveries(tx, { shopId: 'shop', orderId: 'order' })).resolves.toBe(true);
+    await expect(canCancelRentalDeliveries(tx, { shopId: 'shop', orderId: 'order' })).resolves.toBe(
+      true,
+    );
     await cancelPendingRentalDeliveries(tx, { shopId: 'shop', orderId: 'order' });
 
     expect(updateMany).toHaveBeenCalledWith({
@@ -168,15 +172,19 @@ describe('cross-context transaction capabilities', () => {
       data: { status: DELIVERY_STATUS.CANCELLED },
     });
     findMany.mockResolvedValueOnce([{ status: DELIVERY_STATUS.PICKED_UP }]);
-    await expect(canCancelRentalDeliveries(tx, { shopId: 'shop', orderId: 'order' })).resolves.toBe(false);
+    await expect(canCancelRentalDeliveries(tx, { shopId: 'shop', orderId: 'order' })).resolves.toBe(
+      false,
+    );
   });
 
   it('keeps Finance receipt and completed-payment mappings explicit', async () => {
     const create = jest.fn().mockResolvedValue(undefined);
     const count = jest.fn().mockResolvedValue(1);
-    const findMany = jest.fn().mockResolvedValue([
-      { amount: new Prisma.Decimal('125.50'), direction: 'IN', purpose: 'RENTAL' },
-    ]);
+    const findMany = jest
+      .fn()
+      .mockResolvedValue([
+        { amount: new Prisma.Decimal('125.50'), direction: 'IN', purpose: 'RENTAL' },
+      ]);
     const tx = {
       paymentTransaction: { create, count, findMany },
     } as unknown as Prisma.TransactionClient;

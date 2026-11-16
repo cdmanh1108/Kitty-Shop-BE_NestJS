@@ -22,6 +22,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --chown=node:node package*.json ./
 COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node prisma.config.ts tsconfig.json ./
+COPY --chown=node:node src/common/constants ./src/common/constants
+COPY --chown=node:node src/common/logging ./src/common/logging
+COPY --chown=node:node src/common/request-context ./src/common/request-context
 COPY --chown=node:node --from=build /app/node_modules ./node_modules
 USER node
 CMD ["./node_modules/.bin/prisma", "migrate", "deploy"]

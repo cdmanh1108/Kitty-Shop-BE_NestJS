@@ -21,7 +21,7 @@ import {
   WEB_RENTAL_MAX_ITEM_COUNT,
   WEB_RENTAL_DATE_TIME_PATTERN,
 } from '../../../application/web-rental-input-validation';
-import { WEB_CHECKOUT_PAYMENT_PREFERENCES } from '../../../domain/web-payment-preference';
+import { WEB_PAYMENT_PREFERENCES } from '../../../domain/web-payment-preference';
 import { WebRentalItemInputDto } from './web-rental-evaluation.dto';
 
 export class WebCreateOrderCustomerDto {
@@ -89,8 +89,7 @@ export class WebCreateOrderReqDto {
   @ApiProperty({
     example: '2026-09-20T01:30:00.000Z',
     format: 'date-time',
-    description:
-      'Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.',
+    description: 'Mốc nhận ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00).',
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
@@ -101,8 +100,7 @@ export class WebCreateOrderReqDto {
   @ApiProperty({
     example: '2026-09-23T01:30:00.000Z',
     format: 'date-time',
-    description:
-      'Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00). Ngày thuần được chấp nhận cho client cũ.',
+    description: 'Mốc trả ISO 8601 có múi giờ; hệ thống hiển thị theo giờ Việt Nam (UTC+07:00).',
   })
   @IsString()
   @Matches(WEB_RENTAL_DATE_TIME_PATTERN, {
@@ -128,12 +126,12 @@ export class WebCreateOrderReqDto {
 
   @ApiProperty({
     example: 'bank_transfer',
-    enum: WEB_CHECKOUT_PAYMENT_PREFERENCES,
+    enum: WEB_PAYMENT_PREFERENCES,
     description:
       'Phương thức khách mong muốn. Lựa chọn này được lưu cho đơn thuê, không tạo giao dịch, không xác nhận đã thanh toán, và không khởi tạo cổng thanh toán.',
   })
-  @IsIn(WEB_CHECKOUT_PAYMENT_PREFERENCES)
-  paymentMethod!: (typeof WEB_CHECKOUT_PAYMENT_PREFERENCES)[number];
+  @IsIn(WEB_PAYMENT_PREFERENCES)
+  paymentMethod!: (typeof WEB_PAYMENT_PREFERENCES)[number];
 
   @ApiPropertyOptional({ format: 'uuid', description: 'Ưu đãi được chọn trong báo giá.' })
   @IsOptional()

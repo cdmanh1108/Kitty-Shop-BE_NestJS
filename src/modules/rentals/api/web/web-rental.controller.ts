@@ -34,7 +34,6 @@ import {
 } from '@modules/web-auth/public';
 import { WebRentalEvaluationService } from '../../application/web-rental-evaluation.service';
 import { WebRentalOrderService } from '../../application/web-rental-order.service';
-import { WebRentalLookupService } from '../../application/web-rental-lookup.service';
 import {
   WebAvailabilityQueryDto,
   WebAvailabilityResDto,
@@ -42,7 +41,6 @@ import {
   WebRentalQuoteResDto,
 } from './dto/web-rental-evaluation.dto';
 import { WebCreateOrderReqDto, WebCreateOrderResDto } from './dto/web-rental-order.dto';
-import { WebOrderLookupReqDto, WebOrderLookupResDto } from './dto/web-rental-lookup.dto';
 
 @Public()
 @ApiTags('Web - Rental Orders')
@@ -53,7 +51,6 @@ export class WebRentalController {
     private readonly shopResolver: ShopResolver,
     private readonly evaluation: WebRentalEvaluationService,
     private readonly orders: WebRentalOrderService,
-    private readonly lookups: WebRentalLookupService,
   ) {}
 
   @Get('availability')
@@ -163,25 +160,5 @@ export class WebRentalController {
           : idempotencyKeys,
       { webAccountId: request.webUser!.id, email: request.webUser!.email },
     );
-  }
-
-  @Post('rental-orders/lookup')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    operationId: 'lookupWebRentalOrder',
-    summary: 'Tra cứu trạng thái đơn thuê bảo mật bằng mã đơn và SĐT',
-  })
-  @ApiOkResponse({ type: WebOrderLookupResDto, description: 'Thông tin tóm tắt đơn thuê' })
-  @ApiBadRequestResponse({
-    type: ErrorResDto,
-    description: 'Mã đơn hoặc số điện thoại không hợp lệ',
-  })
-  @ApiNotFoundResponse({
-    type: ErrorResDto,
-    description: 'Không tìm thấy đơn thuê hoặc số điện thoại không khớp',
-  })
-  async lookupOrder(@Body() body: WebOrderLookupReqDto): Promise<WebOrderLookupResDto> {
-    const shopId = await this.shopResolver.resolveShopId();
-    return this.lookups.lookupOrder(shopId, body);
   }
 }

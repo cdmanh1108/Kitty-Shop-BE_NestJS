@@ -17,13 +17,10 @@ describe('Web rental input validation', () => {
     },
   );
 
-  it('accepts legacy date-only values at the Vietnam shop opening time', () => {
-    expect(parseWebRentalDateRange({ pickupDate: '2028-02-29', returnDate: '2028-03-01' })).toEqual(
-      {
-        from: new Date('2028-02-29T01:30:00.000Z'),
-        until: new Date('2028-03-01T01:30:00.000Z'),
-      },
-    );
+  it('requires full timezone-aware timestamps', () => {
+    expect(() =>
+      parseWebRentalDateRange({ pickupDate: '2028-02-29', returnDate: '2028-03-01' }),
+    ).toThrow(WebRentalInputValidationError);
   });
 
   it('preserves timezone-aware minute precision as an exact instant', () => {

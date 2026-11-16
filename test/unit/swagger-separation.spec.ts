@@ -153,8 +153,8 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(schemas).toContain('WebRentalQuoteReqDto');
       expect(schemas).toContain('WebRentalQuoteResDto');
       expect(schemas).toContain('WebCreateOrderReqDto');
-      expect(schemas).toContain('WebOrderLookupReqDto');
-      expect(schemas).toContain('WebOrderLookupResDto');
+      expect(schemas).not.toContain('WebOrderLookupReqDto');
+      expect(schemas).not.toContain('WebOrderLookupResDto');
       expect(schemas).toContain('CartDto');
       expect(schemas).toContain('CartGetResDto');
       expect(schemas).toContain('ErrorResDto');
@@ -162,7 +162,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(JSON.stringify(webDoc.paths['/web/favorites']?.get?.responses['200'])).toContain(
         '#/components/schemas/WebProductListResDto',
       );
-      expect(JSON.stringify(webDoc.components?.schemas?.WebProductListItemDto)).toContain(
+      expect(JSON.stringify(webDoc.components?.schemas?.WebProductListItemDto)).not.toContain(
         'rentalPrices',
       );
 
@@ -188,7 +188,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       }
     });
 
-    it('defines standardized, collision-free operationIds for all 8 storefront endpoints', () => {
+    it('defines standardized, collision-free operationIds for core storefront endpoints', () => {
       const expectedOperationIds: Record<string, { method: 'get' | 'post'; id: string }> = {
         '/web/categories': { method: 'get', id: 'getWebCategories' },
         '/web/products': { method: 'get', id: 'getWebProducts' },
@@ -196,7 +196,6 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
         '/web/availability': { method: 'get', id: 'getWebAvailability' },
         '/web/rental/quote': { method: 'post', id: 'createWebRentalQuote' },
         '/web/rental-orders': { method: 'post', id: 'createWebRentalOrder' },
-        '/web/rental-orders/lookup': { method: 'post', id: 'lookupWebRentalOrder' },
         '/web/policies': { method: 'get', id: 'getWebPolicies' },
       };
 
@@ -217,6 +216,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(webDoc.paths['/web/favorites/{productId}']?.delete?.operationId).toBe(
         'removeFavorite',
       );
+      expect(webDoc.paths['/web/rental-orders/lookup']).toBeUndefined();
     });
 
     it('documents comprehensive HTTP status codes and ErrorResDto schema references', () => {
@@ -255,12 +255,6 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       expect(JSON.stringify(orderPost?.responses['409'])).toContain(
         '#/components/schemas/ErrorResDto',
       );
-
-      // 6. POST /web/rental-orders/lookup -> 200, 400, 404
-      const lookupPost = webDoc.paths['/web/rental-orders/lookup']?.post;
-      expect(lookupPost?.responses['200']).toBeDefined();
-      expect(lookupPost?.responses['400']).toBeDefined();
-      expect(lookupPost?.responses['404']).toBeDefined();
     });
 
     it('enforces numeric types for monetary amounts and strict enums in web schemas', () => {

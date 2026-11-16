@@ -61,7 +61,6 @@ export class WebRentalEvaluationService {
     const variant = await this.availability.getBookableVariant({
       shopId,
       variantId: query.variantId,
-      durationDays,
       from,
       until,
       storefrontEligibility: true,

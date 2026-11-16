@@ -1,9 +1,8 @@
 export const WEB_AUTH_REPOSITORY = Symbol('WEB_AUTH_REPOSITORY');
 
-/** Email fields are nullable only for retained phone-era accounts. */
 export interface WebAccount {
   id: string;
-  email: string | null;
+  email: string;
   fullName?: string | null;
   contactPhone?: string | null;
   passwordHash: string;
@@ -16,7 +15,7 @@ export interface WebAccount {
 
 export interface WebProfile {
   id: string;
-  email: string | null;
+  email: string;
   fullName?: string | null;
   phone?: string | null;
   emailVerifiedAt: Date | null;

@@ -1,6 +1,4 @@
 import { rentalPolicies } from '../fixtures/rental-policy.fixture';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import {
   connectTestDatabase,
   disconnectTestDatabase,
@@ -37,6 +35,12 @@ describe('Inventory occupancy persistence and read models', () => {
       lines: f.data.lines.map((line) => ({
         ...line,
         quantity: 2,
+        lineTotal: line.unitRentalPrice * 2,
+        depositAmount: line.depositAmount * 2,
+        pricingSnapshot:
+          line.pricingSnapshot.version === 'CYCLE_V1'
+            ? { ...line.pricingSnapshot, billableQuantity: 2 }
+            : line.pricingSnapshot,
         inventory: [...line.inventory, { id: second.id, sku: second.sku }],
       })),
     });
@@ -81,58 +85,5 @@ describe('Inventory occupancy persistence and read models', () => {
       seriesStart: new Date('2026-10-04T17:00:00Z'),
     });
     expect(summary.rentingProducts).toBe(2);
-  });
-
-  it('migrates legacy occupancy without deleting allocations or historical statuses', async () => {
-    const f = await rentalScenario(prisma);
-    const repo = new PrismaRentalRepository(prisma, fixedClock, rentalPolicies);
-    await repo.createOrder(f.data);
-    const orphan = await prisma.inventoryItem.create({
-      data: {
-        shopId: f.shop.id,
-        variantId: f.variant.id,
-        sku: uniqueCode('ORPHAN'),
-      },
-    });
-    const migration = readFileSync(
-      join(
-        process.cwd(),
-        'prisma/migrations/202609110003_repair_inventory_operational_status/migration.sql',
-      ),
-      'utf8',
-    );
-    const rollback = new Error('Rollback migration test');
-    // Reconstruct the previous inventory schema inside a rollback-only transaction.
-    await expect(
-      prisma.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe(
-          'ALTER TABLE inventory_items DROP CONSTRAINT inventory_items_operational_status_check',
-        );
-        await tx.inventoryItem.update({
-          where: { id: f.inventory.id },
-          data: { currentStatus: 'RENTED' },
-        });
-        await tx.inventoryItem.update({
-          where: { id: orphan.id },
-          data: { currentStatus: 'RESERVED' },
-        });
-        await tx.inventoryStatusHistory.create({
-          data: { shopId: f.shop.id, inventoryItemId: f.inventory.id, toStatus: 'RENTED' },
-        });
-        for (const statement of migration.replace(/^BEGIN;|^COMMIT;/gm, '').split(';')) {
-          if (statement.trim()) await tx.$executeRawUnsafe(statement);
-        }
-        expect(
-          (await tx.inventoryItem.findUniqueOrThrow({ where: { id: f.inventory.id } }))
-            .currentStatus,
-        ).toBe('AVAILABLE');
-        expect(
-          (await tx.inventoryItem.findUniqueOrThrow({ where: { id: orphan.id } })).currentStatus,
-        ).toBe('CLEANING');
-        expect(await tx.rentalItemAllocation.count()).toBe(1);
-        expect(await tx.inventoryStatusHistory.count({ where: { toStatus: 'RENTED' } })).toBe(1);
-        throw rollback;
-      }),
-    ).rejects.toBe(rollback);
   });
 });

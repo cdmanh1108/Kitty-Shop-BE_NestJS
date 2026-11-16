@@ -11,7 +11,6 @@ import type {
   RemovedProductMedia,
   SetPrimaryProductMediaResult,
   UpdateProductResult,
-  UpsertRentalRateResult,
 } from './catalog.models';
 import type {
   CatalogListProductsCriteria,
@@ -53,11 +52,6 @@ export interface CatalogProductRepository {
     productId: string,
     variantId: string,
   ): Promise<DeleteProductVariantResult>;
-  upsertRentalRate(
-    shopId: string,
-    variantId: string,
-    input: { durationDays: number; price: number },
-  ): Promise<UpsertRentalRateResult>;
   updateProduct(shopId: string, id: string, input: UpdateProductData): Promise<UpdateProductResult>;
   archiveProduct(shopId: string, id: string): Promise<boolean>;
   addProductMedia(

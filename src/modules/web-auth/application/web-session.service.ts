@@ -57,7 +57,12 @@ export class WebSessionService {
       replacement.data,
       this.clock.now(),
     );
-    if (rotation.outcome !== 'ROTATED') webAuthError('AUTH_REQUIRED');
+    if (
+      rotation.outcome !== 'ROTATED' ||
+      rotation.account.disabledAt ||
+      !rotation.account.emailVerifiedAt
+    )
+      webAuthError('AUTH_REQUIRED');
     return this.issueTokens(rotation.account, replacement.rawToken, replacement.data.expiresAt);
   }
 
@@ -68,9 +73,7 @@ export class WebSessionService {
 
   async accountForAccessToken(accountId: string): Promise<WebProfile> {
     const account = await this.repository.findAccountById(accountId);
-    // A valid pre-migration JWT remains usable for a legacy row with no email.
-    if (!account || account.disabledAt || (account.email !== null && !account.emailVerifiedAt))
-      webAuthError('AUTH_REQUIRED');
+    if (!account || account.disabledAt || !account.emailVerifiedAt) webAuthError('AUTH_REQUIRED');
     return this.profile(account);
   }
 

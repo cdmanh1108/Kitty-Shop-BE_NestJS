@@ -3,7 +3,6 @@ import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import type { StorefrontProductDetails, StorefrontProductItem } from '../domain/catalog.models';
 import {
-  extractRentalPrices,
   storefrontProductBaseWhere,
   storefrontProductSelect,
   storefrontVariantBaseWhere,
@@ -60,14 +59,6 @@ export async function findStorefrontProductBySlug(
         orderBy: { sortOrder: 'asc' },
         select: { storageKey: true, url: true, isPrimary: true },
       },
-      rentalRates: {
-        where: {
-          isActive: true,
-          OR: [{ variantId: null }, { variant: storefrontVariantBaseWhere() }],
-        },
-        orderBy: { durationDays: 'asc' },
-        select: { durationDays: true, price: true },
-      },
       variants: {
         where: storefrontVariantBaseWhere(),
         select: {
@@ -76,11 +67,6 @@ export async function findStorefrontProductBySlug(
           depositAmountOverride: true,
           size: { select: { name: true } },
           color: { select: { name: true } },
-          rentalRates: {
-            where: { isActive: true },
-            orderBy: { durationDays: 'asc' },
-            select: { durationDays: true, price: true },
-          },
         },
       },
     },
@@ -99,11 +85,6 @@ export async function findStorefrontProductBySlug(
   );
   const colors = Array.from(
     new Set(product.variants.map((v) => v.color?.name).filter((c): c is string => Boolean(c))),
-  );
-
-  const rentalPrices = extractRentalPrices(
-    product.rentalRates,
-    product.variants.map((v) => v.rentalRates),
   );
 
   const baseDepositAmount = decimalToNumber(product.defaultDepositAmount);
@@ -130,7 +111,6 @@ export async function findStorefrontProductBySlug(
     gallery: gallery.length ? gallery : imageUrl ? [imageUrl] : [],
     size: sizes.join(', ') || 'Free size',
     color: colors.join(', ') || 'Nhiều màu',
-    rentalPrices,
     depositAmount: baseDepositAmount,
     isRentable: product.isRentable,
     description: product.description,

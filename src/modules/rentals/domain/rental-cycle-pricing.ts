@@ -33,7 +33,7 @@ export interface ResolvedRentalCyclePricing {
  * Renewal days replace the additional-day fee with the effective cycle price.
  * A renewal on day 5 repeats every 4 days (1, 5, 9, ...); day 8 repeats every 7.
  * Integer cents keep decimal overrides exact during arithmetic. Booking and quote
- * callers use this resolver; legacy snapshots retain their original semantics.
+ * callers use this resolver and persist its complete pricing snapshot.
  */
 export function resolveRentalCyclePricing(
   input: ResolveRentalCyclePricingInput,

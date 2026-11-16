@@ -9,7 +9,7 @@ import { PrismaDeliveryRepository } from '../../src/modules/deliveries/infrastru
 import { PrismaRentalRepository } from '../../src/modules/rentals/infrastructure/prisma-rental.repository';
 import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { rentalScenario } from '../fixtures/rental.fixture';
-import { createTestUserAndMember, uniqueCode } from '../fixtures/test-factories';
+import { createTestUserAndMember } from '../fixtures/test-factories';
 import { generateTestAccessToken } from '../helpers/auth-helper';
 import {
   connectTestDatabase,
@@ -100,26 +100,31 @@ describe('Delivery status transition HTTP contract', () => {
       trackingCode: 'TRACK-READY',
     });
 
-    const otherShop = await prisma.shop.create({
-      data: { code: uniqueCode('shop'), name: 'Other shop', timezone: 'Asia/Ho_Chi_Minh' },
-    });
-    const foreignManager = await createTestUserAndMember(prisma, otherShop.id, {
-      permissions: [PERMISSIONS.DELIVERIES_MANAGE],
+    await patch(
+      server,
+      generateTestAccessToken({
+        ...data.rental.principal,
+        shopId: '00000000-0000-4000-8000-000000000000',
+      }),
+      data.delivery.id,
+      { status: 'PICKED_UP' },
+    ).expect(401);
+
+    const viewer = await createTestUserAndMember(prisma, data.rental.shop.id, {
+      permissions: ['rentals.view'],
     });
     await patch(
       server,
       generateTestAccessToken({
-        userId: foreignManager.user.id,
-        memberId: foreignManager.member.id,
-        shopId: otherShop.id,
+        userId: viewer.user.id,
+        memberId: viewer.member.id,
+        shopId: data.rental.shop.id,
       }),
       data.delivery.id,
-      { status: 'PICKED_UP' },
-    ).expect(404);
-
-    await patch(server, generateTestAccessToken(data.rental.principal), data.delivery.id, {
-      status: 'PICKED_UP',
-    }).expect(403);
+      {
+        status: 'PICKED_UP',
+      },
+    ).expect(403);
   });
 
   it('lets one HTTP request win a forced persisted-state race and reports the other as a conflict', async () => {

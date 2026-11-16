@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { AuditPort } from '../../src/modules/audit/domain/audit.port';
 import { ColorService } from '../../src/modules/catalog/application/color.service';
 import { CATALOG_ERROR_CODE } from '../../src/modules/catalog/domain/catalog-errors';
@@ -93,6 +94,7 @@ describe('Admin Color management persistence', () => {
 
   it('returns inactive detail and treats missing or cross-shop records as not found', async () => {
     const f = await rentalScenario(prisma);
+    const missingId = randomUUID();
     const otherShop = await createTestShop(prisma);
     const color = await makeColor(f.shop.id, { name: 'Inactive', isActive: false });
 
@@ -100,7 +102,7 @@ describe('Admin Color management persistence', () => {
       id: color.id,
       isActive: false,
     });
-    await expect(colors.getColor(f.principal, 'missing')).rejects.toMatchObject({
+    await expect(colors.getColor(f.principal, missingId)).rejects.toMatchObject({
       code: CATALOG_ERROR_CODE.COLOR_NOT_FOUND,
     });
     const otherPrincipal = { ...f.principal, shopId: otherShop.id };

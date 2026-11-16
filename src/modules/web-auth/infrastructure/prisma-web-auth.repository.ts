@@ -148,7 +148,6 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
 
     const account = await tx.webAccount.findUniqueOrThrow({ where: { id: initial.accountId } });
     if (account.disabledAt) return { error: 'ACCOUNT_DISABLED' };
-    if (!account.email) return { error: 'OTP_CHALLENGE_NOT_FOUND' };
     if (account.emailVerifiedAt) return { error: 'EMAIL_ALREADY_VERIFIED' };
     if (!account.registrationAttemptId || !account.pendingPasswordHash)
       return { error: 'OTP_CHALLENGE_NOT_FOUND' };
@@ -216,7 +215,7 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
   }
   async updateProfile(id: string, input: { fullName: string; contactPhone: string }) {
     const accounts = await this.prisma.webAccount.updateManyAndReturn({
-      where: { id, disabledAt: null, email: { not: null }, emailVerifiedAt: { not: null } },
+      where: { id, disabledAt: null, emailVerifiedAt: { not: null } },
       data: input,
     });
     return accounts[0] ?? null;
@@ -238,7 +237,6 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
         include: { account: true },
       });
       if (challenge.account.disabledAt) return { error: 'ACCOUNT_DISABLED' };
-      if (!challenge.account.email) return { error: 'OTP_CONSUMED' };
       if (challenge.account.emailVerifiedAt) return { error: 'OTP_CONSUMED' };
       if (
         !challenge.registrationAttemptId ||
@@ -276,7 +274,7 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM web_accounts WHERE id = ${input.accountId}::uuid FOR UPDATE`;
       const account = await tx.webAccount.findUnique({ where: { id: input.accountId } });
-      if (!account?.email || !account.emailVerifiedAt || account.disabledAt) return false;
+      if (!account || !account.emailVerifiedAt || account.disabledAt) return false;
       await tx.webRefreshTokenFamily.create({
         data: { id: input.familyId, accountId: input.accountId },
       });
@@ -313,11 +311,10 @@ export class PrismaWebAuthRepository implements WebAuthRepository {
             }
             return { outcome: 'REUSED' } as const;
           }
-          // Allow only previously issued sessions to continue for retained rows with no email.
           if (
             token.family.revokedAt ||
             token.family.accountId !== token.accountId ||
-            (token.account.email !== null && !token.account.emailVerifiedAt) ||
+            !token.account.emailVerifiedAt ||
             token.account.disabledAt
           )
             return { outcome: 'REJECTED' } as const;

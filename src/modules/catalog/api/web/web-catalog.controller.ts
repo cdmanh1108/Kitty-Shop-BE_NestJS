@@ -40,10 +40,7 @@ import {
 @ApiTags('Web - Catalog')
 @ApiSurface('web')
 @Public()
-@ApiExtraModels(
-  WebResolvedStorefrontSelectionDto,
-  WebUnavailableStorefrontSelectionDto,
-)
+@ApiExtraModels(WebResolvedStorefrontSelectionDto, WebUnavailableStorefrontSelectionDto)
 @Controller('web')
 export class WebCatalogController {
   constructor(

@@ -143,7 +143,6 @@ export class RentalCreationService {
         const variant = await this.availability.getBookableVariant({
           shopId: user.shopId,
           variantId: item.variantId,
-          durationDays,
           from: start,
           until: end,
         });
@@ -157,7 +156,6 @@ export class RentalCreationService {
           policy: policy.rentalPricing,
           orderCyclePriceOverride: input.cyclePriceOverride,
           itemCyclePriceOverride: item.cyclePriceOverride,
-          legacyUnitRentalPrice: item.unitRentalPrice,
           quantity: item.quantity,
           depositPerItem: variant.depositPerItem,
           billingRole,

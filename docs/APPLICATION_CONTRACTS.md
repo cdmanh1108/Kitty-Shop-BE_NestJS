@@ -30,7 +30,7 @@ Repository consumers now receive named models instead of `unknown`. Implementati
 
 `IdempotencyClaim` is discriminated by state. Completed rental claims carry `JsonSerialized<RentalOrderDetails>`; other states carry no response. Live order results may contain Date/Decimal; replay results already contain JSON strings. Both paths preserve the original serialized response, including a possible null result.
 
-There is one narrow assertion at the persisted replay boundary in `rental-idempotency.claimIdempotency`: that scope is written by `createOrder` from `JSON.stringify(getWithTx(...))`. It does not validate externally edited/legacy malformed database JSON; adding a versioned replay schema is a separate idempotency task. No result is cast merely to hide a repository mapper mismatch, and no `as unknown as`/`any` was introduced.
+There is one narrow assertion at the persisted replay boundary in `rental-idempotency.claimIdempotency`: that scope is written by `createOrder` from `JSON.stringify(getWithTx(...))`. The assertion is limited to that repository-owned JSON shape; it does not suppress mapper mismatches elsewhere. No result is cast merely to hide a repository mapper mismatch.
 
 Rental DTO mapping uses spread plus nested copies to preserve property order and defaults: the existing request hash uses `JSON.stringify(input)`. Tests compare the exact serialized bytes, not just object equality. Controllers continue returning application values without new response filtering or serialization.
 

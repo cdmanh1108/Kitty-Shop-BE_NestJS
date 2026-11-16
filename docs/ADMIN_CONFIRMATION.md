@@ -10,8 +10,8 @@ actual handover separately, including for bookings paid in advance.
 ## Contract and authorization
 
 All confirmation endpoints require `rentals.confirm` and scope the order to the
-authenticated shop. The migration grants this permission to existing OWNER and
-MANAGER roles; the seed grants it to those roles for new installations.
+authenticated shop. The initial seed grants this permission to OWNER and
+MANAGER roles.
 
 - `GET /rental-orders/:id/confirmation-options`: policy methods/document types,
   order expected deposit, image size and MIME limits.
@@ -33,10 +33,11 @@ document return after completion remains available.
 
 ## Persistence and evidence
 
-Migration `202609130001_admin_rental_confirmation` adds `rental_confirmations`,
-one row per order. It snapshots actor, time, rental amount, collateral, note and
-optional image metadata. Foreign keys, nonnegative amounts, valid collateral
-combinations and complete evidence metadata are enforced in PostgreSQL.
+The database schema has one `rental_confirmations` row per order. It snapshots
+actor, time, rental amount, collateral, note and optional image metadata. The
+initial-release baseline creates this table and enforces foreign keys,
+nonnegative amounts, valid collateral combinations, and complete evidence
+metadata in PostgreSQL.
 
 A serializable transaction writes confirmation, order/item/allocation states,
 status history, the existing AuditLog and outbox together. Confirmation audit is
@@ -58,16 +59,15 @@ retains evidence when cleanup cannot establish ownership. Process termination
 can leave an unreferenced private object; retention cleanup must check DB
 references before deleting anything. Never expire referenced evidence blindly.
 
-## Future Sales Web
+## Receipt provenance
 
-Receipts distinguish ADMIN_MANUAL, ONLINE_WEBHOOK, INTERNAL_TRANSFER and LEGACY.
-Manual BANK_TRANSFER means staff verified the transfer; it is not a webhook.
-Provider and providerTransactionId have a unique constraint for future verified
-webhook ingestion. No gateway/webhook endpoint is implemented here. Confirmation
-and settlement receipt keys are deterministic and unique per order. Actor, time,
-note and protected evidence provide the audit trail.
+Receipts distinguish staff-entered `ADMIN_MANUAL` payments from internal deposit
+offsets (`INTERNAL_TRANSFER`). A manual bank transfer means staff verified the
+transfer; it is not a webhook. Confirmation and settlement receipt keys are
+deterministic and unique per order. Actor, time, note and protected evidence
+provide the audit trail.
 
-## Settlement and migration
+## Settlement
 
 Settlement uses net ledger receipts. Unpaid rental/charges = grand total minus net
 rental payments; deposit held = deposits in minus deposits out. Excess deposit is
@@ -76,9 +76,6 @@ pair (deposit OUT, rental IN), changing revenue classification without inventing
 an external cash movement. Actual collection/refund uses the selected payment method.
 Settlement, receipts, order state, audit and outbox commit atomically.
 
-Migration `202609140002_manual_payment_ledger` backfills existing confirmations and
-settlements, subtracting recorded receipts. Historical methods remain UNSPECIFIED
-with source LEGACY because old records did not capture them. Signed historical
-settlement amounts are preserved rather than recalculated into fictional collections.
-Mixed historical receipts or incorrect old settlements require reconciliation against
-actual cash/bank records; migration cannot establish their missing payment methods.
+The fresh-release database starts without historical receipts or settlements.
+Signed refunds remain separate ledger movements and settlement uses the net
+verified receipts.

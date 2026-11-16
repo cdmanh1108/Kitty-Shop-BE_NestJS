@@ -9,10 +9,6 @@ export interface RentalOrderReader {
     id: string,
   ): Promise<{ status: string; rentalStartAt: Date; rentalEndAt: Date } | null>;
   getReturnPreview(shopId: string, orderId: string, returnedAt?: Date): Promise<ReturnPreviewData>;
-  lookupStorefrontOrder(
-    shopId: string,
-    orderNumber: string,
-  ): Promise<StorefrontOrderLookupRecord | null>;
 }
 
 export const RENTAL_ORDER_READER = Symbol('RENTAL_ORDER_READER');
@@ -55,24 +51,4 @@ export interface ReturnPreviewData {
   durationDays?: number;
   actualDurationDays?: number;
   feePreviewToken?: string;
-}
-
-export interface StorefrontOrderLookupRecord {
-  orderNumber: string;
-  customerFullName: string;
-  customerPhone: string;
-  customerNormalizedPhone: string;
-  rentalStartAt: Date;
-  rentalEndAt: Date;
-  status: string;
-  grandTotal: number;
-  depositRequired: number;
-  paidAmount: number;
-  items: Array<{
-    name: string;
-    imageUrl: string;
-    quantity: number;
-    billingRole?: string;
-    productKindSnapshot?: string;
-  }>;
 }

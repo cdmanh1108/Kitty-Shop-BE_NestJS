@@ -1,3 +1,4 @@
+import { cyclePricingSnapshot } from '../fixtures/rental-pricing.fixture';
 import { returnAndSettle } from '../fixtures/return.fixture';
 import { rentalPolicies } from '../fixtures/rental-policy.fixture';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
@@ -80,7 +81,11 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
             unitRentalPrice: 150000,
             depositAmount: 300000,
             lineTotal: 150000,
-            pricingSnapshot: { durationDays: 4, unitRentalPrice: 150000, depositPerItem: 300000 },
+            pricingSnapshot: cyclePricingSnapshot({
+              durationDays: 4,
+              unitRentalPrice: 150000,
+              depositPerItem: 300000,
+            }),
             inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
           },
         ],
@@ -151,7 +156,11 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
           unitRentalPrice: 100000,
           depositAmount: 200000,
           lineTotal: 100000,
-          pricingSnapshot: { durationDays: 2, unitRentalPrice: 100000, depositPerItem: 200000 },
+          pricingSnapshot: cyclePricingSnapshot({
+            durationDays: 2,
+            unitRentalPrice: 100000,
+            depositPerItem: 200000,
+          }),
           inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
         },
       ],
@@ -195,7 +204,11 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
             unitRentalPrice: 100000,
             depositAmount: 200000,
             lineTotal: 100000,
-            pricingSnapshot: { durationDays: 2, unitRentalPrice: 100000, depositPerItem: 200000 },
+            pricingSnapshot: cyclePricingSnapshot({
+              durationDays: 2,
+              unitRentalPrice: 100000,
+              depositPerItem: 200000,
+            }),
             inventory: [{ id: inventoryItem.id, sku: inventoryItem.sku }],
           },
         ],
@@ -264,7 +277,7 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       const order = await repo.createOrder({
         ...f.data,
         rentalStartAt: new Date('2000-01-01T00:00:00Z'),
-        rentalEndAt: new Date('2000-01-02T00:00:00Z'),
+        rentalEndAt: new Date('2000-01-03T00:00:00Z'),
       });
       if (!order) throw new Error('Expected order');
       if (status !== 'RESERVED') {
@@ -311,7 +324,6 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
         const bookable = await repo.getBookableVariant({
           shopId: f.shop.id,
           variantId: f.variant.id,
-          durationDays: 2,
           from: f.data.rentalStartAt,
           until: f.data.rentalEndAt,
         });

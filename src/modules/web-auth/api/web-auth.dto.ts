@@ -53,11 +53,10 @@ export class WebProfileDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({
     format: 'email',
-    nullable: true,
     type: String,
-    description: 'Null only for retained accounts created before email identity migration.',
+    description: 'Verified email address used as the account identity.',
   })
-  email!: string | null;
+  email!: string;
   @ApiPropertyOptional({ type: String, nullable: true, maxLength: 100 })
   fullName?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, pattern: '^0\\d{9}$' })
@@ -66,7 +65,7 @@ export class WebProfileDto {
     format: 'date-time',
     nullable: true,
     type: String,
-    description: 'Null only for unverified or retained pre-migration accounts.',
+    description: 'Null until email verification is complete.',
   })
   emailVerifiedAt!: string | null;
   @ApiProperty({ format: 'date-time' }) createdAt!: string;

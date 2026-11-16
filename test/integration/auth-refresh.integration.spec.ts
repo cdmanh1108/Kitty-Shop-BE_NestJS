@@ -143,7 +143,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
       .tokens.refreshToken;
     const tokenB = (await authService.refresh(tokenA, {})).tokens.refreshToken;
 
-    await expect(authService.refresh(tokenA, {})).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(authService.refresh(tokenA, {})).rejects.toMatchObject({ kind: 'UNAUTHORIZED' });
     const family = await prisma.refreshTokenFamily.findFirstOrThrow();
     expect(family).toMatchObject({ revocationReason: 'REUSE_DETECTED' });
     expect(family.revokedAt).not.toBeNull();
@@ -154,7 +154,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     ).toMatchObject({
       revocationReason: 'FAMILY_COMPROMISED',
     });
-    await expect(authService.refresh(tokenB, {})).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(authService.refresh(tokenB, {})).rejects.toMatchObject({ kind: 'UNAUTHORIZED' });
   });
 
   it('guarantees at most one successful rotation under concurrent refresh race with same token', async () => {
@@ -185,7 +185,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     // Exactly one must succeed and exactly one must fail with 401
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
-    expect(rejected[0]!.reason).toBeInstanceOf(UnauthorizedException);
+    expect(rejected[0]!.reason).toMatchObject({ kind: 'UNAUTHORIZED' });
 
     // In the database, the winner's replacement token exists and tokenA is marked revoked
     const winnerToken = fulfilled[0]!.value.tokens.refreshToken;
@@ -270,9 +270,9 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     if (!user.email) throw new Error('Missing fixture email');
     const session = await authService.login({ email: user.email, password: TEST_PASSWORD }, {});
     await prisma.refreshToken.updateMany({ data: { expiresAt: new Date('2000-01-01T00:00:00Z') } });
-    await expect(authService.refresh(session.tokens.refreshToken, {})).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(authService.refresh(session.tokens.refreshToken, {})).rejects.toMatchObject({
+      kind: 'UNAUTHORIZED',
+    });
     expect(await prisma.refreshToken.count()).toBe(1);
     await expect(prisma.refreshTokenFamily.findFirstOrThrow()).resolves.toMatchObject({
       revokedAt: null,

@@ -48,13 +48,13 @@ describe('Finance HTTP authorization and validation', () => {
         userId: identity.user.id,
         memberId: identity.member.id,
       });
-    await request(server).get('/api/v1/finance/summary').expect(401);
+    await request(server).get('/api/v1/admin/finance/summary').expect(401);
     await request(server)
-      .get('/api/v1/finance/summary')
+      .get('/api/v1/admin/finance/summary')
       .set('Authorization', `Bearer ${token(denied)}`)
       .expect(403);
     const result = await request(server)
-      .get('/api/v1/finance/summary')
+      .get('/api/v1/admin/finance/summary')
       .set('Authorization', `Bearer ${token(allowed)}`)
       .expect(200);
     expect(result.body).toMatchObject({
@@ -64,15 +64,15 @@ describe('Finance HTTP authorization and validation', () => {
       breakdown: [],
     });
     await request(server)
-      .get('/api/v1/finance/transactions')
+      .get('/api/v1/admin/finance/transactions')
       .set('Authorization', `Bearer ${token(denied)}`)
       .expect(403);
     await request(server)
-      .get('/api/v1/finance/transactions')
+      .get('/api/v1/admin/finance/transactions')
       .set('Authorization', `Bearer ${token(allowed)}`)
       .expect(200);
     await request(server)
-      .post('/api/v1/expenses')
+      .post('/api/v1/admin/expenses')
       .set('Authorization', `Bearer ${token(allowed)}`)
       .send({})
       .expect(403);
@@ -86,7 +86,7 @@ describe('Finance HTTP authorization and validation', () => {
       'limit=101',
     ]) {
       await request(server)
-        .get('/api/v1/finance/transactions?' + query)
+        .get('/api/v1/admin/finance/transactions?' + query)
         .set('Authorization', `Bearer ${token(allowed)}`)
         .expect(400);
     }
@@ -97,7 +97,7 @@ describe('Finance HTTP authorization and validation', () => {
       data: { shopId: shop.id, code: 'LAUNDRY', name: 'Giặt hấp' },
     });
     const categories = await request(server)
-      .get('/api/v1/expense-categories')
+      .get('/api/v1/admin/expense-categories')
       .set('Authorization', `Bearer ${token(manager)}`)
       .expect(200);
     expect(categories.body).toEqual([{ id: category.id, name: 'Giặt hấp' }]);
@@ -108,12 +108,12 @@ describe('Finance HTTP authorization and validation', () => {
       expenseDate: '2026-09-15',
     };
     await request(server)
-      .post('/api/v1/expenses')
+      .post('/api/v1/admin/expenses')
       .set('Authorization', `Bearer ${token(manager)}`)
       .send({ ...body, expenseDate: '2026-02-30' })
       .expect(400);
     await request(server)
-      .post('/api/v1/expenses')
+      .post('/api/v1/admin/expenses')
       .set('Authorization', `Bearer ${token(manager)}`)
       .send(body)
       .expect(201);
@@ -124,18 +124,14 @@ describe('Finance HTTP authorization and validation', () => {
       1,
     );
     const totals = await request(server)
-      .get('/api/v1/finance/summary?preset=custom&from=2026-09-15&to=2026-09-15')
+      .get('/api/v1/admin/finance/summary?preset=custom&from=2026-09-15&to=2026-09-15')
       .set('Authorization', `Bearer ${token(manager)}`)
       .expect(200);
     expect(totals.body).toMatchObject({ totalExpenses: '120000.00', profit: '-120000.00' });
-    const otherShop = await createTestShop(prisma);
-    const foreign = await prisma.expenseCategory.create({
-      data: { shopId: otherShop.id, code: 'OTHER', name: 'Khác' },
-    });
     await request(server)
-      .post('/api/v1/expenses')
+      .post('/api/v1/admin/expenses')
       .set('Authorization', `Bearer ${token(manager)}`)
-      .send({ ...body, categoryId: foreign.id })
+      .send({ ...body, categoryId: '00000000-0000-4000-8000-000000000000' })
       .expect(400);
   });
 });

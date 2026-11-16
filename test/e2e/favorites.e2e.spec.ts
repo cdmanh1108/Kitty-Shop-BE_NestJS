@@ -40,10 +40,18 @@ describe('Account favorites end-to-end', () => {
     const shop = await createTestShop(prisma);
     const { product } = await createTestProductWithVariant(prisma, shop.id);
     const first = await prisma.webAccount.create({
-      data: { phone: '+84912345678', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345678@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
     const second = await prisma.webAccount.create({
-      data: { phone: '+84912345679', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345679@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
     const firstCookie = cookieFor(first.id);
     const secondCookie = cookieFor(second.id);
@@ -101,7 +109,11 @@ describe('Account favorites end-to-end', () => {
     const second = await createTestProductWithVariant(prisma, shop.id);
     const third = await createTestProductWithVariant(prisma, shop.id);
     const account = await prisma.webAccount.create({
-      data: { phone: '+84912345670', passwordHash: 'not-used', phoneVerifiedAt: new Date() },
+      data: {
+        email: 'account-84912345670@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
     });
     const cookie = cookieFor(account.id);
     await prisma.favorite.createMany({

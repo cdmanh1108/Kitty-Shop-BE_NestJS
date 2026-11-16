@@ -15,7 +15,6 @@ const product: StorefrontProductItem = {
   imageUrl: '',
   size: 'M',
   color: 'White',
-  rentalPrices: [],
   depositAmount: 0,
   isRentable: true,
 };

@@ -10,6 +10,19 @@ export const uniqueCode = (prefix: string): string => `${prefix}_${nextCounter()
 export const TEST_PASSWORD = 'TestPassword123!';
 export const TEST_PASSWORD_HASH = '$2b$12$vrFPZiTzL/BznUagqb2GTOxz8kA.OhnqUbnYbAVX8dvLEpGMdI53W';
 
+export async function createVerifiedWebAccount(
+  prisma: PrismaService,
+  email = `web_${nextCounter()}@example.test`,
+) {
+  return prisma.webAccount.create({
+    data: {
+      email,
+      passwordHash: TEST_PASSWORD_HASH,
+      emailVerifiedAt: new Date('2026-10-01T00:00:00.000Z'),
+    },
+  });
+}
+
 export async function ensurePermissionsSeeded(
   prisma: PrismaService,
   selected?: string[],
@@ -159,14 +172,12 @@ export async function createTestProductWithVariant(
   prisma: PrismaService,
   shopId: string,
   options?: {
-    dailyRate?: number;
     depositAmount?: number;
     inventoryCount?: number;
   },
 ) {
   const category = await createTestCategory(prisma, shopId);
   const productCode = uniqueCode('prod');
-  const dailyRate = options?.dailyRate ?? 100000;
   const depositAmount = options?.depositAmount ?? 200000;
 
   const product = await prisma.product.create({
@@ -192,18 +203,6 @@ export async function createTestProductWithVariant(
       variantCode,
       status: 'ACTIVE',
     },
-  });
-
-  await prisma.rentalRate.createMany({
-    data: [1, 2, 3, 4, 5].map((days) => ({
-      shopId,
-      productId: product.id,
-      variantId: variant.id,
-      durationDays: days,
-      price: new Prisma.Decimal(dailyRate * days),
-      currency: 'VND',
-      isActive: true,
-    })),
   });
 
   const count = options?.inventoryCount ?? 1;

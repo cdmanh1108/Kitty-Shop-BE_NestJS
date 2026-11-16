@@ -1,6 +1,6 @@
 # Rental Shop Backend
 
-Production-oriented NestJS API for a clothing rental shop admin platform. The codebase is designed for the current admin workflow and leaves stable extension points for a public catalog, customer self-booking, online payments and multiple locations later.
+NestJS API for KITTY's rental operations and public storefront. It serves the Admin and Web OpenAPI contracts from one backend and resolves the deployment's active shop internally.
 
 ## Stack
 
@@ -26,9 +26,9 @@ npm run start:dev
 
 `npm run i` only installs dependencies.
 
-`npm run bootstrap` creates `.env` from `.env.example` when absent, generates a random local JWT secret, starts PostgreSQL with Docker when `DB_AUTO_START=true`, applies migrations, seeds RBAC/lookups/admin, and exports OpenAPI.
+`npm run bootstrap` creates `.env` from `.env.example` when absent, generates a random local JWT secret, starts PostgreSQL with Docker when `DB_AUTO_START=true`, applies migrations, seeds RBAC/admin and the approved release catalog, and exports OpenAPI.
 
-If you use an existing PostgreSQL instance, install dependencies, copy `.env.example` to `.env`, edit `DATABASE_URL`, set `DB_AUTO_START=false`, then run `npm run bootstrap`.
+If you use a separately provisioned, empty PostgreSQL database, install dependencies, copy `.env.example` to `.env`, edit `DATABASE_URL`, set `DB_AUTO_START=false`, then run `npm run bootstrap`. The initial-release baseline is not an upgrade path for a database with existing data or Prisma migration history.
 
 Default local login after seed:
 
@@ -41,7 +41,7 @@ Change it before any real deployment.
 
 - API: `http://localhost:3000/api/v1`
 - Swagger UI: `http://localhost:3000/docs`
-- OpenAPI file: `generated/openapi.json`
+- OpenAPI files: `generated/openapi-admin.json` and `generated/openapi-web.json`
 - Health: `GET /api/v1/health/live`, `GET /api/v1/health/ready`
 
 ## Core domain invariants
@@ -68,9 +68,10 @@ npm run quality           # lint + tests + production build + non-mutating OpenA
 npm run db:up             # start local PostgreSQL only
 npm run db:migrate        # apply committed migrations
 npm run db:migrate:dev    # create a migration during development
-npm run db:seed           # idempotent base seed
+npm run db:seed           # admin/RBAC + approved initial-release catalog; safe reruns
+npm run db:seed:check     # validate catalog without connecting to a database
 npm run db:studio         # Prisma Studio
-npm run openapi:export    # regenerate generated/openapi.json
+npm run openapi:export    # regenerate both audience-specific OpenAPI files
 ```
 
 ## Project structure
@@ -106,6 +107,8 @@ See [docs/API.md](docs/API.md) for endpoint groups and [docs/ROADMAP.md](docs/RO
 
 Catalog media reads use an injected public URL resolver and centrally validated storage configuration. Key-backed objects retain provider-neutral identity; external legacy URLs remain supported. See [Object storage](docs/OBJECT_STORAGE.md).
 
+The initial-release seed restores the approved catalog and stock with fresh rental counters and env-configured admin credentials. See [Release seed](docs/RELEASE_SEED.md) before resetting a local test database or initializing the new production database.
+
 ## Clean dependency verification
 
 ```bash
@@ -117,7 +120,7 @@ npm run quality
 
 `db:generate` is required after a clean install; npm ci alone may leave the generic Prisma client stub. `quality` covers lint, unit tests, build and a non-mutating OpenAPI freshness check; it does not run PostgreSQL integration/E2E. Use `npm run openapi:export` explicitly when an API contract changes. Follow TESTING.md for an isolated TEST_DATABASE_URL, migrate with `test:db:migrate`, then run `test:integration` and `test:e2e` sequentially. Migration deploy changes the selected database; never use the application database for test cleanup.
 
-See [Task 7 stabilization](docs/STABILIZATION.md) for the latest verification. Earlier dated counts are historical, not the current suite contract.
+See [quality gates](docs/QA.md), [testing](docs/TESTING.md), and the [release runbook](docs/RUNBOOK.md) for current verification and deployment steps.
 
 Metadata-only OpenAPI export still validates application configuration. Without a configured local .env, provide an explicit synthetic JWT_ACCESS_SECRET of at least 32 characters for verification. The export command itself sets SKIP_DATABASE_CONNECT; let test harnesses manage their own NODE_ENV. Never reuse the synthetic signing key in a deployment. No database connection is needed for export.
 

@@ -16,7 +16,7 @@ export interface WebProductListFilterInput {
   category?: string;
   size?: string;
   color?: string;
-  sort?: 'newest' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc';
+  sort?: 'newest' | 'name_asc' | 'name_desc';
 }
 
 export interface WebCatalogFiltersInput {
