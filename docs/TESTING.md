@@ -59,3 +59,15 @@ The database suites verify rental overlap protection, transactional rollback,
 payment/deposit accounting, idempotency ownership, refresh-token rotation,
 shop scoping, and audit/outbox persistence. Add coverage alongside changes to
 those boundaries rather than weakening or bypassing the database constraints.
+
+## Request-parser regression
+
+`test/unit/request-parser.spec.ts` runs the real Nest parser and
+`configureApplication` in isolated child processes without importing AppModule
+or connecting to a database. It covers ordinary JSON/gzip bodies, trailing bytes
+after a completed deflate frame and a larger invalid tail after a gzip frame,
+followed by a health request. An unhandled parser error fails the child instead
+of terminating Jest.
+
+Production dependency versions and remaining advisory triage are documented in
+[Dependency security](DEPENDENCY_SECURITY.md).
