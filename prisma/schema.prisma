@@ -75,6 +75,7 @@ model WebOtpChallenge {
   account               WebAccount           @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId, createdAt])
+  @@index([accountId, registrationAttemptId], map: "web_otp_challenges_account_attempt_idx")
   @@index([expiresAt])
   @@map("web_otp_challenges")
 }
@@ -416,6 +417,7 @@ model Customer {
   @@unique([shopId, customerCode])
   @@unique([shopId, normalizedPhone])
   @@index([shopId, fullName])
+  @@index([fullName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_full_name_trgm_idx")
   @@index([shopId, status])
   @@map("customers")
 }
@@ -551,6 +553,7 @@ model Product {
   @@unique([shopId, slug])
   @@index([shopId, categoryId, status])
   @@index([shopId, name])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "products_name_trgm_idx")
   @@index([shopId, status, isPublic, isRentable, archivedAt, createdAt(sort: Desc)])
   @@index([shopId, allowFreeAccessory, status, isPublic, isRentable, archivedAt, createdAt(sort: Desc)], map: "products_shop_free_accessory_visibility_idx")
   @@map("products")

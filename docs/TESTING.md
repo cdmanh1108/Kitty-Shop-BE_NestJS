@@ -23,6 +23,13 @@ npm run test:e2e
 Integration and E2E suites run serially. Do not run them in parallel against the
 same test database.
 
+The integration suite includes `schema-drift.integration.spec.ts`: migrated
+PostgreSQL must match Prisma-supported metadata with an empty read-only diff.
+It uses only the explicitly guarded test database and checks the three
+baseline-created trigram/OTP indexes. PostgreSQL-only partial/expression
+indexes and exclusion/check constraints still need their own invariant tests
+and migration review; an empty Prisma diff is not a complete database audit.
+
 ## Isolated PostgreSQL
 
 Use a disposable database only. The database test helper requires an explicit

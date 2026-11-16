@@ -69,6 +69,30 @@ Prisma schema edits do not automatically update SQL-only invariants. Review the
 baseline's custom SQL whenever changing the affected fields. Never rewrite an
 applied baseline; use additive migrations for deployed databases.
 
+### Index metadata and migration review
+
+The baseline creates `customers_full_name_trgm_idx`, `products_name_trgm_idx`
+and `web_otp_challenges_account_attempt_idx`. Their definitions are also declared
+in `schema.prisma`, with the exact physical index names. The trigram indexes use
+`type: Gin` and `ops: raw("gin_trgm_ops")`, supported by
+[Prisma 6 index metadata](https://www.prisma.io/docs/orm/v6/prisma-schema/data-model/indexes).
+Adding these declarations reconciles metadata only: it requires no migration,
+index rebuild, baseline edit or production data change.
+
+`test/integration/schema-drift.integration.spec.ts` compares the explicitly
+guarded, migrated `TEST_DATABASE_URL` to the Prisma datamodel using read-only
+`migrate diff --script --exit-code`. An empty supported diff is required; this
+prevents future generated migrations from silently proposing the three index drops.
+The check never executes its generated SQL and never falls back to runtime `.env`.
+
+Prisma's diff covers supported database features only; see the
+[Prisma 6 CLI reference](https://www.prisma.io/docs/orm/v6/reference/prisma-cli-reference).
+It does not prove preservation of expression/partial indexes, check constraints
+or the rental exclusion constraint. Continue reviewing those PostgreSQL-only
+definitions and running database invariant/concurrency suites. Do not replace
+the committed migration chain with `db push`, execute diff output blindly, or
+rewrite an applied baseline to make drift disappear.
+
 ## Local and test databases
 
 `docker-compose.dev.yml` starts a local PostgreSQL 17 container. Database tests
