@@ -66,6 +66,7 @@ describe('initial release seed', () => {
         prisma.webAccount.count(),
       ]),
     ).toEqual([13, 16, 6, 116, 121, 116, 116, 0, 0, 0, 0, 0]);
+    expect(await prisma.product.count({ where: { freeAccessoryLimit: 1 } })).toBe(116);
     expect(await prisma.product.count({ where: { code: { startsWith: 'TEST' } } })).toBe(0);
     expect(
       await prisma.product.findMany({
@@ -120,7 +121,7 @@ describe('initial release seed', () => {
     const changedPassword = await hash('ChangedAfterRelease123!', 4);
     await prisma.product.update({
       where: { id: product.id },
-      data: { name: 'Edited after release' },
+      data: { name: 'Edited after release', freeAccessoryLimit: 3 },
     });
     await prisma.inventoryItem.update({
       where: { id: item.id },
@@ -143,6 +144,7 @@ describe('initial release seed', () => {
     expect(await prisma.user.count()).toBe(1);
     expect(await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).toMatchObject({
       name: 'Edited after release',
+      freeAccessoryLimit: 3,
     });
     expect(await prisma.inventoryItem.findUniqueOrThrow({ where: { id: item.id } })).toMatchObject({
       currentStatus: 'CLEANING',

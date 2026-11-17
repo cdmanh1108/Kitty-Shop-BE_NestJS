@@ -5764,6 +5764,13 @@
             "type": "boolean",
             "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn."
           },
+          "freeAccessoryLimit": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "example": 1,
+            "description": "Số phụ kiện miễn phí được kèm cho mỗi món sản phẩm thuê có phí. 0 là không kèm miễn phí."
+          },
           "code": {
             "type": "string",
             "example": "DRESS-AURORA"
@@ -5827,6 +5834,11 @@
           },
           "allowFreeAccessory": {
             "type": "boolean"
+          },
+          "freeAccessoryLimit": {
+            "type": "number",
+            "minimum": 0,
+            "default": 1
           },
           "id": {
             "type": "string"
@@ -5892,6 +5904,7 @@
         "required": [
           "rentalPriceOverride",
           "allowFreeAccessory",
+          "freeAccessoryLimit",
           "id",
           "code",
           "name",
@@ -5935,6 +5948,13 @@
           "allowFreeAccessory": {
             "type": "boolean",
             "description": "Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn."
+          },
+          "freeAccessoryLimit": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "example": 1,
+            "description": "Số phụ kiện miễn phí được kèm cho mỗi món sản phẩm thuê có phí. 0 là không kèm miễn phí."
           },
           "name": {
             "type": "string"
@@ -8632,6 +8652,11 @@
           "allowFreeAccessory": {
             "type": "boolean"
           },
+          "freeAccessoryLimit": {
+            "type": "number",
+            "minimum": 0,
+            "default": 1
+          },
           "id": {
             "type": "string"
           },
@@ -8676,6 +8701,7 @@
         "required": [
           "rentalPriceOverride",
           "allowFreeAccessory",
+          "freeAccessoryLimit",
           "id",
           "code",
           "name",
@@ -8756,6 +8782,11 @@
           "allowFreeAccessory": {
             "type": "boolean"
           },
+          "freeAccessoryLimit": {
+            "type": "number",
+            "minimum": 0,
+            "default": 1
+          },
           "id": {
             "type": "string"
           },
@@ -8778,6 +8809,7 @@
         "required": [
           "rentalPriceOverride",
           "allowFreeAccessory",
+          "freeAccessoryLimit",
           "id",
           "code",
           "name",
@@ -9134,7 +9166,7 @@
               "PAID",
               "FREE_ACCESSORY"
             ],
-            "description": "Bỏ trống là thuê có tính phí (PAID). FREE_ACCESSORY chỉ dành cho phụ kiện đi kèm, tối đa 2 phụ kiện miễn phí cho mỗi món tính phí."
+            "description": "Bỏ trống là thuê có tính phí (PAID). FREE_ACCESSORY chỉ dành cho phụ kiện đi kèm trong hạn mức của từng sản phẩm thuê có phí."
           },
           "cyclePriceOverride": {
             "type": "number",

@@ -56,6 +56,7 @@ export async function resolveStorefrontSelections(
           slug: true,
           name: true,
           allowFreeAccessory: true,
+          freeAccessoryLimit: true,
           media: productMediaSelect,
         },
       },
@@ -82,6 +83,7 @@ export async function resolveStorefrontSelections(
         slug: variant.product.slug,
         name: variant.product.name,
         allowFreeAccessory: variant.product.allowFreeAccessory,
+        freeAccessoryLimit: variant.product.freeAccessoryLimit,
       },
       variant: {
         id: variant.id,

@@ -39,6 +39,7 @@ import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import type { CreateRentalOrderInput } from './rental.contracts';
 import {
   assertFreeAccessoryAllowed,
+  rentalAccessoryAllowance,
   rentalBillingRole,
   rentalSelectionKey,
 } from '../domain/rental-accessories';
@@ -140,6 +141,11 @@ export class RentalCreationService {
       }
       const policy = await this.policies.getPolicy(user.shopId);
       const lines: CreateRentalOrderData['lines'] = [];
+      const allowanceItems: Array<{
+        quantity: number;
+        billingRole: string;
+        freeAccessoryLimit: number;
+      }> = [];
       const allocatedInventoryIds = new Set<string>();
       for (const item of input.items) {
         const variant = await this.availability.getBookableVariant({
@@ -152,6 +158,11 @@ export class RentalCreationService {
           throw new RentalNotFoundError(`Biến thể ${item.variantId} không được phép cho thuê.`);
         const billingRole = rentalBillingRole(item.billingRole);
         assertFreeAccessoryAllowed(billingRole, variant.allowFreeAccessory);
+        allowanceItems.push({
+          quantity: item.quantity,
+          billingRole,
+          freeAccessoryLimit: variant.freeAccessoryLimit,
+        });
         const pricing = resolveRentalLinePricing({
           durationDays,
           billableQuantity,
@@ -213,6 +224,7 @@ export class RentalCreationService {
         });
       }
 
+      rentalAccessoryAllowance(allowanceItems);
       const order = await this.creation.createOrder({
         orderNumber: generateDatedReference('RT'),
         shopId: user.shopId,

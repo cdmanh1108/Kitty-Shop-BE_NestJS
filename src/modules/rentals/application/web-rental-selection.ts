@@ -82,7 +82,6 @@ export async function evaluateWebRentalSelection(
     });
   }
 
-  rentalAccessoryAllowance(input.items);
   const variantIds = [...new Set(candidates.map(({ variantId }) => variantId))];
   const variants = await repository.getBookableVariants({
     shopId: input.shopId,
@@ -102,6 +101,13 @@ export async function evaluateWebRentalSelection(
   }
 
   const groups = new Map<string, LineGroup>();
+  if (!failure)
+    rentalAccessoryAllowance(
+      candidates.map((line) => ({
+        ...line,
+        freeAccessoryLimit: variantById.get(line.variantId)!.freeAccessoryLimit,
+      })),
+    );
   for (const candidate of candidates) {
     const groupKey = rentalSelectionKey(candidate.variantId, candidate.billingRole);
     const current = groups.get(groupKey);

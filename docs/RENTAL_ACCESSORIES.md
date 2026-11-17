@@ -4,7 +4,7 @@
 
 `Product.allowFreeAccessory` controls complimentary eligibility independently of category. `RentalOrderItem.billingRole` captures the
 agreed rental role independently: `PAID` or `FREE_ACCESSORY`. Omitted input is paid.
-Each paid physical unit earns up to two free accessories, including standalone paid
+Each paid physical unit earns the number of free accessories configured on its product (`freeAccessoryLimit`, default 1; 0 earns none), including standalone paid
 accessories and paid lines with an explicit zero price. Free accessories do not
 earn more free accessories or count toward the cycle-pricing quantity tier.
 
@@ -15,13 +15,13 @@ silently changing their price. Only a shop-scoped bookable variant whose Product
 can receive the free role. Paid accessories use ordinary pricing and deposit.
 
 Admin create, Web quote and Web checkout item inputs accept optional `billingRole`.
-For example, two paid units allow up to four selected free units:
+For example, two paid units at the default limit allow up to two selected free units:
 
 ```json
 {
   "items": [
     { "variantId": "<paid-variant-uuid>", "quantity": 2 },
-    { "variantId": "<accessory-variant-uuid>", "quantity": 4, "billingRole": "FREE_ACCESSORY" }
+    { "variantId": "<accessory-variant-uuid>", "quantity": 2, "billingRole": "FREE_ACCESSORY" }
   ]
 }
 ```
@@ -29,7 +29,7 @@ For example, two paid units allow up to four selected free units:
 A variant can appear in both roles, with distinct physical allocations. Admin
 rejects repeated variant/role combinations; Web merges them within each role.
 Quotes return role-specific line totals and an `accessoryAllowance` containing
-paid quantity, selected free quantity and remaining entitlement (`2 * paid - free`).
+paid quantity, selected free quantity and remaining entitlement (`sum(paid quantity * product freeAccessoryLimit) - free`).
 Paid quantity itself is unchanged: it remains the quantity used by cycle pricing,
 not the free-accessory capacity. Item price
 overrides are rejected on free lines; order overrides apply to paid lines only.
@@ -72,3 +72,5 @@ Account cart items accept optional `billingRole`, defaulting to paid when absent
 The cart is editable intent, so reducing paid quantity may temporarily exceed the free allowance. Cart persistence keeps that explicit choice; quote and booking continue to enforce canonical accessory eligibility, entitlement, combined physical demand and booking safety. Web checkout blocks until the customer removes excess accessories or explicitly chooses paid rental.
 
 The Catalog and Favorites DTOs publish `allowFreeAccessory`. Detail and selection resolution provide the canonical flag for complimentary eligibility. Accessory selectors query `allowFreeAccessory=true`; a false product remains available in normal paid catalog selection. The flag alone never waives charges: only a validated FREE_ACCESSORY role does. Regenerate both frontend OpenAPI/schema snapshots after this contract change.
+
+Product limits are validated from canonical Catalog reads and rechecked inside the Serializable booking transaction. Clients never submit entitlement limits. Editing a product does not rewrite saved order prices or roles. The additive `202611170001_product_free_accessory_limit` migration sets every existing product to 1 and defaults future products to 1. Seed reruns do not reset edited limits.

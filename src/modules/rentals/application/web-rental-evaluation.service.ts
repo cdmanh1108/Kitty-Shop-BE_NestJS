@@ -187,7 +187,15 @@ export class WebRentalEvaluationService {
         )
           ? linePricings[0]!
           : null,
-      accessoryAllowance: rentalAccessoryAllowance(req.items),
+      accessoryAllowance: selection.failure
+        ? undefined
+        : rentalAccessoryAllowance(
+            selection.demands.map(({ variant, quantity, billingRole }) => ({
+              quantity,
+              billingRole,
+              freeAccessoryLimit: variant.freeAccessoryLimit,
+            })),
+          ),
       rentalSubtotal,
       depositAmount,
       shippingFee,

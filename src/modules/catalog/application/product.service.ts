@@ -77,6 +77,7 @@ export class ProductService {
         code: input.code,
         name: input.name,
         allowFreeAccessory,
+        freeAccessoryLimit: input.freeAccessoryLimit ?? 1,
         rentalPriceOverride: input.rentalPriceOverride ?? null,
       },
     });
@@ -193,6 +194,7 @@ export class ProductService {
   async updateProduct(user: CurrentUser, id: string, input: UpdateProductInput) {
     const updated = await this.repository.updateProduct(user.shopId, id, {
       allowFreeAccessory: input.allowFreeAccessory,
+      freeAccessoryLimit: input.freeAccessoryLimit,
       name: input.name,
       slug: input.slug,
       categoryId: input.categoryId,

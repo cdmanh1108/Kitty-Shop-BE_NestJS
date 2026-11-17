@@ -57,6 +57,7 @@ export class WebProductVariantSummaryDto {
 }
 
 export class WebProductListItemDto {
+  @ApiProperty({ type: Number, minimum: 0, default: 1 }) freeAccessoryLimit!: number;
   @ApiProperty({ type: Number, nullable: true }) rentalPriceOverride!: number | null;
   @ApiProperty({ type: Number, minimum: 0 }) rentalPrice!: number;
   @ApiPropertyOptional({ type: Boolean })
@@ -99,6 +100,7 @@ export class WebProductDetailDto {
   @ApiProperty({ type: Number, nullable: true }) rentalPriceOverride!: number | null;
   @ApiProperty({ type: Number, minimum: 0 }) rentalPrice!: number;
   @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
+  @ApiProperty({ type: Number, minimum: 0, default: 1 }) freeAccessoryLimit!: number;
   @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' })
   id!: string;
 

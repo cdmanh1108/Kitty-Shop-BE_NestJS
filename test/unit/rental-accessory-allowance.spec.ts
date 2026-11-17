@@ -9,10 +9,36 @@ import {
 import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 import { calculateRentalReturnFees } from '../../src/modules/rentals/domain/rental-return-fees';
 
-const paid = (quantity: number) => ({ quantity, billingRole: RENTAL_BILLING_ROLE.PAID });
+const paid = (quantity: number) => ({
+  quantity,
+  freeAccessoryLimit: 2,
+  billingRole: RENTAL_BILLING_ROLE.PAID,
+});
 const free = (quantity: number) => ({ quantity, billingRole: RENTAL_BILLING_ROLE.FREE_ACCESSORY });
 
-describe('Two complimentary accessories per paid physical unit', () => {
+describe('Product-configured complimentary allowance', () => {
+  it('defaults to one and pools different product limits without changing paid pricing quantity', () => {
+    expect(rentalAccessoryAllowance([{ quantity: 1 }, free(1)])).toEqual({
+      billableQuantity: 1,
+      freeAccessoryQuantity: 1,
+      remainingFreeAccessoryQuantity: 0,
+    });
+    expect(
+      rentalAccessoryAllowance([
+        { quantity: 2, freeAccessoryLimit: 1 },
+        { quantity: 1, freeAccessoryLimit: 3 },
+        { quantity: 1, freeAccessoryLimit: 0 },
+        { ...free(5), freeAccessoryLimit: 100 },
+      ]),
+    ).toEqual({ billableQuantity: 4, freeAccessoryQuantity: 5, remainingFreeAccessoryQuantity: 0 });
+    expect(() =>
+      rentalAccessoryAllowance([{ quantity: 1, freeAccessoryLimit: 0 }, free(1)]),
+    ).toThrow('tối đa 0');
+    for (const limit of [-1, 1.5, Infinity, 2147483648])
+      expect(() => rentalAccessoryAllowance([{ quantity: 1, freeAccessoryLimit: limit }])).toThrow(
+        'không hợp lệ',
+      );
+  });
   it.each([
     [1, 0, 2],
     [1, 1, 1],
@@ -35,7 +61,7 @@ describe('Two complimentary accessories per paid physical unit', () => {
       rentalAccessoryAllowance([paid(1), paid(2), free(6)]).remainingFreeAccessoryQuantity,
     ).toBe(0);
     expect(() => rentalAccessoryAllowance([paid(1), free(3)])).toThrow(/tối đa 2/);
-    expect(() => rentalAccessoryAllowance([paid(2), free(5)])).toThrow(/tối đa 2/);
+    expect(() => rentalAccessoryAllowance([paid(2), free(5)])).toThrow(/tối đa 4/);
     expect(() => rentalAccessoryAllowance([free(2)])).toThrow(/ít nhất một món/);
   });
   it('includes zero-priced PAID units while keeping paid pricing quantity below the three-unit tier', () => {
@@ -91,6 +117,6 @@ describe('Two complimentary accessories per paid physical unit', () => {
     );
   });
   it('rejects unsafe doubled capacity before calculating an allowance', () => {
-    expect(() => rentalAccessoryAllowance([paid(Number.MAX_SAFE_INTEGER)])).toThrow(/Tổng số món/);
+    expect(() => rentalAccessoryAllowance([paid(Number.MAX_SAFE_INTEGER)])).toThrow(/Tổng hạn mức/);
   });
 });

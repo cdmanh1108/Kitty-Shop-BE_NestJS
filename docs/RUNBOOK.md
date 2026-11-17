@@ -1,20 +1,12 @@
 # Release runbook
 
-## Two free accessories per paid item
+## Per-product free accessory limits
 
-The accessory allowance is now `2 * paid quantity`. No schema change, migration,
-reset or repricing of saved order lines is required. Existing per-selection/order
-quantity limits and physical stock restrictions still apply.
+Apply `202611170001_product_free_accessory_limit` with `npm run db:migrate` (or the deployment's migrate container) before switching application traffic. This additive migration sets every existing product to 1 and defaults new products to 1. Do not reset or reseed the database. Admin can edit a product's nonnegative integer limit; 0 grants no free units.
 
-Deploy the backend, storefront and Admin together in a short coordinated
-maintenance window for this policy change. The storefront checks quote allowance
-against its local selection model; mixing the 1:1 and 1:2 versions can reject
-quotes even for a cart with no free selections. Refresh open storefront/Admin
-tabs afterward. Do not relax quote validation to bypass a mixed deployment.
+Deploy backend, storefront and Admin together and refresh open tabs. The storefront validates the exact quote allowance against current canonical product metadata. Previous fixed 1:2 builds cannot be mixed with per-product builds. Existing order lines keep their saved roles, prices and allocations.
 
-Smoke-test one paid unit with two free accessories (accepted), one with three
-(rejected), and two paid units with four free accessories. Confirm the displayed
-capacity and stock checks, and that only paid units determine pricing tiers.
+Smoke-test default 1, custom 2/3, zero, pooled mixed-product limits, reducing paid quantities and lowering a product limit between quote and create. Verify that pricing tiers still count only paid physical units and that stock remains shared between paid/free lines.
 
 ## Update an initialized release database
 

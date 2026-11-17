@@ -89,6 +89,7 @@ export async function createProduct(
           categoryId: input.categoryId,
           code: input.code,
           allowFreeAccessory: input.allowFreeAccessory ?? false,
+          freeAccessoryLimit: input.freeAccessoryLimit ?? 1,
           name: input.name,
           slug,
           description: input.description,
@@ -177,6 +178,8 @@ export async function updateProduct(
         await assertActiveCategory(tx, shopId, input.categoryId);
       }
       const data: Prisma.ProductUpdateInput = {};
+      if (input.freeAccessoryLimit !== undefined)
+        data.freeAccessoryLimit = input.freeAccessoryLimit;
       if (input.allowFreeAccessory !== undefined)
         data.allowFreeAccessory = input.allowFreeAccessory;
       if (input.status === 'ARCHIVED') {

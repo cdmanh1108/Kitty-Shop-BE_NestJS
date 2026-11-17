@@ -104,6 +104,7 @@ export type ProductDetails =
       | 'id'
       | 'code'
       | 'allowFreeAccessory'
+      | 'freeAccessoryLimit'
       | 'name'
       | 'categoryId'
       | 'description'
@@ -266,6 +267,7 @@ export interface StorefrontProductVariant {
 export interface StorefrontProductItem {
   rentalPriceOverride: number | null;
   rentalPrice: number;
+  freeAccessoryLimit: number;
   allowFreeAccessory: boolean;
   id: string;
   code: string;
@@ -283,6 +285,7 @@ export interface StorefrontProductItem {
 export interface StorefrontProductDetails {
   rentalPriceOverride: number | null;
   rentalPrice: number;
+  freeAccessoryLimit: number;
   allowFreeAccessory: boolean;
   id: string;
   code: string;
@@ -323,6 +326,7 @@ export interface StorefrontSelectionInput {
 }
 
 export interface StorefrontSelectedProduct {
+  freeAccessoryLimit: number;
   allowFreeAccessory: boolean;
   id: string;
   slug: string;

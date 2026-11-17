@@ -2428,6 +2428,11 @@
           "allowFreeAccessory": {
             "type": "boolean"
           },
+          "freeAccessoryLimit": {
+            "type": "number",
+            "minimum": 0,
+            "default": 1
+          },
           "id": {
             "type": "string",
             "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -2501,6 +2506,7 @@
           "rentalPriceOverride",
           "rentalPrice",
           "allowFreeAccessory",
+          "freeAccessoryLimit",
           "id",
           "code",
           "slug",
@@ -3069,6 +3075,11 @@
       "WebProductListItemDto": {
         "type": "object",
         "properties": {
+          "freeAccessoryLimit": {
+            "type": "number",
+            "minimum": 0,
+            "default": 1
+          },
           "rentalPriceOverride": {
             "type": "number",
             "nullable": true
@@ -3127,6 +3138,7 @@
           }
         },
         "required": [
+          "freeAccessoryLimit",
           "rentalPriceOverride",
           "rentalPrice",
           "id",
@@ -3355,7 +3367,7 @@
               "PAID",
               "FREE_ACCESSORY"
             ],
-            "description": "Bỏ trống là PAID. FREE_ACCESSORY: phụ kiện khách chọn đi kèm, không có tiền thuê/cọc; mỗi món PAID được kèm tối đa 2 phụ kiện miễn phí."
+            "description": "Bỏ trống là PAID. FREE_ACCESSORY: phụ kiện đi kèm, không có tiền thuê/cọc; hạn mức tùy từng sản phẩm PAID."
           },
           "variantId": {
             "type": "string",
@@ -3384,14 +3396,14 @@
         "properties": {
           "billableQuantity": {
             "type": "number",
-            "description": "Số món PAID; mỗi món được kèm tối đa 2 phụ kiện miễn phí. Số này vẫn là số món dùng để tính giá."
+            "description": "Số món PAID dùng để tính giá, độc lập với hạn mức phụ kiện của từng sản phẩm."
           },
           "freeAccessoryQuantity": {
             "type": "number"
           },
           "remainingFreeAccessoryQuantity": {
             "type": "number",
-            "description": "Hạn mức còn lại: số món PAID nhân 2, trừ số phụ kiện miễn phí đã chọn."
+            "description": "Tổng số lượng PAID nhân hạn mức từng sản phẩm, trừ số phụ kiện miễn phí đã chọn."
           }
         },
         "required": [
@@ -3975,6 +3987,11 @@
           "allowFreeAccessory": {
             "type": "boolean"
           },
+          "freeAccessoryLimit": {
+            "type": "number",
+            "minimum": 0,
+            "default": 1
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -3990,6 +4007,7 @@
         },
         "required": [
           "allowFreeAccessory",
+          "freeAccessoryLimit",
           "id",
           "slug",
           "name"

@@ -117,6 +117,19 @@ export class CreateProductReqDto {
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí chưa hợp lệ. Vui lòng chọn lại.' })
   allowFreeAccessory?: boolean;
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 0,
+    maximum: 2147483647,
+    example: 1,
+    description:
+      'Số phụ kiện miễn phí được kèm cho mỗi món sản phẩm thuê có phí. 0 là không kèm miễn phí.',
+  })
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Số phụ kiện miễn phí phải là số nguyên không âm.' })
+  @Min(0)
+  @Max(2147483647)
+  freeAccessoryLimit?: number;
 
   @ApiProperty({ example: 'DRESS-AURORA' })
   @IsString({ message: 'Mã nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
@@ -204,6 +217,19 @@ export class UpdateProductReqDto {
   @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
   @IsBoolean({ message: 'Tùy chọn thuê kèm miễn phí chưa hợp lệ. Vui lòng chọn lại.' })
   allowFreeAccessory?: boolean;
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 0,
+    maximum: 2147483647,
+    example: 1,
+    description:
+      'Số phụ kiện miễn phí được kèm cho mỗi món sản phẩm thuê có phí. 0 là không kèm miễn phí.',
+  })
+  @ValidateIf((_object: unknown, value: unknown) => value !== undefined)
+  @IsInt({ message: 'Số phụ kiện miễn phí phải là số nguyên không âm.' })
+  @Min(0)
+  @Max(2147483647)
+  freeAccessoryLimit?: number;
 
   @ApiPropertyOptional()
   @IsString({ message: 'Tên nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
@@ -341,6 +367,7 @@ export class ProductCategorySummaryResDto {
 export class ProductResDto {
   @ApiProperty({ type: String, nullable: true }) rentalPriceOverride!: string | null;
   @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
+  @ApiProperty({ type: Number, minimum: 0, default: 1 }) freeAccessoryLimit!: number;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
@@ -370,6 +397,7 @@ export class ProductResDto {
 export class ProductListItemResDto {
   @ApiProperty({ type: String, nullable: true }) rentalPriceOverride!: string | null;
   @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
+  @ApiProperty({ type: Number, minimum: 0, default: 1 }) freeAccessoryLimit!: number;
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;

@@ -20,6 +20,7 @@ export const FavoritesMapper = {
           size: product.size,
           color: product.color,
           rentalPriceOverride: product.rentalPriceOverride,
+          freeAccessoryLimit: product.freeAccessoryLimit,
           rentalPrice: product.rentalPrice,
           depositAmount: product.depositAmount,
           isRentable: product.isRentable,

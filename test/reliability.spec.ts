@@ -649,6 +649,7 @@ function rentalServiceWithPorts(
     variantCode: 'VAR-1',
     productId: 'product',
     productName: 'Product',
+    freeAccessoryLimit: 1,
     allowFreeAccessory: false,
     sizeName: null,
     colorName: null,

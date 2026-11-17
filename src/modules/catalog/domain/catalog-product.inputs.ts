@@ -1,4 +1,5 @@
 export interface CreateProductData {
+  freeAccessoryLimit?: number;
   rentalPriceOverride?: number | null;
   allowFreeAccessory?: boolean;
   code: string;
@@ -22,6 +23,7 @@ export interface CreateProductData {
 }
 
 export interface UpdateProductData {
+  freeAccessoryLimit?: number;
   rentalPriceOverride?: number | null;
   allowFreeAccessory?: boolean;
   name?: string;

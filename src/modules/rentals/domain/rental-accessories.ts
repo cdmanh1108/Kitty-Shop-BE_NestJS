@@ -5,7 +5,6 @@ export const RENTAL_BILLING_ROLE = {
   FREE_ACCESSORY: 'FREE_ACCESSORY',
 } as const;
 export type RentalBillingRole = (typeof RENTAL_BILLING_ROLE)[keyof typeof RENTAL_BILLING_ROLE];
-export const FREE_ACCESSORIES_PER_PAID_ITEM = 2;
 
 export interface RentalAccessoryAllowance {
   billableQuantity: number;
@@ -33,10 +32,10 @@ export function rentalPaidQuantity(
   );
 }
 
-/** Entitlements count physical paid units, including paid accessories and zero price overrides. */
-export function rentalAccessoryAllowance(
+/** Validate physical counts without consulting mutable catalog entitlements. */
+export function rentalAccessoryCounts(
   items: readonly { quantity: number; billingRole?: string }[],
-): RentalAccessoryAllowance {
+) {
   let billableQuantity = 0;
   let freeAccessoryQuantity = 0;
   for (const item of items) {
@@ -49,10 +48,8 @@ export function rentalAccessoryAllowance(
       freeAccessoryQuantity += item.quantity;
     else billableQuantity += item.quantity;
   }
-  const allowanceQuantity = billableQuantity * FREE_ACCESSORIES_PER_PAID_ITEM;
   if (
     !Number.isSafeInteger(billableQuantity) ||
-    !Number.isSafeInteger(allowanceQuantity) ||
     !Number.isSafeInteger(freeAccessoryQuantity) ||
     !Number.isSafeInteger(billableQuantity + freeAccessoryQuantity)
   )
@@ -65,10 +62,34 @@ export function rentalAccessoryAllowance(
       'PAID_RENTAL_ITEM_REQUIRED',
       'Đơn thuê cần ít nhất một món thuê có tính phí để chọn phụ kiện đi kèm.',
     );
+  return { billableQuantity, freeAccessoryQuantity };
+}
+
+/** Limits come from canonical product reads, never customer input or monetary amounts. */
+export function rentalAccessoryAllowance(
+  items: readonly { quantity: number; billingRole?: string; freeAccessoryLimit?: number }[],
+): RentalAccessoryAllowance {
+  const { billableQuantity, freeAccessoryQuantity } = rentalAccessoryCounts(items);
+  let allowanceQuantity = 0;
+  for (const item of items) {
+    if (rentalBillingRole(item.billingRole) === RENTAL_BILLING_ROLE.FREE_ACCESSORY) continue;
+    const limit = item.freeAccessoryLimit ?? 1;
+    if (!Number.isSafeInteger(limit) || limit < 0 || limit > 2147483647)
+      throw new RentalInvariantError(
+        'INVALID_FREE_ACCESSORY_LIMIT',
+        'Số phụ kiện miễn phí của sản phẩm không hợp lệ.',
+      );
+    allowanceQuantity += item.quantity * limit;
+  }
+  if (!Number.isSafeInteger(allowanceQuantity))
+    throw new RentalInvariantError(
+      'INVALID_RENTAL_PRICING_QUANTITY',
+      'Tổng hạn mức phụ kiện không hợp lệ.',
+    );
   if (freeAccessoryQuantity > allowanceQuantity)
     throw new RentalInvariantError(
       'FREE_ACCESSORY_ALLOWANCE_EXCEEDED',
-      'Mỗi món thuê có tính phí được kèm tối đa 2 phụ kiện miễn phí. Vui lòng bỏ bớt hoặc chọn thuê có phí cho phần vượt mức.',
+      `Đơn thuê được kèm tối đa ${allowanceQuantity} phụ kiện miễn phí theo các sản phẩm đã chọn. Vui lòng bỏ bớt hoặc chọn thuê có phí cho phần vượt mức.`,
     );
   return {
     billableQuantity,

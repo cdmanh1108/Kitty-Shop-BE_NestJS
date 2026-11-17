@@ -7,6 +7,7 @@ describe('FavoritesMapper', () => {
       items: [
         {
           id: 'product-1',
+          freeAccessoryLimit: 1,
           allowFreeAccessory: false,
           code: 'SP-001',
           slug: 'dam-da-hoi-trang',
@@ -29,6 +30,7 @@ describe('FavoritesMapper', () => {
       items: [
         {
           id: 'product-1',
+          freeAccessoryLimit: 1,
           allowFreeAccessory: false,
           code: 'SP-001',
           slug: 'dam-da-hoi-trang',

@@ -4,7 +4,7 @@
 - Every active physical rental is represented by a RentalItemAllocation.
 - Active allocations for the same InventoryItem may not overlap in time.
 - Rental interval semantics are `[start, end)`.
-- Each PAID physical unit grants two FREE_ACCESSORY units, including paid standalone accessories and zero-price items. Free units never earn another allowance or affect the pricing quantity tier. The allowance is pooled within the order; excess selections must be explicitly PAID.
+- Each PAID physical unit grants its product freeAccessoryLimit FREE_ACCESSORY units (default 1, zero disables the allowance), including paid standalone accessories and zero-price items. Free units never earn another allowance or affect the pricing quantity tier. The allowance is pooled within the order; excess selections must be explicitly PAID.
 - Only products with allowFreeAccessory=true can supply FREE_ACCESSORY variants, independent of category. Booking revalidates the flag and entitlement inside its Serializable transaction, writes immutable billing-role/eligibility snapshots, and applies the same allocation overlap constraint to both roles. Paid and free lines of the same variant share one stock pool and never share a SKU.
 - FREE_ACCESSORY_V1 snapshots have zero rental price, deposit and automatic late fees. Damage/loss inspections and compensation remain applicable, as do all reservation, handover, reschedule, return and cancellation allocation rules. A stored line's role is immutable; current catalog eligibility does not reclassify it.
 - An order stores immutable name and price snapshots.

@@ -4,6 +4,7 @@ export interface BookableVariant {
   productId: string;
   productName: string;
   allowFreeAccessory: boolean;
+  freeAccessoryLimit: number;
   sizeName: string | null;
   colorName: string | null;
   depositPerItem: number;

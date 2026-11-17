@@ -45,6 +45,7 @@ export class WebStorefrontSelectionResolveReqDto {
 
 export class WebStorefrontSelectionProductDto {
   @ApiProperty({ type: Boolean }) allowFreeAccessory!: boolean;
+  @ApiProperty({ type: Number, minimum: 0, default: 1 }) freeAccessoryLimit!: number;
   @ApiProperty({ format: 'uuid' })
   id!: string;
 

@@ -9,7 +9,7 @@ import {
 import { RentalInvariantError } from './rental-errors';
 import { getRentalPricingVersion, RENTAL_PRICING_VERSION } from './rental-pricing-version';
 import {
-  rentalAccessoryAllowance,
+  rentalAccessoryCounts,
   rentalBillingRole,
   RENTAL_BILLING_ROLE,
   type RentalBillingRole,
@@ -49,7 +49,7 @@ const PRICING_FIELDS = [
 export function rentalBillableQuantity(
   items: readonly { quantity: number; billingRole?: string }[],
 ): number {
-  return rentalAccessoryAllowance(items).billableQuantity;
+  return rentalAccessoryCounts(items).billableQuantity;
 }
 
 export function resolveRentalLinePricing(

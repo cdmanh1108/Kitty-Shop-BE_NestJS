@@ -65,6 +65,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
   describe('WebCatalogMapper.toProductListItem & toProductListResponse', () => {
     it('maps storefront product item to clean WebProductListItemDto', () => {
       const product: StorefrontProductItem = {
+        freeAccessoryLimit: 1,
         allowFreeAccessory: false,
         id: 'prod-1',
         code: 'DR001',
@@ -112,6 +113,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             id: 'p-1',
             code: 'SP-1',
             slug: 'vay-ngan',
+            freeAccessoryLimit: 1,
             allowFreeAccessory: false,
             name: 'Váy ngắn',
             categoryId: 'cat-1',
@@ -150,6 +152,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
   describe('WebCatalogMapper.toProductDetail', () => {
     it('maps full product details including variants and images', () => {
       const product: StorefrontProductDetails = {
+        freeAccessoryLimit: 1,
         allowFreeAccessory: false,
         id: 'prod-1',
         code: 'DR001',
@@ -214,6 +217,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             id: 'product-1',
             slug: 'dam-da-hoi',
             name: 'Đầm dạ hội',
+            freeAccessoryLimit: 1,
             allowFreeAccessory: false,
           },
           variant: { id: 'variant-m', code: 'DAM-M', size: 'M', color: 'Đỏ' },
@@ -271,6 +275,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             id: 'p-1',
             code: 'SP-1',
             slug: 'dam-da-hoi',
+            freeAccessoryLimit: 1,
             allowFreeAccessory: false,
             name: 'Đầm dạ hội',
             categoryId: 'cat-1',
@@ -325,6 +330,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
         id: 'p-1',
         code: 'SP-1',
         slug: 'dam-da-hoi',
+        freeAccessoryLimit: 1,
         allowFreeAccessory: false,
         name: 'Đầm dạ hội',
         categoryId: 'cat-1',
@@ -374,6 +380,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
             id: 'p-25',
             slug: 'trang-phuc-trang-25',
             name: 'Sản phẩm trang 25',
+            freeAccessoryLimit: 1,
             allowFreeAccessory: false,
           },
           variant: { id: 'v-25-m', code: 'SP25-M', size: 'M', color: null },
@@ -424,6 +431,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
               id: 'p-1',
               code: 'AD01',
               slug: 'ao-dai-do',
+              freeAccessoryLimit: 1,
               allowFreeAccessory: false,
               name: 'Áo dài đỏ',
               categoryId: 'cat-1',
@@ -443,6 +451,7 @@ describe('Web Catalog Presenters, Service and Controller', () => {
           id: 'p-1',
           code: 'AD01',
           slug: 'ao-dai-do',
+          freeAccessoryLimit: 1,
           allowFreeAccessory: false,
           name: 'Áo dài đỏ',
           categoryId: 'cat-1',

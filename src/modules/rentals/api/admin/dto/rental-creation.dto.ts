@@ -32,7 +32,7 @@ export class CreateRentalItemReqDto {
   @ApiPropertyOptional({
     enum: Object.values(RENTAL_BILLING_ROLE),
     description:
-      'Bỏ trống là thuê có tính phí (PAID). FREE_ACCESSORY chỉ dành cho phụ kiện đi kèm, tối đa 2 phụ kiện miễn phí cho mỗi món tính phí.',
+      'Bỏ trống là thuê có tính phí (PAID). FREE_ACCESSORY chỉ dành cho phụ kiện đi kèm trong hạn mức của từng sản phẩm thuê có phí.',
   })
   @ValidateIf((_: CreateRentalItemReqDto, value: unknown) => value !== undefined)
   @IsIn(Object.values(RENTAL_BILLING_ROLE), {

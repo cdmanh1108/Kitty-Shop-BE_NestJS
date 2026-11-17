@@ -39,7 +39,11 @@ import {
 } from '../domain/rental-pricing-snapshot';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { RENTAL_PRICING_VERSION } from '../domain/rental-pricing-version';
-import { assertFreeAccessoryAllowed, rentalBillingRole } from '../domain/rental-accessories';
+import {
+  assertFreeAccessoryAllowed,
+  rentalAccessoryAllowance,
+  rentalBillingRole,
+} from '../domain/rental-accessories';
 import { RentalAuthenticationRequiredError } from '../application/rental.errors';
 import { redeemWebAccountLoyaltyReward } from '@modules/customers/public/rental-loyalty-transaction';
 import {
@@ -321,7 +325,9 @@ async function assertRentalCatalogLines(
     select: {
       id: true,
       productId: true,
-      product: { select: { allowFreeAccessory: true, rentalPriceOverride: true } },
+      product: {
+        select: { allowFreeAccessory: true, freeAccessoryLimit: true, rentalPriceOverride: true },
+      },
     },
   });
   if (
@@ -333,6 +339,13 @@ async function assertRentalCatalogLines(
     throw new RentalInventoryUnavailableError();
   }
   const accessoryEligibility = new Map<string, boolean>();
+  rentalAccessoryAllowance(
+    data.lines.map((line) => ({
+      ...line,
+      freeAccessoryLimit: eligibleVariants.find((variant) => variant.id === line.variantId)!.product
+        .freeAccessoryLimit,
+    })),
+  );
   for (const variant of eligibleVariants) {
     accessoryEligibility.set(variant.id, variant.product.allowFreeAccessory);
   }

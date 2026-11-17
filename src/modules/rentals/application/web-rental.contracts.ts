@@ -48,7 +48,7 @@ export interface WebRentalLineAvailability {
 export interface WebRentalQuoteResult {
   durationDays: number;
   pricing: ResolvedRentalCyclePricing | null;
-  accessoryAllowance: RentalAccessoryAllowance;
+  accessoryAllowance?: RentalAccessoryAllowance;
   rentalSubtotal: number;
   depositAmount: number;
   shippingFee: number;

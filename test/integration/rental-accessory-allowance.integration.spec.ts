@@ -53,10 +53,11 @@ describe('Two-accessory allowance at rental write boundaries', () => {
 
   async function basket(inventoryCount = 4) {
     const f = await rentalScenario(prisma);
+    await prisma.product.update({ where: { id: f.product.id }, data: { freeAccessoryLimit: 2 } });
     const accessory = await createTestProductWithVariant(prisma, f.shop.id, { inventoryCount });
     await prisma.product.update({
       where: { id: accessory.product.id },
-      data: { allowFreeAccessory: true },
+      data: { allowFreeAccessory: true, freeAccessoryLimit: 2 },
     });
     const items = [
       { variantId: f.variant.id, quantity: 1, billingRole: RENTAL_BILLING_ROLE.PAID },
@@ -166,11 +167,12 @@ describe('Two-accessory allowance at rental write boundaries', () => {
     const freePricing = resolveRentalLinePricing({
       durationDays: 2,
       billableQuantity: 1,
-      quantity: 3,
+      quantity: 2,
       depositPerItem: 200000,
       billingRole: RENTAL_BILLING_ROLE.FREE_ACCESSORY,
       policy: (await rentalPolicies.getPolicy(f.shop.id)).rentalPricing,
     });
+    await prisma.product.update({ where: { id: f.product.id }, data: { freeAccessoryLimit: 1 } });
     await expect(
       rentals.createOrder({
         ...f.data,
@@ -182,14 +184,63 @@ describe('Two-accessory allowance at rental write boundaries', () => {
             variantId: accessory.variant.id,
             productName: accessory.product.name,
             variantName: accessory.variant.variantCode,
-            quantity: 3,
+            quantity: 2,
             billingRole: RENTAL_BILLING_ROLE.FREE_ACCESSORY,
             inventory: accessory.inventoryItems
-              .slice(0, 3)
+              .slice(0, 2)
               .map((item) => ({ id: item.id, sku: item.sku })),
           },
         ],
       }),
+    ).rejects.toMatchObject({ code: 'FREE_ACCESSORY_ALLOWANCE_EXCEEDED' });
+    expect(await prisma.rentalOrder.count()).toBe(0);
+    expect(await prisma.rentalItemAllocation.count()).toBe(0);
+  });
+
+  it('uses one by default, supports zero, and uses mixed product limits in quote and Admin booking', async () => {
+    const { f, accessory } = await basket(6);
+    await prisma.product.update({ where: { id: f.product.id }, data: { freeAccessoryLimit: 0 } });
+    await expect(
+      evaluation.calculateQuote(f.shop.id, {
+        ...interval,
+        items: [
+          { variantId: f.variant.id, quantity: 1 },
+          { variantId: accessory.variant.id, quantity: 1, billingRole: 'FREE_ACCESSORY' },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'FREE_ACCESSORY_ALLOWANCE_EXCEEDED' });
+    const other = await createTestProductWithVariant(prisma, f.shop.id);
+    expect(other.product.freeAccessoryLimit).toBe(1);
+    await prisma.product.update({ where: { id: f.product.id }, data: { freeAccessoryLimit: 3 } });
+    const items = [
+      { variantId: f.variant.id, quantity: 1 },
+      { variantId: other.variant.id, quantity: 1 },
+      {
+        variantId: accessory.variant.id,
+        quantity: 4,
+        billingRole: RENTAL_BILLING_ROLE.FREE_ACCESSORY,
+      },
+    ];
+    const quote = await evaluation.calculateQuote(f.shop.id, { ...interval, items });
+    expect(quote).toMatchObject({
+      available: true,
+      rentalSubtotal: 120000,
+      accessoryAllowance: {
+        billableQuantity: 2,
+        freeAccessoryQuantity: 4,
+        remainingFreeAccessoryQuantity: 0,
+      },
+    });
+    await admin.create(f.principal, { ...f.input, items }, 'mixed-product-limits');
+    expect(await prisma.rentalItemAllocation.count()).toBe(6);
+  });
+
+  it('rejects a selection when the product limit is lowered after quoting', async () => {
+    const { f, items } = await basket();
+    await evaluation.calculateQuote(f.shop.id, { ...interval, items });
+    await prisma.product.update({ where: { id: f.product.id }, data: { freeAccessoryLimit: 1 } });
+    await expect(
+      admin.create(f.principal, { ...f.input, items }, 'stale-limit'),
     ).rejects.toMatchObject({ code: 'FREE_ACCESSORY_ALLOWANCE_EXCEEDED' });
     expect(await prisma.rentalOrder.count()).toBe(0);
     expect(await prisma.rentalItemAllocation.count()).toBe(0);

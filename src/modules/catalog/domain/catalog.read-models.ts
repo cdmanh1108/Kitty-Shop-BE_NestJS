@@ -3,6 +3,7 @@ import type { DecimalValue } from '@common/types/decimal';
 
 export interface ProductListItem {
   rentalPriceOverride: DecimalValue | null;
+  freeAccessoryLimit: number;
   allowFreeAccessory: boolean;
   id: string;
   code: string;
@@ -19,6 +20,7 @@ export interface ProductListItem {
 
 export interface ProductLookupItem {
   rentalPriceOverride: DecimalValue | null;
+  freeAccessoryLimit: number;
   allowFreeAccessory: boolean;
   id: string;
   code: string;

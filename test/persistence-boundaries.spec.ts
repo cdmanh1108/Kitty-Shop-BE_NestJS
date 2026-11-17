@@ -32,6 +32,7 @@ function variant(): NonNullable<Parameters<typeof toBookableVariant>[0]> {
     color: null,
     inventoryItems: [],
     product: {
+      freeAccessoryLimit: 1,
       allowFreeAccessory: false,
       id: 'product',
       shopId: 'shop',

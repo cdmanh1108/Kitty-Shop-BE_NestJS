@@ -145,13 +145,17 @@ export async function assertInitialReleaseDatabase(tx: Prisma.TransactionClient)
     migrations.some(
       (row) =>
         !row.finished_at ||
-        !['202610230001_initial_release', '202611160001_product_rental_price_override'].includes(
-          row.migration_name,
-        ),
+        ![
+          '202610230001_initial_release',
+          '202611160001_product_rental_price_override',
+          '202611170001_product_free_accessory_limit',
+        ].includes(row.migration_name),
     ) ||
-    !['202610230001_initial_release', '202611160001_product_rental_price_override'].every((name) =>
-      migrations.some((row) => row.migration_name === name && row.finished_at),
-    )
+    ![
+      '202610230001_initial_release',
+      '202611160001_product_rental_price_override',
+      '202611170001_product_free_accessory_limit',
+    ].every((name) => migrations.some((row) => row.migration_name === name && row.finished_at))
   ) {
     throw new ReleaseSeedError(
       'Release seed requires all committed release migrations on a new/reset database. Run db:migrate first. Existing migration history was left unchanged.',

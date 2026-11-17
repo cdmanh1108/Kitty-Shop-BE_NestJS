@@ -43,6 +43,7 @@ export async function listProducts(
         code: true,
         rentalPriceOverride: true,
         allowFreeAccessory: true,
+        freeAccessoryLimit: true,
         name: true,
         status: true,
         categoryId: true,
@@ -65,6 +66,7 @@ export async function listProducts(
     items: items.map(({ category, media, variants, ...product }) => ({
       ...product,
       allowFreeAccessory: product.allowFreeAccessory,
+      freeAccessoryLimit: product.freeAccessoryLimit,
       categoryName: category.name,
       imageUrl: media[0] ? mediaUrls.resolve(media[0]) : null,
       variantCount: variants.length,
@@ -106,6 +108,7 @@ export async function lookupProducts(
         code: true,
         rentalPriceOverride: true,
         allowFreeAccessory: true,
+        freeAccessoryLimit: true,
         name: true,
         status: true,
         variants: {
@@ -129,6 +132,7 @@ export async function lookupProducts(
     items: items.map((p) => ({
       ...p,
       allowFreeAccessory: p.allowFreeAccessory,
+      freeAccessoryLimit: p.freeAccessoryLimit,
       variants: p.variants.map(({ size, color, ...v }) => ({
         ...v,
         sizeName: size?.name ?? null,
@@ -152,6 +156,7 @@ export async function findProduct(
       code: true,
       rentalPriceOverride: true,
       allowFreeAccessory: true,
+      freeAccessoryLimit: true,
       name: true,
       categoryId: true,
       description: true,
@@ -197,6 +202,7 @@ export async function findProduct(
   return {
     ...product,
     allowFreeAccessory: product.allowFreeAccessory,
+    freeAccessoryLimit: product.freeAccessoryLimit,
     category: {
       id: product.category.id,
       code: product.category.code,

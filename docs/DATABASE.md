@@ -99,3 +99,7 @@ rewrite an applied baseline to make drift disappear.
 require an explicit dedicated `TEST_DATABASE_URL`; they never use the runtime
 `DATABASE_URL` as a fallback. See [Testing](TESTING.md) for test setup and
 [Runbook](RUNBOOK.md) for release steps.
+
+## Product accessory limits
+
+`Product.freeAccessoryLimit` is a nonnegative integer, default 1. The additive `202611170001_product_free_accessory_limit` migration initializes all existing products to 1 without changing order history or other catalog data. This entitlement is independent of `allowFreeAccessory` (whether a product can itself be selected free). Order capacity is the sum of each PAID quantity multiplied by its current product limit; FREE_ACCESSORY lines grant no capacity.

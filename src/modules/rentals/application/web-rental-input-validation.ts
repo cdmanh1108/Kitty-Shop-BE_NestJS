@@ -1,5 +1,5 @@
 import type { WebRentalItemInput } from './web-rental.contracts';
-import { rentalAccessoryAllowance } from '../domain/rental-accessories';
+import { rentalAccessoryCounts } from '../domain/rental-accessories';
 
 /**
  * Transport-facing resource limits for one Web rental request. They protect
@@ -80,7 +80,7 @@ export function assertWebRentalItems(items: readonly WebRentalItemInput[]): void
       throw new WebRentalInputValidationError('TOTAL_QUANTITY_EXCEEDED');
     }
   }
-  rentalAccessoryAllowance(items);
+  rentalAccessoryCounts(items);
 }
 
 function assertCalendarDate(value: string): void {

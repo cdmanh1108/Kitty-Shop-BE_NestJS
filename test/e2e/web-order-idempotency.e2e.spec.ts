@@ -44,7 +44,7 @@ describe('Web order idempotency HTTP contract', () => {
     const f = await rentalScenario(prisma);
     await prisma.product.update({
       where: { id: f.product.id },
-      data: { allowFreeAccessory: true },
+      data: { allowFreeAccessory: true, freeAccessoryLimit: 2 },
     });
     await prisma.inventoryItem.createMany({
       data: [1, 2].map((index) => ({

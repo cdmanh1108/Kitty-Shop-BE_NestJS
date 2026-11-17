@@ -103,6 +103,7 @@ describe('ProductService', () => {
 
     it('creates product with multiple variants (M/Trắng and M/Hồng) atomically', async () => {
       const createdProduct: CreateProductResult = {
+        freeAccessoryLimit: 1,
         allowFreeAccessory: false,
         id: 'prod-1',
         shopId: mockUser.shopId,
@@ -279,6 +280,7 @@ describe('ProductService', () => {
       'forwards product price %s while updating core fields',
       async (rentalPriceOverride) => {
         const updated: UpdateProductResult = {
+          freeAccessoryLimit: 1,
           allowFreeAccessory: false,
           id: 'prod-1',
           shopId: mockUser.shopId,
@@ -347,6 +349,7 @@ describe('ProductService', () => {
 
     it('forwards explicit slug when provided in updateProduct', async () => {
       const updated: UpdateProductResult = {
+        freeAccessoryLimit: 1,
         allowFreeAccessory: false,
         id: 'prod-1',
         shopId: mockUser.shopId,

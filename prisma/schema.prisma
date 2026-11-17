@@ -526,6 +526,7 @@ model Product {
   categoryId           String    @map("category_id") @db.Uuid
   code                 String    @db.VarChar(50)
   name                 String    @db.VarChar(255)
+  freeAccessoryLimit   Int       @default(1) @map("free_accessory_limit")
   allowFreeAccessory   Boolean   @default(false) @map("allow_free_accessory")
   slug                 String    @db.VarChar(255)
   description          String?   @db.Text

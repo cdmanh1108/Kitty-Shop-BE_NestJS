@@ -43,6 +43,50 @@ describe('product rental price persistence and booking', () => {
   });
   afterAll(disconnectTestDatabase);
 
+  it('stores per-product accessory limits and exposes them through canonical catalog reads', async () => {
+    const f = await rentalScenario(prisma);
+    expect(f.product.freeAccessoryLimit).toBe(1);
+    const product = await catalog.createProduct(f.shop.id, {
+      code: 'CUSTOM-ACCESSORY-LIMIT',
+      name: 'Custom allowance',
+      categoryId: f.product.categoryId,
+      defaultDepositAmount: 100000,
+      isPublic: true,
+      freeAccessoryLimit: 3,
+      variants: [],
+      media: [],
+    });
+    expect(product).toMatchObject({ freeAccessoryLimit: 3 });
+    await catalog.updateProduct(f.shop.id, f.product.id, { freeAccessoryLimit: 3 });
+    expect(await catalog.findProduct(f.shop.id, f.product.id)).toMatchObject({
+      freeAccessoryLimit: 3,
+    });
+    expect(await catalog.findStorefrontProductBySlug(f.shop.id, f.product.slug)).toMatchObject({
+      freeAccessoryLimit: 3,
+    });
+    const list = await catalog.listStorefrontProducts({ shopId: f.shop.id, page: 1, limit: 10 });
+    expect(list.items.find((item) => item.id === f.product.id)).toMatchObject({
+      freeAccessoryLimit: 3,
+    });
+    const lookup = await catalog.lookupProducts({ shopId: f.shop.id, page: 1, limit: 10 });
+    expect(lookup.items.find((item) => item.id === f.product.id)).toMatchObject({
+      freeAccessoryLimit: 3,
+    });
+    const projection = await catalog.resolveStorefrontSelections({
+      shopId: f.shop.id,
+      selections: [{ productId: f.product.id, variantId: f.variant.id, quantity: 1 }],
+    });
+    expect(projection[0]).toMatchObject({ status: 'RESOLVED', product: { freeAccessoryLimit: 3 } });
+    await catalog.updateProduct(f.shop.id, f.product.id, { freeAccessoryLimit: 0 });
+    await catalog.updateProduct(f.shop.id, f.product.id, { name: 'Unrelated edit' });
+    expect(await catalog.findProduct(f.shop.id, f.product.id)).toMatchObject({
+      freeAccessoryLimit: 0,
+    });
+    await expect(
+      prisma.product.update({ where: { id: f.product.id }, data: { freeAccessoryLimit: -1 } }),
+    ).rejects.toThrow('products_free_accessory_limit_nonnegative');
+  });
+
   it('stores zero, clears to null, and reads changed shop defaults without copying them into products', async () => {
     const f = await rentalScenario(prisma);
     await catalog.updateProduct(f.shop.id, f.product.id, { rentalPriceOverride: 0 });

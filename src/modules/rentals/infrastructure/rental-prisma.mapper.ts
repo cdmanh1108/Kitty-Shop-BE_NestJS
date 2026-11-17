@@ -36,6 +36,7 @@ export function toBookableVariant(variant: BookableVariantRecord | null): Bookab
     productId: variant.productId,
     productName: variant.product.name,
     allowFreeAccessory: variant.product.allowFreeAccessory,
+    freeAccessoryLimit: variant.product.freeAccessoryLimit,
     sizeName: variant.size?.name ?? null,
     colorName: variant.color?.name ?? null,
     depositPerItem,

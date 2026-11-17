@@ -38,6 +38,7 @@ export interface ColorRecord {
 }
 
 export interface ProductRecord {
+  freeAccessoryLimit: number;
   allowFreeAccessory: boolean;
   id: string;
   shopId: string;
