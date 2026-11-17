@@ -104,6 +104,8 @@ describe('Idempotency Integration with PostgreSQL', () => {
     const ordersAfterFirst = await prisma.rentalOrder.count({ where: { shopId: shop.id } });
     expect(ordersAfterFirst).toBe(1);
 
+    // A completed command must replay before mutable customer validation.
+    await prisma.customer.update({ where: { id: customer.id }, data: { status: 'INACTIVE' } });
     // Second request with same key and same payload
     const secondResult = await service.create(currentUser, input, idempotencyKey);
     expect(secondResult).not.toBeNull();
@@ -116,6 +118,21 @@ describe('Idempotency Integration with PostgreSQL', () => {
 
     // Audit log should only have been called once for the actual creation
     expect(auditLogMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('validates a new claim and releases it when the customer is inactive', async () => {
+    const f = await rentalScenario(prisma);
+    await prisma.customer.update({ where: { id: f.customer.id }, data: { status: 'INACTIVE' } });
+    await expect(service.create(f.principal, f.input, 'inactive-customer-key')).rejects.toThrow(
+      'Khách hàng không tồn tại hoặc đã ngừng hoạt động.',
+    );
+    expect(await prisma.idempotencyRecord.count()).toBe(0);
+    expect(await prisma.rentalOrder.count()).toBe(0);
+    await prisma.customer.update({ where: { id: f.customer.id }, data: { status: 'ACTIVE' } });
+    await expect(
+      service.create(f.principal, f.input, 'inactive-customer-key'),
+    ).resolves.toBeTruthy();
+    expect(await prisma.rentalOrder.count()).toBe(1);
   });
 
   it('rejects same key with different payload as HASH_MISMATCH', async () => {

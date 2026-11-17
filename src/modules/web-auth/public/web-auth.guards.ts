@@ -67,6 +67,13 @@ export class WebJwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<WebAuthRequest>();
     const user = await resolveWebRequestUser(request, this.jwt, this.session, this.cookies);
     if (!user) webAuthHttpError('AUTH_REQUIRED', 401);
+    const expectedAccount = request.headers['x-kitty-web-account-id'];
+    if (expectedAccount !== undefined && expectedAccount !== user.id) {
+      throw new ForbiddenException({
+        code: 'AUTH_SESSION_CHANGED',
+        message: 'Tài khoản đã thay đổi. Vui lòng tải lại trang trước khi tiếp tục.',
+      });
+    }
     request.webUser = user;
     return true;
   }

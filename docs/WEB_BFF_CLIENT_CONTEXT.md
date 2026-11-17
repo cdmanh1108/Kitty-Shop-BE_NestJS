@@ -37,6 +37,8 @@ multiple backend instances do not share counters. This change does not add distr
    - Backend server `.env` (the API service already uses `env_file: .env`). No Admin FE variable is needed.
 3. Verify the storefront `BACKEND_BASE_URL` is HTTPS and includes the actual API prefix, for example
    `https://api.example.com/api/v1`. Keep platform system environment variables available to Vercel Functions.
+   Include both the storefront and Admin HTTPS origins in backend `CORS_ORIGINS`; the auth BFF forwards
+   the browser `Origin`, which the backend checks against this allowlist.
 4. **Deploy the storefront first**, then deploy/recreate the backend API with the matching secret.
    The old backend ignores the new header; the new backend requires it. Deploying backend first temporarily
    rejects old unsigned storefront auth requests. Do not change the database or run a migration for this task.

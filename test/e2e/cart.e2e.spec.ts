@@ -55,6 +55,32 @@ describe('Account cart end-to-end', () => {
       { algorithm: 'HS256', issuer: 'kitty-api', audience: 'kitty-web', expiresIn: 900 },
     );
     const cookie = `kitty_web_access=${token}`;
+    const other = await prisma.webAccount.create({
+      data: {
+        email: 'other-cart@example.test',
+        passwordHash: 'not-used',
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const otherToken = new JwtService({ secret: process.env.WEB_JWT_ACCESS_SECRET }).sign(
+      { sub: other.id, surface: 'web' },
+      { algorithm: 'HS256', issuer: 'kitty-api', audience: 'kitty-web', expiresIn: 900 },
+    );
+    // Browser cookies switched to B while a draft still belongs to A. Reject
+    // before both reads and writes, even when there was no preceding 401.
+    await request(server)
+      .get('/api/v1/web/cart')
+      .set('Cookie', `kitty_web_access=${otherToken}`)
+      .set('x-kitty-web-account-id', account.id)
+      .expect(403);
+    const rejected = await request(server)
+      .put('/api/v1/web/cart')
+      .set('Cookie', `kitty_web_access=${otherToken}`)
+      .set('x-kitty-web-account-id', account.id)
+      .send({ ...draft, version: 0 })
+      .expect(403);
+    expect(rejected.body).toMatchObject({ code: 'AUTH_SESSION_CHANGED' });
+    expect(await prisma.cart.count()).toBe(0);
 
     await request(server).get('/api/v1/web/cart').expect(401);
     await request(server)
@@ -66,6 +92,7 @@ describe('Account cart end-to-end', () => {
     await request(server)
       .put('/api/v1/web/cart')
       .set('Cookie', cookie)
+      .set('x-kitty-web-account-id', account.id)
       .set('Content-Type', 'application/json')
       .send({ ...draft, version: 0 })
       .expect(200)

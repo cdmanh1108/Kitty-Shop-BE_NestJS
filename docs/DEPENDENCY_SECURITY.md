@@ -28,30 +28,26 @@ Upstream references:
 - [Multer asynchronous fileFilter crash](https://github.com/advisories/GHSA-q7qp-rjg7-q26m)
 - [proxy-addr trust-subnet issue](https://github.com/advisories/GHSA-jqcg-44mw-7w3h)
 
-## Remaining Prisma tooling advisory
+## Prisma tooling patch — 2026-11-17
 
-`npm audit --omit=dev` still reports **3 high-severity dependency entries**:
-`prisma`, `@prisma/config` and `deepmerge-ts`. These are one dependency chain
-for [the recursive-object merge advisory](https://github.com/advisories/GHSA-ggr8-5vv4-36mx),
-not three independent exploits. Prisma remains at 6.19.3; its config package uses
-deepmerge-ts 7.1.5. npm's proposed fix upgrades Prisma to major 7, while directly
-forcing deepmerge-ts 8 would replace a major outside the config package's range.
-Neither is included in this release patch.
+Prisma/client stay on 6.19.3. A deliberately scoped npm override replaces only
+`@prisma/config`'s `deepmerge-ts` with **8.0.2**, resolving
+[the recursive-object merge advisory](https://github.com/advisories/GHSA-ggr8-5vv4-36mx).
+This is an explicit compatibility decision outside the config package's original
+major range, not an upstream Prisma 6 patch or a Prisma 7 migration.
 
-The application imports the generated `@prisma/client` for database access.
-`prisma/config` is used only by the repository-owned `prisma.config.ts` for CLI
-commands. No application source imports deepmerge-ts or accepts Prisma
-configuration from HTTP requests. The advisory requires recursive JavaScript
-object graphs; ordinary parsed JSON cannot create these references. On that
-basis, no reachable HTTP exploitation path has been identified in this backend.
-This assessment is not a patched-version claim or proof of absence of all risk.
+The [deepmerge-ts 8 release notes](https://github.com/RebeccaStevens/deepmerge-ts/releases/tag/v8.0.0)
+describe circular-reference protection, deeper Map-value merging and renamed
+custom-merge TypeScript helpers. Prisma config imports `deepmerge` at runtime;
+our trusted `prisma.config.ts` uses plain configuration objects, strings and a
+seed command, with no Map values or custom merge types. The ordinary merge API
+remains compatible with that use. Validate this boundary with real client
+generation, fresh migrations and the schema-diff integration test, rather than
+forcing a database-client major upgrade just to remove a CLI advisory.
 
-The Prisma CLI can still be retained in a production dependency tree through
-the client's optional peer, and is intentionally included in the separate
-migrator image. Therefore these findings must remain visible in audit output;
-they are not suppressed or hidden by changing the audit threshold. Keep config
-files and migration commands restricted to trusted repository/deployment input.
-Revisit this chain during a separately tested Prisma upgrade or supported patch.
+`npm audit --omit=dev` on 2026-11-17 reports **0 vulnerabilities** after this
+override. Keep the override and lockfile together; reassess it during the next
+Prisma upgrade. Do not replace `deepmerge` with its unsafe fast entrypoint.
 
 ## Verification
 
@@ -65,9 +61,8 @@ npm run format:check
 npm run quality
 ```
 
-Audit output is time-dependent. The snapshot above reduced the affected
-production dependency entries from 12 to 3, with no remaining critical entries;
-the remaining entries are the Prisma tooling chain described above.
+Audit output is time-dependent. The original patch reduced production findings
+from 12 to 3; the scoped config override now resolves the remaining chain.
 
 `test/unit/request-parser.spec.ts` starts a database-free Nest probe in a child
 process using the real application configuration and default parser. It verifies

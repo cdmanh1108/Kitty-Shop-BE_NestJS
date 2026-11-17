@@ -6,6 +6,8 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCookieAuth,
+  ApiHeader,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -23,6 +25,13 @@ import { CartDto, CartGetResDto, CartReplaceReqDto } from './dto/cart.dto';
 @Public()
 @ApiTags('Web - Cart')
 @ApiSurface('web')
+@ApiForbiddenResponse({ type: ErrorResDto })
+@ApiHeader({
+  name: 'x-kitty-web-account-id',
+  required: false,
+  description:
+    'Expected authenticated account. Rejects stale requests after a browser account switch.',
+})
 @Controller('web/cart')
 @UseGuards(WebJwtAuthGuard, WebAuthOriginGuard)
 export class CartController {

@@ -26,6 +26,8 @@
 - Payment status and deposit status are derived from non-voided transaction history.
 - Void/cancel/archive replaces destructive delete for business history.
 - Expense creation requires an actor/shop-scoped intent key. Expense, durable CREATE audit and public replay snapshot commit atomically under the claim ownership fence. Retrying the same input/key replays the original creation result; an intentionally distinct identical expense uses a new key. Replay retention is 30 days; see `docs/EXPENSE_IDEMPOTENCY.md`.
+- Completed Admin rental creates replay before mutable customer/location checks. New commands still validate referenced records; invalid new claims are released under their ownership fence. Admin uncertain attempts cannot silently become a new command after reload, later rejection or expiry; see `docs/RELIABILITY.md`.
+- An optional expected Web account assertion can only narrow the authenticated Web principal. Mismatched requests are rejected before cart/profile handlers; the header never establishes identity or permissions. Browser cart reads/writes carry the original owner and cannot replay as a different refreshed account.
 - Money uses decimal values only.
 - Business timestamps use timezone-aware timestamps; shop timezone controls day/month reporting boundaries.
 

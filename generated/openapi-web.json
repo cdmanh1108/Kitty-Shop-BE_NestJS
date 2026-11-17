@@ -667,7 +667,17 @@
     "/web/cart": {
       "get": {
         "operationId": "getCart",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-kitty-web-account-id",
+            "in": "header",
+            "description": "Expected authenticated account. Rejects stale requests after a browser account switch.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -680,6 +690,16 @@
             }
           },
           "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "",
             "content": {
               "application/json": {
@@ -703,7 +723,17 @@
       },
       "put": {
         "operationId": "replaceCart",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-kitty-web-account-id",
+            "in": "header",
+            "description": "Expected authenticated account. Rejects stale requests after a browser account switch.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -736,6 +766,16 @@
             }
           },
           "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          },
+          "403": {
             "description": "",
             "content": {
               "application/json": {

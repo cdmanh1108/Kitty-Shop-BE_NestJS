@@ -68,6 +68,21 @@ acceptance is not inbox delivery. Do not promise exactly-once delivery. See
 
 ## Fenced idempotency
 
+The shared Serializable transaction helper retries Prisma `P2034`, raw-query
+`40001`, and Prisma 6's typed UnknownRequestError ending in the engine's canonical
+write-conflict message. It keeps the existing three-attempt bound and backoff;
+other errors are not retried. Exhausted unknown write conflicts become `P2034`
+so the existing safe HTTP 409 mapping applies. Rental exclusion violations
+continue to map separately to `RentalOverlapError`; the DB constraint is unchanged.
+
+Admin completed creates replay before checking mutable customer/location
+activity, just as they already bypass current inventory and policy. Invalid new
+commands release only their owned claim. Admin records minimal account-scoped
+pending identity before POST, keeps uncertain results sticky, and stops retrying
+before the 24-hour retention boundary. Reload/expiry requires explicit order-list
+review before a new command; see
+[Admin recovery](../../kitty-admin-fe/docs/RENTAL_CREATION_RECOVERY.md).
+
 Rental creation supports fenced claims for both Admin and Web scopes. Identity remains
 `(shopId, scope, key)`, backed by the existing unique index. Admin keeps its existing
 optional `rental-order.create` protocol and serialized detail replay. Web requires an

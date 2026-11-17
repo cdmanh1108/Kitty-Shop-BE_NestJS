@@ -2,6 +2,36 @@
 
 ## Update an initialized release database
 
+For this release update, configure both applications before deploying:
+
+1. Put the same independent random 64-hex `WEB_BFF_CLIENT_CONTEXT_SECRET` in
+   backend server `.env` and Vercel Production (Preview too if used). Keep it
+   server-only. See [BFF client identity](WEB_BFF_CLIENT_CONTEXT.md).
+2. Backend `CORS_ORIGINS` must contain the exact HTTPS origins of **both Admin
+   and the storefront**, separated by commas. The Web BFF forwards `Origin`;
+   allowing only Admin causes storefront authentication to return 403.
+3. Vercel `BACKEND_BASE_URL` must use HTTPS and the real `/api/v1` prefix;
+   `NEXT_PUBLIC_SITE_URL` is the public storefront origin. Production backend
+   must keep `AUTH_OTP_BYPASS_ENABLED=false`.
+4. Deploy **storefront → backend API → Admin** for the first rollout of these
+   changes. Storefront signs auth context before the backend requires it; the
+   backend must support expense idempotency before the updated Admin is used.
+   Existing initialized release databases use only pending migrations, as below.
+5. Recreate the API container after changing server `.env`; redeploy Vercel
+   after changing environment variables. Compose reads `.env`, not a local
+   developer `.env.production`. Local env edits do not update either cloud.
+6. Finish or review any in-flight/uncertain order or expense before reloading
+   existing Admin tabs: the new recovery marker cannot reconstruct an intent
+   sent by an older bundle. Reload storefront tabs too; older clients that omit
+   the optional expected-account assertion retain their previous behavior.
+   Smoke-test Web login/refresh, registration/OTP,
+   profile, cart, checkout and history, then Admin login, rental creation/retry
+   and expense creation/retry. Change accounts in another tab while cart sync
+   is pending and confirm the previous account's draft is not saved to the new one.
+
+Do not rotate only one side of the BFF secret on a live installation. Both sides
+need the same value; follow the coordinated rotation note in the BFF document.
+
 For a database already initialized with `202610230001_initial_release`, apply
 subsequent committed migrations with the one-off migrator (or `npm run db:migrate`
 from a configured source checkout), then deploy the matching API and FE builds.

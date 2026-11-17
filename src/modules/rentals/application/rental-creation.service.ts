@@ -77,16 +77,6 @@ export class RentalCreationService {
       throw new InvalidRentalPeriodError(
         'Thời gian bắt đầu thuê phải trước thời gian kết thúc thuê.',
       );
-    if (!(await this.creationValidator.customerExists(user.shopId, input.customerId))) {
-      throw new RentalNotFoundError('Khách hàng không tồn tại hoặc đã ngừng hoạt động.');
-    }
-    if (
-      input.locationId &&
-      !(await this.creationValidator.locationExists(user.shopId, input.locationId))
-    ) {
-      throw new RentalNotFoundError('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.');
-    }
-
     const selections = input.items.map((item) =>
       rentalSelectionKey(item.variantId, item.billingRole),
     );
@@ -136,6 +126,18 @@ export class RentalCreationService {
     }
 
     try {
+      // Completed claims above replay their immutable result even if referenced
+      // customer/location records have since been disabled. New claims still
+      // validate normally, and failures release only the owned claim below.
+      if (!(await this.creationValidator.customerExists(user.shopId, input.customerId))) {
+        throw new RentalNotFoundError('Khách hàng không tồn tại hoặc đã ngừng hoạt động.');
+      }
+      if (
+        input.locationId &&
+        !(await this.creationValidator.locationExists(user.shopId, input.locationId))
+      ) {
+        throw new RentalNotFoundError('Địa điểm cửa hàng không tồn tại hoặc đã ngừng hoạt động.');
+      }
       const policy = await this.policies.getPolicy(user.shopId);
       const lines: CreateRentalOrderData['lines'] = [];
       const allocatedInventoryIds = new Set<string>();
