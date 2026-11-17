@@ -4,7 +4,7 @@
 
 `Product.allowFreeAccessory` controls complimentary eligibility independently of category. `RentalOrderItem.billingRole` captures the
 agreed rental role independently: `PAID` or `FREE_ACCESSORY`. Omitted input is paid.
-Each paid physical unit earns one free accessory, including standalone paid
+Each paid physical unit earns up to two free accessories, including standalone paid
 accessories and paid lines with an explicit zero price. Free accessories do not
 earn more free accessories or count toward the cycle-pricing quantity tier.
 
@@ -15,13 +15,13 @@ silently changing their price. Only a shop-scoped bookable variant whose Product
 can receive the free role. Paid accessories use ordinary pricing and deposit.
 
 Admin create, Web quote and Web checkout item inputs accept optional `billingRole`.
-For example, two paid units allow up to two selected free units:
+For example, two paid units allow up to four selected free units:
 
 ```json
 {
   "items": [
     { "variantId": "<paid-variant-uuid>", "quantity": 2 },
-    { "variantId": "<accessory-variant-uuid>", "quantity": 2, "billingRole": "FREE_ACCESSORY" }
+    { "variantId": "<accessory-variant-uuid>", "quantity": 4, "billingRole": "FREE_ACCESSORY" }
   ]
 }
 ```
@@ -29,7 +29,9 @@ For example, two paid units allow up to two selected free units:
 A variant can appear in both roles, with distinct physical allocations. Admin
 rejects repeated variant/role combinations; Web merges them within each role.
 Quotes return role-specific line totals and an `accessoryAllowance` containing
-paid quantity, selected free quantity and remaining entitlement. Item price
+paid quantity, selected free quantity and remaining entitlement (`2 * paid - free`).
+Paid quantity itself is unchanged: it remains the quantity used by cycle pricing,
+not the free-accessory capacity. Item price
 overrides are rejected on free lines; order overrides apply to paid lines only.
 
 ## Persistence, availability and lifecycle

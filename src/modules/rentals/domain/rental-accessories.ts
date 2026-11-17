@@ -5,6 +5,7 @@ export const RENTAL_BILLING_ROLE = {
   FREE_ACCESSORY: 'FREE_ACCESSORY',
 } as const;
 export type RentalBillingRole = (typeof RENTAL_BILLING_ROLE)[keyof typeof RENTAL_BILLING_ROLE];
+export const FREE_ACCESSORIES_PER_PAID_ITEM = 2;
 
 export interface RentalAccessoryAllowance {
   billableQuantity: number;
@@ -48,8 +49,10 @@ export function rentalAccessoryAllowance(
       freeAccessoryQuantity += item.quantity;
     else billableQuantity += item.quantity;
   }
+  const allowanceQuantity = billableQuantity * FREE_ACCESSORIES_PER_PAID_ITEM;
   if (
     !Number.isSafeInteger(billableQuantity) ||
+    !Number.isSafeInteger(allowanceQuantity) ||
     !Number.isSafeInteger(freeAccessoryQuantity) ||
     !Number.isSafeInteger(billableQuantity + freeAccessoryQuantity)
   )
@@ -62,15 +65,15 @@ export function rentalAccessoryAllowance(
       'PAID_RENTAL_ITEM_REQUIRED',
       'Đơn thuê cần ít nhất một món thuê có tính phí để chọn phụ kiện đi kèm.',
     );
-  if (freeAccessoryQuantity > billableQuantity)
+  if (freeAccessoryQuantity > allowanceQuantity)
     throw new RentalInvariantError(
       'FREE_ACCESSORY_ALLOWANCE_EXCEEDED',
-      'Mỗi món thuê có tính phí chỉ được kèm một phụ kiện miễn phí. Vui lòng chuyển phần vượt mức sang thuê có tính phí.',
+      'Mỗi món thuê có tính phí được kèm tối đa 2 phụ kiện miễn phí. Vui lòng bỏ bớt hoặc chọn thuê có phí cho phần vượt mức.',
     );
   return {
     billableQuantity,
     freeAccessoryQuantity,
-    remainingFreeAccessoryQuantity: billableQuantity - freeAccessoryQuantity,
+    remainingFreeAccessoryQuantity: allowanceQuantity - freeAccessoryQuantity,
   };
 }
 

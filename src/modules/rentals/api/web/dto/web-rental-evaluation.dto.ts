@@ -69,7 +69,7 @@ export class WebRentalItemInputDto {
   @ApiPropertyOptional({
     enum: Object.values(RENTAL_BILLING_ROLE),
     description:
-      'Bỏ trống là PAID. FREE_ACCESSORY: phụ kiện khách chọn đi kèm, không có tiền thuê/cọc; mỗi món PAID được kèm một phụ kiện.',
+      'Bỏ trống là PAID. FREE_ACCESSORY: phụ kiện khách chọn đi kèm, không có tiền thuê/cọc; mỗi món PAID được kèm tối đa 2 phụ kiện miễn phí.',
   })
   @ValidateIf((_: WebRentalItemInputDto, value: unknown) => value !== undefined)
   @IsIn(Object.values(RENTAL_BILLING_ROLE), {
@@ -184,10 +184,16 @@ export class WebRentalQuoteItemResDto {
 }
 
 export class RentalAccessoryAllowanceResDto {
-  @ApiProperty({ description: 'Số món PAID; mỗi món tạo một quyền chọn phụ kiện miễn phí.' })
+  @ApiProperty({
+    description:
+      'Số món PAID; mỗi món được kèm tối đa 2 phụ kiện miễn phí. Số này vẫn là số món dùng để tính giá.',
+  })
   billableQuantity!: number;
   @ApiProperty() freeAccessoryQuantity!: number;
-  @ApiProperty() remainingFreeAccessoryQuantity!: number;
+  @ApiProperty({
+    description: 'Hạn mức còn lại: số món PAID nhân 2, trừ số phụ kiện miễn phí đã chọn.',
+  })
+  remainingFreeAccessoryQuantity!: number;
 }
 
 export class WebRentalQuoteRewardResDto {

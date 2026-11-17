@@ -9134,7 +9134,7 @@
               "PAID",
               "FREE_ACCESSORY"
             ],
-            "description": "Bỏ trống là thuê có tính phí (PAID). FREE_ACCESSORY chỉ dành cho phụ kiện đi kèm trong mức một phụ kiện cho mỗi món tính phí."
+            "description": "Bỏ trống là thuê có tính phí (PAID). FREE_ACCESSORY chỉ dành cho phụ kiện đi kèm, tối đa 2 phụ kiện miễn phí cho mỗi món tính phí."
           },
           "cyclePriceOverride": {
             "type": "number",

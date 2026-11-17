@@ -1,5 +1,21 @@
 # Release runbook
 
+## Two free accessories per paid item
+
+The accessory allowance is now `2 * paid quantity`. No schema change, migration,
+reset or repricing of saved order lines is required. Existing per-selection/order
+quantity limits and physical stock restrictions still apply.
+
+Deploy the backend, storefront and Admin together in a short coordinated
+maintenance window for this policy change. The storefront checks quote allowance
+against its local selection model; mixing the 1:1 and 1:2 versions can reject
+quotes even for a cart with no free selections. Refresh open storefront/Admin
+tabs afterward. Do not relax quote validation to bypass a mixed deployment.
+
+Smoke-test one paid unit with two free accessories (accepted), one with three
+(rejected), and two paid units with four free accessories. Confirm the displayed
+capacity and stock checks, and that only paid units determine pricing tiers.
+
 ## Update an initialized release database
 
 For this release update, configure both applications before deploying:

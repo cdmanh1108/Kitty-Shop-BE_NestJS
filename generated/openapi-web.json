@@ -3355,7 +3355,7 @@
               "PAID",
               "FREE_ACCESSORY"
             ],
-            "description": "Bỏ trống là PAID. FREE_ACCESSORY: phụ kiện khách chọn đi kèm, không có tiền thuê/cọc; mỗi món PAID được kèm một phụ kiện."
+            "description": "Bỏ trống là PAID. FREE_ACCESSORY: phụ kiện khách chọn đi kèm, không có tiền thuê/cọc; mỗi món PAID được kèm tối đa 2 phụ kiện miễn phí."
           },
           "variantId": {
             "type": "string",
@@ -3384,13 +3384,14 @@
         "properties": {
           "billableQuantity": {
             "type": "number",
-            "description": "Số món PAID; mỗi món tạo một quyền chọn phụ kiện miễn phí."
+            "description": "Số món PAID; mỗi món được kèm tối đa 2 phụ kiện miễn phí. Số này vẫn là số món dùng để tính giá."
           },
           "freeAccessoryQuantity": {
             "type": "number"
           },
           "remainingFreeAccessoryQuantity": {
-            "type": "number"
+            "type": "number",
+            "description": "Hạn mức còn lại: số món PAID nhân 2, trừ số phụ kiện miễn phí đã chọn."
           }
         },
         "required": [
