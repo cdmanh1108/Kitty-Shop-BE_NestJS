@@ -1,3 +1,5 @@
+import { readPayosAttemptForWrite } from './payos-payment-lock';
+import { PaymentUnavailableError } from '@modules/payments/public/hosted-payment';
 import { Prisma } from '@prisma/client';
 import { recomputeOrderPaymentState } from '@modules/finance/public/order-payment-state-transaction';
 import { recordRentalReceipt } from '@modules/finance/public/rental-receipt-transaction';
@@ -27,6 +29,17 @@ export function confirmOrder(prisma: PrismaService, input: ConfirmRentalData, cl
         'Chỉ có thể xác nhận đơn đang ở trạng thái đã đặt trước.',
       );
     assertManualConfirmation(input);
+    const attempt = await readPayosAttemptForWrite(tx, order);
+    if (attempt && attempt.state !== 'PAID')
+      throw new PaymentUnavailableError(
+        'PAYOS_PAYMENT_PENDING',
+        'Chờ xác minh tiền qua payOS trước khi xác nhận đơn.',
+      );
+    if (attempt && !attempt.depositAmount.equals(input.collateralAmount))
+      throw new PaymentUnavailableError(
+        'PAYOS_DEPOSIT_MISMATCH',
+        'Tiền cọc phải khớp với khoản đã nhận qua payOS.',
+      );
     const allocations = await tx.rentalItemAllocation.findMany({
       where: { orderId: order.id, shopId: input.shopId, releasedAt: null },
       select: { inventoryItemId: true },
@@ -69,6 +82,14 @@ export function confirmOrder(prisma: PrismaService, input: ConfirmRentalData, cl
     const existing = await listCompletedPaymentLines(tx, order.id);
     const ledger = rentalLedger(existing);
     const actualDeposit = new Prisma.Decimal(input.collateralAmount);
+    if (
+      attempt &&
+      (ledger.depositHeld.lessThan(actualDeposit) || ledger.paidRental.lessThan(order.grandTotal))
+    )
+      throw new PaymentUnavailableError(
+        'PAYOS_PAYMENT_PENDING',
+        'Số tiền đã ghi nhận thay đổi. Kiểm tra lịch sử thanh toán trước khi xác nhận.',
+      );
     if (ledger.depositHeld.greaterThan(actualDeposit))
       throw new RentalInvariantError(
         'DEPOSIT_ALREADY_RECEIVED',
@@ -83,20 +104,22 @@ export function confirmOrder(prisma: PrismaService, input: ConfirmRentalData, cl
       paymentMethod: input.paymentMethod ?? 'CASH',
       note: input.note,
     };
-    await recordRentalReceipt(tx, {
-      ...receipt,
-      key: 'RC-R-' + order.id,
-      purpose: 'RENTAL_PAYMENT',
-      direction: 'IN',
-      amount: Prisma.Decimal.max(0, order.grandTotal.minus(ledger.paidRental)),
-    });
-    await recordRentalReceipt(tx, {
-      ...receipt,
-      key: 'RC-D-' + order.id,
-      purpose: 'DEPOSIT',
-      direction: 'IN',
-      amount: actualDeposit.minus(ledger.depositHeld),
-    });
+    if (!attempt) {
+      await recordRentalReceipt(tx, {
+        ...receipt,
+        key: 'RC-R-' + order.id,
+        purpose: 'RENTAL_PAYMENT',
+        direction: 'IN',
+        amount: Prisma.Decimal.max(0, order.grandTotal.minus(ledger.paidRental)),
+      });
+      await recordRentalReceipt(tx, {
+        ...receipt,
+        key: 'RC-D-' + order.id,
+        purpose: 'DEPOSIT',
+        direction: 'IN',
+        amount: actualDeposit.minus(ledger.depositHeld),
+      });
+    }
     await recomputeOrderPaymentState(tx, order.id);
     await tx.rentalOrderItem.updateMany({
       where: { orderId: order.id, shopId: input.shopId },

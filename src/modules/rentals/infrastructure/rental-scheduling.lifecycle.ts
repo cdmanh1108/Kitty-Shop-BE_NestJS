@@ -1,3 +1,4 @@
+import { assertPayosPaymentUnblocked } from './payos-payment-lock';
 import { assertInventoryRentable } from './rental-inventory';
 import { getWithTx } from './rental-admin.queries';
 import { isOverlapError } from './rental-errors';
@@ -19,10 +20,12 @@ export async function reschedule(
 ): ReturnType<RentalLifecycleRepository['reschedule']> {
   try {
     return await serializableTransaction(prisma, async (tx) => {
+      if (!(await lockRentalOrder(tx, input))) return null;
       const order = await tx.rentalOrder.findFirst({
         where: { id: input.orderId, shopId: input.shopId },
       });
       if (!order || !canRescheduleRental(order.status)) return null;
+      await assertPayosPaymentUnblocked(tx, order);
       assertRentalReschedule({
         createdAt: order.createdAt,
         rentalStartAt: order.rentalStartAt,
@@ -88,6 +91,7 @@ export async function addCharge(
       where: { id: input.orderId, shopId: input.shopId },
     });
     if (!order) return null;
+    await assertPayosPaymentUnblocked(tx, order);
     const settlement = await tx.rentalSettlement.findUnique({ where: { orderId: order.id } });
     assertChargeMutationAllowed({ status: order.status, hasSettlement: Boolean(settlement) });
     await tx.rentalOrderCharge.create({

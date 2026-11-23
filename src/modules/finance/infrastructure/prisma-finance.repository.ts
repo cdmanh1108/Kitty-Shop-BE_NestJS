@@ -1,3 +1,4 @@
+import { assertPayosPaymentUnblocked } from '@modules/rentals/public/payos-payment-lock';
 import type { PaymentRecordedEvent } from '../domain/finance.events';
 import { TRANSACTION_STATUS, EXPENSE_STATUS } from '../domain/payment-status';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
@@ -62,6 +63,12 @@ export class PrismaFinanceRepository implements FinanceRepository {
         where: { shopId: input.shopId, orderId: order.id },
         select: { orderId: true },
       });
+      const payos = await assertPayosPaymentUnblocked(tx, order);
+      if (payos?.state === 'PAID' && order.status === 'RESERVED') {
+        throw new FinanceInvariantError(
+          'Đơn đã thu qua payOS. Dùng thao tác hoàn và hủy nếu cần trả lại khoản đã nhận.',
+        );
+      }
       assertPaymentCreationAllowed(
         { status: order.status, hasSettlement: Boolean(settlement) },
         input,

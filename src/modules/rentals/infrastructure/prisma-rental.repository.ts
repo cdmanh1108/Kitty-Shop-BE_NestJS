@@ -123,11 +123,10 @@ export class PrismaRentalRepository
     return getSchedule(this.prisma, ...args);
   }
 
-  async transition(
+  transition(
     ...args: Parameters<RentalLifecycleRepository['transition']>
   ): ReturnType<RentalLifecycleRepository['transition']> {
-    const policy = await this.policies.getPolicy(args[0].shopId);
-    return transition(this.prisma, args[0], policy, this.clock);
+    return transition(this.prisma, args[0], this.clock);
   }
 
   async reschedule(

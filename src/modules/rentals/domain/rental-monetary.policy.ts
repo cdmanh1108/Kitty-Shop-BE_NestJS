@@ -78,6 +78,12 @@ export function assertPaymentVoidAllowed(
   orderId: string,
   payment: RentalPaymentMutation,
 ): void {
+  if (payment.source === 'PAYOS') {
+    throw new RentalInvariantError(
+      'PAYMENT_VOID_PROTECTED',
+      'Giao dịch nhận qua payOS cần được đối soát và ghi nhận hoàn tiền.',
+    );
+  }
   if (payment.source === 'INTERNAL_TRANSFER') {
     throw new RentalInvariantError(
       'PAYMENT_VOID_PROTECTED',

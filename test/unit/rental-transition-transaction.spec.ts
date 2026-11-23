@@ -1,6 +1,5 @@
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { transition } from '../../src/modules/rentals/infrastructure/rental-transition.lifecycle';
-import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 import type { Clock } from '../../src/common/clock/clock';
 
 const clock: Clock = { now: () => new Date('2026-10-01T12:00:00Z') };
@@ -37,7 +36,7 @@ function fakeTransaction() {
 describe('rental transition transaction gates', () => {
   it('rejects generic confirmation without querying payment transactions', async () => {
     const { prisma, tx } = fakeTransaction();
-    await expect(transition(prisma, command, DEFAULT_RENTAL_POLICY, clock)).rejects.toMatchObject({
+    await expect(transition(prisma, command, clock)).rejects.toMatchObject({
       code: 'CONFIRMATION_REQUIRED',
     });
     expect(tx.paymentTransaction.findMany).not.toHaveBeenCalled();
@@ -47,12 +46,7 @@ describe('rental transition transaction gates', () => {
   it('refuses a direct RESERVED to ACTIVE transition before any write', async () => {
     const { prisma, tx } = fakeTransaction();
     await expect(
-      transition(
-        prisma,
-        { ...command, toStatus: 'ACTIVE', fromStatuses: ['RESERVED'] },
-        DEFAULT_RENTAL_POLICY,
-        clock,
-      ),
+      transition(prisma, { ...command, toStatus: 'ACTIVE', fromStatuses: ['RESERVED'] }, clock),
     ).resolves.toBeNull();
     expect(tx.paymentTransaction.findMany).not.toHaveBeenCalled();
     expect(tx.rentalOrder.updateMany).not.toHaveBeenCalled();
