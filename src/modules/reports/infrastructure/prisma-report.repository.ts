@@ -2,6 +2,7 @@ import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { zonedDateKey } from '@common/utils/timezone';
+import { rentalCashFlowByDay } from '@modules/finance/public/rental-cash-flow';
 import type {
   CustomerPerformanceRow,
   ProductPerformanceRow,
@@ -26,17 +27,7 @@ export class PrismaReportRepository implements ReportRepository {
     const lastDay = zonedDateKey(new Date(input.until.getTime() - 1), input.timezone);
     return this.prisma.$queryRaw<RevenueReportRow[]>(Prisma.sql`
       WITH revenue AS (
-        SELECT
-          (paid_at AT TIME ZONE ${input.timezone})::date AS day,
-          SUM(CASE WHEN direction = 'IN' THEN amount ELSE -amount END) AS revenue
-        FROM payment_transactions
-        WHERE shop_id = ${input.shopId}::uuid
-          AND status = 'COMPLETED'
-          AND voided_at IS NULL
-          AND purpose NOT IN ('DEPOSIT', 'DEPOSIT_REFUND')
-          AND paid_at >= ${input.from}
-          AND paid_at < ${input.until}
-        GROUP BY 1
+        ${rentalCashFlowByDay(input)}
       ), expense AS (
         SELECT expense_date AS day, SUM(amount) AS expense
         FROM expenses

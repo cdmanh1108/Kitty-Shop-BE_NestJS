@@ -9,7 +9,7 @@ import type {
   FinanceTransaction,
 } from '../domain/finance-read.repository';
 
-/** One normalized accounting source shared by summary and table; never union receipts with charges. */
+/** Revenue recognized at order completion, shared by the finance summary and transaction table. */
 function source(input: FinanceCriteria) {
   return Prisma.sql`
     WITH finalized AS MATERIALIZED (

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { rentalCashFlowByDay } from '@modules/finance/public/rental-cash-flow';
 import { RENTAL_STATUS, ALLOCATION_STATUS } from '@modules/rentals/public/rental-status';
 import type { DashboardRepository, DashboardSummaryData } from '../domain/dashboard.repository';
 import type { DashboardSummary } from '../domain/dashboard.models';
@@ -26,18 +27,10 @@ export class PrismaDashboardRepository implements DashboardRepository {
   }
 
   private async revenue(input: DashboardSummaryData): Promise<Revenue> {
-    // Same ledger semantics as Finance/Reports: net completed, non-voided,
-    // non-deposit movements, including internal deposit-to-rental offsets.
     const from = input.seriesStart < input.monthStart ? input.seriesStart : input.monthStart;
     const [row] = await this.prisma.$queryRaw<Revenue[]>(Prisma.sql`
       WITH daily AS (
-        SELECT (paid_at AT TIME ZONE ${input.timezone})::date AS day,
-          SUM(CASE WHEN direction = 'IN' THEN amount ELSE -amount END) AS revenue
-        FROM payment_transactions
-        WHERE shop_id = ${input.shopId}::uuid AND status = 'COMPLETED'
-          AND voided_at IS NULL AND purpose NOT IN ('DEPOSIT', 'DEPOSIT_REFUND')
-          AND paid_at >= ${from} AND paid_at < ${input.monthEnd}
-        GROUP BY 1
+        ${rentalCashFlowByDay({ ...input, from, until: input.monthEnd })}
       ), series AS (
         SELECT d::date AS day, COALESCE(daily.revenue, 0) AS revenue
         FROM generate_series(

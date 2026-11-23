@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { FinanceReadService } from '../../src/modules/finance/application/finance-read.service';
 import { PrismaFinanceReadRepository } from '../../src/modules/finance/infrastructure/prisma-finance-read.repository';
+import { PrismaReportRepository } from '../../src/modules/reports/infrastructure/prisma-report.repository';
 import {
   connectTestDatabase,
   disconnectTestDatabase,
@@ -85,6 +86,26 @@ describe('Finance normalized PostgreSQL read model', () => {
       },
     });
   }
+
+  it('keeps the receipt day separate from the completed-order revenue day', async () => {
+    const f = await rentalScenario(prisma);
+    const complete = new Date('2026-09-16T02:00:00Z');
+    const booking = await order(f, { completedAt: complete, rentalEndAt: complete });
+    await payment(f, booking.id, { purpose: 'RENTAL_PAYMENT', amount: 50000 });
+    await payment(f, booking.id, { purpose: 'DEPOSIT', amount: 300000 });
+    const report = new PrismaReportRepository(prisma);
+    const rows = await report.revenue({
+      shopId: f.shop.id,
+      timezone: 'Asia/Ho_Chi_Minh',
+      from: new Date('2026-09-14T17:00:00Z'),
+      until: new Date('2026-09-15T17:00:00Z'),
+    });
+    expect(rows).toMatchObject([{ revenue: '50000.00' }]);
+    const forDay = (day: string) =>
+      service().summary(f.principal, { preset: 'custom', from: day, to: day });
+    expect(Number((await forDay('2026-09-15')).totalRevenue)).toBe(0);
+    expect(Number((await forDay('2026-09-16')).totalRevenue)).toBe(50000);
+  });
   it('returns zeros and no phantom rows in an empty period', async () => {
     const f = await rentalScenario(prisma);
     expect(await service().summary(f.principal, {})).toMatchObject({
