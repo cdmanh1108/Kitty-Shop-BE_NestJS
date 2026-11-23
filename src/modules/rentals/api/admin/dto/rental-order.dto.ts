@@ -10,6 +10,10 @@ import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import { PaginationMetaResDto } from '@common/dto/response.dto';
 import { RentalReturnResDto } from './rental-return.dto';
 import { RentalSettlementDetailsResDto, RentalSettlementResDto } from './rental-settlement.dto';
+import {
+  RENTAL_LIST_SORT_DIRECTIONS,
+  RENTAL_LIST_SORT_FIELDS,
+} from '../../../domain/ports/rental-order-reader.port';
 
 export class RentalListQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
@@ -47,6 +51,14 @@ export class RentalListQueryDto extends PaginationQueryDto {
   })
   @IsOptional()
   until?: string;
+  @ApiPropertyOptional({ enum: RENTAL_LIST_SORT_FIELDS })
+  @IsIn(RENTAL_LIST_SORT_FIELDS, { message: 'Cột sắp xếp không hợp lệ.' })
+  @IsOptional()
+  sortBy?: (typeof RENTAL_LIST_SORT_FIELDS)[number];
+  @ApiPropertyOptional({ enum: RENTAL_LIST_SORT_DIRECTIONS })
+  @IsIn(RENTAL_LIST_SORT_DIRECTIONS, { message: 'Thứ tự sắp xếp không hợp lệ.' })
+  @IsOptional()
+  sortDirection?: (typeof RENTAL_LIST_SORT_DIRECTIONS)[number];
 }
 
 export class RentalCustomerResDto {

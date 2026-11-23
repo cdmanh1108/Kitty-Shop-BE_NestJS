@@ -27,6 +27,8 @@ export class RentalReadService {
       paymentStatus: query.paymentStatus,
       from: query.from ? new Date(query.from) : undefined,
       until: query.until ? new Date(query.until) : undefined,
+      sortBy: query.sortBy,
+      sortDirection: query.sortDirection,
     });
   }
 

@@ -1,5 +1,6 @@
 import type { PaginationParams } from '@common/types/pagination';
 import type { RentalBillingRole } from '../domain/rental-accessories';
+import type { RentalListCriteria } from '../domain/ports/rental-order-reader.port';
 export interface AddRentalChargeInput {
   chargeType: string;
   description?: string;
@@ -60,6 +61,8 @@ export interface RentalListQuery extends PaginationParams {
   paymentStatus?: string;
   from?: string;
   until?: string;
+  sortBy?: RentalListCriteria['sortBy'];
+  sortDirection?: RentalListCriteria['sortDirection'];
 }
 
 export interface RescheduleRentalInput {

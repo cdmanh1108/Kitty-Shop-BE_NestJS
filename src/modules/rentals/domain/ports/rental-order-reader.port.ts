@@ -13,6 +13,16 @@ export interface RentalOrderReader {
 
 export const RENTAL_ORDER_READER = Symbol('RENTAL_ORDER_READER');
 
+export const RENTAL_LIST_SORT_FIELDS = [
+  'orderNumber',
+  'rentalStartAt',
+  'rentalEndAt',
+  'totalAmount',
+  'paymentStatus',
+  'status',
+] as const;
+export const RENTAL_LIST_SORT_DIRECTIONS = ['asc', 'desc'] as const;
+
 export interface RentalListCriteria {
   shopId: string;
   customerId?: string;
@@ -24,6 +34,8 @@ export interface RentalListCriteria {
   paymentStatus?: string;
   from?: Date;
   until?: Date;
+  sortBy?: (typeof RENTAL_LIST_SORT_FIELDS)[number];
+  sortDirection?: (typeof RENTAL_LIST_SORT_DIRECTIONS)[number];
 }
 
 export interface ReturnPreviewData {

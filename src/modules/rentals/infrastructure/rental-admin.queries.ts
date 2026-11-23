@@ -9,6 +9,7 @@ export async function list(
   input: Parameters<RentalOrderReader['list']>[0],
 ): ReturnType<RentalOrderReader['list']> {
   const phoneSearch = input.search?.replace(/\D/g, '');
+  const sortField = input.sortBy === 'totalAmount' ? 'grandTotal' : input.sortBy;
   const where = {
     shopId: input.shopId,
     ...(input.customerId ? { customerId: input.customerId } : {}),
@@ -46,7 +47,9 @@ export async function list(
         grandTotal: true,
         customer: { select: { id: true, fullName: true, phone: true } },
       },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: sortField
+        ? [{ [sortField]: input.sortDirection ?? 'asc' }, { id: 'desc' }]
+        : [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: (input.page - 1) * input.limit,
       take: input.limit,
     }),
