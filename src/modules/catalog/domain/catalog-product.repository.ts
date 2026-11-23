@@ -1,4 +1,5 @@
 import type { ProductLookupPage } from './catalog.read-models';
+import type { ProductMediaRecord } from './catalog.records';
 import type {
   AddProductMediaResult,
   AddVariantResult,
@@ -21,6 +22,25 @@ import type {
 } from './catalog-product.inputs';
 
 export const CATALOG_PRODUCT_REPOSITORY = Symbol('CATALOG_PRODUCT_REPOSITORY');
+
+export interface ProductMediaUploadIntent {
+  scope: string;
+  key: string;
+  requestHash: string;
+  expiresAt: Date;
+}
+
+export interface ProductMediaUploadOwner {
+  scope: string;
+  key: string;
+  claimId: string;
+  completedAt: Date;
+}
+
+export type ProductMediaUploadClaim =
+  | { state: 'CLAIMED'; claimId: string }
+  | { state: 'IN_PROGRESS' | 'HASH_MISMATCH' }
+  | { state: 'COMPLETED'; media: ProductMediaRecord | null };
 
 /** Admin product reads and transactional product/variant/rate writes. */
 export interface CatalogProductRepository {
@@ -58,7 +78,15 @@ export interface CatalogProductRepository {
     shopId: string,
     productId: string,
     input: ProductMediaData,
+    intent?: ProductMediaUploadOwner,
   ): Promise<AddProductMediaResult>;
+  claimProductMediaUpload(
+    shopId: string,
+    productId: string,
+    intent: ProductMediaUploadIntent,
+    now: Date,
+  ): Promise<ProductMediaUploadClaim>;
+  releaseProductMediaUpload(shopId: string, intent: ProductMediaUploadOwner): Promise<void>;
   setPrimaryProductMedia(
     shopId: string,
     productId: string,

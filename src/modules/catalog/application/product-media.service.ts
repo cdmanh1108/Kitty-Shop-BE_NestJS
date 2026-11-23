@@ -1,4 +1,6 @@
 import type { CurrentUser } from '@common/types/current-user';
+import { createHash, randomUUID } from 'node:crypto';
+import { CLOCK, type Clock } from '@common/clock/clock';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import {
   APPLICATION_LOGGER,
@@ -12,12 +14,14 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import {
   CATALOG_PRODUCT_REPOSITORY,
   type CatalogProductRepository,
+  type ProductMediaUploadOwner,
 } from '../domain/catalog-product.repository';
 import type { ProductMediaRecord } from '../domain/catalog.records';
 import type { ProductMediaInput, ProductMediaUploadInput } from './catalog.contracts';
 import {
   CatalogResourceNotFoundError,
   InvalidCatalogInputError,
+  ProductMediaUploadConflictError,
 } from './catalog-application.errors';
 
 @Injectable()
@@ -28,6 +32,7 @@ export class ProductMediaService {
     @Inject(CATALOG_PRODUCT_REPOSITORY) private readonly repository: CatalogProductRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
+    @Inject(CLOCK) private readonly clock: Clock,
     @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
   ) {
     this.logger = loggerFactory?.create(ProductMediaService.name) ?? silentApplicationLog;
@@ -81,11 +86,49 @@ export class ProductMediaService {
       throw new InvalidCatalogInputError('Loại tệp không khớp nội dung hình ảnh.');
     }
 
+    const options = {
+      altText: input.altText,
+      isPrimary: input.isPrimary ?? false,
+      sortOrder: input.sortOrder ?? 0,
+    };
+    let intent: ProductMediaUploadOwner | undefined;
+    if (input.uploadIntentId) {
+      const now = this.clock.now();
+      const scope = 'product-media.upload:' + productId;
+      const key = input.uploadIntentId.toLowerCase();
+      const requestHash = createHash('sha256')
+        .update(JSON.stringify({ imageHash: image.contentHash, ...options }))
+        .digest('hex');
+      const claim = await this.repository.claimProductMediaUpload(
+        user.shopId,
+        productId,
+        { scope, key, requestHash, expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
+        now,
+      );
+      if (claim.state === 'COMPLETED') {
+        if (claim.media) return claim.media;
+        throw new ProductMediaUploadConflictError(
+          'Ảnh từ lượt tải này đã được gỡ.',
+          'MEDIA_UPLOAD_REMOVED',
+        );
+      }
+      if (claim.state !== 'CLAIMED') {
+        throw new ProductMediaUploadConflictError(
+          claim.state === 'HASH_MISMATCH'
+            ? 'Nội dung của lượt tải ảnh đã thay đổi.'
+            : 'Lượt tải ảnh đang được xử lý. Vui lòng thử lại.',
+          claim.state === 'HASH_MISMATCH' ? 'MEDIA_UPLOAD_CHANGED' : 'MEDIA_UPLOAD_IN_PROGRESS',
+        );
+      }
+      intent = { scope, key, claimId: claim.claimId, completedAt: now };
+    }
+
     const storageKey = buildProductMediaKey({
       shopCode: target.shopCode,
       productCode: target.productCode,
       contentHash: image.contentHash,
       extension: image.extension,
+      generation: randomUUID(),
     });
 
     let media: ProductMediaRecord | null;
@@ -95,16 +138,26 @@ export class ProductMediaService {
         body: file.buffer,
         contentType: image.mimeType,
       });
-      media = await this.repository.addProductMedia(user.shopId, productId, {
-        url: stored.publicUrl,
-        storageKey,
-        altText: input.altText,
-        isPrimary: input.isPrimary ?? false,
-        sortOrder: input.sortOrder ?? 0,
-      });
+      media = await this.repository.addProductMedia(
+        user.shopId,
+        productId,
+        { url: stored.publicUrl, storageKey, ...options },
+        intent && { ...intent, completedAt: this.clock.now() },
+      );
       if (!media) throw new CatalogResourceNotFoundError('Không tìm thấy sản phẩm.');
     } catch (error) {
       await this.cleanupUnreferencedProductMedia(user.shopId, productId, storageKey, 'upload');
+      if (intent) {
+        try {
+          await this.repository.releaseProductMediaUpload(user.shopId, intent);
+        } catch (releaseError) {
+          this.logger.error({
+            event: 'catalog.product_media.upload_claim_release_failed',
+            productId,
+            errorClass: releaseError instanceof Error ? releaseError.name : 'UnknownError',
+          });
+        }
+      }
       throw error;
     }
 

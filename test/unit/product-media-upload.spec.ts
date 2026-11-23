@@ -40,6 +40,7 @@ describe('ProductMediaService', () => {
   let auditLog: jest.MockedFunction<AuditPort['log']>;
   let cleanupLog: jest.MockedFunction<(message: unknown) => void>;
   let addMedia: jest.MockedFunction<CatalogProductRepository['addProductMedia']>;
+  let claimUpload: jest.MockedFunction<CatalogProductRepository['claimProductMediaUpload']>;
   let findTarget: jest.MockedFunction<CatalogProductRepository['findProductMediaUploadTarget']>;
   let countByKey: jest.MockedFunction<CatalogProductRepository['countProductMediaByStorageKey']>;
   let removeMedia: jest.MockedFunction<CatalogProductRepository['removeProductMedia']>;
@@ -49,6 +50,7 @@ describe('ProductMediaService', () => {
 
   beforeEach(() => {
     addMedia = jest.fn();
+    claimUpload = jest.fn();
     findTarget = jest.fn().mockResolvedValue({ shopCode: 'Shop A', productCode: 'Dress 1' });
     countByKey = jest.fn().mockResolvedValue(0);
     removeMedia = jest.fn();
@@ -64,6 +66,8 @@ describe('ProductMediaService', () => {
       updateProduct: jest.fn(),
       archiveProduct: jest.fn(),
       addProductMedia: addMedia,
+      claimProductMediaUpload: claimUpload,
+      releaseProductMediaUpload: jest.fn(),
       setPrimaryProductMedia: jest.fn(),
       findProductMediaUploadTarget: findTarget,
       countProductMediaByStorageKey: countByKey,
@@ -87,9 +91,15 @@ describe('ProductMediaService', () => {
     };
     auditLog = jest.fn().mockResolvedValue(undefined);
     cleanupLog = jest.fn();
-    service = new ProductMediaService(repository, { log: auditLog }, storage, {
-      create: () => ({ log: jest.fn(), error: cleanupLog }),
-    });
+    service = new ProductMediaService(
+      repository,
+      { log: auditLog },
+      storage,
+      { now: () => new Date('2026-01-01T00:00:00.000Z') },
+      {
+        create: () => ({ log: jest.fn(), error: cleanupLog }),
+      },
+    );
   });
 
   it('rejects a missing file, invalid image bytes, and a mismatched declared MIME type', async () => {
@@ -122,7 +132,7 @@ describe('ProductMediaService', () => {
 
     findTarget.mockResolvedValueOnce({ shopCode: 'Shop A', productCode: 'Dress 1' });
     const inspected = validateAndHashImage(image, 'image/jpeg');
-    const key = buildProductMediaKey({
+    const baseKey = buildProductMediaKey({
       shopCode: 'Shop A',
       productCode: 'Dress 1',
       contentHash: inspected.contentHash,
@@ -130,8 +140,6 @@ describe('ProductMediaService', () => {
     });
     const persistedMedia = {
       ...mediaRecord,
-      storageKey: key,
-      url: `https://assets.example.test/${key}`,
       altText: 'Front view',
     };
     addMedia.mockResolvedValueOnce(persistedMedia);
@@ -139,25 +147,54 @@ describe('ProductMediaService', () => {
       file: { buffer: image, mimetype: 'image/jpeg' },
       altText: 'Front view',
     });
+    const key = putObject.mock.calls[0]![0].key;
+    expect(key.startsWith(baseKey.replace(/\.jpg$/, '-'))).toBe(true);
+    expect(key.endsWith('.jpg')).toBe(true);
     expect(putObject).toHaveBeenCalledWith({
       key,
       body: image,
       contentType: 'image/jpeg',
     });
-    expect(addMedia).toHaveBeenCalledWith(user.shopId, 'product-1', {
-      url: `https://assets.example.test/${key}`,
-      storageKey: key,
-      altText: 'Front view',
-      isPrimary: false,
-      sortOrder: 0,
-    });
+    expect(addMedia).toHaveBeenCalledWith(
+      user.shopId,
+      'product-1',
+      {
+        url: `https://assets.example.test/${key}`,
+        storageKey: key,
+        altText: 'Front view',
+        isPrimary: false,
+        sortOrder: 0,
+      },
+      undefined,
+    );
     expect(result).toBe(persistedMedia);
     expect(auditLog).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'CREATE', entityType: 'product_media' }),
     );
     expect(auditLog.mock.calls[0]?.[0].newValues).toEqual(
-      expect.objectContaining({ storageKey: key }),
+      expect.objectContaining({ storageKey: persistedMedia.storageKey }),
     );
+  });
+
+  it('replays an acknowledged upload intent without writing another object', async () => {
+    claimUpload.mockResolvedValueOnce({ state: 'COMPLETED', media: mediaRecord });
+    await expect(
+      service.uploadProductMedia(user, 'product-1', {
+        uploadIntentId: 'd0d40cbc-4d94-4892-96d8-e6f397811bb0',
+        file: { buffer: image, mimetype: 'image/jpeg' },
+      }),
+    ).resolves.toBe(mediaRecord);
+    expect(putObject).not.toHaveBeenCalled();
+    expect(addMedia).not.toHaveBeenCalled();
+  });
+
+  it('allocates a fresh object key even when the same image is uploaded again', async () => {
+    addMedia.mockResolvedValue(mediaRecord);
+    const command = { file: { buffer: image, mimetype: 'image/jpeg' } };
+    await service.uploadProductMedia(user, 'product-1', command);
+    await service.uploadProductMedia(user, 'product-1', command);
+    const keys = putObject.mock.calls.map(([request]) => request.key);
+    expect(new Set(keys).size).toBe(2);
   });
 
   it('cleans up an unreferenced object after persistence fails and preserves the persistence error', async () => {

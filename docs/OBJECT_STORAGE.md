@@ -68,7 +68,19 @@ Admins with `catalog.manage` can upload one file through `POST /api/v1/admin/pro
 
 Admins with `catalog.manage` can also make an existing image the product's primary image through `PATCH /api/v1/admin/products/:id/media/:mediaId/primary`. The shop, product and media association are checked inside a serializable transaction; the transaction clears the old primary flag before setting the selected image, preserving the one-primary-image database constraint.
 
-Object keys are content-addressed using the existing `shops/<shop>/products/<product>/<sha256>.<extension>` scheme. If persistence fails after storage succeeds, the service checks whether the key has any media references and attempts bounded best-effort cleanup only when none remain. Removing managed media performs the same reference check; external URL rows have no storage key and never trigger object deletion. Cleanup failures do not undo a successful database write and are logged without provider error details. Upload audit metadata records the key and media options, not file bytes or credentials.
+Each managed upload writes a fresh object key in the form
+`shops/<shop>/products/<product>/<sha256>-<generation>.<extension>`.
+The generation prevents cleanup of an earlier upload from deleting a newer object with the same bytes.
+The API accepts an optional UUID `uploadIntentId`. For 24 hours, repeating the same
+file and options with that ID replays the saved media record. A different payload
+with the same ID returns a conflict. The idempotency result commits with the
+media row. Existing content-addressed keys remain valid.
+
+If persistence fails after storage succeeds, the service checks references and
+attempts bounded cleanup of the object belonging to that upload. Removing
+managed media performs the same reference check.
+Cleanup failures are logged and leave the database operation intact. Upload
+audit metadata records the key and media options.
 
 No schema migration is needed: `ProductMedia.storageKey` already supports managed objects and is nullable for external legacy media.
 

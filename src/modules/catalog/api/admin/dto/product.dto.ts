@@ -73,6 +73,11 @@ export class ProductMediaReqDto {
 }
 
 export class ProductMediaUploadReqDto {
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsUUID('4')
+  @IsOptional()
+  uploadIntentId?: string;
+
   @ApiPropertyOptional()
   @IsString({ message: 'Mô tả hình ảnh nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()

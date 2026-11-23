@@ -62,9 +62,11 @@ import {
 import { createProduct, addVariant, updateProduct, archiveProduct } from './product-commands';
 import {
   addProductMedia,
+  claimProductMediaUpload,
   setPrimaryProductMedia,
   removeProductMedia,
 } from './product-media-commands';
+import { releaseIdempotencyClaim } from '@database/prisma/idempotency';
 import {
   updateProductVariant,
   setProductVariantArchived,
@@ -346,6 +348,18 @@ export class PrismaCatalogRepository
     ...args: Parameters<CatalogRepository['addProductMedia']>
   ): ReturnType<CatalogRepository['addProductMedia']> {
     return addProductMedia(this.prisma, this.mediaUrls, ...args);
+  }
+
+  claimProductMediaUpload(
+    ...args: Parameters<CatalogProductRepository['claimProductMediaUpload']>
+  ) {
+    return claimProductMediaUpload(this.prisma, this.mediaUrls, ...args);
+  }
+
+  releaseProductMediaUpload(
+    ...[shopId, intent]: Parameters<CatalogProductRepository['releaseProductMediaUpload']>
+  ) {
+    return releaseIdempotencyClaim(this.prisma, shopId, intent.scope, intent.key, intent.claimId);
   }
 
   setPrimaryProductMedia(

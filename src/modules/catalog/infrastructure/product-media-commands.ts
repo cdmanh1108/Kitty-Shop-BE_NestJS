@@ -1,9 +1,40 @@
 import type { PublicMediaUrlResolver } from '@common/storage/public-url.resolver';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
+import {
+  claimIdempotencyRecord,
+  completeIdempotencyClaim,
+  lockIdempotencyClaim,
+} from '@database/prisma/idempotency';
 import type { RemovedProductMedia } from '../domain/catalog.models';
 import type { ProductMediaData } from '../domain/catalog-product.inputs';
-import type { CatalogProductRepository } from '../domain/catalog-product.repository';
+import type {
+  CatalogProductRepository,
+  ProductMediaUploadIntent,
+  ProductMediaUploadOwner,
+  ProductMediaUploadClaim,
+} from '../domain/catalog-product.repository';
+import { ProductMediaUploadConflictError } from '../application/catalog-application.errors';
+
+export async function claimProductMediaUpload(
+  prisma: PrismaService,
+  mediaUrls: PublicMediaUrlResolver,
+  shopId: string,
+  productId: string,
+  intent: ProductMediaUploadIntent,
+  now: Date,
+): Promise<ProductMediaUploadClaim> {
+  const claim = await claimIdempotencyRecord(prisma, { now: () => now }, { shopId, ...intent });
+  if (claim.state !== 'COMPLETED') return claim;
+  const result = claim.responseBody;
+  const mediaId =
+    result && typeof result === 'object' && !Array.isArray(result) ? result.mediaId : undefined;
+  const media =
+    typeof mediaId === 'string'
+      ? await prisma.productMedia.findFirst({ where: { id: mediaId, productId, shopId } })
+      : null;
+  return { state: 'COMPLETED', media: media ? { ...media, url: mediaUrls.resolve(media) } : null };
+}
 
 export async function addProductMedia(
   prisma: PrismaService,
@@ -11,6 +42,7 @@ export async function addProductMedia(
   shopId: string,
   productId: string,
   input: ProductMediaData,
+  intent?: ProductMediaUploadOwner,
 ): ReturnType<CatalogProductRepository['addProductMedia']> {
   const created = await serializableTransaction(prisma, async (tx) => {
     const product = await tx.product.findFirst({
@@ -18,15 +50,36 @@ export async function addProductMedia(
       select: { id: true },
     });
     if (!product) return null;
+    if (intent && !(await lockIdempotencyClaim(tx, shopId, intent))) {
+      throw new ProductMediaUploadConflictError(
+        'Lượt tải ảnh đang được xử lý lại.',
+        'MEDIA_UPLOAD_IN_PROGRESS',
+      );
+    }
     if (input.isPrimary) {
       await tx.productMedia.updateMany({
         where: { shopId, productId, isPrimary: true },
         data: { isPrimary: false },
       });
     }
-    return tx.productMedia.create({
+    const media = await tx.productMedia.create({
       data: { shopId, productId, ...input, storageKey: input.storageKey ?? null },
     });
+    if (
+      intent &&
+      !(await completeIdempotencyClaim(tx, {
+        ...intent,
+        shopId,
+        responseCode: 201,
+        responseBody: { mediaId: media.id },
+      }))
+    ) {
+      throw new ProductMediaUploadConflictError(
+        'Lượt tải ảnh đang được xử lý lại.',
+        'MEDIA_UPLOAD_IN_PROGRESS',
+      );
+    }
+    return media;
   });
   if (!created) return null;
   return { ...created, url: mediaUrls.resolve(created) };

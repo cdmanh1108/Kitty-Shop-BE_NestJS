@@ -12,6 +12,10 @@ export class InvalidCatalogInputError extends ApplicationError {
   readonly kind = 'VALIDATION' as const;
 }
 
+export class ProductMediaUploadConflictError extends ApplicationError {
+  readonly kind = 'CONFLICT' as const;
+}
+
 export class DuplicateProductVariantCombinationError extends ApplicationError {
   readonly kind = 'CONFLICT' as const;
 

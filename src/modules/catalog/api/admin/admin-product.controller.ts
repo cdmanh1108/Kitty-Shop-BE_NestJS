@@ -217,6 +217,7 @@ export class AdminProductController {
           description: 'JPEG, PNG, GIF or WEBP; max 15 MiB.',
         },
         altText: { type: 'string' },
+        uploadIntentId: { type: 'string', format: 'uuid' },
         isPrimary: { type: 'boolean', default: false },
         sortOrder: { type: 'integer', default: 0 },
       },
@@ -225,6 +226,7 @@ export class AdminProductController {
   @ApiCreatedResponse({ type: ProductMediaResDto })
   @ApiBadRequestResponse({ description: 'Thiếu tệp hoặc dữ liệu ảnh/form không hợp lệ.' })
   @ApiNotFoundResponse({ description: 'Không tìm thấy sản phẩm trong cửa hàng đã xác thực.' })
+  @ApiConflictResponse({ description: 'Lượt tải đang xử lý, đã thay đổi hoặc ảnh đã bị gỡ.' })
   @ApiPayloadTooLargeResponse({ description: 'Ảnh sản phẩm vượt quá 15 MiB.' })
   uploadProductMedia(
     @CurrentUser() user: CurrentUserType,

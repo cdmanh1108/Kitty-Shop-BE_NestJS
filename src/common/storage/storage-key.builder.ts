@@ -150,9 +150,11 @@ export function buildProductMediaKey(params: {
   productCode: string;
   contentHash: string;
   extension: string;
+  generation?: string;
 }): string {
   const shopPart = sanitizeKeyIdentifier(params.shopCode || 'main');
   const productPart = sanitizeKeyIdentifier(params.productCode);
   const extPart = params.extension.replace(/^\.+/, '').toLowerCase();
-  return `shops/${shopPart}/products/${productPart}/${params.contentHash}.${extPart}`;
+  const generation = params.generation ? '-' + sanitizeKeyIdentifier(params.generation) : '';
+  return `shops/${shopPart}/products/${productPart}/${params.contentHash}${generation}.${extPart}`;
 }

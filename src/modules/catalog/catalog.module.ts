@@ -1,4 +1,5 @@
 import { SettingsModule } from '@modules/settings/settings.module';
+import { ClockModule } from '@common/clock/clock.module';
 import { Module } from '@nestjs/common';
 import { RentalsModule } from '@modules/rentals/rentals.module';
 import { AdminCategoryController } from './api/admin/admin-category.controller';
@@ -26,7 +27,7 @@ import { STOREFRONT_CATALOG_REPOSITORY } from './domain/storefront-catalog.repos
 import { PrismaCatalogRepository } from './infrastructure/prisma-catalog.repository';
 
 @Module({
-  imports: [RentalsModule, SettingsModule],
+  imports: [RentalsModule, SettingsModule, ClockModule],
   controllers: [
     AdminCategoryController,
     AdminCatalogReferenceController,

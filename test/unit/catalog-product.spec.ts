@@ -71,6 +71,8 @@ describe('ProductService', () => {
       updateProduct: updateProductMock,
       archiveProduct: archiveProductMock,
       addProductMedia: jest.fn(),
+      claimProductMediaUpload: jest.fn(),
+      releaseProductMediaUpload: jest.fn(),
       setPrimaryProductMedia: jest.fn(),
       findProductMediaUploadTarget: jest.fn(),
       countProductMediaByStorageKey: jest.fn(),

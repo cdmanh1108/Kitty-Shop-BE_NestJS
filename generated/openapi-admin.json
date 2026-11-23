@@ -1839,6 +1839,10 @@
                   "altText": {
                     "type": "string"
                   },
+                  "uploadIntentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
                   "isPrimary": {
                     "type": "boolean",
                     "default": false
@@ -1868,6 +1872,9 @@
           },
           "404": {
             "description": "Không tìm thấy sản phẩm trong cửa hàng đã xác thực."
+          },
+          "409": {
+            "description": "Lượt tải đang xử lý, đã thay đổi hoặc ảnh đã bị gỡ."
           },
           "413": {
             "description": "Ảnh sản phẩm vượt quá 15 MiB."

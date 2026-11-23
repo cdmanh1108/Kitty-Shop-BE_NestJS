@@ -73,6 +73,7 @@ export type UpdateProductVariantInput = UpdateProductVariantData;
 export type ProductMediaInput = ProductMediaData;
 
 export interface ProductMediaUploadInput {
+  uploadIntentId?: string;
   file?: {
     buffer: Buffer;
     mimetype: string;

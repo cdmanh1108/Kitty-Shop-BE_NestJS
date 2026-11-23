@@ -108,6 +108,7 @@ export function toProductMediaUploadInput(
 ): ProductMediaUploadInput {
   return {
     file,
+    uploadIntentId: dto.uploadIntentId,
     altText: dto.altText,
     isPrimary: dto.isPrimary,
     sortOrder: dto.sortOrder,
