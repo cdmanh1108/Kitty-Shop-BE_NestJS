@@ -26,6 +26,8 @@ export class ReportController {
   @Permissions(PERMISSIONS.REPORTS_VIEW)
   @ApiOperation({
     summary: 'Daily realized revenue, expense and profit; deposits are excluded from revenue',
+    description:
+      'Payments use the supplied half-open time interval. Expenses use shop-local calendar dates covered by that interval.',
   })
   @ApiOkResponse({ type: [RevenueReportRowResDto] })
   revenue(@CurrentUser() user: CurrentUserType, @Query() query: ReportRangeQueryDto) {

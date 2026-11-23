@@ -4782,6 +4782,7 @@
     },
     "/admin/reports/revenue": {
       "get": {
+        "description": "Payments use the supplied half-open time interval. Expenses use shop-local calendar dates covered by that interval.",
         "operationId": "ReportController_revenue",
         "parameters": [
           {

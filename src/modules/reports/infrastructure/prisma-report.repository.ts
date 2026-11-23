@@ -1,6 +1,7 @@
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { zonedDateKey } from '@common/utils/timezone';
 import type {
   CustomerPerformanceRow,
   ProductPerformanceRow,
@@ -21,6 +22,8 @@ export class PrismaReportRepository implements ReportRepository {
   }
 
   revenue(input: { shopId: string; from: Date; until: Date; timezone: string }) {
+    const firstDay = zonedDateKey(input.from, input.timezone);
+    const lastDay = zonedDateKey(new Date(input.until.getTime() - 1), input.timezone);
     return this.prisma.$queryRaw<RevenueReportRow[]>(Prisma.sql`
       WITH revenue AS (
         SELECT
@@ -40,8 +43,8 @@ export class PrismaReportRepository implements ReportRepository {
         WHERE shop_id = ${input.shopId}::uuid
           AND status = 'PAID'
           AND voided_at IS NULL
-          AND expense_date >= ${input.from}::date
-          AND expense_date < ${input.until}::date
+          AND expense_date >= ${firstDay}::date
+          AND expense_date <= ${lastDay}::date
         GROUP BY 1
       )
       SELECT

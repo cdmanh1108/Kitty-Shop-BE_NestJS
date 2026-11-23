@@ -234,4 +234,34 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
       }),
     ).toEqual([]);
   });
+
+  it('reports expenses on the Vietnam day covered by the payment interval', async () => {
+    const { shop } = await rentalScenario(prisma);
+    const category = await prisma.expenseCategory.create({
+      data: { shopId: shop.id, code: uniqueCode('CAT'), name: 'Giặt đồ' },
+    });
+    await prisma.expense.createMany({
+      data: [
+        { day: '2026-09-30', amount: 10000 },
+        { day: '2026-10-01', amount: 30000 },
+        { day: '2026-10-02', amount: 40000 },
+      ].map(({ day, amount }) => ({
+        shopId: shop.id,
+        categoryId: category.id,
+        expenseNumber: uniqueCode('EXP'),
+        description: 'Giặt đồ',
+        expenseDate: new Date(day),
+        status: 'PAID',
+        amount,
+      })),
+    });
+    const report = new PrismaReportRepository(prisma);
+    const rows = await report.revenue({
+      shopId: shop.id,
+      from: new Date('2026-09-30T17:00:00.000Z'),
+      until: new Date('2026-10-01T17:00:00.000Z'),
+      timezone: 'Asia/Ho_Chi_Minh',
+    });
+    expect(rows.map((row) => Number(row.expense))).toEqual([30000]);
+  });
 });
