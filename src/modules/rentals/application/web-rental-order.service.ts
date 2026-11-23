@@ -12,7 +12,7 @@ import {
   type RentalPolicyProvider,
 } from '@modules/settings/public/rental-policy';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
-import { RentalProductPriceChangedError } from '../domain/rental-errors';
+import { assertRentalQuoteAmounts } from '../domain/rental-quote';
 import {
   assertOnlineRentalDuration,
   sumRentalPricingAmounts,
@@ -201,14 +201,20 @@ export class WebRentalOrderService {
         });
       }
 
-      if (
-        req.expectedRentalSubtotal !== undefined &&
-        req.expectedRentalSubtotal !== sumRentalPricingAmounts(lines.map((line) => line.lineTotal))
-      ) {
-        throw new RentalProductPriceChangedError();
-      }
-      const standardShippingFee = policy.delivery.standardShippingFee;
-      const shippingFee = req.delivery.method === 'shop_delivery' ? standardShippingFee : 0;
+      const shippingFee =
+        req.delivery.method === 'shop_delivery' ? policy.delivery.standardShippingFee : 0;
+      const rentalSubtotal = sumRentalPricingAmounts(lines.map((line) => line.lineTotal));
+      assertRentalQuoteAmounts(req.expectedQuote, {
+        rentalSubtotal,
+        depositAmount: sumRentalPricingAmounts(lines.map((line) => line.depositAmount)),
+        shippingFee,
+        ...(!req.loyaltyRewardId
+          ? {
+              discountAmount: 0,
+              totalAmount: sumRentalPricingAmounts([rentalSubtotal, shippingFee]),
+            }
+          : {}),
+      });
 
       // Persist the booking contact independently of the booking
       // transaction, but only after all no-write selection, price, and inventory
@@ -247,6 +253,7 @@ export class WebRentalOrderService {
           : {}),
         preferredPaymentMethod: req.paymentMethod,
         storefrontEligibility: true,
+        expectedQuote: req.expectedQuote,
         idempotency: {
           scope: WEB_CREATE_IDEMPOTENCY_SCOPE,
           key: idempotencyKey,
@@ -335,9 +342,7 @@ export class WebRentalOrderService {
         },
         paymentMethod: req.paymentMethod,
         ...(req.loyaltyRewardId ? { loyaltyRewardId: req.loyaltyRewardId } : {}),
-        ...(req.expectedRentalSubtotal === undefined
-          ? {}
-          : { expectedRentalSubtotal: req.expectedRentalSubtotal }),
+        expectedQuote: { ...req.expectedQuote },
       },
     };
   }

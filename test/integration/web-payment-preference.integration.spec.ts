@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from '../fixtures/rental-quote.fixture';
 import { RentalReadPresenter } from '../../src/modules/rentals/application/rental-read.presenter';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
 import { toRentalResponse } from '../../src/modules/rentals/api/rental.response';
@@ -57,6 +58,7 @@ describe('Web payment preference persistence', () => {
         returnDate: '2026-10-12T08:30:00+07:00',
         items: [{ variantId: fixture.variant.id, quantity: 1 }],
         delivery: { method: 'self_pickup' },
+        expectedQuote: checkoutQuoteFixture(),
         paymentMethod: 'bank_transfer',
       },
       'web-payment-preference',
@@ -92,6 +94,7 @@ describe('Web payment preference persistence', () => {
           returnDate: '2026-10-12T08:30:00+07:00',
           items: [{ variantId: fixture.variant.id, quantity: 1 }],
           delivery: { method: 'self_pickup' },
+          expectedQuote: checkoutQuoteFixture(),
           paymentMethod: 'cash',
         },
         'web-payment-preference',

@@ -50,6 +50,17 @@ export class RentalProductPriceChangedError extends ApplicationError {
   }
 }
 
+export class RentalQuoteChangedError extends ApplicationError {
+  readonly kind = 'CONFLICT' as const;
+
+  constructor() {
+    super(
+      'Báo giá đã thay đổi. Vui lòng kiểm tra lại các khoản tiền trước khi gửi yêu cầu.',
+      'RENTAL_QUOTE_CHANGED',
+    );
+  }
+}
+
 export class RentalOverlapError extends ApplicationError {
   readonly kind = 'CONFLICT' as const;
 

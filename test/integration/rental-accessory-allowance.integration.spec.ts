@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from '../fixtures/rental-quote.fixture';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { RentalCreationService } from '../../src/modules/rentals/application/rental-creation.service';
@@ -100,6 +101,7 @@ describe('Two-accessory allowance at rental write boundaries', () => {
             customer: { name: f.customer.fullName, phone: f.customer.phone },
             items,
             delivery: { method: 'self_pickup' },
+            expectedQuote: checkoutQuoteFixture(),
             paymentMethod: 'cash',
           },
           'accessory-web',
@@ -152,6 +154,7 @@ describe('Two-accessory allowance at rental write boundaries', () => {
           customer: { name: f.customer.fullName, phone: f.customer.phone },
           items: excessive,
           delivery: { method: 'self_pickup' },
+          expectedQuote: checkoutQuoteFixture(),
           paymentMethod: 'cash',
         },
         'excess-web',

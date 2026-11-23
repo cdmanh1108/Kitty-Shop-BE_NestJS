@@ -138,7 +138,7 @@ export class WebRentalController {
   @ApiConflictResponse({
     type: ErrorResDto,
     description:
-      'Sản phẩm không đủ tồn kho, thông tin khách hàng không thể dùng để đặt thuê, hoặc Idempotency-Key đang được dùng',
+      'Báo giá đã thay đổi, sản phẩm không đủ tồn kho hoặc Idempotency-Key đang được dùng.',
   })
   async createOrder(
     @Req() request: WebAuthRequest,

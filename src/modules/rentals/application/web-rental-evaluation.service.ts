@@ -12,6 +12,7 @@ import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
   assertOnlineRentalDuration,
   resolveRentalCyclePricing,
+  rentalQuoteTotal,
   sumRentalPricingAmounts,
 } from '../domain/rental-cycle-pricing';
 import {
@@ -171,10 +172,7 @@ export class WebRentalEvaluationService {
           applicable: discountAmount > 0,
         }
       : undefined;
-    const totalAmount = Math.max(
-      0,
-      sumRentalPricingAmounts([rentalSubtotal, shippingFee]) - discountAmount,
-    );
+    const totalAmount = rentalQuoteTotal(rentalSubtotal, shippingFee, discountAmount);
 
     return {
       durationDays,

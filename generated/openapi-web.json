@@ -1573,7 +1573,7 @@
             }
           },
           "409": {
-            "description": "Sản phẩm không đủ tồn kho, thông tin khách hàng không thể dùng để đặt thuê, hoặc Idempotency-Key đang được dùng",
+            "description": "Báo giá đã thay đổi, sản phẩm không đủ tồn kho hoặc Idempotency-Key đang được dùng.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2666,10 +2666,13 @@
       "WebCreateOrderReqDto": {
         "type": "object",
         "properties": {
-          "expectedRentalSubtotal": {
-            "type": "number",
-            "minimum": 0,
-            "description": "Tổng tiền thuê của báo giá khách vừa xác nhận; dùng để phát hiện thay đổi giá, không dùng để tính tiền."
+          "expectedQuote": {
+            "description": "Các khoản tiền khách vừa kiểm tra. Hệ thống tự tính lại và đối chiếu trước khi tạo đơn.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WebCheckoutQuoteDto"
+              }
+            ]
           },
           "customer": {
             "$ref": "#/components/schemas/WebCreateOrderCustomerDto"
@@ -2712,6 +2715,7 @@
           }
         },
         "required": [
+          "expectedQuote",
           "customer",
           "pickupDate",
           "returnDate",
@@ -3545,6 +3549,39 @@
           "requestedQuantity",
           "availableQuantity",
           "available"
+        ]
+      },
+      "WebCheckoutQuoteDto": {
+        "type": "object",
+        "properties": {
+          "rentalSubtotal": {
+            "type": "number",
+            "minimum": 0
+          },
+          "shippingFee": {
+            "type": "number",
+            "minimum": 0
+          },
+          "discountAmount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "depositAmount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "totalAmount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Tổng tiền thuê và phí sau giảm, chưa gồm cọc."
+          }
+        },
+        "required": [
+          "rentalSubtotal",
+          "shippingFee",
+          "discountAmount",
+          "depositAmount",
+          "totalAmount"
         ]
       },
       "WebCreateOrderCustomerDto": {

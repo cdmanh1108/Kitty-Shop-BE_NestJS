@@ -68,17 +68,48 @@ export class WebCreateOrderDeliveryDto {
   address?: string;
 }
 
-export class WebCreateOrderReqDto {
-  @ApiPropertyOptional({
-    type: Number,
-    minimum: 0,
-    description:
-      'Tổng tiền thuê của báo giá khách vừa xác nhận; dùng để phát hiện thay đổi giá, không dùng để tính tiền.',
-  })
-  @ValidateIf((_: WebCreateOrderReqDto, value: unknown) => value !== undefined)
+export class WebCheckoutQuoteDto {
+  @ApiProperty({ type: Number, minimum: 0 })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  expectedRentalSubtotal?: number;
+  rentalSubtotal!: number;
+
+  @ApiProperty({ type: Number, minimum: 0 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  shippingFee!: number;
+
+  @ApiProperty({ type: Number, minimum: 0 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  discountAmount!: number;
+
+  @ApiProperty({ type: Number, minimum: 0 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  depositAmount!: number;
+
+  @ApiProperty({
+    type: Number,
+    minimum: 0,
+    description: 'Tổng tiền thuê và phí sau giảm, chưa gồm cọc.',
+  })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  totalAmount!: number;
+}
+
+export class WebCreateOrderReqDto {
+  @ApiProperty({
+    type: WebCheckoutQuoteDto,
+    description:
+      'Các khoản tiền khách vừa kiểm tra. Hệ thống tự tính lại và đối chiếu trước khi tạo đơn.',
+  })
+  @IsDefined()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => WebCheckoutQuoteDto)
+  expectedQuote!: WebCheckoutQuoteDto;
 
   @ApiProperty({ type: WebCreateOrderCustomerDto })
   @IsDefined()

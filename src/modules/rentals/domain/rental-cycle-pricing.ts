@@ -111,6 +111,11 @@ export function sumRentalPricingAmounts(amounts: readonly number[]): number {
   return checkedRentalAmount(amounts.reduce((sum, amount) => sum + cyclePriceCents(amount), 0n));
 }
 
+export function rentalQuoteTotal(subtotal: number, charges: number, discount: number): number {
+  const amount = cyclePriceCents(subtotal) + cyclePriceCents(charges) - cyclePriceCents(discount);
+  return checkedRentalAmount(amount > 0n ? amount : 0n);
+}
+
 /** Storefront duration rules never constrain manual Admin bookings. */
 export function assertOnlineRentalDuration(
   durationDays: number,

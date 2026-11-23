@@ -2,10 +2,11 @@ import type { JsonValue } from '@common/types/json';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { PersistedRentalPolicy, RentalPolicy } from '../domain/rental-policy';
+import type { RentalPolicy } from '../domain/rental-policy';
 import type { SettingsRepository } from '../domain/settings.repository';
 
 import { RENTAL_POLICY_SETTING_KEY } from '../domain/rental-policy';
+import { readRentalPolicySetting } from './rental-policy.query';
 
 @Injectable()
 export class PrismaSettingsRepository implements SettingsRepository {
@@ -57,17 +58,8 @@ export class PrismaSettingsRepository implements SettingsRepository {
     return this.prisma.shop.update({ where: { id: shopId }, data });
   }
 
-  async getRentalPolicy(
-    shopId: string,
-  ): Promise<{ policy: PersistedRentalPolicy; updatedAt: Date } | null> {
-    const row = await this.prisma.appSetting.findUnique({
-      where: { shopId_key: { shopId, key: RENTAL_POLICY_SETTING_KEY } },
-    });
-    if (!row) return null;
-    return {
-      policy: row.value as unknown as PersistedRentalPolicy,
-      updatedAt: row.updatedAt,
-    };
+  getRentalPolicy(shopId: string) {
+    return readRentalPolicySetting(this.prisma, shopId);
   }
 
   async saveRentalPolicy(

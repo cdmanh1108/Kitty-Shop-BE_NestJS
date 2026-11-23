@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from './fixtures/rental-quote.fixture';
 import { Body, Controller, Module, Post, type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
@@ -121,6 +122,7 @@ describe('Vietnamese API error messages', () => {
         returnDate: '2026-10-02T08:30:00+07:00',
         items: [{ variantId: '4d767d42-c065-4457-939f-8b30a9c9b28b', quantity: 1 }],
         delivery: { method: 'self_pickup' },
+        expectedQuote: checkoutQuoteFixture(),
         paymentMethod: 'cash',
         source: 'OFFLINE',
       })

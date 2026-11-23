@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from '../fixtures/rental-quote.fixture';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -71,6 +72,7 @@ describe('Storefront rental eligibility boundary', () => {
           customer: { name: f.customer.fullName, phone: f.customer.phone },
           items: [{ variantId: f.variant.id, quantity: 1 }],
           delivery: { method: 'self_pickup' },
+          expectedQuote: checkoutQuoteFixture(),
           paymentMethod: 'cash',
         },
         'web-eligibility-key',

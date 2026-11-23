@@ -1,3 +1,4 @@
+import type { RentalQuoteAmounts } from '../domain/rental-quote';
 import type { WebCheckoutPaymentPreference } from '../domain/web-payment-preference';
 import type { ResolvedRentalCyclePricing } from '../domain/rental-cycle-pricing';
 import type { RentalBillingRole, RentalAccessoryAllowance } from '../domain/rental-accessories';
@@ -45,15 +46,10 @@ export interface WebRentalLineAvailability {
   depositAmount?: number;
 }
 
-export interface WebRentalQuoteResult {
+export interface WebRentalQuoteResult extends RentalQuoteAmounts {
   durationDays: number;
   pricing: ResolvedRentalCyclePricing | null;
   accessoryAllowance?: RentalAccessoryAllowance;
-  rentalSubtotal: number;
-  depositAmount: number;
-  shippingFee: number;
-  discountAmount: number;
-  totalAmount: number;
   currency: string;
   available: boolean;
   canCheckout: boolean;
@@ -67,7 +63,7 @@ export interface WebRentalQuoteResult {
 }
 
 export interface WebCreateOrderInput {
-  expectedRentalSubtotal?: number;
+  expectedQuote: RentalQuoteAmounts;
   customer: {
     name: string;
     phone: string;

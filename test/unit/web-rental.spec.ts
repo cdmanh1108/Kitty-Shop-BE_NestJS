@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from '../fixtures/rental-quote.fixture';
 import { Prisma } from '@prisma/client';
 import { WebRentalEvaluationService } from '../../src/modules/rentals/application/web-rental-evaluation.service';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -437,6 +438,7 @@ describe('Web rental use cases', () => {
             returnDate: '2026-05-02T08:30:00+07:00',
             items: [{ variantId: 'var-1', quantity: 1 }],
             delivery: { method: 'self_pickup' },
+            expectedQuote: checkoutQuoteFixture(),
             paymentMethod: 'cash',
           },
           'web-invalid-calendar',
@@ -461,6 +463,7 @@ describe('Web rental use cases', () => {
       returnDate: '2026-09-23T08:30:00+07:00',
       items: [{ variantId: 'var-1', quantity: 1 }],
       delivery: { method: 'self_pickup' as const },
+      expectedQuote: checkoutQuoteFixture(),
       paymentMethod: 'cash' as const,
     });
 
@@ -538,6 +541,7 @@ describe('Web rental use cases', () => {
             returnDate: '2026-09-23T08:30:00+07:00',
             items: [{ variantId: 'var-1', quantity: 1 }],
             delivery: { method: 'self_pickup' },
+            expectedQuote: checkoutQuoteFixture(),
             paymentMethod: 'bank_transfer',
           },
           'web-test-stock',
@@ -578,6 +582,7 @@ describe('Web rental use cases', () => {
           returnDate: '2026-09-23T08:30:00+07:00',
           items: [{ variantId: 'var-1', quantity: 1 }],
           delivery: { method: 'self_pickup' },
+          expectedQuote: checkoutQuoteFixture(70_000, 600_000),
           paymentMethod: 'bank_transfer',
         },
         'web-test-create',
@@ -597,6 +602,41 @@ describe('Web rental use cases', () => {
       });
       expect(firstCreateOrderInput().preferredPaymentMethod).toBe('bank_transfer');
       expect(firstCreateOrderInput().source).toBe('ONLINE');
+    });
+
+    it.each([
+      'rentalSubtotal',
+      'shippingFee',
+      'discountAmount',
+      'depositAmount',
+      'totalAmount',
+    ] as const)('rejects a stale %s before saving the booking contact', async (field) => {
+      availability.getBookableVariant.mockResolvedValue({
+        id: 'var-1',
+        productId: 'prod-1',
+        variantCode: 'DR-M',
+        productName: 'Váy',
+        freeAccessoryLimit: 1,
+        allowFreeAccessory: false,
+        sizeName: null,
+        colorName: null,
+        depositPerItem: 200_000,
+        availableInventory: [{ id: 'inv-1', sku: 'SKU-001' }],
+      });
+      const expectedQuote = checkoutQuoteFixture(70_000);
+      expectedQuote[field] += 1;
+      await expect(
+        submitOrder(
+          'shop-1',
+          {
+            ...webOrderInput(),
+            expectedQuote,
+          },
+          'stale-quote',
+        ),
+      ).rejects.toMatchObject({ code: 'RENTAL_QUOTE_CHANGED' });
+      expect(mockCustomerRepo.resolveForBooking).not.toHaveBeenCalled();
+      expect(creation.createOrder.mock.calls).toHaveLength(0);
     });
 
     it('maps only the typed invalid-phone error from the resolver to a client error', async () => {
@@ -623,6 +663,7 @@ describe('Web rental use cases', () => {
             returnDate: '2026-09-23T08:30:00+07:00',
             items: [{ variantId: 'var-1', quantity: 1 }],
             delivery: { method: 'self_pickup' },
+            expectedQuote: checkoutQuoteFixture(70_000, 600_000),
             paymentMethod: 'cash',
           },
           'web-test-invalid-phone',
@@ -670,6 +711,7 @@ describe('Web rental use cases', () => {
           returnDate: '2026-09-23T08:30:00+07:00',
           items: [{ variantId: 'var-1', quantity: 1 }],
           delivery: { method: 'shop_delivery', address: '1 Nguyễn Huệ' },
+          expectedQuote: checkoutQuoteFixture(70_000, 600_000, 45_000),
           paymentMethod: 'cash',
         },
         'web-test-delivery',
@@ -727,6 +769,7 @@ describe('Web rental use cases', () => {
             { variantId: 'var-1', quantity: 1 },
           ],
           delivery: { method: 'self_pickup' },
+          expectedQuote: checkoutQuoteFixture(140_000, 1_200_000),
           paymentMethod: 'cash',
         },
         'web-test-duplicates',
@@ -769,6 +812,7 @@ describe('Web rental use cases', () => {
             returnDate: '2026-09-23T08:30:00+07:00',
             items: [{ productId: 'prod-2', variantId: 'var-1', quantity: 1 }],
             delivery: { method: 'self_pickup' },
+            expectedQuote: checkoutQuoteFixture(),
             paymentMethod: 'cash',
           },
           'web-test-parent',

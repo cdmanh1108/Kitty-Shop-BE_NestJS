@@ -4,6 +4,7 @@ import type { RentalOrderSource } from '../rental-order-source';
 import type { WebPaymentPreference } from '../web-payment-preference';
 import type { RentalPricingSnapshot } from '../rental-pricing-snapshot';
 import type { RentalBillingRole } from '../rental-accessories';
+import type { RentalQuoteAmounts } from '../rental-quote';
 
 export type IdempotencyClaim =
   | { state: 'CLAIMED'; claimId: string }
@@ -35,6 +36,8 @@ export interface CreateRentalOrderData {
   createdBy?: string;
   /** Server-owned context set only by the Web rental application service. */
   storefrontEligibility?: true;
+  /** Amounts displayed by the Web checkout. Always compared with server pricing before booking. */
+  expectedQuote?: RentalQuoteAmounts;
   idempotency?: {
     scope: string;
     key: string;

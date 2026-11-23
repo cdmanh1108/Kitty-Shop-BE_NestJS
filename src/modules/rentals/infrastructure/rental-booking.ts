@@ -1,5 +1,7 @@
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { RentalProductPriceChangedError } from '../domain/rental-errors';
+import { readRentalPolicyInTransaction } from '@modules/settings/public/rental-policy-transaction';
+import { assertRentalQuoteAmounts } from '../domain/rental-quote';
 import { assertInventoryRentable } from './rental-inventory';
 import type { RentalOutboxEvent } from '../domain/rental.events';
 import {
@@ -31,11 +33,13 @@ import { createRentalDeliveryJob } from '@modules/deliveries/public/rental-deliv
 import { calculateRentalDurationDays } from '../domain/rental-policy';
 import {
   assertOnlineRentalDuration,
+  rentalQuoteTotal,
   sumRentalPricingAmounts,
 } from '../domain/rental-cycle-pricing';
 import {
   assertRentalPricingLineSnapshot,
   rentalBillableQuantity,
+  resolveRentalLinePricing,
 } from '../domain/rental-pricing-snapshot';
 import { RENTAL_ORDER_SOURCE } from '../domain/rental-order-source';
 import { RENTAL_PRICING_VERSION } from '../domain/rental-pricing-version';
@@ -98,7 +102,16 @@ export async function createOrder(
       const billableQuantity = rentalBillableQuantity(data.lines);
       for (const line of data.lines)
         assertRentalPricingLineSnapshot(line, durationDays, billableQuantity);
-      const accessoryEligibility = await assertRentalCatalogLines(tx, data);
+      const checkoutPolicy = data.expectedQuote
+        ? await readRentalPolicyInTransaction(tx, data.shopId)
+        : null;
+      if (checkoutPolicy) assertOnlineRentalDuration(durationDays, checkoutPolicy.rentalPricing);
+      const { accessoryEligibility, lines } = await resolveBookingLines(
+        tx,
+        data,
+        durationDays,
+        checkoutPolicy,
+      );
 
       for (const line of data.lines) {
         await assertInventoryRentable(tx, {
@@ -108,19 +121,34 @@ export async function createOrder(
         });
       }
 
-      const rentalSubtotal = sumRentalPricingAmounts(data.lines.map((line) => line.lineTotal));
+      const rentalSubtotal = sumRentalPricingAmounts(lines.map((line) => line.lineTotal));
       const explicitChargesTotal = data.charges.reduce(
         (sum, charge) => sum + charge.amount * charge.quantity,
         0,
       );
-      const shippingTotal = data.delivery?.shippingFee ?? 0;
+      const shippingTotal = checkoutPolicy
+        ? data.delivery?.method === 'DELIVERY'
+          ? checkoutPolicy.delivery.standardShippingFee
+          : 0
+        : (data.delivery?.shippingFee ?? 0);
       const chargesTotal = explicitChargesTotal + shippingTotal;
-      const depositRequired = sumRentalPricingAmounts(data.lines.map((line) => line.depositAmount));
+      const depositRequired = sumRentalPricingAmounts(lines.map((line) => line.depositAmount));
       if (rewardToRedeem && rentalSubtotal <= 0) throw new RentalLoyaltyRewardNotApplicableError();
       const discountTotal = rewardToRedeem
         ? Math.min(rewardToRedeem.rewardValue.toNumber(), rentalSubtotal)
         : data.discountTotal;
-      const grandTotal = Math.max(0, rentalSubtotal + chargesTotal - discountTotal);
+      const grandTotal = data.expectedQuote
+        ? rentalQuoteTotal(rentalSubtotal, chargesTotal, discountTotal)
+        : Math.max(0, rentalSubtotal + chargesTotal - discountTotal);
+      if (data.expectedQuote) {
+        assertRentalQuoteAmounts(data.expectedQuote, {
+          rentalSubtotal,
+          shippingFee: shippingTotal,
+          discountAmount: discountTotal,
+          depositAmount: depositRequired,
+          totalAmount: grandTotal,
+        });
+      }
 
       const order = await tx.rentalOrder.create({
         data: {
@@ -162,7 +190,7 @@ export async function createOrder(
         if (!redeemed) throw new RentalLoyaltyRewardUnavailableError();
       }
 
-      for (const line of data.lines) {
+      for (const line of lines) {
         const snapshot = line.pricingSnapshot;
         const allowFreeAccessorySnapshot = accessoryEligibility.get(line.variantId);
         if (allowFreeAccessorySnapshot === undefined) throw new RentalInventoryUnavailableError();
@@ -227,16 +255,17 @@ export async function createOrder(
           shopId: data.shopId,
           orderId: order.id,
           ...data.delivery,
+          shippingFee: shippingTotal,
           createdBy: data.createdBy,
         });
-        if (data.delivery.shippingFee > 0) {
+        if (shippingTotal > 0) {
           await tx.rentalOrderCharge.create({
             data: {
               shopId: data.shopId,
               orderId: order.id,
               chargeType: 'SHIPPING',
               description: 'Shipping fee',
-              amount: data.delivery.shippingFee,
+              amount: shippingTotal,
               quantity: 1,
               createdBy: data.createdBy,
             },
@@ -273,10 +302,12 @@ export async function createOrder(
   }
 }
 
-async function assertRentalCatalogLines(
+async function resolveBookingLines(
   tx: Prisma.TransactionClient,
   data: CreateRentalOrderData,
-): Promise<Map<string, boolean>> {
+  durationDays: number,
+  checkoutPolicy: RentalPolicy | null,
+) {
   // Revalidate Catalog-owned eligibility in the serializable booking transaction
   // so stale storefront selections cannot create a Rental allocation.
   const expectedProductByVariant = new Map<string, string>();
@@ -302,8 +333,14 @@ async function assertRentalCatalogLines(
     select: {
       id: true,
       productId: true,
+      depositAmountOverride: true,
       product: {
-        select: { allowFreeAccessory: true, freeAccessoryLimit: true, rentalPriceOverride: true },
+        select: {
+          allowFreeAccessory: true,
+          freeAccessoryLimit: true,
+          rentalPriceOverride: true,
+          defaultDepositAmount: true,
+        },
       },
     },
   });
@@ -315,35 +352,51 @@ async function assertRentalCatalogLines(
   ) {
     throw new RentalInventoryUnavailableError();
   }
-  const accessoryEligibility = new Map<string, boolean>();
+  const variants = new Map(eligibleVariants.map((variant) => [variant.id, variant]));
+  const accessoryEligibility = new Map(
+    eligibleVariants.map((variant) => [variant.id, variant.product.allowFreeAccessory]),
+  );
+  const billableQuantity = rentalBillableQuantity(data.lines);
   rentalAccessoryAllowance(
     data.lines.map((line) => ({
       ...line,
-      freeAccessoryLimit: eligibleVariants.find((variant) => variant.id === line.variantId)!.product
-        .freeAccessoryLimit,
+      freeAccessoryLimit: variants.get(line.variantId)!.product.freeAccessoryLimit,
     })),
   );
-  for (const variant of eligibleVariants) {
-    accessoryEligibility.set(variant.id, variant.product.allowFreeAccessory);
-  }
-  for (const line of data.lines) {
-    const allowed = accessoryEligibility.get(line.variantId);
-    if (allowed === undefined) throw new RentalInventoryUnavailableError();
-    assertFreeAccessoryAllowed(rentalBillingRole(line.billingRole), allowed);
+  const lines = data.lines.map((line) => {
+    const variant = variants.get(line.variantId)!;
+    const billingRole = rentalBillingRole(line.billingRole);
+    assertFreeAccessoryAllowed(billingRole, variant.product.allowFreeAccessory);
+    const override = variant.product.rentalPriceOverride;
+    const price = override == null ? null : decimalToNumber(override);
+    if (checkoutPolicy) {
+      return {
+        ...line,
+        ...resolveRentalLinePricing({
+          durationDays,
+          billableQuantity,
+          billingRole,
+          policy: checkoutPolicy.rentalPricing,
+          quantity: line.quantity,
+          depositPerItem: decimalToNumber(
+            variant.depositAmountOverride ?? variant.product.defaultDepositAmount,
+          ),
+          productCyclePriceOverride: price,
+        }),
+      };
+    }
     const snapshot = line.pricingSnapshot;
     if (
       snapshot.version === RENTAL_PRICING_VERSION.CYCLE &&
       snapshot.itemCyclePriceOverride == null &&
-      snapshot.orderCyclePriceOverride == null
+      snapshot.orderCyclePriceOverride == null &&
+      (snapshot.productCyclePriceOverride ?? null) !== price
     ) {
-      const current = eligibleVariants.find((variant) => variant.id === line.variantId)!.product
-        .rentalPriceOverride;
-      const price = current == null ? null : decimalToNumber(current);
-      if ((snapshot.productCyclePriceOverride ?? null) !== price)
-        throw new RentalProductPriceChangedError();
+      throw new RentalProductPriceChangedError();
     }
-  }
-  return accessoryEligibility;
+    return line;
+  });
+  return { accessoryEligibility, lines };
 }
 
 /**

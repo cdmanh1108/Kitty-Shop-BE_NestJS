@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from '../fixtures/rental-quote.fixture';
 import type { INestApplication } from '@nestjs/common';
 import type { Server } from 'node:http';
 import * as request from 'supertest';
@@ -38,6 +39,7 @@ describe('Web rental input validation HTTP boundary', () => {
     returnDate: '2026-10-12T08:30:00+07:00',
     items: [{ variantId, quantity: 1 }],
     delivery: { method: 'self_pickup' },
+    expectedQuote: checkoutQuoteFixture(),
     paymentMethod: 'cash',
   });
 

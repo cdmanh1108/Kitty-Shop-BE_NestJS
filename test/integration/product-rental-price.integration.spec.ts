@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from '../fixtures/rental-quote.fixture';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { ConfiguredPublicMediaUrlResolver } from '../../src/common/storage/public-url.resolver';
 import { PrismaCatalogRepository } from '../../src/modules/catalog/infrastructure/prisma-catalog.repository';
@@ -177,13 +178,13 @@ describe('product rental price persistence and booking', () => {
     await expect(
       web.createOrder(
         f.shop.id,
-        { ...req, expectedRentalSubtotal: 50000 },
+        { ...req, expectedQuote: checkoutQuoteFixture(50000) },
         'stale-product-price',
         owner,
       ),
-    ).rejects.toMatchObject({ code: 'RENTAL_PRODUCT_PRICE_CHANGED' });
+    ).rejects.toMatchObject({ code: 'RENTAL_QUOTE_CHANGED' });
     expect(await prisma.rentalOrder.count()).toBe(0);
-    const acceptedRequest = { ...req, expectedRentalSubtotal: 90000 };
+    const acceptedRequest = { ...req, expectedQuote: checkoutQuoteFixture(90000) };
     const created = await web.createOrder(
       f.shop.id,
       acceptedRequest,

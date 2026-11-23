@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from '../fixtures/rental-quote.fixture';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -53,6 +54,7 @@ describe('Storefront rental selection and allocation', () => {
       customer: { name: 'Test Customer', phone: '0912345678' },
       items: [{ productId, quantity: 1 }],
       delivery: { method: 'self_pickup' as const },
+      expectedQuote: checkoutQuoteFixture(),
       paymentMethod: 'cash' as const,
     };
   }
@@ -157,6 +159,7 @@ describe('Storefront rental selection and allocation', () => {
       f.shop.id,
       {
         ...createWebOrderInput(f.product.id),
+        expectedQuote: checkoutQuoteFixture(120_000, 400_000),
         items: [
           { variantId: f.variant.id, quantity: 1 },
           { productId: f.product.id, variantId: f.variant.id, quantity: 1 },

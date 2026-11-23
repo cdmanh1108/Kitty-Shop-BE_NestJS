@@ -1,3 +1,4 @@
+import { checkoutQuoteFixture } from '../fixtures/rental-quote.fixture';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -43,6 +44,7 @@ describe('Web order idempotency', () => {
     returnDate: '2026-10-12T08:30:00+07:00',
     items: [{ variantId, quantity: 1 }],
     delivery: { method: 'self_pickup' as const },
+    expectedQuote: checkoutQuoteFixture(),
     paymentMethod: 'cash' as const,
   });
 

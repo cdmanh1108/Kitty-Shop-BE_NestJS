@@ -1,3 +1,4 @@
+import { quoteAmounts } from '../fixtures/rental-quote.fixture';
 import type { PrismaService } from '../../src/database/prisma/prisma.service';
 import { PrismaCustomerRepository } from '../../src/modules/customers/infrastructure/prisma-customer.repository';
 import { WebRentalOrderService } from '../../src/modules/rentals/application/web-rental-order.service';
@@ -84,6 +85,7 @@ describe('Web rental shipping persistence', () => {
           method: input.delivery,
           ...(input.delivery === 'shop_delivery' ? { address: '1 Nguyễn Huệ' } : {}),
         },
+        expectedQuote: quoteAmounts(quote),
         paymentMethod: 'cash',
       },
       'web-shipping-key',
@@ -161,6 +163,38 @@ describe('Web rental shipping persistence', () => {
     expect(order.items).toHaveLength(1);
     expect(order.items[0]).toMatchObject({ quantity: 2 });
     expect(order.items[0]?.allocations).toHaveLength(2);
+  });
+
+  it('rejects a deposit changed after checkout preflight and accepts the next reviewed quote', async () => {
+    const { shop, customer, catalog } = await setup({});
+    const createOrder = rentals.createOrder.bind(rentals);
+    const beforeBooking = jest
+      .spyOn(rentals, 'createOrder')
+      .mockImplementationOnce(async (data) => {
+        await prisma.productVariant.update({
+          where: { id: catalog.variant.id },
+          data: { depositAmountOverride: 250_000 },
+        });
+        return createOrder(data);
+      });
+    const booking = {
+      shopId: shop.id,
+      customer,
+      variantId: catalog.variant.id,
+      delivery: 'shop_delivery' as const,
+    };
+    try {
+      await expect(quoteAndCreate(booking)).rejects.toMatchObject({ code: 'RENTAL_QUOTE_CHANGED' });
+      expect(await prisma.rentalOrder.count()).toBe(0);
+      expect(await prisma.rentalItemAllocation.count()).toBe(0);
+      expect(await prisma.deliveryJob.count()).toBe(0);
+    } finally {
+      beforeBooking.mockRestore();
+    }
+    const { quote, response, order } = await quoteAndCreate(booking);
+    expect(quote.depositAmount).toBe(250_000);
+    expect(response.depositAmount).toBe(250_000);
+    expect(order.depositRequired.toNumber()).toBe(250_000);
   });
 
   it('keeps independent explicit charges separate from delivery-owned shipping in booking', async () => {
