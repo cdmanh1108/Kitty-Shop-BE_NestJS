@@ -284,10 +284,7 @@ describe('OpenAPI Separation & Production Contract Specification', () => {
       const deliveryDto = schemas['WebCreateOrderDeliveryDto'];
       expect(deliveryDto?.properties?.method?.enum).toEqual(['self_pickup', 'shop_delivery']);
 
-      // Collateral method and documentType enums
-      const collateralDto = schemas['WebCreateOrderCollateralDto'];
-      expect(collateralDto?.properties?.method?.enum).toEqual(['CASH', 'DOCUMENT']);
-      expect(collateralDto?.properties?.documentType?.enum).toEqual(['CCCD', 'GPLX']);
+      expect(schemas?.WebCreateOrderReqDto?.properties?.collateral).toBeUndefined();
     });
   });
 

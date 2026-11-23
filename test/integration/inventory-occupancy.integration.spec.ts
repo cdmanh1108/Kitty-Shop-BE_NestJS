@@ -64,7 +64,6 @@ describe('Inventory occupancy persistence and read models', () => {
       actorMemberId: f.member.id,
       actorUserId: f.user.id,
       actorName: f.user.fullName,
-      collateralMethod: 'CASH',
       collateralAmount: 400000,
     });
     await repo.transition({

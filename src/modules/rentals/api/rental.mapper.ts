@@ -29,7 +29,6 @@ export function toSettleRentalOrderInput(dto: SettleRentalOrderReqDto): SettleRe
   return {
     paymentMethod: dto.paymentMethod,
     note: dto.note,
-    returnDocumentCollateral: dto.returnDocumentCollateral,
     feePreviewToken: dto.feePreviewToken,
     feeOverrides: dto.feeOverrides?.map((item) => ({
       inventoryItemId: item.inventoryItemId,

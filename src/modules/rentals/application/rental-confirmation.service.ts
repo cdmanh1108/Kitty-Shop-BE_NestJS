@@ -15,10 +15,6 @@ import { PERMISSIONS } from '@common/constants/permissions';
 import type { CurrentUser } from '@common/types/current-user';
 import { currentRequestMetadata } from '@common/request-context/request-context';
 import {
-  RENTAL_POLICY_PROVIDER,
-  type RentalPolicyProvider,
-} from '@modules/settings/public/rental-policy';
-import {
   RENTAL_LIFECYCLE_REPOSITORY,
   type RentalLifecycleRepository,
 } from '../domain/ports/rental-lifecycle.port';
@@ -49,7 +45,6 @@ export class RentalConfirmationService {
     @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
     @Inject(RENTAL_LIFECYCLE_REPOSITORY)
     private readonly lifecycle: RentalLifecycleRepository,
-    @Inject(RENTAL_POLICY_PROVIDER) private readonly policies: RentalPolicyProvider,
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
     @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
   ) {
@@ -60,10 +55,7 @@ export class RentalConfirmationService {
     this.authorize(user);
     const order = await this.orderReader.get(user.shopId, orderId);
     if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
-    const policy = await this.policies.getPolicy(user.shopId);
     return {
-      allowedMethods: policy.deposit.allowedMethods,
-      allowedDocumentTypes: policy.deposit.allowedDocumentTypes,
       expectedDeposit: order.depositRequired.toString(),
       maxEvidenceBytes: MAX_MEDIA_FILE_SIZE_BYTES,
       evidenceMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
@@ -83,7 +75,7 @@ export class RentalConfirmationService {
       throw new RentalOperationNotAllowedError(
         'Chỉ có thể xác nhận đơn đang ở trạng thái đã đặt trước.',
       );
-    assertManualConfirmation(input, await this.policies.getPolicy(user.shopId));
+    assertManualConfirmation(input);
     let evidence: { key: string; filename: string; mimeType: string; size: number } | undefined;
     if (file) {
       let image;

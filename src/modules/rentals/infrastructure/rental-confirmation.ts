@@ -7,7 +7,6 @@ import { rentalLedger } from './rental-ledger';
 import type { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import type { Clock } from '@common/clock/clock';
-import type { RentalPolicy } from '@modules/settings/public/rental-policy';
 import { assertManualConfirmation, type ConfirmRentalData } from '../domain/rental-confirmation';
 import { RentalInvariantError } from '../domain/rental-errors';
 import { getWithTx } from './rental-admin.queries';
@@ -15,12 +14,7 @@ import { assertInventoryRentable } from './rental-inventory';
 import { lockRentalOrder } from './rental-order-lock';
 import { enqueueRentalEmail } from './rental-email.transaction';
 
-export function confirmOrder(
-  prisma: PrismaService,
-  input: ConfirmRentalData,
-  policy: RentalPolicy,
-  clock: Clock,
-) {
+export function confirmOrder(prisma: PrismaService, input: ConfirmRentalData, clock: Clock) {
   return serializableTransaction(prisma, async (tx) => {
     if (!(await lockRentalOrder(tx, input))) return null;
     const order = await tx.rentalOrder.findFirst({
@@ -32,7 +26,7 @@ export function confirmOrder(
         'RENTAL_TRANSITION_NOT_ALLOWED',
         'Chỉ có thể xác nhận đơn đang ở trạng thái đã đặt trước.',
       );
-    assertManualConfirmation(input, policy);
+    assertManualConfirmation(input);
     const allocations = await tx.rentalItemAllocation.findMany({
       where: { orderId: order.id, shopId: input.shopId, releasedAt: null },
       select: { inventoryItemId: true },
@@ -47,10 +41,6 @@ export function confirmOrder(
       where: { id: order.id, shopId: input.shopId, status: 'RESERVED' },
       data: {
         status: 'CONFIRMED',
-        collateralMethod: input.collateralMethod,
-        documentType: input.documentType ?? null,
-        collateralStatus: 'HELD',
-        collateralReceivedAt: now,
         updatedBy: input.actorMemberId,
       },
     });
@@ -68,8 +58,6 @@ export function confirmOrder(
         actorUserId: input.actorUserId,
         actorName: input.actorName,
         rentalAmount: order.grandTotal,
-        collateralMethod: input.collateralMethod,
-        documentType: input.documentType,
         collateralAmount: input.collateralAmount,
         note: input.note,
         evidenceKey: input.evidence?.key,
@@ -80,9 +68,7 @@ export function confirmOrder(
     });
     const existing = await listCompletedPaymentLines(tx, order.id);
     const ledger = rentalLedger(existing);
-    const actualDeposit = new Prisma.Decimal(
-      input.collateralMethod === 'CASH' ? (input.collateralAmount ?? 0) : 0,
-    );
+    const actualDeposit = new Prisma.Decimal(input.collateralAmount);
     if (ledger.depositHeld.greaterThan(actualDeposit))
       throw new RentalInvariantError(
         'DEPOSIT_ALREADY_RECEIVED',
@@ -144,9 +130,7 @@ export function confirmOrder(
       newValues: {
         status: 'CONFIRMED',
         source: 'ADMIN_MANUAL',
-        collateralMethod: input.collateralMethod,
-        documentType: input.documentType ?? null,
-        collateralAmount: input.collateralAmount?.toString() ?? null,
+        collateralAmount: input.collateralAmount.toString(),
         rentalAmount: order.grandTotal.toString(),
         hasEvidence: Boolean(input.evidence),
         confirmedAt: now.toISOString(),

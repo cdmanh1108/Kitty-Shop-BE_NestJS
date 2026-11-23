@@ -3,7 +3,6 @@ import type { CurrentUser } from '../../src/common/types/current-user';
 import type { ObjectStoragePort } from '../../src/common/storage/object-storage.port';
 import { RentalConfirmationService } from '../../src/modules/rentals/application/rental-confirmation.service';
 import { RentalSettlementService } from '../../src/modules/rentals/application/rental-settlement.service';
-import { DEFAULT_RENTAL_POLICY } from '../../src/modules/settings/domain/rental-policy';
 import {
   rentalOrderDetailsFixture,
   rentalSettlementFixture,
@@ -52,21 +51,10 @@ describe('rental evidence storage operation policy', () => {
     const objectStorage = storage();
     objectStorage.putObject.mockRejectedValueOnce(original);
     objectStorage.deleteObject.mockResolvedValueOnce();
-    const policies = { getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY) };
-    const service = new RentalConfirmationService(
-      orderReader,
-      lifecycle,
-      policies as never,
-      objectStorage,
-    );
+    const service = new RentalConfirmationService(orderReader, lifecycle, objectStorage);
 
     await expect(
-      service.confirm(
-        user,
-        'order-1',
-        { collateralMethod: 'CASH', collateralAmount: 100000 },
-        image,
-      ),
+      service.confirm(user, 'order-1', { collateralAmount: 100000 }, image),
     ).rejects.toBe(original);
 
     expect(lifecycle.confirm.mock.calls).toHaveLength(0);
@@ -89,22 +77,15 @@ describe('rental evidence storage operation policy', () => {
     const objectStorage = storage();
     objectStorage.putObject.mockResolvedValueOnce({ storageKey: 'key', publicUrl: '' });
     const logger = applicationLoggerMock();
-    const policies = { getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY) };
     const service = new RentalConfirmationService(
       orderReader,
       lifecycle,
-      policies as never,
       objectStorage,
       logger.factory,
     );
 
     await expect(
-      service.confirm(
-        user,
-        'order-1',
-        { collateralMethod: 'CASH', collateralAmount: 100000 },
-        image,
-      ),
+      service.confirm(user, 'order-1', { collateralAmount: 100000 }, image),
     ).rejects.toBe(original);
 
     expect(objectStorage.deleteObject.mock.calls).toHaveLength(0);
@@ -126,22 +107,15 @@ describe('rental evidence storage operation policy', () => {
     objectStorage.putObject.mockResolvedValueOnce({ storageKey: 'key', publicUrl: '' });
     objectStorage.deleteObject.mockRejectedValueOnce(new Error('cleanup timeout'));
     const logger = applicationLoggerMock();
-    const policies = { getPolicy: jest.fn().mockResolvedValue(DEFAULT_RENTAL_POLICY) };
     const service = new RentalConfirmationService(
       orderReader,
       lifecycle,
-      policies as never,
       objectStorage,
       logger.factory,
     );
 
     await expect(
-      service.confirm(
-        user,
-        'order-1',
-        { collateralMethod: 'CASH', collateralAmount: 100000 },
-        image,
-      ),
+      service.confirm(user, 'order-1', { collateralAmount: 100000 }, image),
     ).rejects.toBe(original);
 
     expect(objectStorage.deleteObject.mock.calls).toEqual([

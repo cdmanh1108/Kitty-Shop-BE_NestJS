@@ -57,7 +57,6 @@ import {
   RentalInventoryConflictError,
   RentalIdempotencyReplayUnavailableError,
   RentalNotFoundError,
-  UnsupportedRentalCollateralError,
 } from './rental.errors';
 import { WEB_PAYMENT_PREFERENCES } from '../domain/web-payment-preference';
 
@@ -151,23 +150,6 @@ export class WebRentalOrderService {
       const durationDays = calculateRentalDurationDays(from, until);
       assertOnlineRentalDuration(durationDays, policy.rentalPricing);
       const billableQuantity = rentalBillableQuantity(req.items);
-
-      // Collateral preference handling - validate upfront
-      const collateralMethod = req.collateral?.method ?? 'CASH';
-      const documentType = req.collateral?.documentType;
-
-      if (!policy.deposit.allowedMethods.includes(collateralMethod)) {
-        throw new UnsupportedRentalCollateralError(
-          'Phương thức đặt cọc không được chính sách hỗ trợ.',
-        );
-      }
-      if (collateralMethod === 'DOCUMENT') {
-        if (!documentType || !policy.deposit.allowedDocumentTypes.includes(documentType)) {
-          throw new UnsupportedRentalCollateralError(
-            'Loại giấy tờ đặt cọc không được chính sách hỗ trợ.',
-          );
-        }
-      }
 
       const selection = await resolveWebRentalSelection(this.availability, {
         shopId,
@@ -286,10 +268,6 @@ export class WebRentalOrderService {
           addressLine: req.delivery.address,
           shippingFee,
         },
-        collateral: {
-          method: collateralMethod,
-          ...(collateralMethod === 'DOCUMENT' && documentType ? { documentType } : {}),
-        },
       });
 
       if (!order) {
@@ -356,10 +334,6 @@ export class WebRentalOrderService {
           address: req.delivery.address ?? null,
         },
         paymentMethod: req.paymentMethod,
-        collateral: {
-          method: req.collateral?.method ?? 'CASH',
-          documentType: req.collateral?.documentType ?? null,
-        },
         ...(req.loyaltyRewardId ? { loyaltyRewardId: req.loyaltyRewardId } : {}),
         ...(req.expectedRentalSubtotal === undefined
           ? {}

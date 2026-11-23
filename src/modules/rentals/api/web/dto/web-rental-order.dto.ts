@@ -68,18 +68,6 @@ export class WebCreateOrderDeliveryDto {
   address?: string;
 }
 
-export class WebCreateOrderCollateralDto {
-  @ApiPropertyOptional({ example: 'CASH', enum: ['CASH', 'DOCUMENT'] })
-  @IsOptional()
-  @IsIn(['CASH', 'DOCUMENT'])
-  method?: 'CASH' | 'DOCUMENT';
-
-  @ApiPropertyOptional({ example: 'CCCD', enum: ['CCCD', 'GPLX'] })
-  @IsOptional()
-  @IsIn(['CCCD', 'GPLX'])
-  documentType?: 'CCCD' | 'GPLX';
-}
-
 export class WebCreateOrderReqDto {
   @ApiPropertyOptional({
     type: Number,
@@ -150,12 +138,6 @@ export class WebCreateOrderReqDto {
   @IsOptional()
   @IsUUID(undefined, { message: 'Mã ưu đãi không hợp lệ.' })
   loyaltyRewardId?: string;
-
-  @ApiPropertyOptional({ type: WebCreateOrderCollateralDto })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => WebCreateOrderCollateralDto)
-  collateral?: WebCreateOrderCollateralDto;
 }
 
 export class WebCreateOrderResDto {

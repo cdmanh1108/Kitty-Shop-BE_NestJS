@@ -150,12 +150,6 @@ export class WebAccountRentalOrderDetailResDto extends WebAccountRentalOrderList
   @ApiProperty()
   discountTotal!: number;
 
-  @ApiProperty()
-  collateralMethod!: string;
-
-  @ApiProperty({ type: String, nullable: true })
-  documentType!: string | null;
-
   @ApiProperty({ type: String, format: 'date-time', nullable: true })
   actualReturnedAt!: string | null;
 

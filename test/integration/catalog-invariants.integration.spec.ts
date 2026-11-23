@@ -62,7 +62,6 @@ describe('Catalog persistence invariants', () => {
           actorMemberId: f.member.id,
           actorUserId: f.user.id,
           actorName: f.user.fullName,
-          collateralMethod: 'CASH',
           collateralAmount: 200000,
         });
         if (status === 'ACTIVE')
@@ -113,7 +112,6 @@ describe('Catalog persistence invariants', () => {
           actorMemberId: f.member.id,
           actorUserId: f.user.id,
           actorName: f.user.fullName,
-          collateralMethod: 'CASH',
           collateralAmount: 200000,
         });
         await rentals.transition({

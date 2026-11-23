@@ -2709,9 +2709,6 @@
             "type": "string",
             "format": "uuid",
             "description": "Ưu đãi được chọn trong báo giá."
-          },
-          "collateral": {
-            "$ref": "#/components/schemas/WebCreateOrderCollateralDto"
           }
         },
         "required": [
@@ -2850,13 +2847,6 @@
           "discountTotal": {
             "type": "number"
           },
-          "collateralMethod": {
-            "type": "string"
-          },
-          "documentType": {
-            "type": "string",
-            "nullable": true
-          },
           "actualReturnedAt": {
             "type": "string",
             "format": "date-time",
@@ -2897,8 +2887,6 @@
           "rentalSubtotal",
           "chargesTotal",
           "discountTotal",
-          "collateralMethod",
-          "documentType",
           "actualReturnedAt",
           "items",
           "deliveries",
@@ -2941,28 +2929,6 @@
               }
             ]
           },
-          "depositMethods": {
-            "example": [
-              "CASH",
-              "DOCUMENT"
-            ],
-            "description": "Các hình thức cọc hợp lệ (tiền mặt hoặc giấy tờ tuỳ thân)",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "depositDocumentTypes": {
-            "example": [
-              "CCCD",
-              "GPLX"
-            ],
-            "description": "Các loại giấy tờ tuỳ thân được chấp nhận giữ cọc",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "defaultDepositAmount": {
             "type": "number",
             "example": 200000,
@@ -2981,8 +2947,6 @@
         },
         "required": [
           "rentalPricing",
-          "depositMethods",
-          "depositDocumentTypes",
           "defaultDepositAmount",
           "lateFeePerItemPerDay",
           "standardShippingFee"
@@ -3625,27 +3589,6 @@
         "required": [
           "method"
         ]
-      },
-      "WebCreateOrderCollateralDto": {
-        "type": "object",
-        "properties": {
-          "method": {
-            "type": "string",
-            "example": "CASH",
-            "enum": [
-              "CASH",
-              "DOCUMENT"
-            ]
-          },
-          "documentType": {
-            "type": "string",
-            "example": "CCCD",
-            "enum": [
-              "CCCD",
-              "GPLX"
-            ]
-          }
-        }
       },
       "WebAccountRentalOrderListItemResDto": {
         "type": "object",

@@ -8,7 +8,6 @@ import {
   ValidateNested,
   ValidateIf,
   Matches,
-  IsBoolean,
 } from 'class-validator';
 import { Transform, Type, plainToInstance } from 'class-transformer';
 import { RentalItemFeeOverrideReqDto } from './rental-return.dto';
@@ -70,16 +69,6 @@ export class SettleRentalOrderReqDto {
   @IsString({ message: 'Ghi chú nhập chưa hợp lệ. Vui lòng kiểm tra lại.' })
   @IsOptional()
   note?: string;
-
-  @ApiPropertyOptional({
-    description: 'Xác nhận đã trả lại giấy tờ CCCD/GPLX cho khách (nếu đơn giữ giấy tờ)',
-  })
-  @IsOptional()
-  @Transform(({ value }: { value: unknown }) =>
-    value === 'true' ? true : value === 'false' ? false : value,
-  )
-  @IsBoolean({ message: 'Xác nhận trả giấy tờ chưa hợp lệ. Vui lòng chọn lại.' })
-  returnDocumentCollateral?: boolean;
 }
 
 export class SettlementPreviewItemResDto {
@@ -110,7 +99,7 @@ export class RentalSettlementDetailsResDto {
   @ApiProperty({ format: 'date-time' }) settledAt!: string;
   @ApiProperty() settledBy!: string;
   @ApiProperty({ type: String, nullable: true }) actorName!: string | null;
-  @ApiProperty({ enum: ['REFUND', 'COLLECTION', 'BALANCED', 'COLLATERAL_ONLY'] })
+  @ApiProperty({ enum: ['REFUND', 'COLLECTION', 'BALANCED'] })
   settlementType!: string;
   @ApiProperty({ type: String, example: '0.00' }) amount!: string;
   @ApiProperty({ type: String, example: '300000.00' }) depositAmount!: string;

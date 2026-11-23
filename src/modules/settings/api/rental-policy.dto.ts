@@ -1,10 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  ArrayNotEmpty,
   IsArray,
   IsBoolean,
-  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -13,7 +11,6 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import type { DepositDocumentType, DepositMethod } from '../domain/rental-policy';
 import { RENTAL_PRICING_LIMITS } from '../domain/rental-pricing-policy';
 
 export class CategoryDepositOverrideDto {
@@ -125,30 +122,6 @@ export class UpdateDepositPolicyDto {
   defaultCashDeposit?: number;
 }
 export class DepositPolicyDto {
-  @ApiProperty({
-    example: ['CASH', 'DOCUMENT'],
-    enum: ['CASH', 'DOCUMENT'],
-    isArray: true,
-    description: 'Allowed deposit methods',
-  })
-  @IsArray({ message: 'Danh sách phương thức đặt cọc phải là danh sách.' })
-  @ArrayNotEmpty({ message: 'Danh sách phương thức đặt cọc không được để trống.' })
-  @IsIn(['CASH', 'DOCUMENT'], {
-    each: true,
-    message: 'Danh sách phương thức đặt cọc không hợp lệ.',
-  })
-  allowedMethods!: DepositMethod[];
-
-  @ApiProperty({
-    example: ['CCCD', 'GPLX'],
-    enum: ['CCCD', 'GPLX'],
-    isArray: true,
-    description: 'Allowed document types for document collateral',
-  })
-  @IsArray({ message: 'Danh sách loại giấy tờ phải là danh sách.' })
-  @IsIn(['CCCD', 'GPLX'], { each: true, message: 'Danh sách loại giấy tờ không hợp lệ.' })
-  allowedDocumentTypes!: DepositDocumentType[];
-
   @ApiProperty({ example: 200000, description: 'Default cash deposit in VND' })
   @IsInt({ message: 'Tiền cọc mặc định phải là số nguyên.' })
   @Min(0, { message: 'Tiền cọc mặc định phải lớn hơn hoặc bằng $constraint1.' })

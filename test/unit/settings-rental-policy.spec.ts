@@ -26,8 +26,6 @@ describe('RentalPolicy domain rules', () => {
       },
       deposit: {
         defaultCashDeposit: 250_000,
-        allowedMethods: ['CASH'],
-        allowedDocumentTypes: ['CCCD'],
         categoryOverrides: [{ categoryId: 'cat-1', cashAmount: 300_000 }],
       },
       delivery: { standardShippingFee: 0 },
@@ -42,10 +40,6 @@ describe('RentalPolicy domain rules', () => {
       additionalDayFee: 12_000,
     });
     expect(effective.deposit.defaultCashDeposit).toBe(250_000);
-    expect(effective.deposit.allowedMethods).toEqual(DEFAULT_RENTAL_POLICY.deposit.allowedMethods);
-    expect(effective.deposit.allowedDocumentTypes).toEqual(
-      DEFAULT_RENTAL_POLICY.deposit.allowedDocumentTypes,
-    );
     expect(effective.deposit.categoryOverrides).toEqual([]);
     expect(effective.delivery).toEqual(DEFAULT_RENTAL_POLICY.delivery);
     expect(effective.reschedule).toEqual(DEFAULT_RENTAL_POLICY.reschedule);
@@ -53,11 +47,9 @@ describe('RentalPolicy domain rules', () => {
 
   it('returns independent fixed policy data without mutating defaults', () => {
     const effective = buildEffectiveRentalPolicy();
-    effective.deposit.allowedMethods.push('DOCUMENT');
     effective.deposit.categoryOverrides.push({ categoryId: 'local', cashAmount: 1 });
     effective.delivery.standardShippingFee = 0;
 
-    expect(DEFAULT_RENTAL_POLICY.deposit.allowedMethods).toEqual(['CASH', 'DOCUMENT']);
     expect(DEFAULT_RENTAL_POLICY.deposit.categoryOverrides).toEqual([]);
     expect(DEFAULT_RENTAL_POLICY.delivery.standardShippingFee).toBe(30_000);
   });

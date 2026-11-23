@@ -10,7 +10,6 @@ export interface RentalLifecycleRepository {
   settleOrder(input: SettleRentalOrderData): Promise<RentalOrderDetails>;
   reschedule(input: RentalRescheduleData): Promise<RentalOrderDetails>;
   addCharge(input: RentalAddChargeData): Promise<RentalOrderDetails>;
-  returnCollateral(shopId: string, orderId: string, changedBy: string): Promise<RentalOrderDetails>;
 }
 
 export const RENTAL_LIFECYCLE_REPOSITORY = Symbol('RENTAL_LIFECYCLE_REPOSITORY');
@@ -50,7 +49,6 @@ export interface SettleRentalOrderData {
   actorName: string;
   settlementType?: string;
   note?: string;
-  returnDocument?: boolean;
   evidence?: { key: string; filename: string; mimeType: string; size: number };
 }
 

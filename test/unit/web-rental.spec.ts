@@ -579,7 +579,6 @@ describe('Web rental use cases', () => {
           items: [{ variantId: 'var-1', quantity: 1 }],
           delivery: { method: 'self_pickup' },
           paymentMethod: 'bank_transfer',
-          collateral: { method: 'CASH' },
         },
         'web-test-create',
       );
@@ -776,32 +775,6 @@ describe('Web rental use cases', () => {
         ),
       ).rejects.toThrow(InvalidRentalInputError);
       expect(creation.createOrder.mock.calls).toHaveLength(0);
-    });
-
-    it('rejects collateral method if not allowed by policy', async () => {
-      mockPolicyProvider.getPolicy.mockResolvedValue({
-        ...DEFAULT_RENTAL_POLICY,
-        deposit: {
-          ...DEFAULT_RENTAL_POLICY.deposit,
-          allowedMethods: ['CASH'], // DOCUMENT not allowed
-        },
-      });
-
-      await expect(
-        submitOrder(
-          'shop-1',
-          {
-            customer: { name: 'Nguyễn Văn A', phone: '0912345678' },
-            pickupDate: '2026-09-20T08:30:00+07:00',
-            returnDate: '2026-09-23T08:30:00+07:00',
-            items: [{ variantId: 'var-1', quantity: 1 }],
-            delivery: { method: 'self_pickup' },
-            paymentMethod: 'cash',
-            collateral: { method: 'DOCUMENT', documentType: 'CCCD' },
-          },
-          'web-test-collateral',
-        ),
-      ).rejects.toThrow(InvalidRentalInputError);
     });
   });
 });

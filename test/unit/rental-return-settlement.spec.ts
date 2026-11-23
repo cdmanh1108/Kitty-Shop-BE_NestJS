@@ -188,7 +188,7 @@ describe('P1 — Complete Return / Charges / Settlement Unit Tests', () => {
       });
     });
 
-    it('Scenario D: No Cash Deposit (Document Collateral CCCD/GPLX) => Full charges are AMOUNT_DUE', () => {
+    it('Scenario D: No Cash Deposit => Full charges are AMOUNT_DUE', () => {
       const settlement = calculateRentalSettlement({
         status: 'RETURNED',
         grandTotal: '280000.00',

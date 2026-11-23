@@ -250,7 +250,6 @@ export class RentalCreationService {
                 : undefined,
             }
           : undefined,
-        collateral: input.collateral,
       });
 
       await this.audit.log({

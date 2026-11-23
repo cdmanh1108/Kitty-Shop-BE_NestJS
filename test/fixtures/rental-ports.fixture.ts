@@ -63,7 +63,6 @@ export function rentalLifecycleRepositoryMock(): jest.Mocked<RentalLifecycleRepo
     settleOrder: jest.fn(),
     reschedule: jest.fn(),
     addCharge: jest.fn(),
-    returnCollateral: jest.fn(),
   };
 }
 

@@ -69,7 +69,6 @@ describe('Web payment preference persistence', () => {
     expect(stored).toMatchObject({
       preferredPaymentMethod: 'bank_transfer',
       paymentStatus: 'UNPAID',
-      collateralMethod: 'CASH',
     });
     await expect(
       prisma.paymentTransaction.count({ where: { shopId: fixture.shop.id, orderId: stored.id } }),

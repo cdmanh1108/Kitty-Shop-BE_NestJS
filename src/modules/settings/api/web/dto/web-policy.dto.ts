@@ -8,18 +8,6 @@ export class WebRentalPolicyDto {
   })
   rentalPricing!: RentalPricingPolicyDto;
 
-  @ApiProperty({
-    example: ['CASH', 'DOCUMENT'],
-    description: 'Các hình thức cọc hợp lệ (tiền mặt hoặc giấy tờ tuỳ thân)',
-  })
-  depositMethods!: string[];
-
-  @ApiProperty({
-    example: ['CCCD', 'GPLX'],
-    description: 'Các loại giấy tờ tuỳ thân được chấp nhận giữ cọc',
-  })
-  depositDocumentTypes!: string[];
-
   @ApiProperty({ example: 200000, description: 'Tiền cọc mặc định cho sản phẩm (VND)' })
   defaultDepositAmount!: number;
 

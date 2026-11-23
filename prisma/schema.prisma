@@ -677,11 +677,6 @@ model RentalOrder {
   chargesTotal           Decimal           @default(0) @map("charges_total") @db.Decimal(18, 2)
   discountTotal          Decimal           @default(0) @map("discount_total") @db.Decimal(18, 2)
   depositRequired        Decimal           @default(0) @map("deposit_required") @db.Decimal(18, 2)
-  collateralMethod       String            @default("CASH") @map("collateral_method") @db.VarChar(20)
-  documentType           String?           @map("document_type") @db.VarChar(20)
-  collateralStatus       String            @default("REQUIRED") @map("collateral_status") @db.VarChar(20)
-  collateralReceivedAt   DateTime?         @map("collateral_received_at") @db.Timestamptz(6)
-  collateralReturnedAt   DateTime?         @map("collateral_returned_at") @db.Timestamptz(6)
   grandTotal             Decimal           @default(0) @map("grand_total") @db.Decimal(18, 2)
   note                   String?           @db.Text
   internalNote           String?           @map("internal_note") @db.Text
@@ -730,9 +725,7 @@ model RentalConfirmation {
   actorUserId      String   @map("actor_user_id") @db.Uuid
   actorName        String   @map("actor_name") @db.VarChar(255)
   rentalAmount     Decimal  @map("rental_amount") @db.Decimal(18, 2)
-  collateralMethod String   @map("collateral_method") @db.VarChar(20)
-  documentType     String?  @map("document_type") @db.VarChar(20)
-  collateralAmount Decimal? @map("collateral_amount") @db.Decimal(18, 2)
+  collateralAmount Decimal  @map("collateral_amount") @db.Decimal(18, 2)
   note             String?  @db.VarChar(2000)
   evidenceKey      String?  @unique @map("evidence_key") @db.VarChar(500)
   evidenceFilename String?  @map("evidence_filename") @db.VarChar(255)

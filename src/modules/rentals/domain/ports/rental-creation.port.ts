@@ -68,7 +68,6 @@ export interface CreateRentalOrderData {
     province?: string;
     shippingFee: number;
   };
-  collateral?: { method: 'CASH' | 'DOCUMENT'; documentType?: 'CCCD' | 'GPLX' };
 }
 
 export interface RentalCreationRepository {

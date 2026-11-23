@@ -77,14 +77,6 @@ export class RentalReadPresenter {
       grandTotal: summary.grandTotal,
       payments,
     });
-    const cashReceivedAt = payments.find(
-      (payment) => payment.purpose === 'DEPOSIT' && payment.direction === 'IN',
-    )?.paidAt;
-    const cashReturnedAt = [...payments]
-      .reverse()
-      .find(
-        (payment) => payment.purpose === 'DEPOSIT_REFUND' && payment.direction === 'OUT',
-      )?.paidAt;
 
     return {
       ...summary,
@@ -95,11 +87,7 @@ export class RentalReadPresenter {
             confirmedBy: row.confirmation.confirmedBy,
             actorName: row.confirmation.actorName,
             rentalAmount: money(row.confirmation.rentalAmount),
-            collateralMethod: row.confirmation.collateralMethod,
-            documentType: row.confirmation.documentType,
-            collateralAmount: row.confirmation.collateralAmount
-              ? money(row.confirmation.collateralAmount)
-              : null,
+            collateralAmount: money(row.confirmation.collateralAmount),
             note: row.confirmation.note,
             hasEvidence: Boolean(row.confirmation.evidenceKey),
             evidenceFilename: row.confirmation.evidenceFilename,
@@ -109,21 +97,6 @@ export class RentalReadPresenter {
       chargesTotal: money(row.chargesTotal),
       discountTotal: money(row.discountTotal),
       depositRequired: money(row.depositRequired),
-      collateralMethod: row.collateralMethod,
-      documentType: row.documentType,
-      collateralStatus: row.confirmation
-        ? row.collateralStatus
-        : row.collateralMethod === 'CASH'
-          ? row.depositStatus
-          : row.collateralStatus,
-      collateralReceivedAt:
-        row.collateralMethod === 'CASH' && !row.confirmation
-          ? (cashReceivedAt ?? null)
-          : row.collateralReceivedAt,
-      collateralReturnedAt:
-        row.collateralMethod === 'CASH' && !row.confirmation
-          ? (cashReturnedAt ?? null)
-          : row.collateralReturnedAt,
       actualReturnedAt: row.actualReturnedAt,
       paidAmount: paymentTotals.paidAmount,
       remainingAmount: paymentTotals.remainingAmount,

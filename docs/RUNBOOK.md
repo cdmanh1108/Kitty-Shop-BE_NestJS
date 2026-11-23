@@ -1,5 +1,11 @@
 # Release runbook
 
+## Cash-only deposits and checkout quotes
+
+Apply `202611230001_cash_only_rental_deposits` with the deployment migration command before switching traffic. This migration drops the document collateral columns and assumes no document collateral confirmations or settlements exist. The release seed accepts this migration on a new database.
+
+Release the backend, storefront and Admin together. Storefront checkout sends the complete reviewed quote and Admin confirmation sends the received deposit amount. Refresh open tabs after the deployment.
+
 ## Per-product free accessory limits
 
 Apply `202611170001_product_free_accessory_limit` with `npm run db:migrate` (or the deployment's migrate container) before switching application traffic. This additive migration sets every existing product to 1 and defaults new products to 1. Do not reset or reseed the database. Admin can edit a product's nonnegative integer limit; 0 grants no free units.

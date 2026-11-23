@@ -137,25 +137,21 @@ export function validateReleaseCatalog(): void {
   }
 }
 
+const releaseMigrations = new Set([
+  '202610230001_initial_release',
+  '202611160001_product_rental_price_override',
+  '202611170001_product_free_accessory_limit',
+  '202611230001_cash_only_rental_deposits',
+]);
+
 export async function assertInitialReleaseDatabase(tx: Prisma.TransactionClient): Promise<void> {
   const migrations = await tx.$queryRaw<
     Array<{ migration_name: string; finished_at: Date | null }>
   >`SELECT migration_name, finished_at FROM "_prisma_migrations" WHERE rolled_back_at IS NULL`;
+  const applied = new Set(migrations.map((row) => row.migration_name));
   if (
-    migrations.some(
-      (row) =>
-        !row.finished_at ||
-        ![
-          '202610230001_initial_release',
-          '202611160001_product_rental_price_override',
-          '202611170001_product_free_accessory_limit',
-        ].includes(row.migration_name),
-    ) ||
-    ![
-      '202610230001_initial_release',
-      '202611160001_product_rental_price_override',
-      '202611170001_product_free_accessory_limit',
-    ].every((name) => migrations.some((row) => row.migration_name === name && row.finished_at))
+    migrations.some((row) => !row.finished_at || !releaseMigrations.has(row.migration_name)) ||
+    [...releaseMigrations].some((name) => !applied.has(name))
   ) {
     throw new ReleaseSeedError(
       'Release seed requires all committed release migrations on a new/reset database. Run db:migrate first. Existing migration history was left unchanged.',

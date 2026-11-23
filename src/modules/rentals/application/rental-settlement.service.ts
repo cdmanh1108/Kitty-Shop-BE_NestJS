@@ -149,7 +149,6 @@ export class RentalSettlementService {
         settlementType: input.settlementType,
         paymentMethod: input.paymentMethod,
         note: input.note?.trim(),
-        returnDocument: input.returnDocumentCollateral,
         evidence,
         feeOverrides: input.feeOverrides,
         feePreviewToken: input.feePreviewToken,
@@ -183,20 +182,6 @@ export class RentalSettlementService {
       body: await this.storage.getObject(settlement.evidenceKey),
       mimeType: settlement.evidenceMimeType,
     };
-  }
-
-  async returnCollateral(user: CurrentUser, id: string) {
-    const order = await this.lifecycle.returnCollateral(user.shopId, id, user.memberId);
-    if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
-    await this.audit.log({
-      shopId: user.shopId,
-      actorUserId: user.userId,
-      actorMemberId: user.memberId,
-      action: 'COLLATERAL_RETURNED',
-      entityType: 'rental_order',
-      entityId: id,
-    });
-    return order;
   }
 
   async addCharge(user: CurrentUser, id: string, input: AddRentalChargeInput) {

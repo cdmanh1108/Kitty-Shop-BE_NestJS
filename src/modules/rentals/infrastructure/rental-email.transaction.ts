@@ -78,19 +78,10 @@ export async function enqueueRentalEmail(
     { label: 'Tổng tiền đơn (không gồm cọc)', value: money(order.grandTotal) },
     { label: 'Đã thanh toán cho đơn', value: money(totals.paidAmount) },
     { label: 'Tiền đơn còn phải thanh toán', value: money(totals.remainingAmount) },
+    { label: 'Cọc dự kiến khi đặt đơn', value: money(order.depositRequired) },
+    { label: 'Tổng cọc đã nhận', value: money(ledger.depositIn) },
+    { label: 'Cọc còn giữ', value: money(ledger.depositHeld) },
   ];
-  if (order.collateralMethod === 'DOCUMENT') {
-    details.push({
-      label: 'Giấy tờ đặt cọc',
-      value: `${order.documentType === 'CCCD' ? 'Căn cước công dân' : order.documentType === 'GPLX' ? 'Giấy phép lái xe' : 'Giấy tờ'} · ${order.collateralStatus === 'RETURNED' ? 'Đã trả lại' : order.collateralStatus === 'HELD' ? 'Cửa hàng đang giữ' : 'Chưa nhận'}`,
-    });
-  } else {
-    details.push(
-      { label: 'Cọc dự kiến khi đặt đơn', value: money(order.depositRequired) },
-      { label: 'Tổng cọc đã nhận', value: money(ledger.depositIn) },
-      { label: 'Cọc còn giữ', value: money(ledger.depositHeld) },
-    );
-  }
   const delivery = order.deliveries[0];
   if (delivery) {
     details.push({

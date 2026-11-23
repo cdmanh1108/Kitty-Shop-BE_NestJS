@@ -30,7 +30,6 @@ const paymentLabels = new Set([
   'Tiền đơn còn phải thanh toán',
 ]);
 const collateralLabels = new Set([
-  'Giấy tờ đặt cọc',
   'Cọc dự kiến khi đặt đơn',
   'Tổng cọc đã nhận',
   'Cọc còn giữ',
@@ -43,7 +42,6 @@ const shortLabels = new Map([
   ['Tiền đơn còn phải thanh toán', 'Còn cần thanh toán'],
   ['Cọc dự kiến khi đặt đơn', 'Cọc dự kiến'],
   ['Tổng cọc đã nhận', 'Cọc đã nhận'],
-  ['Giấy tờ đặt cọc', 'Giấy tờ'],
   ['Cách nhận đồ', 'Hình thức nhận'],
   ['Địa chỉ giao đồ', 'Địa chỉ giao'],
   ['Đã thu thêm khi tất toán', 'Đã thu thêm'],
@@ -71,7 +69,6 @@ function renderRows(rows: Detail[]): string {
         const label = shortLabels.get(row.label) ?? row.label;
         if (
           row.label === 'Địa chỉ giao đồ' ||
-          row.label === 'Giấy tờ đặt cọc' ||
           /[\r\n]/.test(row.value)
         ) {
           return `<tr><td colspan="2" style="padding:4px 0">

@@ -19,7 +19,7 @@ export async function recomputeOrderPaymentState(
   const state = calculateOrderPaymentState({
     grandTotal: decimalToNumber(order.grandTotal),
     depositRequired: order.confirmation
-      ? Number(order.confirmation.collateralAmount ?? 0)
+      ? Number(order.confirmation.collateralAmount)
       : decimalToNumber(order.depositRequired),
     transactions: transactions.map((transaction) => ({
       amount: decimalToNumber(transaction.amount),

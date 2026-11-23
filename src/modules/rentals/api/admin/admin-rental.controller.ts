@@ -159,7 +159,7 @@ export class AdminRentalController {
   @HttpCode(200)
   @ApiOperation({
     summary:
-      'Manually acknowledge receipt and collateral; atomically confirm without Payment API. Requires rentals.confirm.',
+      'Manually record rental and deposit receipts; atomically confirm without Payment API. Requires rentals.confirm.',
   })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(ConfirmationUploadInterceptor)
@@ -184,9 +184,7 @@ export class AdminRentalController {
         id,
         {
           paymentMethod: body.paymentMethod,
-          collateralMethod: body.collateralMethod,
           collateralAmount: body.collateralAmount,
-          documentType: body.documentType,
           note: body.note?.trim(),
         },
         file,
@@ -234,15 +232,6 @@ export class AdminRentalController {
   ) {
     return this.lifecycle
       .start(user, id, toTransitionRentalInput(body))
-      .then((order) => toRentalResponse(this.responses.details(order)));
-  }
-
-  @Post(':id/collateral/return')
-  @Permissions(PERMISSIONS.RENTALS_UPDATE)
-  @ApiOkResponse({ type: RentalOrderResDto })
-  returnCollateral(@CurrentUser() user: CurrentUserType, @Param('id') id: string) {
-    return this.settlements
-      .returnCollateral(user, id)
       .then((order) => toRentalResponse(this.responses.details(order)));
   }
 
@@ -315,7 +304,7 @@ export class AdminRentalController {
   @HttpCode(200)
   @ApiOperation({
     summary:
-      'Settle returned rental order; offsets charges against cash deposit, releases document collateral if requested, and completes order',
+      'Settle returned rental order; offsets charges against cash deposit, and completes order',
   })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(SettlementUploadInterceptor)

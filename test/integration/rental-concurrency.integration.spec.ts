@@ -295,7 +295,6 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
           actorMemberId: f.member.id,
           actorUserId: f.user.id,
           actorName: f.user.fullName,
-          collateralMethod: 'CASH',
           collateralAmount: 200000,
         });
         if (status === 'ACTIVE')
@@ -368,7 +367,6 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       actorMemberId: f.member.id,
       actorUserId: f.user.id,
       actorName: f.user.fullName,
-      collateralMethod: 'CASH',
       collateralAmount: 200000,
     });
     await payRentalForConfirmation(prisma, {
@@ -384,7 +382,6 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       actorMemberId: f.member.id,
       actorUserId: f.user.id,
       actorName: f.user.fullName,
-      collateralMethod: 'CASH',
       collateralAmount: 200000,
     });
     await repo.transition({
@@ -445,7 +442,6 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       actorMemberId: f.member.id,
       actorUserId: f.user.id,
       actorName: f.user.fullName,
-      collateralMethod: 'CASH',
       collateralAmount: 200000,
     });
     await repo.confirm({
@@ -454,7 +450,6 @@ describe('Concurrent Rental Creation & Transaction Rollback Integration', () => 
       actorMemberId: f.member.id,
       actorUserId: f.user.id,
       actorName: f.user.fullName,
-      collateralMethod: 'CASH',
       collateralAmount: 200000,
     });
     await repo.transition({

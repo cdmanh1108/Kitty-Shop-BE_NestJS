@@ -68,7 +68,7 @@ describe('Delivery monetary mutation boundary', () => {
       actorUserId: f.user.id,
       actorName: f.user.fullName,
     };
-    await rentals.confirm({ ...actor, collateralMethod: 'CASH', collateralAmount: 300000 });
+    await rentals.confirm({ ...actor, collateralAmount: 300000 });
     await rentals.transition({
       shopId: f.shop.id,
       orderId: order.id,

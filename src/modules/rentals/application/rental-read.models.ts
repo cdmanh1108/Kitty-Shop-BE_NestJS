@@ -26,9 +26,7 @@ export interface RentalDetailsResult extends RentalOrderSummaryResult {
     confirmedBy: string;
     actorName: string;
     rentalAmount: string;
-    collateralMethod: string;
-    documentType: string | null;
-    collateralAmount: string | null;
+    collateralAmount: string;
     note: string | null;
     hasEvidence: boolean;
     evidenceFilename: string | null;
@@ -37,11 +35,6 @@ export interface RentalDetailsResult extends RentalOrderSummaryResult {
   chargesTotal: string;
   discountTotal: string;
   depositRequired: string;
-  collateralMethod: string;
-  documentType: string | null;
-  collateralStatus: string;
-  collateralReceivedAt: RentalReadTimestamp | null;
-  collateralReturnedAt: RentalReadTimestamp | null;
   actualReturnedAt: RentalReadTimestamp | null;
   paidAmount: string;
   remainingAmount: string;

@@ -42,8 +42,6 @@ export function toWebAccountRentalOrderDetailResponse(
     rentalSubtotal: order.rentalSubtotal,
     chargesTotal: order.chargesTotal,
     discountTotal: order.discountTotal,
-    collateralMethod: order.collateralMethod,
-    documentType: order.documentType,
     actualReturnedAt: order.actualReturnedAt?.toISOString() ?? null,
     items: order.items.map((item) => ({ ...item })),
     deliveries: order.deliveries.map((delivery) => ({

@@ -48,58 +48,50 @@ describe('Atomic manual rental confirmation', () => {
       headObject: () => Promise.resolve(null),
       getPublicUrl: () => '',
     };
-    const service = new RentalConfirmationService(repository, repository, rentalPolicies, storage);
+    const service = new RentalConfirmationService(repository, repository, storage);
     return { ...f, order, user, objects, service };
   }
 
-  it.each(['CASH', 'CCCD', 'GPLX'] as const)(
-    'confirms %s with actual receipts and without evidence and persists actor/audit',
-    async (type) => {
-      const f = await fixture();
-      const input =
-        type === 'CASH'
-          ? { collateralMethod: 'CASH' as const, collateralAmount: 200000 }
-          : { collateralMethod: 'DOCUMENT' as const, documentType: type };
-      const confirmed = await withRequestContext({ requestId: 'confirm-request' }, () =>
-        f.service.confirm(f.user, f.order.id, { ...input, note: 'Đã nhận tại cửa hàng' }),
-      );
-      expect(confirmed.status).toBe('CONFIRMED');
-      expect(confirmed.collateralStatus).toBe('HELD');
-      expect(confirmed.confirmation).toMatchObject({
-        confirmedAt: fixedClock.now(),
-        confirmedBy: f.member.id,
-        actorUserId: f.user.userId,
-        note: 'Đã nhận tại cửa hàng',
-        evidenceKey: null,
-      });
-      expect(await prisma.paymentTransaction.count()).toBe(type === 'CASH' ? 2 : 1);
-      expect(confirmed.paymentStatus).toBe('PAID');
-      expect(await prisma.auditLog.findFirst({ where: { entityId: f.order.id } })).toMatchObject({
-        requestId: 'confirm-request',
-        action: 'RENTAL_ORDER_CONFIRMED',
-        actorMemberId: f.member.id,
-      });
-      expect(
-        confirmed.items.every(
-          (item) =>
-            item.status === 'CONFIRMED' && item.allocations.every((a) => a.status === 'CONFIRMED'),
-        ),
-      ).toBe(true);
-      await expect(f.service.confirm(f.user, f.order.id, input)).rejects.toThrow();
-      expect(await prisma.rentalConfirmation.count()).toBe(1);
-      expect(await prisma.auditLog.count()).toBe(1);
-      expect(
-        await prisma.outboxEvent.count({ where: { eventType: 'RENTAL_ORDER_CONFIRMED' } }),
-      ).toBe(1);
-    },
-  );
+  it('confirms cash receipts and persists actor and audit details', async () => {
+    const f = await fixture();
+    const input = { collateralAmount: 200000 };
+    const confirmed = await withRequestContext({ requestId: 'confirm-request' }, () =>
+      f.service.confirm(f.user, f.order.id, { ...input, note: 'Đã nhận tại cửa hàng' }),
+    );
+    expect(confirmed.status).toBe('CONFIRMED');
+    expect(confirmed.confirmation).toMatchObject({
+      confirmedAt: fixedClock.now(),
+      confirmedBy: f.member.id,
+      actorUserId: f.user.userId,
+      note: 'Đã nhận tại cửa hàng',
+      evidenceKey: null,
+    });
+    expect(await prisma.paymentTransaction.count()).toBe(2);
+    expect(confirmed.paymentStatus).toBe('PAID');
+    expect(await prisma.auditLog.findFirst({ where: { entityId: f.order.id } })).toMatchObject({
+      requestId: 'confirm-request',
+      action: 'RENTAL_ORDER_CONFIRMED',
+      actorMemberId: f.member.id,
+    });
+    expect(
+      confirmed.items.every(
+        (item) =>
+          item.status === 'CONFIRMED' && item.allocations.every((a) => a.status === 'CONFIRMED'),
+      ),
+    ).toBe(true);
+    await expect(f.service.confirm(f.user, f.order.id, input)).rejects.toThrow();
+    expect(await prisma.rentalConfirmation.count()).toBe(1);
+    expect(await prisma.auditLog.count()).toBe(1);
+    expect(await prisma.outboxEvent.count({ where: { eventType: 'RENTAL_ORDER_CONFIRMED' } })).toBe(
+      1,
+    );
+  });
 
   it.each([0, 50000, 300000])(
     'records negotiated deposit %s and settles from the ledger',
     async (deposit) => {
       const f = await fixture();
       const confirmed = await f.service.confirm(f.user, f.order.id, {
-        collateralMethod: 'CASH',
         collateralAmount: deposit,
         paymentMethod: 'BANK_TRANSFER',
       });
@@ -169,12 +161,7 @@ describe('Atomic manual rental confirmation', () => {
   };
   it('stores only evidence metadata and serves the uploaded bytes to an authorized same-shop actor', async () => {
     const f = await fixture();
-    const result = await f.service.confirm(
-      f.user,
-      f.order.id,
-      { collateralMethod: 'CASH', collateralAmount: 200000 },
-      image,
-    );
+    const result = await f.service.confirm(f.user, f.order.id, { collateralAmount: 200000 }, image);
     expect(result.confirmation).toMatchObject({
       evidenceFilename: 'receipt.jpg',
       evidenceMimeType: 'image/jpeg',
@@ -195,7 +182,7 @@ describe('Atomic manual rental confirmation', () => {
 
   it('has one winner under concurrent confirms and creates one audit/history/evidence', async () => {
     const f = await fixture();
-    const input = { collateralMethod: 'CASH' as const, collateralAmount: 200000 };
+    const input = { collateralAmount: 200000 };
     const results = await Promise.allSettled([
       f.service.confirm(f.user, f.order.id, input, image),
       f.service.confirm(f.user, f.order.id, input, image),
@@ -217,12 +204,7 @@ describe('Atomic manual rental confirmation', () => {
       throw new Error('Lost commit response');
     });
     await expect(
-      f.service.confirm(
-        f.user,
-        f.order.id,
-        { collateralMethod: 'CASH', collateralAmount: 200000 },
-        image,
-      ),
+      f.service.confirm(f.user, f.order.id, { collateralAmount: 200000 }, image),
     ).rejects.toThrow('Lost commit response');
     expect((await repository.get(f.shop.id, f.order.id))?.status).toBe('CONFIRMED');
     expect(f.objects.size).toBe(1);
@@ -239,16 +221,10 @@ describe('Atomic manual rental confirmation', () => {
       );
       try {
         await expect(
-          f.service.confirm(
-            f.user,
-            f.order.id,
-            { collateralMethod: 'CASH', collateralAmount: 200000 },
-            image,
-          ),
+          f.service.confirm(f.user, f.order.id, { collateralAmount: 200000 }, image),
         ).rejects.toThrow();
         const current = await repository.get(f.shop.id, f.order.id);
         expect(current?.status).toBe('RESERVED');
-        expect(current?.collateralStatus).toBe('REQUIRED');
         expect(current?.confirmation).toBeNull();
         expect(current?.items[0]?.allocations[0]?.status).toBe('HELD');
         expect(await prisma.auditLog.count()).toBe(0);
@@ -268,18 +244,17 @@ describe('Atomic manual rental confirmation', () => {
     const f = await fixture();
     await expect(
       f.service.confirm({ ...f.user, permissions: ['rentals.update'] }, f.order.id, {
-        collateralMethod: 'CASH',
         collateralAmount: 200000,
       }),
     ).rejects.toMatchObject({ kind: 'FORBIDDEN' });
     await expect(
-      f.service.confirm(f.user, f.order.id, { collateralMethod: 'CASH', collateralAmount: -1 }),
+      f.service.confirm(f.user, f.order.id, { collateralAmount: -1 }),
     ).rejects.toMatchObject({ code: 'INVALID_COLLATERAL_AMOUNT' });
     await expect(
       f.service.confirm(
         f.user,
         f.order.id,
-        { collateralMethod: 'CASH', collateralAmount: 200000 },
+        { collateralAmount: 200000 },
         { ...image, buffer: Buffer.from('<html>') },
       ),
     ).rejects.toMatchObject({ kind: 'VALIDATION' });
@@ -301,7 +276,7 @@ describe('Atomic manual rental confirmation', () => {
       changedBy: f.member.id,
     });
     await expect(
-      f.service.confirm(f.user, f.order.id, { collateralMethod: 'CASH', collateralAmount: 200000 }),
+      f.service.confirm(f.user, f.order.id, { collateralAmount: 200000 }),
     ).rejects.toMatchObject({ kind: 'VALIDATION' });
   });
 });

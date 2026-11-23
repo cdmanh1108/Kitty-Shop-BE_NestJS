@@ -41,11 +41,6 @@ export interface RentalOrderRecord {
   chargesTotal: DecimalValue;
   discountTotal: DecimalValue;
   depositRequired: DecimalValue;
-  collateralMethod: string;
-  documentType: string | null;
-  collateralStatus: string;
-  collateralReceivedAt: Date | null;
-  collateralReturnedAt: Date | null;
   grandTotal: DecimalValue;
   note: string | null;
   internalNote: string | null;

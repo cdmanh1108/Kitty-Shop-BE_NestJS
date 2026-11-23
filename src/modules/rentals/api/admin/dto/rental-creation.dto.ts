@@ -134,16 +134,6 @@ export class RentalDeliveryReqDto {
   shippingFee = 0;
 }
 
-export class RentalCollateralReqDto {
-  @ApiProperty({ enum: ['CASH', 'DOCUMENT'] })
-  @IsIn(['CASH', 'DOCUMENT'], { message: 'Phương thức không hợp lệ.' })
-  method!: 'CASH' | 'DOCUMENT';
-  @ApiPropertyOptional({ enum: ['CCCD', 'GPLX'] })
-  @IsIn(['CCCD', 'GPLX'], { message: 'Loại giấy tờ không hợp lệ.' })
-  @IsOptional()
-  documentType?: 'CCCD' | 'GPLX';
-}
-
 export class CreateRentalOrderReqDto {
   @ApiProperty()
   @IsUUID(undefined, { message: 'Khách hàng không hợp lệ. Vui lòng chọn lại.' })
@@ -211,9 +201,4 @@ export class CreateRentalOrderReqDto {
   @Type(() => RentalDeliveryReqDto)
   @IsOptional()
   delivery?: RentalDeliveryReqDto;
-  @ApiPropertyOptional({ type: () => RentalCollateralReqDto })
-  @ValidateNested({ message: 'Thông tin đặt cọc có dữ liệu không hợp lệ.' })
-  @Type(() => RentalCollateralReqDto)
-  @IsOptional()
-  collateral?: RentalCollateralReqDto;
 }

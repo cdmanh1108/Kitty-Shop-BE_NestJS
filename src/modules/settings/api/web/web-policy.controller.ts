@@ -30,8 +30,6 @@ export class WebPolicyController {
     const policy = await this.policyProvider.getPolicy(shopId);
     return {
       rentalPricing: { ...policy.rentalPricing },
-      depositMethods: policy.deposit.allowedMethods,
-      depositDocumentTypes: policy.deposit.allowedDocumentTypes,
       defaultDepositAmount: policy.deposit.defaultCashDeposit,
       lateFeePerItemPerDay: policy.lateReturn.feePerItemPerDay,
       standardShippingFee: policy.delivery.standardShippingFee,

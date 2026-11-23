@@ -60,26 +60,13 @@ export async function settleOrder(
       ? 'REFUND'
       : amountDue.greaterThan(0)
         ? 'COLLECTION'
-        : order.collateralMethod === 'DOCUMENT'
-          ? 'COLLATERAL_ONLY'
-          : 'BALANCED';
+        : 'BALANCED';
     if (input.settlementType && input.settlementType !== settlementType) {
       throw new RentalInvariantError(
         'SETTLEMENT_CHANGED',
         'Số tiền kết toán đã thay đổi. Vui lòng tải lại đơn thuê.',
       );
     }
-    if (
-      order.collateralMethod === 'DOCUMENT' &&
-      order.collateralStatus === 'HELD' &&
-      !input.returnDocument
-    ) {
-      throw new RentalInvariantError(
-        'DOCUMENT_COLLATERAL_RETURN_REQUIRED',
-        'Vui lòng xác nhận đã trả lại giấy tờ đặt cọc cho khách trước khi hoàn tất kết toán.',
-      );
-    }
-
     const now = clock.now();
     await persistSettlementFeeAdjustments(tx, order, plan, input, now);
     const settledMoney = refundAmount.greaterThan(0)
@@ -164,8 +151,6 @@ export async function settleOrder(
       data: {
         status: RENTAL_STATUS.COMPLETED,
         completedAt: now,
-        collateralStatus: 'RETURNED',
-        collateralReturnedAt: now,
         updatedBy: input.actorMemberId,
       },
     });

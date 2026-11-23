@@ -82,10 +82,6 @@ export interface WebCreateOrderInput {
   };
   paymentMethod: WebCheckoutPaymentPreference;
   loyaltyRewardId?: string;
-  collateral?: {
-    method?: 'CASH' | 'DOCUMENT';
-    documentType?: 'CCCD' | 'GPLX';
-  };
 }
 
 export interface WebCreateOrderResult {

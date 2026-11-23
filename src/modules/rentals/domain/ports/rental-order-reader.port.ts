@@ -48,8 +48,6 @@ export interface ReturnPreviewData {
   itemCount: number;
   rentalSubtotal: string;
   depositHeld: string;
-  collateralMethod: string;
-  documentType: string | null;
   items?: Array<{
     inventoryItemId: string;
     sku: string;

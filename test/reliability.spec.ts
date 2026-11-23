@@ -81,11 +81,6 @@ function orderDetails(): NonNullable<RentalOrderDetails> {
     chargesTotal: new Prisma.Decimal(0),
     discountTotal: new Prisma.Decimal(0),
     depositRequired: new Prisma.Decimal(200000),
-    collateralMethod: 'CASH',
-    documentType: null,
-    collateralStatus: 'REQUIRED',
-    collateralReceivedAt: null,
-    collateralReturnedAt: null,
     grandTotal: new Prisma.Decimal(50000),
     note: null,
     internalNote: null,
@@ -550,32 +545,6 @@ function bookingTransaction(prisma: PrismaService) {
 }
 
 describe('booking transaction ordering and failure propagation', () => {
-  it('rejects disallowed collateral methods and document types before persistence', async () => {
-    const prisma = new PrismaService();
-    const transaction = jest.spyOn(prisma, '$transaction');
-    await expect(
-      createOrder(
-        prisma,
-        { ...bookingInput(), collateral: { method: 'DOCUMENT', documentType: 'CCCD' } },
-        {
-          ...DEFAULT_RENTAL_POLICY,
-          deposit: { ...DEFAULT_RENTAL_POLICY.deposit, allowedMethods: ['CASH'] },
-        },
-      ),
-    ).rejects.toMatchObject({ code: 'COLLATERAL_METHOD_NOT_ALLOWED' });
-    await expect(
-      createOrder(
-        prisma,
-        { ...bookingInput(), collateral: { method: 'DOCUMENT', documentType: 'GPLX' } },
-        {
-          ...DEFAULT_RENTAL_POLICY,
-          deposit: { ...DEFAULT_RENTAL_POLICY.deposit, allowedDocumentTypes: ['CCCD'] },
-        },
-      ),
-    ).rejects.toMatchObject({ code: 'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED' });
-    expect(transaction).not.toHaveBeenCalled();
-  });
-
   it('locks ownership before writing, then completes after outbox on the same transaction', async () => {
     const prisma = new PrismaService();
     const tx = bookingTransaction(prisma);

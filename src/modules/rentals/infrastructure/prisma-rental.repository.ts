@@ -32,7 +32,7 @@ import { receiveReturn } from './rental-return.lifecycle';
 import { settleOrder } from './rental-settlement.lifecycle';
 import { transition } from './rental-transition.lifecycle';
 import { addCharge, reschedule } from './rental-scheduling.lifecycle';
-import { getReturnPreview, returnDocumentCollateral } from './rental-collateral.lifecycle';
+import { getReturnPreview } from './rental-return-preview';
 import { confirmOrder } from './rental-confirmation';
 import type { RentalSettlementPreviewReader } from '../domain/ports/rental-settlement-preview.port';
 import { getSettlementPreview } from './rental-settlement-fees';
@@ -54,13 +54,8 @@ export class PrismaRentalRepository
   ) {
     return getSettlementPreview(this.prisma, input);
   }
-  async confirm(input: Parameters<RentalLifecycleRepository['confirm']>[0]) {
-    return confirmOrder(
-      this.prisma,
-      input,
-      await this.policies.getPolicy(input.shopId),
-      this.clock,
-    );
+  confirm(input: Parameters<RentalLifecycleRepository['confirm']>[0]) {
+    return confirmOrder(this.prisma, input, this.clock);
   }
   constructor(
     private readonly prisma: PrismaService,
@@ -161,10 +156,6 @@ export class PrismaRentalRepository
   async getReturnPreview(shopId: string, orderId: string, returnedAt?: Date) {
     const policy = await this.policies.getPolicy(shopId);
     return getReturnPreview(this.prisma, shopId, orderId, returnedAt, policy, this.clock);
-  }
-
-  returnCollateral(shopId: string, orderId: string, changedBy: string) {
-    return returnDocumentCollateral(this.prisma, shopId, orderId, changedBy, this.clock);
   }
 
   claimIdempotency(

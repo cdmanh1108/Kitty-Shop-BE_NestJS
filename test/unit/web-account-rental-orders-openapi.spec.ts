@@ -21,7 +21,6 @@ describe('Web Account Rental Orders OpenAPI response fields', () => {
       { schema: 'WebAccountRentalOrderDeliveryResDto', name: 'recipientName' },
       { schema: 'WebAccountRentalOrderDeliveryResDto', name: 'recipientPhone' },
       { schema: 'WebAccountRentalOrderDeliveryResDto', name: 'addressLine' },
-      { schema: 'WebAccountRentalOrderDetailResDto', name: 'documentType' },
       {
         schema: 'WebAccountRentalOrderDetailResDto',
         name: 'actualReturnedAt',

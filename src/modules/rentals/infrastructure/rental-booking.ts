@@ -25,7 +25,7 @@ import type {
 import { getWithTx } from './rental-admin.queries';
 import { isOverlapError } from './rental-errors';
 import type { RentalPolicy } from '@modules/settings/public/rental-policy';
-import { RentalInventoryUnavailableError, RentalInvariantError } from '../domain/rental-errors';
+import { RentalInventoryUnavailableError } from '../domain/rental-errors';
 import { storefrontProductEligibility } from '@modules/catalog/public/storefront-eligibility';
 import { createRentalDeliveryJob } from '@modules/deliveries/public/rental-delivery-transaction';
 import { calculateRentalDurationDays } from '../domain/rental-policy';
@@ -59,27 +59,6 @@ export async function createOrder(
   const durationDays = calculateRentalDurationDays(data.rentalStartAt, data.rentalEndAt);
   if (data.source === RENTAL_ORDER_SOURCE.ONLINE) {
     assertOnlineRentalDuration(durationDays, policy.rentalPricing);
-  }
-  const collateral = data.collateral ?? { method: 'CASH' as const };
-  if (data.collateral && !policy.deposit.allowedMethods.includes(collateral.method))
-    throw new RentalInvariantError(
-      'COLLATERAL_METHOD_NOT_ALLOWED',
-      'Phương thức đặt cọc không được chính sách cửa hàng cho phép.',
-    );
-  if (collateral.method === 'DOCUMENT') {
-    if (
-      !collateral.documentType ||
-      !policy.deposit.allowedDocumentTypes.includes(collateral.documentType)
-    )
-      throw new RentalInvariantError(
-        'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED',
-        'Loại giấy tờ đặt cọc không được chính sách cửa hàng cho phép.',
-      );
-  } else if (collateral.documentType) {
-    throw new RentalInvariantError(
-      'COLLATERAL_DOCUMENT_TYPE_NOT_ALLOWED',
-      'Đặt cọc bằng tiền mặt không được chỉ định loại giấy tờ.',
-    );
   }
   try {
     return await serializableTransaction(prisma, async (tx) => {
@@ -164,8 +143,6 @@ export async function createOrder(
           chargesTotal,
           discountTotal,
           depositRequired,
-          collateralMethod: data.collateral?.method ?? 'CASH',
-          documentType: data.collateral?.documentType,
           grandTotal,
           note: data.note,
           internalNote: data.internalNote,

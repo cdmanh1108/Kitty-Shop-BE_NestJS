@@ -56,7 +56,6 @@ export interface SettleRentalOrderInput {
   orderId: string;
   settlementType: SettlementType;
   note?: string;
-  returnDocument?: boolean;
 }
 
 export interface RentalReturnInspectionRecord {

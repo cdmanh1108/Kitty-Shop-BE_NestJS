@@ -10,25 +10,13 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import type { DepositDocumentType, DepositMethod } from '@modules/settings/public/rental-policy';
 
 export class ConfirmRentalReqDto {
   @ApiPropertyOptional({ enum: ['CASH', 'BANK_TRANSFER'] })
   @IsOptional()
   @IsIn(['CASH', 'BANK_TRANSFER'], { message: 'Phương thức nhận tiền không hợp lệ.' })
   paymentMethod?: 'CASH' | 'BANK_TRANSFER';
-  @ApiProperty({ enum: ['CASH', 'DOCUMENT'] })
-  @IsIn(['CASH', 'DOCUMENT'], { message: 'Phương thức đặt cọc không hợp lệ.' })
-  collateralMethod!: DepositMethod;
-
-  @ApiPropertyOptional({ enum: ['CCCD', 'GPLX'] })
-  @IsOptional()
-  @IsIn(['CCCD', 'GPLX'], {
-    message: 'Loại giấy tờ phải là căn cước công dân hoặc giấy phép lái xe.',
-  })
-  documentType?: DepositDocumentType;
-
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: Number,
     minimum: 0,
     maximum: 100000000,
@@ -37,14 +25,13 @@ export class ConfirmRentalReqDto {
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' && value.trim() !== '' ? Number(value) : value,
   )
-  @IsOptional()
   @IsNumber(
     { maxDecimalPlaces: 2 },
     { message: 'Tiền cọc phải là số có tối đa 2 chữ số thập phân.' },
   )
   @Min(0, { message: 'Tiền cọc không được âm.' })
   @Max(100000000, { message: 'Tiền cọc không được vượt quá 100.000.000 đồng.' })
-  collateralAmount?: number;
+  collateralAmount!: number;
 
   @ApiPropertyOptional({ maxLength: 2000 })
   @IsOptional()
@@ -62,9 +49,6 @@ export class ConfirmRentalReqDto {
 }
 
 export class ConfirmationOptionsResDto {
-  @ApiProperty({ enum: ['CASH', 'DOCUMENT'], isArray: true }) allowedMethods!: DepositMethod[];
-  @ApiProperty({ enum: ['CCCD', 'GPLX'], isArray: true })
-  allowedDocumentTypes!: DepositDocumentType[];
   @ApiProperty() expectedDeposit!: string;
   @ApiProperty() maxEvidenceBytes!: number;
   @ApiProperty({ type: [String] }) evidenceMimeTypes!: string[];
@@ -76,9 +60,7 @@ export class RentalConfirmationResDto {
   @ApiProperty() actorName!: string;
   @ApiProperty({ description: 'Rental amount manually acknowledged; not a payment ledger entry.' })
   rentalAmount!: string;
-  @ApiProperty() collateralMethod!: string;
-  @ApiProperty({ type: String, nullable: true }) documentType!: string | null;
-  @ApiProperty({ type: String, nullable: true }) collateralAmount!: string | null;
+  @ApiProperty({ type: String }) collateralAmount!: string;
   @ApiProperty({ type: String, nullable: true }) note!: string | null;
   @ApiProperty() hasEvidence!: boolean;
   @ApiProperty({ type: String, nullable: true }) evidenceFilename!: string | null;

@@ -65,7 +65,7 @@ describe('Finance monetary mutation boundary', () => {
       actorUserId: f.user.id,
       actorName: f.user.fullName,
     };
-    await rentals.confirm({ ...actor, collateralMethod: 'CASH', collateralAmount: 300000 });
+    await rentals.confirm({ ...actor, collateralAmount: 300000 });
     await rentals.transition({
       shopId: f.shop.id,
       orderId: order.id,
@@ -127,7 +127,6 @@ describe('Finance monetary mutation boundary', () => {
       actorMemberId: f.member.id,
       actorUserId: f.user.id,
       actorName: f.user.fullName,
-      collateralMethod: 'CASH',
       collateralAmount: 300000,
     });
     const receipt = await prisma.paymentTransaction.findFirstOrThrow({

@@ -178,15 +178,6 @@ export class RentalOrderResDto extends RentalOrderListItemResDto {
   @ApiProperty({ type: String, example: '50000.00' }) chargesTotal!: string;
   @ApiProperty({ type: String, example: '0.00' }) discountTotal!: string;
   @ApiProperty({ type: String, example: '1000000.00' }) depositRequired!: string;
-  @ApiProperty() collateralMethod!: string;
-  @ApiProperty({ type: String, nullable: true }) documentType!: string | null;
-  @ApiProperty() collateralStatus!: string;
-  @ApiProperty({ type: String, format: 'date-time', nullable: true }) collateralReceivedAt!:
-    | string
-    | null;
-  @ApiProperty({ type: String, format: 'date-time', nullable: true }) collateralReturnedAt!:
-    | string
-    | null;
   @ApiProperty({ type: String, format: 'date-time', nullable: true }) actualReturnedAt!:
     | string
     | null;

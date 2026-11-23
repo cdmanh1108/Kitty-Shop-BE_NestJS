@@ -142,51 +142,6 @@ describe('Rental policy transaction enforcement', () => {
     expect((await repo.list({ ...criteria, search: 'NoSuchCustomer' })).items).toEqual([]);
   });
 
-  it('holds document collateral without storing document numbers and returns it once', async () => {
-    const f = await rentalScenario(prisma);
-    const order = await repo.createOrder({
-      ...f.data,
-      collateral: { method: 'DOCUMENT', documentType: 'CCCD' },
-    });
-    if (!order) throw new Error('Missing fixture order');
-    const confirm = () =>
-      repo.confirm({
-        shopId: f.shop.id,
-        orderId: order.id,
-        actorMemberId: f.member.id,
-        actorUserId: f.user.id,
-        actorName: f.user.fullName,
-        collateralMethod: 'DOCUMENT',
-        documentType: 'CCCD',
-      });
-    await payRentalForConfirmation(prisma, {
-      shopId: f.shop.id,
-      orderId: order.id,
-      memberId: f.member.id,
-      rentalAmount: 200000,
-      depositAmount: 0,
-    });
-
-    expect((await confirm())?.status).toBe('CONFIRMED');
-    await repo.transition({
-      shopId: f.shop.id,
-      orderId: order.id,
-      fromStatuses: ['CONFIRMED'],
-      toStatus: 'ACTIVE',
-      changedBy: f.member.id,
-    });
-    await returnAndSettle(repo, f, order.id);
-    expect((await repo.get(f.shop.id, order.id))?.collateralStatus).toBe('RETURNED');
-    await expect(repo.returnCollateral(f.shop.id, order.id, f.member.id)).rejects.toMatchObject({
-      code: 'COLLATERAL_TRANSITION_NOT_ALLOWED',
-    });
-    expect(
-      await prisma.outboxEvent.count({
-        where: { aggregateId: order.id, eventType: 'RENTAL_ORDER_COMPLETED' },
-      }),
-    ).toBe(1);
-  });
-
   it('persists late fees and customer loyalty exactly once on completion', async () => {
     const f = await rentalScenario(prisma);
     const lateClock = { now: () => new Date('2026-10-15T00:00:00.000Z') };
@@ -206,7 +161,6 @@ describe('Rental policy transaction enforcement', () => {
       actorMemberId: f.member.id,
       actorUserId: f.user.id,
       actorName: f.user.fullName,
-      collateralMethod: 'CASH',
       collateralAmount: 200000,
     });
     await repo.transition({
@@ -275,7 +229,6 @@ describe('Rental policy transaction enforcement', () => {
         actorMemberId: f.member.id,
         actorUserId: f.user.id,
         actorName: f.user.fullName,
-        collateralMethod: 'CASH',
         collateralAmount: 200000,
       });
       await repo.transition({

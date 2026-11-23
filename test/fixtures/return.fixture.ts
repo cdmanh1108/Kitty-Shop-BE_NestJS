@@ -30,5 +30,5 @@ export async function returnAndSettle(
       })),
     ),
   });
-  return repository.settleOrder({ ...actor, returnDocument: true });
+  return repository.settleOrder(actor);
 }

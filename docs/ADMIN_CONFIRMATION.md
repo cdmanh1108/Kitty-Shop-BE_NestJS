@@ -13,11 +13,9 @@ All confirmation endpoints require `rentals.confirm` and scope the order to the
 authenticated shop. The initial seed grants this permission to OWNER and
 MANAGER roles.
 
-- `GET /rental-orders/:id/confirmation-options`: policy methods/document types,
-  order expected deposit, image size and MIME limits.
-- `POST /rental-orders/:id/confirm`: multipart fields `collateralMethod`
-  (`CASH` or `DOCUMENT`), `collateralAmount` for CASH, `documentType` (`CCCD` or
-  `GPLX`) for DOCUMENT, optional `note` (2,000 characters) and `evidence` image.
+- `GET /rental-orders/:id/confirmation-options`: expected deposit, image size and MIME limits.
+- `POST /rental-orders/:id/confirm`: multipart fields `collateralAmount` for the
+  actual deposit received, optional `note` (2,000 characters) and `evidence` image.
   Optional `paymentMethod` is CASH or BANK_TRANSFER (defaults to CASH).
   Actual CASH deposit may be below the suggested amount, including zero, up to
   100,000,000. The suggested amount is not an unpaid balance. Existing recorded
@@ -28,15 +26,14 @@ MANAGER roles.
 
 Only RESERVED can be confirmed. Repeated/concurrent confirmation has one winner;
 other attempts fail without duplicate records. Generic repository transitions to
-CONFIRMED are rejected. The separate collateral receive endpoint was removed;
-document return after completion remains available.
+CONFIRMED are rejected.
 
 ## Persistence and evidence
 
 The database schema has one `rental_confirmations` row per order. It snapshots
-actor, time, rental amount, collateral, note and optional image metadata. The
+actor, time, rental amount, cash deposit, note and optional image metadata. The
 initial-release baseline creates this table and enforces foreign keys,
-nonnegative amounts, valid collateral combinations, and complete evidence
+nonnegative amounts, a required deposit amount, and complete evidence
 metadata in PostgreSQL.
 
 A serializable transaction writes confirmation, order/item/allocation states,

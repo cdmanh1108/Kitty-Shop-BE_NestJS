@@ -142,7 +142,6 @@ describe('Real transaction boundaries and inventory lifecycle', () => {
       actorMemberId: f.member.id,
       actorUserId: f.user.id,
       actorName: f.user.fullName,
-      collateralMethod: 'CASH' as const,
       collateralAmount: 200000,
     };
     const results = await Promise.allSettled([

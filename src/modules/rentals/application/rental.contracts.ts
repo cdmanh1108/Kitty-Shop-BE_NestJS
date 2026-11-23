@@ -21,7 +21,6 @@ export interface CreateRentalOrderInput {
   note?: string;
   internalNote?: string;
   delivery?: RentalDeliveryInput;
-  collateral?: { method: 'CASH' | 'DOCUMENT'; documentType?: 'CCCD' | 'GPLX' };
 }
 
 export interface CreateRentalItemInput {
@@ -99,5 +98,4 @@ export interface SettleRentalOrderInput {
   paymentMethod?: 'CASH' | 'BANK_TRANSFER';
   settlementType?: string;
   note?: string;
-  returnDocumentCollateral?: boolean;
 }

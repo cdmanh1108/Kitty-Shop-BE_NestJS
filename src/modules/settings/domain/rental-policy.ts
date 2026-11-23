@@ -9,9 +9,7 @@ import {
 
 export type { RentalPricingPolicy } from './rental-pricing-policy';
 
-export type DepositMethod = 'CASH' | 'DOCUMENT';
 export const RENTAL_POLICY_SETTING_KEY = 'rental_policy';
-export type DepositDocumentType = 'CCCD' | 'GPLX';
 
 export interface CategoryDepositOverride {
   categoryId: string;
@@ -19,8 +17,6 @@ export interface CategoryDepositOverride {
 }
 
 export interface DepositPolicy {
-  allowedMethods: DepositMethod[];
-  allowedDocumentTypes: DepositDocumentType[];
   defaultCashDeposit: number;
   categoryOverrides: CategoryDepositOverride[];
 }
@@ -74,8 +70,6 @@ export type PersistedRentalPolicy = Partial<{
 export const DEFAULT_RENTAL_POLICY: RentalPolicy = {
   rentalPricing: buildEffectiveRentalPricingPolicy(),
   deposit: {
-    allowedMethods: ['CASH', 'DOCUMENT'],
-    allowedDocumentTypes: ['CCCD', 'GPLX'],
     defaultCashDeposit: 200_000,
     categoryOverrides: [],
   },
@@ -105,8 +99,6 @@ export function buildEffectiveRentalPolicy(saved?: PersistedRentalPolicy | null)
   return {
     rentalPricing: buildEffectiveRentalPricingPolicy(saved?.rentalPricing),
     deposit: {
-      allowedMethods: [...DEFAULT_RENTAL_POLICY.deposit.allowedMethods],
-      allowedDocumentTypes: [...DEFAULT_RENTAL_POLICY.deposit.allowedDocumentTypes],
       defaultCashDeposit:
         saved?.deposit?.defaultCashDeposit ?? DEFAULT_RENTAL_POLICY.deposit.defaultCashDeposit,
       categoryOverrides: DEFAULT_RENTAL_POLICY.deposit.categoryOverrides.map((item) => ({
@@ -125,8 +117,6 @@ export function mergeRentalPolicy(base: RentalPolicy, patch: RentalPolicyPatch):
   return {
     rentalPricing: mergeRentalPricingPolicy(base.rentalPricing, patch.rentalPricing ?? {}),
     deposit: {
-      allowedMethods: [...base.deposit.allowedMethods],
-      allowedDocumentTypes: [...base.deposit.allowedDocumentTypes],
       defaultCashDeposit: patch.deposit?.defaultCashDeposit ?? base.deposit.defaultCashDeposit,
       categoryOverrides: base.deposit.categoryOverrides.map((item) => ({ ...item })),
     },
@@ -146,23 +136,6 @@ export function validateRentalPolicy(policy: RentalPolicy): void {
     policy.deposit.defaultCashDeposit < 0
   ) {
     throw new InvalidShopSettingsError('Tiền cọc mặc định phải là số nguyên không âm.');
-  }
-
-  if (
-    !Array.isArray(policy.deposit.allowedMethods) ||
-    policy.deposit.allowedMethods.length === 0 ||
-    policy.deposit.allowedMethods.some((method) => !['CASH', 'DOCUMENT'].includes(method))
-  ) {
-    throw new InvalidShopSettingsError('Phương thức đặt cọc phải gồm tiền mặt hoặc giấy tờ.');
-  }
-
-  if (
-    !Array.isArray(policy.deposit.allowedDocumentTypes) ||
-    policy.deposit.allowedDocumentTypes.some((type) => !['CCCD', 'GPLX'].includes(type))
-  ) {
-    throw new InvalidShopSettingsError(
-      'Loại giấy tờ đặt cọc phải là căn cước công dân hoặc giấy phép lái xe.',
-    );
   }
 
   if (policy.deposit.categoryOverrides) {

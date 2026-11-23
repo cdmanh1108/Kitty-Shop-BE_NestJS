@@ -2727,7 +2727,7 @@
             "access-token": []
           }
         ],
-        "summary": "Manually acknowledge receipt and collateral; atomically confirm without Payment API. Requires rentals.confirm.",
+        "summary": "Manually record rental and deposit receipts; atomically confirm without Payment API. Requires rentals.confirm.",
         "tags": [
           "Admin - Rental Orders"
         ],
@@ -2848,42 +2848,6 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RentalOrderResDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "tags": [
-          "Admin - Rental Orders"
-        ],
-        "x-api-surface": "admin"
-      }
-    },
-    "/admin/rental-orders/{id}/collateral/return": {
-      "post": {
-        "operationId": "RentalController_returnCollateral",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "",
@@ -3088,7 +3052,7 @@
             "access-token": []
           }
         ],
-        "summary": "Settle returned rental order; offsets charges against cash deposit, releases document collateral if requested, and completes order",
+        "summary": "Settle returned rental order; offsets charges against cash deposit, and completes order",
         "tags": [
           "Admin - Rental Orders"
         ],
@@ -6694,9 +6658,6 @@
           },
           "delivery": {
             "$ref": "#/components/schemas/RentalDeliveryReqDto"
-          },
-          "collateral": {
-            "$ref": "#/components/schemas/RentalCollateralReqDto"
           }
         },
         "required": [
@@ -6788,26 +6749,6 @@
             "type": "string",
             "example": "1000000.00"
           },
-          "collateralMethod": {
-            "type": "string"
-          },
-          "documentType": {
-            "type": "string",
-            "nullable": true
-          },
-          "collateralStatus": {
-            "type": "string"
-          },
-          "collateralReceivedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "collateralReturnedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
           "actualReturnedAt": {
             "type": "string",
             "format": "date-time",
@@ -6896,11 +6837,6 @@
           "chargesTotal",
           "discountTotal",
           "depositRequired",
-          "collateralMethod",
-          "documentType",
-          "collateralStatus",
-          "collateralReceivedAt",
-          "collateralReturnedAt",
           "actualReturnedAt",
           "paidAmount",
           "remainingAmount",
@@ -6940,20 +6876,6 @@
               "BANK_TRANSFER"
             ]
           },
-          "collateralMethod": {
-            "type": "string",
-            "enum": [
-              "CASH",
-              "DOCUMENT"
-            ]
-          },
-          "documentType": {
-            "type": "string",
-            "enum": [
-              "CCCD",
-              "GPLX"
-            ]
-          },
           "collateralAmount": {
             "type": "number",
             "minimum": 0,
@@ -6971,32 +6893,12 @@
           }
         },
         "required": [
-          "collateralMethod"
+          "collateralAmount"
         ]
       },
       "ConfirmationOptionsResDto": {
         "type": "object",
         "properties": {
-          "allowedMethods": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "CASH",
-                "DOCUMENT"
-              ]
-            }
-          },
-          "allowedDocumentTypes": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "CCCD",
-                "GPLX"
-              ]
-            }
-          },
           "expectedDeposit": {
             "type": "string"
           },
@@ -7011,8 +6913,6 @@
           }
         },
         "required": [
-          "allowedMethods",
-          "allowedDocumentTypes",
           "expectedDeposit",
           "maxEvidenceBytes",
           "evidenceMimeTypes"
@@ -7187,10 +7087,6 @@
           "note": {
             "type": "string",
             "example": "Đã hoàn cọc qua tiền mặt"
-          },
-          "returnDocumentCollateral": {
-            "type": "boolean",
-            "description": "Xác nhận đã trả lại giấy tờ CCCD/GPLX cho khách (nếu đơn giữ giấy tờ)"
           }
         }
       },
@@ -9510,28 +9406,6 @@
           "method"
         ]
       },
-      "RentalCollateralReqDto": {
-        "type": "object",
-        "properties": {
-          "method": {
-            "type": "string",
-            "enum": [
-              "CASH",
-              "DOCUMENT"
-            ]
-          },
-          "documentType": {
-            "type": "string",
-            "enum": [
-              "CCCD",
-              "GPLX"
-            ]
-          }
-        },
-        "required": [
-          "method"
-        ]
-      },
       "RentalCustomerResDto": {
         "type": "object",
         "properties": {
@@ -9568,16 +9442,8 @@
             "type": "string",
             "description": "Rental amount manually acknowledged; not a payment ledger entry."
           },
-          "collateralMethod": {
-            "type": "string"
-          },
-          "documentType": {
-            "type": "string",
-            "nullable": true
-          },
           "collateralAmount": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           },
           "note": {
             "type": "string",
@@ -9596,8 +9462,6 @@
           "confirmedBy",
           "actorName",
           "rentalAmount",
-          "collateralMethod",
-          "documentType",
           "collateralAmount",
           "note",
           "hasEvidence",
@@ -9785,8 +9649,7 @@
             "enum": [
               "REFUND",
               "COLLECTION",
-              "BALANCED",
-              "COLLATERAL_ONLY"
+              "BALANCED"
             ]
           },
           "amount": {
@@ -10221,36 +10084,6 @@
       "DepositPolicyDto": {
         "type": "object",
         "properties": {
-          "allowedMethods": {
-            "type": "array",
-            "example": [
-              "CASH",
-              "DOCUMENT"
-            ],
-            "description": "Allowed deposit methods",
-            "items": {
-              "type": "string",
-              "enum": [
-                "CASH",
-                "DOCUMENT"
-              ]
-            }
-          },
-          "allowedDocumentTypes": {
-            "type": "array",
-            "example": [
-              "CCCD",
-              "GPLX"
-            ],
-            "description": "Allowed document types for document collateral",
-            "items": {
-              "type": "string",
-              "enum": [
-                "CCCD",
-                "GPLX"
-              ]
-            }
-          },
           "defaultCashDeposit": {
             "type": "number",
             "example": 200000,
@@ -10265,8 +10098,6 @@
           }
         },
         "required": [
-          "allowedMethods",
-          "allowedDocumentTypes",
           "defaultCashDeposit"
         ]
       },

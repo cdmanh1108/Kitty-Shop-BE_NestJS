@@ -52,8 +52,6 @@ export interface WebAccountRentalOrderDetail extends WebAccountRentalOrderListIt
   rentalSubtotal: number;
   chargesTotal: number;
   discountTotal: number;
-  collateralMethod: string;
-  documentType: string | null;
   actualReturnedAt: Date | null;
   deliveries: Array<{
     method: string;

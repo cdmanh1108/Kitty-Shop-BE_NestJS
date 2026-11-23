@@ -64,11 +64,6 @@ describe('Rental creation and lifecycle services', () => {
     chargesTotal: new Prisma.Decimal(0),
     discountTotal: new Prisma.Decimal(0),
     depositRequired: new Prisma.Decimal(300000),
-    collateralMethod: 'CASH',
-    documentType: null,
-    collateralStatus: 'REQUIRED',
-    collateralReceivedAt: null,
-    collateralReturnedAt: null,
     grandTotal: new Prisma.Decimal(200000),
     note: null,
     internalNote: null,
@@ -134,12 +129,9 @@ describe('Rental creation and lifecycle services', () => {
       itemCount: 0,
       rentalSubtotal: '0.00',
       depositHeld: '0.00',
-      collateralMethod: 'CASH',
-      documentType: null,
     });
     ports.lifecycle.transition.mockResolvedValue(createSampleOrder());
     ports.lifecycle.addCharge.mockResolvedValue(createSampleOrder());
-    ports.lifecycle.returnCollateral.mockResolvedValue(createSampleOrder());
     ports.lifecycle.receiveReturn.mockResolvedValue(createSampleOrder());
 
     audit = {

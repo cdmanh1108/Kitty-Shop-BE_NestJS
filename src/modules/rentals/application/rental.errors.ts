@@ -21,8 +21,6 @@ export class InvalidRentalItemSelectionError extends InvalidRentalInputError {}
 
 export class InvalidRentalIdempotencyKeyError extends InvalidRentalInputError {}
 
-export class UnsupportedRentalCollateralError extends InvalidRentalInputError {}
-
 export class InvalidRentalChargeError extends InvalidRentalInputError {}
 
 export class InvalidRentalCustomerDetailsError extends InvalidRentalInputError {}

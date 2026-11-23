@@ -143,8 +143,6 @@ export async function getWebAccountOrder(
       rentalSubtotal: true,
       chargesTotal: true,
       discountTotal: true,
-      collateralMethod: true,
-      documentType: true,
       items: {
         select: {
           productId: true,
@@ -221,8 +219,6 @@ export async function getWebAccountOrder(
     rentalSubtotal: decimalToNumber(order.rentalSubtotal),
     chargesTotal: decimalToNumber(order.chargesTotal),
     discountTotal: decimalToNumber(order.discountTotal),
-    collateralMethod: order.collateralMethod,
-    documentType: order.documentType,
     items: order.items.map((item) => ({
       productId: item.productId,
       productName: item.productNameSnapshot,
