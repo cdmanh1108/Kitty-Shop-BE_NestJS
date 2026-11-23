@@ -464,7 +464,7 @@ describe('payOS rental checkout and accounting', () => {
       expectedQuote: { ...checkoutQuoteFixture(), discountAmount: 50000, totalAmount: 10000 },
     });
     expect(order.totalAmount).toBe(10000);
-    const scope = { shopId: f.shop.id, orderCode: order.orderCode };
+    const scope = { shopId: f.shop.id, orderCode: order.orderCode, webAccountId: f.account.id };
     clockTime = new Date(clockTime.getTime() + 16 * 60_000);
     await payments(false).sync(scope);
     expect(gateway.read.mock.calls).toHaveLength(0);

@@ -38,12 +38,9 @@ export interface PaymentAttempt {
   reviewReason: string | null;
 }
 
-export interface PaymentOrderScope {
-  shopId: string;
-  orderCode?: string;
-  webAccountId?: string;
-  orderId?: string;
-}
+export type PaymentOrderScope =
+  | { shopId: string; orderId: string; orderCode?: never; webAccountId?: never }
+  | { shopId: string; orderId?: never; orderCode: string; webAccountId: string };
 
 export interface CreatePaymentLink {
   orderCode: number;

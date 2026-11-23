@@ -8,6 +8,11 @@ import { writeTransactionalAuditLog } from '@modules/audit/public/transactional-
 import { restoreUnpaidWebRentalReward } from '@modules/customers/public/rental-loyalty-transaction';
 import { recomputeOrderPaymentState } from '@modules/finance/public/order-payment-state-transaction';
 import { recordRentalReceipt } from '@modules/finance/public/rental-receipt-transaction';
+import {
+  canApplySingleTransfer,
+  nextPaymentCheck,
+  reconcilePaymentAttempt,
+} from '@modules/payments/public/payment-reconciliation';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type {
@@ -30,9 +35,6 @@ import { lockRentalOrder } from './rental-order-lock';
 import { transitionWithTx } from './rental-transition.lifecycle';
 
 const CLAIM_MS = 30_000;
-const RETRY_MS = 45_000;
-const PAID_CHECK_MS = 75_000;
-const CLOSED_LINKS = new Set(['CANCELLED', 'EXPIRED', 'FAILED']);
 const attemptInclude = {
   order: {
     select: {
@@ -199,14 +201,11 @@ export class PrismaRentalPaymentRepository implements PaymentRepository {
       let row = await lockAttempt(tx, { orderId, shopId });
       if (row?.claimId !== claim.id) return;
 
-      const nextCheckAt = new Date(
-        now.getTime() + (observation === undefined ? RETRY_MS : PAID_CHECK_MS),
-      );
-      const reportDueAt =
-        row.closeReason || row.expiresAt <= now
-          ? nextCheckAt
-          : new Date(Math.min(nextCheckAt.getTime(), row.expiresAt.getTime()));
-      const release = { claimId: null, claimUntil: null, nextCheckAt: reportDueAt };
+      const release = {
+        claimId: null,
+        claimUntil: null,
+        nextCheckAt: nextPaymentCheck(now, row.expiresAt, !!row.closeReason, observation),
+      };
 
       if (
         observation &&
@@ -230,10 +229,7 @@ export class PrismaRentalPaymentRepository implements PaymentRepository {
         });
         // An exact, single transfer is the automatic settlement contract. Split or excess credits
         // remain visible for manual review even when the provider reports the link as paid.
-        const acceptExact =
-          observation.status === 'PAID' &&
-          observation.amountPaid === observation.amount &&
-          observation.transfers.length === 1;
+        const acceptExact = canApplySingleTransfer(observation);
         for (const transfer of observation.transfers) {
           await this.recordTransferWithTx(tx, shopId, transfer, acceptExact);
         }
@@ -249,72 +245,32 @@ export class PrismaRentalPaymentRepository implements PaymentRepository {
         _sum: { amount: true },
       });
       const refundedAmount = refundAggregate._sum.amount ?? new Prisma.Decimal(0);
-      const providerClosed = observation
-        ? CLOSED_LINKS.has(observation.status) ||
-          (observation.status === 'PAID' && refundedAmount.greaterThan(0))
-        : observation === null && !row.providerLinkId;
-      const providerCleared = observation
-        ? refundedAmount.equals(observation.amountPaid)
-        : providerClosed;
-
-      if (
-        row.closeReason &&
-        providerClosed &&
-        providerCleared &&
-        !reviewCount &&
-        row.state !== 'PAID'
-      ) {
-        if (await this.closeOrder(tx, row, now)) return;
-      }
-
-      const needsReview =
-        observation &&
-        observation.amountPaid > 0 &&
-        row.state !== 'PAID' &&
-        !refundedAmount.equals(observation.amountPaid);
-      const naturallyClosed =
-        observation && CLOSED_LINKS.has(observation.status) && providerCleared && !reviewCount;
-      if (!row.closeReason && naturallyClosed && row.state !== 'PAID') {
-        const reminder = await tx.rentalPayosAttempt.update({
-          where: { orderId },
-          data: { closeReason: observation.status === 'EXPIRED' ? 'EXPIRED' : 'CANCELLED' },
-          include: attemptInclude,
-        });
-        if (await this.closeOrder(tx, reminder, now)) return;
-      }
-      const canResume =
-        row.state === 'REVIEW' &&
-        row.reviewReason === 'LINK_MISMATCH' &&
-        !row.closeReason &&
-        !reviewCount &&
-        observation?.status === 'PENDING' &&
-        observation.amountPaid === 0 &&
-        observation.transfers.length === 0;
-      const state =
-        row.state === 'PAID' || (row.state === 'REVIEW' && !canResume)
-          ? row.state
-          : needsReview
-            ? 'REVIEW'
-            : observation
-              ? 'PENDING'
-              : row.state;
+      const decision = reconcilePaymentAttempt(attemptView(row), observation, {
+        unresolved: reviewCount > 0,
+        allRefunded: !!observation && refundedAmount.equals(observation.amountPaid),
+        hasRefund: refundedAmount.greaterThan(0),
+      });
+      if (decision.closeReason && (await this.closeOrder(tx, row, decision.closeReason, now)))
+        return;
       await tx.rentalPayosAttempt.update({
         where: { orderId },
         data: {
           ...release,
-          state,
-          ...(canResume ? { reviewReason: null } : {}),
-          ...(needsReview && !row.reviewReason ? { reviewReason: 'INCOMPLETE_PROVIDER_DATA' } : {}),
+          ...decision,
         },
       });
     });
   }
 
-  private async closeOrder(tx: Prisma.TransactionClient, row: AttemptRow, now: Date) {
+  private async closeOrder(
+    tx: Prisma.TransactionClient,
+    row: AttemptRow,
+    closeReason: PaymentCloseReason,
+    now: Date,
+  ) {
     const {
       orderId,
       order: { shopId },
-      closeReason,
     } = row;
     if (await hasRemainingPayments(tx, orderId)) return false;
     const clock: Clock = { now: () => now };
@@ -336,7 +292,7 @@ export class PrismaRentalPaymentRepository implements PaymentRepository {
     await restoreUnpaidWebRentalReward(tx, shopId, orderId);
     await tx.rentalPayosAttempt.update({
       where: { orderId },
-      data: { state: 'CLOSED', claimId: null, claimUntil: null, reviewReason: null },
+      data: { state: 'CLOSED', closeReason, claimId: null, claimUntil: null, reviewReason: null },
     });
     await writeTransactionalAuditLog(tx, {
       shopId,
