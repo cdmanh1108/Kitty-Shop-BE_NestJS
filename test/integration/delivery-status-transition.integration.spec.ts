@@ -60,6 +60,59 @@ describe('Delivery status lifecycle persistence', () => {
     return result.delivery;
   }
 
+  it('filters and pages within the shop and keeps delivery detail available outside the page', async () => {
+    const { f, delivery } = await fixture();
+    const other = await fixture();
+    const fields = {
+      direction: 'RETURN',
+      method: 'SHOP_DELIVERY',
+      status: 'READY',
+      recipientName: 'Nguyễn Ánh',
+    };
+    await prisma.deliveryJob.update({
+      where: { id: delivery.id },
+      data: { ...fields, scheduledAt: new Date('2026-09-22T17:00:00.000Z') },
+    });
+    await prisma.deliveryJob.update({
+      where: { id: other.delivery.id },
+      data: { ...fields, scheduledAt: new Date('2026-09-22T18:00:00.000Z') },
+    });
+    const rows = await Promise.all(
+      ['2026-09-23T16:59:59.999Z', '2026-09-23T17:00:00.000Z'].map((scheduledAt) =>
+        prisma.deliveryJob.create({
+          data: {
+            ...fields,
+            shopId: f.shop.id,
+            orderId: delivery.orderId,
+            scheduledAt: new Date(scheduledAt),
+          },
+        }),
+      ),
+    );
+    const query = {
+      shopId: f.shop.id,
+      direction: 'RETURN',
+      status: 'READY',
+      method: 'SHOP_DELIVERY',
+      search: 'nguyen anh',
+      from: new Date('2026-09-22T17:00:00.000Z'),
+      until: new Date('2026-09-23T17:00:00.000Z'),
+      page: 2,
+      limit: 1,
+    } as const;
+    const page = await deliveries.page(query);
+    expect(page.items.map(({ id }) => id)).toEqual([rows[0]!.id]);
+    expect(page.meta).toEqual({ page: 2, limit: 1, total: 2, totalPages: 2 });
+    const unfiltered = await deliveries.page({ shopId: f.shop.id, page: 1, limit: 1 });
+    expect(page.summary).toEqual(unfiltered.summary);
+    expect(page.summary.shopDeliveryCount).toBeGreaterThanOrEqual(3);
+    await expect(deliveries.get(f.shop.id, rows[1]!.id)).resolves.toMatchObject({
+      id: rows[1]!.id,
+      order: { customer: { fullName: f.customer.fullName } },
+    });
+    await expect(deliveries.get(other.f.shop.id, delivery.id)).resolves.toBeNull();
+  });
+
   it('commits the allowed path and preserves timestamps from their committed transitions', async () => {
     const { f, delivery } = await fixture();
     await transition({ shopId: f.shop.id, id: delivery.id, status: 'READY' });

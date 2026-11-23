@@ -54,6 +54,8 @@ describe('DeliveryService status transitions', () => {
     return {
       port: {
         list: jest.fn(),
+        page: jest.fn(),
+        get: jest.fn(),
         create: jest.fn(),
         updateStatus,
       } satisfies DeliveryRepository,

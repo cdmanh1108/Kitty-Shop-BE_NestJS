@@ -2,7 +2,7 @@ import { PERMISSIONS } from '@common/constants/permissions';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -16,7 +16,13 @@ import { IsOptional, IsUUID } from 'class-validator';
 import { ApiSurface } from '@common/decorators/api-surface.decorator';
 import { ErrorResDto } from '@common/dto/response.dto';
 import { DeliveryService } from '../application/delivery.service';
-import { CreateDeliveryReqDto, DeliveryResDto, UpdateDeliveryStatusReqDto } from './delivery.dto';
+import {
+  CreateDeliveryReqDto,
+  DeliveryPageQueryDto,
+  DeliveryPageResDto,
+  DeliveryResDto,
+  UpdateDeliveryStatusReqDto,
+} from './delivery.dto';
 import { toCreateDeliveryInput, toUpdateDeliveryStatusInput } from './delivery.mapper';
 
 class DeliveryListQueryDto {
@@ -37,6 +43,22 @@ export class DeliveryController {
   @ApiOkResponse({ type: [DeliveryResDto] })
   list(@CurrentUser() user: CurrentUserType, @Query() query: DeliveryListQueryDto) {
     return this.service.list(user, query.orderId);
+  }
+
+  @Get('page')
+  @Permissions(PERMISSIONS.DELIVERIES_VIEW)
+  @ApiOkResponse({ type: DeliveryPageResDto })
+  @ApiBadRequestResponse({ type: ErrorResDto })
+  page(@CurrentUser() user: CurrentUserType, @Query() query: DeliveryPageQueryDto) {
+    return this.service.page(user, query);
+  }
+
+  @Get(':id')
+  @Permissions(PERMISSIONS.DELIVERIES_VIEW)
+  @ApiOkResponse({ type: DeliveryResDto })
+  @ApiNotFoundResponse({ type: ErrorResDto })
+  get(@CurrentUser() user: CurrentUserType, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.get(user, id);
   }
 
   @Post('orders/:orderId')

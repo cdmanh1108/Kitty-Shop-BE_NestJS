@@ -3,12 +3,17 @@ import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import { DELIVERY_REPOSITORY, type DeliveryRepository } from '../domain/delivery.repository';
-import type { CreateDeliveryInput, UpdateDeliveryStatusInput } from './delivery.contracts';
+import type {
+  CreateDeliveryInput,
+  DeliveryPageQuery,
+  UpdateDeliveryStatusInput,
+} from './delivery.contracts';
 import {
   DeliveryChangedConcurrentlyError,
   DeliveryNotFoundError,
   DeliveryOrderNotFoundError,
   DeliveryTransitionNotAllowedError,
+  InvalidDeliveryListRangeError,
   InvalidDeliveryStatusError,
 } from './delivery.errors';
 
@@ -21,6 +26,19 @@ export class DeliveryService {
 
   list(user: CurrentUser, orderId?: string) {
     return this.repository.list(user.shopId, orderId);
+  }
+
+  page(user: CurrentUser, query: DeliveryPageQuery) {
+    const from = query.from ? new Date(query.from) : undefined;
+    const until = query.until ? new Date(query.until) : undefined;
+    if (from && until && from >= until) throw new InvalidDeliveryListRangeError();
+    return this.repository.page({ ...query, shopId: user.shopId, from, until });
+  }
+
+  async get(user: CurrentUser, id: string) {
+    const delivery = await this.repository.get(user.shopId, id);
+    if (!delivery) throw new DeliveryNotFoundError();
+    return delivery;
   }
 
   async create(user: CurrentUser, orderId: string, input: CreateDeliveryInput) {

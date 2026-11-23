@@ -1,12 +1,30 @@
 import type { DeliveryCreatedEvent } from '../domain/delivery.events';
 import { CLOCK, type Clock } from '@common/clock/clock';
-import { DELIVERY_STATUS, canTransitionDelivery } from '@modules/deliveries/domain/delivery-status';
+import { paginateMeta } from '@common/types/pagination';
+import {
+  DELIVERY_METHOD,
+  DELIVERY_STATUS,
+  canTransitionDelivery,
+} from '@modules/deliveries/domain/delivery-status';
 import { Inject, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { lockRentalOrder } from '@modules/rentals/public/rental-order-lock';
 import { addDeliveryShippingCharge } from '@modules/rentals/public/delivery-shipping-charge-transaction';
-import type { DeliveryRepository } from '../domain/delivery.repository';
+import type { DeliveryPageCriteria, DeliveryRepository } from '../domain/delivery.repository';
+
+const includeOrder = {
+  order: {
+    select: { orderNumber: true, customer: { select: { fullName: true, phone: true } } },
+  },
+} satisfies Prisma.DeliveryJobInclude;
+
+const completedStatuses = new Set<string>([
+  DELIVERY_STATUS.DELIVERED,
+  DELIVERY_STATUS.FAILED,
+  DELIVERY_STATUS.CANCELLED,
+]);
 
 @Injectable()
 export class PrismaDeliveryRepository implements DeliveryRepository {
@@ -18,13 +36,83 @@ export class PrismaDeliveryRepository implements DeliveryRepository {
   list(shopId: string, orderId?: string) {
     return this.prisma.deliveryJob.findMany({
       where: { shopId, ...(orderId ? { orderId } : {}) },
-      include: {
-        order: {
-          select: { orderNumber: true, customer: { select: { fullName: true, phone: true } } },
-        },
-      },
+      include: includeOrder,
       orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }],
     });
+  }
+
+  get(shopId: string, id: string) {
+    return this.prisma.deliveryJob.findFirst({ where: { shopId, id }, include: includeOrder });
+  }
+
+  async page(input: DeliveryPageCriteria) {
+    const { shopId, page, limit, orderId, direction, method, status, from, until } = input;
+    const search = input.search?.trim().replace(/\s+/g, ' ');
+    const joins = search
+      ? Prisma.sql`
+          JOIN rental_orders o ON o.id = d.order_id AND o.shop_id = d.shop_id
+          JOIN customers c ON c.id = o.customer_id AND c.shop_id = d.shop_id
+        `
+      : Prisma.empty;
+    const condition = search
+      ? Prisma.sql`AND strpos(
+          unaccent(lower(concat_ws(' ', o.order_number, c.full_name, d.recipient_name,
+            d.recipient_phone, d.tracking_code))),
+          unaccent(lower(${search}))
+        ) > 0`
+      : Prisma.empty;
+    const scope = Prisma.sql`
+      FROM delivery_jobs d ${joins}
+      WHERE d.shop_id = ${shopId}::uuid
+        ${orderId ? Prisma.sql`AND d.order_id = ${orderId}::uuid` : Prisma.empty}
+        ${direction ? Prisma.sql`AND d.direction = ${direction}` : Prisma.empty}
+        ${method ? Prisma.sql`AND d.method = ${method}` : Prisma.empty}
+        ${status ? Prisma.sql`AND d.status = ${status}` : Prisma.empty}
+        ${from ? Prisma.sql`AND d.scheduled_at >= ${from}` : Prisma.empty}
+        ${until ? Prisma.sql`AND d.scheduled_at < ${until}` : Prisma.empty}
+        ${condition}
+    `;
+    return this.prisma.$transaction(
+      async (tx) => {
+        const summaries = await tx.deliveryJob.groupBy({
+          by: ['method', 'status'],
+          where: { shopId },
+          _count: { _all: true },
+        });
+        const summary = {
+          pendingCount: 0,
+          pickupCount: 0,
+          shopDeliveryCount: 0,
+          thirdPartyCount: 0,
+        };
+        for (const group of summaries) {
+          const count = group._count._all;
+          if (!completedStatuses.has(group.status)) summary.pendingCount += count;
+          if (group.method === DELIVERY_METHOD.CUSTOMER_PICKUP) summary.pickupCount += count;
+          if (group.method === DELIVERY_METHOD.SHOP_DELIVERY) summary.shopDeliveryCount += count;
+          if (group.method === DELIVERY_METHOD.THIRD_PARTY_SHIPPER)
+            summary.thirdPartyCount += count;
+        }
+        const [count] = await tx.$queryRaw<Array<{ total: number }>>`
+        SELECT count(*)::int AS total ${scope}
+      `;
+        const meta = paginateMeta(page, limit, count?.total ?? 0);
+        if (page > meta.totalPages) return { items: [], meta, summary };
+
+        const ids = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT d.id ${scope}
+        ORDER BY d.scheduled_at ASC NULLS LAST, d.created_at DESC, d.id DESC
+        LIMIT ${limit} OFFSET ${(page - 1) * limit}
+      `;
+        const items = await tx.deliveryJob.findMany({
+          where: { shopId, id: { in: ids.map(({ id }) => id) } },
+          include: includeOrder,
+          orderBy: [{ scheduledAt: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        });
+        return { items, meta, summary };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 
   async create(input: Parameters<DeliveryRepository['create']>[0]) {

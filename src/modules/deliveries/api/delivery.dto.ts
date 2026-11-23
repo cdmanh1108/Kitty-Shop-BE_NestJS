@@ -8,8 +8,57 @@ import {
 } from '@modules/deliveries/domain/delivery-status';
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
+import { PaginationMetaResDto } from '@common/dto/response.dto';
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+} from 'class-validator';
+
+export class DeliveryPageQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID(undefined, { message: 'Đơn thuê không hợp lệ. Vui lòng chọn lại.' })
+  orderId?: string;
+
+  @ApiPropertyOptional({ maxLength: 200 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200, { message: 'Từ khóa tìm giao nhận tối đa 200 ký tự.' })
+  search?: string;
+
+  @ApiPropertyOptional({ enum: Object.values(DELIVERY_DIRECTION) })
+  @IsOptional()
+  @IsIn(Object.values(DELIVERY_DIRECTION), { message: 'Chiều giao nhận không hợp lệ.' })
+  direction?: DeliveryDirection;
+
+  @ApiPropertyOptional({ enum: Object.values(DELIVERY_METHOD) })
+  @IsOptional()
+  @IsIn(Object.values(DELIVERY_METHOD), { message: 'Hình thức giao nhận không hợp lệ.' })
+  method?: DeliveryMethod;
+
+  @ApiPropertyOptional({ enum: Object.values(DELIVERY_STATUS) })
+  @IsOptional()
+  @IsIn(Object.values(DELIVERY_STATUS), { message: 'Trạng thái giao nhận không hợp lệ.' })
+  status?: DeliveryStatus;
+
+  @ApiPropertyOptional({ format: 'date-time' })
+  @IsOptional()
+  @IsDateString({ strict: true }, { message: 'Thời gian bắt đầu không hợp lệ.' })
+  from?: string;
+
+  @ApiPropertyOptional({ format: 'date-time', description: 'Exclusive upper bound' })
+  @IsOptional()
+  @IsDateString({ strict: true }, { message: 'Thời gian kết thúc không hợp lệ.' })
+  until?: string;
+}
 
 export class CreateDeliveryReqDto {
   @ApiProperty({ enum: Object.values(DELIVERY_DIRECTION) })
@@ -173,4 +222,29 @@ export class DeliveryResDto {
 
   @ApiPropertyOptional({ type: DeliveryOrderResDto, nullable: true })
   order?: DeliveryOrderResDto | null;
+}
+
+export class DeliverySummaryResDto {
+  @ApiProperty()
+  pendingCount!: number;
+
+  @ApiProperty()
+  pickupCount!: number;
+
+  @ApiProperty()
+  shopDeliveryCount!: number;
+
+  @ApiProperty()
+  thirdPartyCount!: number;
+}
+
+export class DeliveryPageResDto {
+  @ApiProperty({ type: [DeliveryResDto] })
+  items!: DeliveryResDto[];
+
+  @ApiProperty({ type: PaginationMetaResDto })
+  meta!: PaginationMetaResDto;
+
+  @ApiProperty({ type: DeliverySummaryResDto })
+  summary!: DeliverySummaryResDto;
 }

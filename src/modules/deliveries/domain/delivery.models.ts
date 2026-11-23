@@ -1,3 +1,4 @@
+import type { PaginatedResult } from '@common/types/pagination';
 import type { DeliveryJobRecord } from '@modules/deliveries/domain/deliveries.records';
 
 export type DeliveryList = Array<
@@ -13,6 +14,17 @@ export type DeliveryList = Array<
 >;
 
 export type DeliveryResult = null | DeliveryJobRecord;
+
+export interface DeliverySummary {
+  pendingCount: number;
+  pickupCount: number;
+  shopDeliveryCount: number;
+  thirdPartyCount: number;
+}
+
+export interface DeliveryPage extends PaginatedResult<DeliveryList[number]> {
+  summary: DeliverySummary;
+}
 
 export type DeliveryStatusUpdateResult =
   | { kind: 'UPDATED'; delivery: DeliveryJobRecord; fromStatus: string }

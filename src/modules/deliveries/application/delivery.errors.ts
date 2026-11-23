@@ -24,6 +24,14 @@ export class InvalidDeliveryStatusError extends ApplicationError {
   }
 }
 
+export class InvalidDeliveryListRangeError extends ApplicationError {
+  readonly kind = 'VALIDATION' as const;
+
+  constructor() {
+    super('Thời gian kết thúc phải sau thời gian bắt đầu.');
+  }
+}
+
 export class DeliveryTransitionNotAllowedError extends ApplicationError {
   readonly kind = 'CONFLICT' as const;
 

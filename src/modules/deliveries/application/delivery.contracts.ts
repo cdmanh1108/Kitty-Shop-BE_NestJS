@@ -3,6 +3,13 @@ import type {
   DeliveryMethod,
   DeliveryStatus,
 } from '@modules/deliveries/domain/delivery-status';
+import type { DeliveryPageCriteria } from '../domain/delivery.repository';
+
+export interface DeliveryPageQuery extends Omit<DeliveryPageCriteria, 'shopId' | 'from' | 'until'> {
+  from?: string;
+  until?: string;
+}
+
 export interface CreateDeliveryInput {
   direction: DeliveryDirection;
   method: DeliveryMethod;

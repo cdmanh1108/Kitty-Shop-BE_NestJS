@@ -4510,6 +4510,190 @@
         "x-api-surface": "admin"
       }
     },
+    "/admin/deliveries/page": {
+      "get": {
+        "operationId": "DeliveryController_page",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 200,
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OUTBOUND",
+                "RETURN"
+              ]
+            }
+          },
+          {
+            "name": "method",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CUSTOMER_PICKUP",
+                "SHOP_DELIVERY",
+                "THIRD_PARTY_SHIPPER"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "READY",
+                "PICKED_UP",
+                "DELIVERING",
+                "DELIVERED",
+                "FAILED",
+                "CANCELLED"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "until",
+            "required": false,
+            "in": "query",
+            "description": "Exclusive upper bound",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryPageResDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Delivery"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/deliveries/{id}": {
+      "get": {
+        "operationId": "DeliveryController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "Delivery"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
     "/admin/deliveries/orders/{orderId}": {
       "post": {
         "operationId": "DeliveryController_create",
@@ -8095,6 +8279,28 @@
           "shippingFee"
         ]
       },
+      "DeliveryPageResDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryResDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/DeliverySummaryResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta",
+          "summary"
+        ]
+      },
       "CreateDeliveryReqDto": {
         "type": "object",
         "properties": {
@@ -10541,6 +10747,29 @@
         },
         "required": [
           "orderNumber"
+        ]
+      },
+      "DeliverySummaryResDto": {
+        "type": "object",
+        "properties": {
+          "pendingCount": {
+            "type": "number"
+          },
+          "pickupCount": {
+            "type": "number"
+          },
+          "shopDeliveryCount": {
+            "type": "number"
+          },
+          "thirdPartyCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "pendingCount",
+          "pickupCount",
+          "shopDeliveryCount",
+          "thirdPartyCount"
         ]
       },
       "ReminderSummaryResDto": {
