@@ -90,3 +90,15 @@ export async function redeemWebAccountLoyaltyReward(
   });
   return result.count === 1;
 }
+
+/** Reopen the exact Web reward consumed by an unpaid cancelled rental. */
+export async function restoreUnpaidWebRentalReward(
+  tx: Prisma.TransactionClient,
+  shopId: string,
+  orderId: string,
+) {
+  await tx.customerLoyaltyReward.updateMany({
+    where: { shopId, redeemedOrderId: orderId, ownerType: 'WEB_ACCOUNT', status: 'REDEEMED' },
+    data: { redeemedOrderId: null, redeemedAt: null, status: 'AVAILABLE' },
+  });
+}

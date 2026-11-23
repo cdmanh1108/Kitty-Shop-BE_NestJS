@@ -47,3 +47,7 @@
 - Manual confirmation records actual rental/deposit receipts atomically with audit/outbox; suggested deposit is not a minimum or a debt.
 - Payment balances come from the transaction ledger only, never ledger plus confirmation snapshots. Confirmation and physical handover remain separate.
 - Settlement offsets deposit using paired internal transactions; actual refunds/collections record their payment method and actor. Receipt keys and provider references prevent duplicate recording.
+
+- payOS checkout can issue a hosted link only while the checkout flag is enabled. Once issued, a link and its callback remain available for reconciliation while checkout is off.
+- Payment attempts snapshot whole VND rental and deposit amounts at booking. Signed credits and authenticated reconciliation share a unique bank reference. Receipt split, payment projection, and audit/outbox use one transaction and the rental monetary lock.
+- A payOS reservation releases allocations only after the provider proves there is no unresolved credit. Mismatched or late credits go to review. A recorded manual refund for a paid reservation writes both refund purposes and cancels the reservation atomically.

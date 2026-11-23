@@ -4,7 +4,7 @@ export interface RentalReceiptInput {
   orderId: string;
   shopId: string;
   customerId: string;
-  actorMemberId: string;
+  actorMemberId?: string;
   key: string;
   purpose: string;
   direction: 'IN' | 'OUT';
@@ -12,7 +12,9 @@ export interface RentalReceiptInput {
   paidAt: Date;
   paymentMethod: string;
   note?: string;
-  source?: 'ADMIN_MANUAL' | 'INTERNAL_TRANSFER';
+  source?: 'ADMIN_MANUAL' | 'INTERNAL_TRANSFER' | 'PAYOS';
+  providerTransactionId?: string;
+  bankReference?: string;
 }
 
 /** Finance-owned payment persistence for an existing Rental transaction. */
@@ -29,6 +31,9 @@ export async function recordRentalReceipt(
       transactionNumber: input.key,
       receiptKey: input.key,
       source: input.source ?? 'ADMIN_MANUAL',
+      provider: input.source === 'PAYOS' ? 'PAYOS' : undefined,
+      providerTransactionId: input.providerTransactionId,
+      bankReference: input.bankReference,
       purpose: input.purpose,
       direction: input.direction,
       amount: input.amount,

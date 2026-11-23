@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { PaymentService } from '@modules/payments/public/payment-service';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { CurrentUser } from '@common/types/current-user';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { RENTAL_STATUS, type RentalStatus } from '../domain/rental-status';
@@ -40,6 +41,7 @@ export class RentalLifecycleService {
     @Inject(RENTAL_ORDER_READER) private readonly orderReader: RentalOrderReader,
     @Inject(RENTAL_LIFECYCLE_REPOSITORY) private readonly lifecycle: RentalLifecycleRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Optional() private readonly payments?: PaymentService,
   ) {}
 
   start(user: CurrentUser, id: string, input: TransitionRentalInput) {
@@ -52,7 +54,21 @@ export class RentalLifecycleService {
     );
   }
 
-  cancel(user: CurrentUser, id: string, input: TransitionRentalInput) {
+  async cancel(user: CurrentUser, id: string, input: TransitionRentalInput) {
+    if (await this.payments?.cancelIfHosted({ shopId: user.shopId, orderId: id })) {
+      await this.audit.log({
+        shopId: user.shopId,
+        actorUserId: user.userId,
+        actorMemberId: user.memberId,
+        action: 'PAYOS_CANCEL_REQUESTED',
+        entityType: 'rental_order',
+        entityId: id,
+        newValues: { reason: input.reason },
+      });
+      const order = await this.orderReader.get(user.shopId, id);
+      if (!order) throw new RentalNotFoundError('Không tìm thấy đơn thuê.');
+      return order;
+    }
     return this.transition(
       user,
       id,
