@@ -1,5 +1,6 @@
 import { CLOCK, type Clock } from '@common/clock/clock';
 import type { CurrentUser } from '@common/types/current-user';
+import type { PaginationParams } from '@common/types/pagination';
 import { ApplicationError } from '@common/errors/application-error';
 import { Inject, Injectable } from '@nestjs/common';
 import {
@@ -153,6 +154,10 @@ export class PaymentService {
 
   listReview(shopId: string) {
     return this.repository.listReview(shopId, 100);
+  }
+
+  reviewQueue(shopId: string, page: PaginationParams) {
+    return this.repository.reviewQueue(shopId, page);
   }
 
   async recordRefund(actor: CurrentUser, id: string, refundReference: string) {

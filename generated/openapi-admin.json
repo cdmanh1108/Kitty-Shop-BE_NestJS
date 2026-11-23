@@ -3314,6 +3314,51 @@
         "x-api-surface": "admin"
       }
     },
+    "/admin/payments/payos/review-queue": {
+      "get": {
+        "operationId": "listAdminPayosReviewQueue",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayosReviewQueueDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Admin - payOS"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
     "/admin/payments/payos/review/{id}/refund": {
       "post": {
         "operationId": "recordAdminPayosRefund",
@@ -7381,6 +7426,24 @@
           "paidAt"
         ]
       },
+      "PayosReviewQueueDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PayosReviewCaseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaResDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
       "RentalPolicyResDto": {
         "type": "object",
         "properties": {
@@ -10284,6 +10347,55 @@
           "currentFee",
           "agreedFee",
           "feeOverrideReason"
+        ]
+      },
+      "PayosReviewCaseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "ATTEMPT",
+              "TRANSFER"
+            ]
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "orderCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reference": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "orderId",
+          "orderCode",
+          "reference",
+          "amount",
+          "reason",
+          "occurredAt"
         ]
       },
       "RentalPricingPolicyDto": {

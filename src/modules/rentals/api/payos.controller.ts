@@ -4,6 +4,7 @@ import { Public } from '@common/decorators/public.decorator';
 import { Permissions } from '@common/decorators/permissions.decorator';
 import { PERMISSIONS } from '@common/constants/permissions';
 import { ShopResolver } from '@common/shop-context/shop-resolver';
+import { PaginationQueryDto } from '@common/dto/pagination.query.dto';
 import type { CurrentUser as CurrentUserType } from '@common/types/current-user';
 import {
   Body,
@@ -14,6 +15,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -36,6 +38,7 @@ import {
   PayosPaymentDto,
   PayosRefundReqDto,
   PayosReviewDto,
+  PayosReviewQueueDto,
   toPayosPayment,
 } from './payos.dto';
 
@@ -150,6 +153,15 @@ export class AdminPayosController {
       ...item,
       paidAt: item.paidAt.toISOString(),
     }));
+  }
+
+  @Get('review-queue')
+  @Permissions(PERMISSIONS.PAYMENTS_VIEW)
+  @Header('Cache-Control', 'private, no-store')
+  @ApiOperation({ operationId: 'listAdminPayosReviewQueue' })
+  @ApiOkResponse({ type: PayosReviewQueueDto })
+  reviewQueue(@CurrentUser() user: CurrentUserType, @Query() query: PaginationQueryDto) {
+    return this.service.reviewQueue(user.shopId, { page: query.page, limit: query.limit });
   }
 
   @Post('review/:id/refund')

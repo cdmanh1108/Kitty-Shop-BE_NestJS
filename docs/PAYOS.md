@@ -29,6 +29,7 @@ Khi tạm dừng, tắt flag tạo link và giữ webhook áp dụng cho link đ
 - Khoản cọc và số tiền đơn được ghi riêng. Trước lúc xác nhận đơn đã thu payOS, staff có thể chuyển hoàn bằng ngân hàng, rồi dùng **Hoàn tiền và hủy đơn** để ghi hai khoản chi theo mục đích và nhả kho trong cùng transaction. Luồng này cần quyền tạo giao dịch và quyền hủy đơn. Sau khi giao đồ, hoàn cọc sử dụng bước kết toán hiện có.
 - Hết hạn hoặc yêu cầu hủy sẽ đóng link và đối soát trước khi nhả đồ. Khi chưa xác định được kết quả từ provider, hệ thống giữ lịch và thử lại. Lượt ưu đãi trở lại khả dụng khi đơn hết hạn hoặc hủy mà chưa ghi nhận tiền.
 - Chuyển sai số, chuyển thêm và chuyển sau khi đơn đã đóng được lưu để admin đối soát. Admin kiểm tra ngân hàng và thực hiện hoàn tiền trước khi ghi mã đã hoàn. Khoản chưa ghép không được ghi vào tiền thuê hoặc tiền cọc của đơn.
+- Hàng chờ cũng hiển thị lần thanh toán đang đối soát khi payOS báo trạng thái mà chưa cung cấp giao dịch tương ứng. Dùng **Kiểm tra payOS** để lấy phản hồi mới. Số tiền hiển thị cho lần thanh toán là số tiền dự kiến của đơn. Chỉ giao dịch có mã chuyển khoản mới ghi nhận hoàn tiền được.
 - Trang thanh toán không lưu cache và không tham gia analytics. Dữ liệu gửi sang payOS gồm mã, số tiền, hạn và đường dẫn quay lại. Backend chỉ lưu mã đối soát, thời điểm và số tiền cần thiết, cùng audit thao tác.
 
 [Tài liệu Node SDK](https://payos.vn/docs/sdks/back-end/node/) · [API payOS](https://payos.vn/docs/api/) · [Môi trường test](https://payos.vn/docs/moi-truong-test/)

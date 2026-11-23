@@ -1,4 +1,5 @@
 import type { CurrentUser } from '@common/types/current-user';
+import type { PaginatedResult, PaginationParams } from '@common/types/pagination';
 import type {
   PaymentAttempt,
   PaymentCloseReason,
@@ -32,6 +33,17 @@ export interface PaymentTransferReview {
   paidAt: Date;
 }
 
+export interface PaymentReviewCase {
+  id: string;
+  kind: 'ATTEMPT' | 'TRANSFER';
+  orderId: string | null;
+  orderCode: string | null;
+  reference: string;
+  amount: number;
+  reason: string | null;
+  occurredAt: string;
+}
+
 export interface PaymentRepository {
   order(scope: PaymentOrderScope): Promise<OrderPayment | null>;
   due(now: Date, limit: number): Promise<PaymentOrderScope[]>;
@@ -41,6 +53,7 @@ export interface PaymentRepository {
   finish(claim: PaymentClaim, now: Date, observation?: PaymentLink | null): Promise<void>;
   recordTransfer(shopId: string, transfer: VerifiedPaymentTransfer): Promise<void>;
   listReview(shopId: string, limit: number): Promise<PaymentTransferReview[]>;
+  reviewQueue(shopId: string, page: PaginationParams): Promise<PaginatedResult<PaymentReviewCase>>;
   refundPaidReservation(
     actor: CurrentUser,
     orderId: string,

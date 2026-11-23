@@ -382,6 +382,49 @@ describe('payOS rental checkout and accounting', () => {
     ).toBe(1);
   });
 
+  it('lists attempts lacking a transfer, pages with transfer reviews, and recovers on verified evidence', async () => {
+    const f = await setup();
+    const order = await f.checkout();
+    const { scope, attempt, transfer } = await openPayment(f, order.orderCode);
+    const incomplete: PaymentLink = {
+      orderCode: attempt.orderCode,
+      linkId: transfer.linkId,
+      status: 'PAID',
+      amount: transfer.amount,
+      amountPaid: transfer.amount,
+      transfers: [],
+    };
+    gateway.read.mockResolvedValueOnce(incomplete);
+    await payments().sync(scope, 'reconcile');
+    const queue = await payments().reviewQueue(f.shop.id, { page: 1, limit: 1 });
+    expect(queue.items).toMatchObject([
+      { kind: 'ATTEMPT', orderId: attempt.orderId, reason: 'INCOMPLETE_PROVIDER_DATA' },
+    ]);
+    expect(queue.meta.total).toBe(1);
+    await expect(payments().cancelIfHosted(scope)).rejects.toMatchObject({
+      code: 'PAYOS_CANCEL_REQUIRES_REVIEW',
+    });
+    expect(await ledger()).toHaveLength(0);
+
+    await repo.recordTransfer(f.shop.id, {
+      ...transfer,
+      orderCode: transfer.orderCode + 1,
+      reference: 'UNKNOWN-REVIEW',
+      paidAt: new Date('2030-01-01T00:00:00Z'),
+    });
+    const secondPage = await payments().reviewQueue(f.shop.id, { page: 2, limit: 1 });
+    expect(secondPage.meta).toMatchObject({ total: 2, totalPages: 2 });
+    expect(secondPage.items).toMatchObject([{ kind: 'TRANSFER', orderId: null }]);
+
+    gateway.read.mockResolvedValueOnce({ ...incomplete, transfers: [transfer] });
+    await payments().sync(scope, 'reconcile');
+    await expect(payments().get(scope)).resolves.toMatchObject({ status: 'PAID' });
+    expect(await ledger()).toHaveLength(2);
+    expect((await payments().reviewQueue(f.shop.id, { page: 1, limit: 5 })).items).toMatchObject([
+      { kind: 'TRANSFER', orderId: null },
+    ]);
+  });
+
   it('restores a redeemed reward when an unpaid reservation with no issued link expires', async () => {
     const f = await setup();
     const earned = await prisma.rentalOrder.create({

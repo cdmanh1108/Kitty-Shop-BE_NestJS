@@ -1,6 +1,7 @@
 import { rentalLedger } from './rental-ledger';
 import { randomUUID } from 'node:crypto';
 import type { Clock } from '@common/clock/clock';
+import { paginateMeta, type PaginationParams } from '@common/types/pagination';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { serializableTransaction } from '@database/prisma/transaction';
 import { writeTransactionalAuditLog } from '@modules/audit/public/transactional-audit';
@@ -13,6 +14,7 @@ import type {
   PaymentClaim,
   PaymentClaimMode,
   PaymentRepository,
+  PaymentReviewCase,
 } from '@modules/payments/public/payment-repository';
 import {
   OPEN_PAYMENT_STATES,
@@ -280,8 +282,16 @@ export class PrismaRentalPaymentRepository implements PaymentRepository {
         });
         if (await this.closeOrder(tx, reminder, now)) return;
       }
+      const canResume =
+        row.state === 'REVIEW' &&
+        row.reviewReason === 'LINK_MISMATCH' &&
+        !row.closeReason &&
+        !reviewCount &&
+        observation?.status === 'PENDING' &&
+        observation.amountPaid === 0 &&
+        observation.transfers.length === 0;
       const state =
-        row.state === 'PAID' || row.state === 'REVIEW'
+        row.state === 'PAID' || (row.state === 'REVIEW' && !canResume)
           ? row.state
           : needsReview
             ? 'REVIEW'
@@ -293,6 +303,7 @@ export class PrismaRentalPaymentRepository implements PaymentRepository {
         data: {
           ...release,
           state,
+          ...(canResume ? { reviewReason: null } : {}),
           ...(needsReview && !row.reviewReason ? { reviewReason: 'INCOMPLETE_PROVIDER_DATA' } : {}),
         },
       });
@@ -483,6 +494,39 @@ export class PrismaRentalPaymentRepository implements PaymentRepository {
       reason: item.reason,
       orderCode: item.order?.orderNumber ?? null,
     }));
+  }
+
+  async reviewQueue(shopId: string, { page, limit }: PaginationParams) {
+    const [result] = await this.prisma.$queryRaw<
+      { items: PaymentReviewCase[]; total: number }[]
+    >(Prisma.sql`
+      WITH cases AS (
+        SELECT t.id, 'TRANSFER' AS kind, t.order_id AS "orderId",
+          o.order_number AS "orderCode", t.reference, t.amount,
+          t.reason, t.paid_at AS "occurredAt"
+        FROM payos_transfers t
+        LEFT JOIN rental_orders o ON o.id = t.order_id AND o.shop_id = t.shop_id
+        WHERE t.shop_id = ${shopId}::uuid AND t.state = 'REVIEW'
+        UNION ALL
+        SELECT a.order_id, 'ATTEMPT', a.order_id, o.order_number,
+          a.order_code::text, a.rental_amount + a.deposit_amount,
+          a.review_reason, a.created_at
+        FROM rental_payos_attempts a
+        JOIN rental_orders o ON o.id = a.order_id
+        WHERE o.shop_id = ${shopId}::uuid AND a.state = 'REVIEW'
+          AND NOT EXISTS (
+            SELECT 1 FROM payos_transfers t
+            WHERE t.order_id = a.order_id AND t.shop_id = o.shop_id AND t.state = 'REVIEW'
+          )
+      ), page AS (
+        SELECT * FROM cases ORDER BY "occurredAt", kind, id
+        LIMIT ${limit} OFFSET ${(page - 1) * limit}
+      )
+      SELECT (SELECT COUNT(*)::int FROM cases) AS total,
+        COALESCE((SELECT jsonb_agg(page ORDER BY "occurredAt", kind, id) FROM page), '[]'::jsonb) AS items
+    `);
+    if (!result) throw new Error('Không đọc được hàng chờ đối soát.');
+    return { items: result.items, meta: paginateMeta(page, limit, result.total) };
   }
 
   async recordRefund(
