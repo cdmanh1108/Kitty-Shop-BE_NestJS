@@ -142,6 +142,7 @@ const releaseMigrations = new Set([
   '202611160001_product_rental_price_override',
   '202611170001_product_free_accessory_limit',
   '202611230001_cash_only_rental_deposits',
+  '202611230002_payos_rental_payments',
 ]);
 
 export async function assertInitialReleaseDatabase(tx: Prisma.TransactionClient): Promise<void> {

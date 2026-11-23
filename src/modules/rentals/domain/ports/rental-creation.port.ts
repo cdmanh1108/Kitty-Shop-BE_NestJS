@@ -38,6 +38,7 @@ export interface CreateRentalOrderData {
   storefrontEligibility?: true;
   /** Amounts displayed by the Web checkout. Always compared with server pricing before booking. */
   expectedQuote?: RentalQuoteAmounts;
+  payosExpiresAt?: Date;
   idempotency?: {
     scope: string;
     key: string;

@@ -207,6 +207,8 @@ model Shop {
   idempotencyRecords     IdempotencyRecord[]
   carts                  Cart[]
 
+  payosTransfers PayosTransfer[]
+
   @@map("shops")
 }
 
@@ -704,9 +706,11 @@ model RentalOrder {
   loyaltyRewardEarned     CustomerLoyaltyReward?     @relation("LoyaltyRewardEarnedOrder")
   loyaltyRewardRedemption CustomerLoyaltyReward?     @relation("LoyaltyRewardRedeemedOrder")
 
-  confirmation RentalConfirmation?
-  returnRecord RentalReturn?
-  settlement   RentalSettlement?
+  payosAttempt   RentalPayosAttempt?
+  payosTransfers PayosTransfer[]
+  confirmation   RentalConfirmation?
+  returnRecord   RentalReturn?
+  settlement     RentalSettlement?
 
   @@unique([shopId, orderNumber])
   @@index([shopId, rentalStartAt, rentalEndAt])
@@ -1022,6 +1026,52 @@ model PaymentTransaction {
   @@index([orderId, paidAt])
   @@index([shopId, paidAt, status])
   @@map("payment_transactions")
+}
+
+model RentalPayosAttempt {
+  orderId        String    @id @map("order_id") @db.Uuid
+  orderCode      BigInt    @unique @default(autoincrement()) @map("order_code")
+  rentalAmount   Decimal   @map("rental_amount") @db.Decimal(18, 0)
+  depositAmount  Decimal   @map("deposit_amount") @db.Decimal(18, 0)
+  state          String    @default("NEW") @db.VarChar(16)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  providerLinkId String?   @unique @map("provider_link_id") @db.VarChar(64)
+  checkoutUrl    String?   @map("checkout_url") @db.VarChar(255)
+  claimId        String?   @map("claim_id") @db.Uuid
+  claimUntil     DateTime? @map("claim_until") @db.Timestamptz(6)
+  nextCheckAt    DateTime  @map("next_check_at") @db.Timestamptz(6)
+  closeReason    String?   @map("close_reason") @db.VarChar(16)
+  reviewReason   String?   @map("review_reason") @db.VarChar(32)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  order RentalOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([state, nextCheckAt])
+  @@map("rental_payos_attempts")
+}
+
+model PayosTransfer {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId            String    @map("shop_id") @db.Uuid
+  orderId           String?   @map("order_id") @db.Uuid
+  providerOrderCode BigInt    @map("provider_order_code")
+  providerLinkId    String    @map("provider_link_id") @db.VarChar(64)
+  reference         String    @unique @db.VarChar(100)
+  amount            Decimal   @db.Decimal(18, 0)
+  state             String    @db.VarChar(16)
+  reason            String?   @db.VarChar(32)
+  paidAt            DateTime  @map("paid_at") @db.Timestamptz(6)
+  refundReference   String?   @unique @map("refund_reference") @db.VarChar(100)
+  resolvedAt        DateTime? @map("resolved_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shop  Shop         @relation(fields: [shopId], references: [id], onDelete: Restrict)
+  order RentalOrder? @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([shopId, state, paidAt])
+  @@index([orderId])
+  @@map("payos_transfers")
 }
 
 model ExpenseCategory {

@@ -1,3 +1,4 @@
+import { assertWholeVnd, PaymentUnavailableError } from '@modules/payments/public/hosted-payment';
 import { decimalToNumber } from '@database/prisma/decimal-mapping';
 import { RentalProductPriceChangedError } from '../domain/rental-errors';
 import { readRentalPolicyInTransaction } from '@modules/settings/public/rental-policy-transaction';
@@ -150,6 +151,17 @@ export async function createOrder(
         });
       }
 
+      const payosAmount = data.payosExpiresAt ? grandTotal + depositRequired : 0;
+      if (data.payosExpiresAt) {
+        assertWholeVnd(grandTotal);
+        assertWholeVnd(depositRequired);
+        assertWholeVnd(payosAmount);
+        if (depositRequired > 100_000_000)
+          throw new PaymentUnavailableError(
+            'PAYOS_DEPOSIT_LIMIT',
+            'Vui lòng liên hệ KITTY để thanh toán khoản cọc này.',
+          );
+      }
       const order = await tx.rentalOrder.create({
         data: {
           shopId: data.shopId,
@@ -178,6 +190,18 @@ export async function createOrder(
           updatedBy: data.createdBy,
         },
       });
+
+      if (data.payosExpiresAt && payosAmount > 0) {
+        await tx.rentalPayosAttempt.create({
+          data: {
+            orderId: order.id,
+            rentalAmount: grandTotal,
+            depositAmount: depositRequired,
+            expiresAt: data.payosExpiresAt,
+            nextCheckAt: data.payosExpiresAt,
+          },
+        });
+      }
 
       if (data.loyaltyRewardId && data.webAccountId) {
         const redeemed = await redeemWebAccountLoyaltyReward(tx, {
