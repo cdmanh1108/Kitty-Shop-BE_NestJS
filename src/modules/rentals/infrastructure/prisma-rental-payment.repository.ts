@@ -124,6 +124,12 @@ export class PrismaRentalPaymentRepository implements PaymentRepository {
     return rows.map(({ orderId, order }) => ({ orderId, shopId: order.shopId }));
   }
 
+  countOverdue(cutoff: Date) {
+    return this.prisma.rentalPayosAttempt.count({
+      where: { state: { in: [...OPEN_PAYMENT_STATES] }, expiresAt: { lte: cutoff } },
+    });
+  }
+
   claim(scope: PaymentOrderScope, now: Date, mode: PaymentClaimMode) {
     return serializableTransaction(this.prisma, async (tx) => {
       const row = await lockAttempt(tx, scope);

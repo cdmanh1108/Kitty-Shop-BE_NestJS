@@ -1,5 +1,9 @@
 # Release runbook
 
+## payOS checkout
+
+Apply `202611230002_payos_rental_payments` before serving the new application version. See [payOS rollout](PAYOS.md) for the disabled deployment, webhook verification and enable steps.
+
 ## Cash-only deposits and checkout quotes
 
 Apply `202611230001_cash_only_rental_deposits` with the deployment migration command before switching traffic. This migration drops the document collateral columns and assumes no document collateral confirmations or settlements exist. The release seed accepts this migration on a new database.

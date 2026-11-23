@@ -1,16 +1,11 @@
-# Storefront payment preference
+# Storefront payment selection
 
-`POST /web/rental-orders` requires the customer's preferred payment option:
-`cash` or `bank_transfer`. This records a preference only. Creating an order
-does not create a `PaymentTransaction`, payment URL, QR code, provider session or
-receipt, and does not mark a positive-value order paid.
+`POST /web/rental-orders` accepts `cash`, `bank_transfer` or `payos`.
+Cash and manual bank transfer record a customer preference. A positive payOS
+order also persists a payment attempt inside the booking transaction. The
+customer opens the hosted link in a separate account-owned request.
 
-The preference is stored atomically in
-`rental_orders.preferred_payment_method`. It is nullable because Admin-created
-orders do not have a storefront preference. No value is inferred from a
-receipt, collateral method or default. Admin order detail may display the
-captured preference; create responses do not.
-
-Actual receipt methods live on `PaymentTransaction.paymentMethod` and may
-differ from the earlier preference. Checkout labels should describe the field
-as a preferred or planned payment method, not as a completed payment.
+The preference lives on `rental_orders.preferred_payment_method`. Admin-created
+orders leave it null. Collected amounts and actual payment methods are derived
+from `PaymentTransaction`, which distinguishes payOS receipts from manual entries.
+See [payOS rollout and accounting](PAYOS.md).

@@ -1,6 +1,7 @@
 import { Logger, Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { safeErrorDiagnostic } from '@common/logging/safe-error-diagnostic';
 import { PrismaSchedulerJobLeaseCoordinator } from '@common/scheduling/prisma-scheduler-job-lease.coordinator';
 import { PaymentService } from '../../application/payment.service';
 
@@ -20,11 +21,16 @@ export class PaymentReconciliationJob {
   async execute() {
     if (!this.service.isConfigured()) return;
     try {
-      await this.coordinator.runIfOwner('payos-rental-reconciliation', (lease) =>
-        this.service.syncDue(() => lease.assertActive()),
-      );
-    } catch {
-      this.logger.warn('Tác vụ đối soát payOS sẽ thử lại ở lượt tiếp theo.');
+      await this.coordinator.runIfOwner('payos-rental-reconciliation', async (lease) => {
+        const overdueAttempts = await this.service.syncDue(() => lease.assertActive());
+        if (overdueAttempts > 0)
+          this.logger.warn({ event: 'payment.reconciliation_overdue', overdueAttempts });
+      });
+    } catch (error) {
+      this.logger.warn({
+        event: 'payment.reconciliation_failed',
+        diagnostic: safeErrorDiagnostic(error),
+      });
     }
   }
 }

@@ -35,6 +35,7 @@ export interface PaymentTransferReview {
 export interface PaymentRepository {
   order(scope: PaymentOrderScope): Promise<OrderPayment | null>;
   due(now: Date, limit: number): Promise<PaymentOrderScope[]>;
+  countOverdue(cutoff: Date): Promise<number>;
   claim(scope: PaymentOrderScope, now: Date, mode: PaymentClaimMode): Promise<PaymentClaim | null>;
   requestClose(scope: PaymentOrderScope, now: Date, reason: PaymentCloseReason): Promise<boolean>;
   finish(claim: PaymentClaim, now: Date, observation?: PaymentLink | null): Promise<void>;

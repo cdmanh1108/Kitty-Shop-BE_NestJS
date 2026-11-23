@@ -117,6 +117,8 @@ export class PaymentService {
       assertActive();
       await this.sync(scope);
     }
+    assertActive();
+    return this.repository.countOverdue(new Date(this.clock.now().getTime() - 5 * 60_000));
   }
 
   async cancelIfHosted(scope: PaymentOrderScope) {

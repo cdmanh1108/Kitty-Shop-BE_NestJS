@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { Logger } from '@nestjs/common';
 import { PayOS } from '@payos/node';
 import type { AppConfiguration } from '../../src/config/configuration';
 import { parsePayosConfiguration } from '../../src/config/payos.configuration';
@@ -53,5 +54,30 @@ describe('payOS configuration and signed webhook', () => {
       paidAt: new Date('2026-10-01T12:10:00.000Z'),
     });
     await expect(client.verify({ ...payload, data: { ...data, amount: 1 } })).rejects.toThrow();
+  });
+
+  it('reports missing credentials without including secrets in the diagnostic', async () => {
+    const config = new ConfigService<AppConfiguration, true>({
+      payos: { checkoutEnabled: false, ttlMinutes: 15 },
+    });
+    const client = new PayosAdapter(config);
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    try {
+      await expect(client.read(1000000000000)).rejects.toThrow();
+      expect(warn.mock.calls).toEqual([
+        [
+          expect.objectContaining({
+            event: 'payment.provider_request_failed',
+            provider: 'payos',
+            operation: 'read',
+            orderCode: 1000000000000,
+            category: 'configuration',
+          }),
+        ],
+      ]);
+      expect(JSON.stringify(warn.mock.calls)).not.toContain('Kênh payOS chưa được cấu hình');
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

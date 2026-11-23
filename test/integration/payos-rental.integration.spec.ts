@@ -367,6 +367,10 @@ describe('payOS rental checkout and accounting', () => {
     const { scope, attempt, transfer } = await openPayment(f, order.orderCode);
     await repo.recordTransfer(f.shop.id, { ...transfer, amount: 20000 });
     expect(await payments().get(scope)).toMatchObject({ status: 'REVIEW', canOpen: false });
+    clockTime = new Date(attempt.expiresAt.getTime() + 5 * 60_000 - 1);
+    await expect(payments().syncDue(() => undefined)).resolves.toBe(0);
+    clockTime = new Date(clockTime.getTime() + 1);
+    await expect(payments().syncDue(() => undefined)).resolves.toBe(1);
     await expect(payments().cancelIfHosted(scope)).rejects.toMatchObject({
       code: 'PAYOS_CANCEL_REQUIRES_REVIEW',
     });
