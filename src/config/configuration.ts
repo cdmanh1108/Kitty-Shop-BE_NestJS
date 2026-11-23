@@ -1,3 +1,4 @@
+import { parsePayosConfiguration, type PayosConfiguration } from './payos.configuration';
 import { parseWebAuthConfiguration, type WebAuthConfiguration } from './web-auth.configuration';
 import {
   parseAuthCleanupConfiguration,
@@ -17,6 +18,7 @@ import {
   type RentalEmailConfiguration,
 } from './rental-email.configuration';
 export interface AppConfiguration {
+  payos: PayosConfiguration;
   webClientContext: WebClientContextConfiguration;
   webAuth: WebAuthConfiguration;
   email: EmailConfiguration;
@@ -54,6 +56,7 @@ export default (): AppConfiguration => {
   const isProduction = nodeEnv === 'production';
 
   return {
+    payos: parsePayosConfiguration(process.env),
     webClientContext: parseWebClientContextConfiguration(process.env),
     webAuth: parseWebAuthConfiguration(process.env),
     email: parseEmailConfiguration(process.env),

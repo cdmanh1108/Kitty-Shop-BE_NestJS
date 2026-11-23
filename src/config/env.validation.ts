@@ -1,3 +1,4 @@
+import { parsePayosConfiguration } from './payos.configuration';
 import { parseObjectStorageConfiguration } from './object-storage.configuration';
 import { parseWebAuthConfiguration } from './web-auth.configuration';
 import { parseAuthCleanupConfiguration } from './auth-cleanup.configuration';
@@ -14,6 +15,7 @@ const required = (config: Record<string, unknown>, key: string): string => {
 
 export function validateEnvironment(config: Record<string, unknown>): Record<string, unknown> {
   parseWebAuthConfiguration(config);
+  parsePayosConfiguration(config);
   parseAuthCleanupConfiguration(config);
   parseWebClientContextConfiguration(config);
   if (config.DEFAULT_SHOP_CODE !== undefined || config.SHOP_CODE !== undefined) {
