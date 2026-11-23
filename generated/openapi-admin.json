@@ -3189,6 +3189,166 @@
         "x-api-surface": "admin"
       }
     },
+    "/admin/payments/payos/orders/{id}": {
+      "get": {
+        "operationId": "getAdminPayosPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayosPaymentDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Admin - payOS"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/payments/payos/orders/{id}/reconcile": {
+      "post": {
+        "operationId": "reconcileAdminPayosPayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayosPaymentDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Admin - payOS"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/payments/payos/orders/{id}/refund-and-cancel": {
+      "post": {
+        "operationId": "recordAdminPayosReservationRefund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayosRefundReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Admin - payOS"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/payments/payos/review": {
+      "get": {
+        "operationId": "listAdminPayosReview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PayosReviewDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Admin - payOS"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
+    "/admin/payments/payos/review/{id}/refund": {
+      "post": {
+        "operationId": "recordAdminPayosRefund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayosRefundReqDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Admin - payOS"
+        ],
+        "x-api-surface": "admin"
+      }
+    },
     "/admin/settings": {
       "get": {
         "operationId": "SettingsController_list",
@@ -5225,6 +5385,9 @@
       "name": "Admin - Rental Orders"
     },
     {
+      "name": "Admin - payOS"
+    },
+    {
       "name": "Settings"
     },
     {
@@ -6713,7 +6876,8 @@
             "type": "string",
             "enum": [
               "cash",
-              "bank_transfer"
+              "bank_transfer",
+              "payos"
             ],
             "nullable": true,
             "description": "Phương thức thanh toán khách mong muốn khi tạo đơn Web; không xác nhận đã thanh toán và không thay thế phương thức trên phiếu thu thực tế."
@@ -7123,6 +7287,98 @@
         "required": [
           "chargeType",
           "amount"
+        ]
+      },
+      "PayosPaymentDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "NOT_REQUIRED",
+              "UNAVAILABLE",
+              "READY",
+              "PROCESSING",
+              "PENDING",
+              "PAID",
+              "EXPIRED",
+              "CANCELLED",
+              "REVIEW"
+            ]
+          },
+          "checkoutUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "canOpen": {
+            "type": "boolean"
+          },
+          "rentalAmount": {
+            "type": "number"
+          },
+          "depositAmount": {
+            "type": "number"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "checkoutUrl",
+          "canOpen",
+          "rentalAmount",
+          "depositAmount",
+          "expiresAt"
+        ]
+      },
+      "PayosRefundReqDto": {
+        "type": "object",
+        "properties": {
+          "refundReference": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "refundReference"
+        ]
+      },
+      "PayosReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "number"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "orderCode",
+          "amount",
+          "reference",
+          "reason",
+          "paidAt"
         ]
       },
       "RentalPolicyResDto": {
@@ -9770,6 +10026,10 @@
           },
           "transactionNumber": {
             "type": "string"
+          },
+          "bankReference": {
+            "type": "string",
+            "nullable": true
           },
           "direction": {
             "type": "string"

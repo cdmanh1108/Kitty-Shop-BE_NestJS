@@ -1838,6 +1838,103 @@
         "x-api-surface": "web"
       }
     },
+    "/web/payments/payos": {
+      "get": {
+        "operationId": "getWebPayosCapability",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayosCapabilityDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "Web - Payments"
+        ],
+        "x-api-surface": "web"
+      }
+    },
+    "/web/account/rental-orders/{orderCode}/payos": {
+      "get": {
+        "operationId": "getWebPayosPayment",
+        "parameters": [
+          {
+            "name": "orderCode",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "RT260928-001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayosPaymentDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "",
+        "tags": [
+          "Web - Payments"
+        ],
+        "x-api-surface": "web"
+      },
+      "post": {
+        "operationId": "openWebPayosPayment",
+        "parameters": [
+          {
+            "name": "orderCode",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "RT260928-001",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayosPaymentDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "web-access": []
+          }
+        ],
+        "summary": "",
+        "tags": [
+          "Web - Payments"
+        ],
+        "x-api-surface": "web"
+      }
+    },
     "/web/policies": {
       "get": {
         "operationId": "getWebPolicies",
@@ -1914,6 +2011,9 @@
     },
     {
       "name": "Web - Account Rental Orders"
+    },
+    {
+      "name": "Web - Payments"
     },
     {
       "name": "Web - Policies"
@@ -2704,7 +2804,8 @@
             "example": "bank_transfer",
             "enum": [
               "cash",
-              "bank_transfer"
+              "bank_transfer",
+              "payos"
             ],
             "description": "Phương thức khách mong muốn. Lựa chọn này được lưu cho đơn thuê, không tạo giao dịch, không xác nhận đã thanh toán, và không khởi tạo cổng thanh toán."
           },
@@ -2920,6 +3021,62 @@
           "orderCode",
           "status",
           "cancelledAt"
+        ]
+      },
+      "PayosCapabilityDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "PayosPaymentDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "NOT_REQUIRED",
+              "UNAVAILABLE",
+              "READY",
+              "PROCESSING",
+              "PENDING",
+              "PAID",
+              "EXPIRED",
+              "CANCELLED",
+              "REVIEW"
+            ]
+          },
+          "checkoutUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "canOpen": {
+            "type": "boolean"
+          },
+          "rentalAmount": {
+            "type": "number"
+          },
+          "depositAmount": {
+            "type": "number"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "checkoutUrl",
+          "canOpen",
+          "rentalAmount",
+          "depositAmount",
+          "expiresAt"
         ]
       },
       "WebRentalPolicyDto": {

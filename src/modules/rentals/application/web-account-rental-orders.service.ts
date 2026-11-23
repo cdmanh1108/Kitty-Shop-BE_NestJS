@@ -1,7 +1,8 @@
+import { PaymentService } from '@modules/payments/public/payment-service';
 import { ShopResolver } from '@common/shop-context/shop-resolver';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { DEPOSIT_STATUS, ORDER_PAYMENT_STATUS } from '@modules/finance/public/payment-status';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import {
   RENTAL_LIFECYCLE_REPOSITORY,
   type RentalLifecycleRepository,
@@ -36,6 +37,7 @@ export class WebAccountRentalOrdersService {
     private readonly lifecycle: RentalLifecycleRepository,
     private readonly shops: ShopResolver,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Optional() private readonly payments?: PaymentService,
   ) {}
 
   async list(
@@ -63,6 +65,20 @@ export class WebAccountRentalOrdersService {
         'Đơn thuê không còn ở trạng thái có thể tự hủy.',
         'WEB_ORDER_CANNOT_BE_CANCELLED',
       );
+    }
+    const payosCancelled =
+      order.preferredPaymentMethod === 'payos'
+        ? await this.payments?.cancelIfHosted({ shopId, orderCode, webAccountId })
+        : null;
+    if (payosCancelled) {
+      await this.audit.log({
+        shopId,
+        actorWebAccountId: webAccountId,
+        action: 'WEB_ORDER_CANCELLED',
+        entityType: 'rental_order',
+        entityId: order.id,
+      });
+      return { ...payosCancelled, status: RENTAL_STATUS.CANCELLED };
     }
     if (
       order.paymentStatus !== ORDER_PAYMENT_STATUS.UNPAID ||

@@ -66,6 +66,7 @@ export class RentalReadPresenter {
       note: payment.note,
       id: payment.id,
       transactionNumber: payment.transactionNumber,
+      ...(payment.bankReference ? { bankReference: payment.bankReference } : {}),
       direction: payment.direction,
       purpose: payment.purpose,
       paymentMethod: payment.paymentMethod,

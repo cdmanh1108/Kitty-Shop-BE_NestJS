@@ -1,3 +1,6 @@
+import { AdminPayosController, WebPayosController } from './api/payos.controller';
+import { PaymentsModule } from '@modules/payments/payments.module';
+import { PrismaRentalPaymentRepository } from './infrastructure/prisma-rental-payment.repository';
 import { ClockModule } from '@common/clock/clock.module';
 import { CustomersModule } from '@modules/customers/customers.module';
 import { SettingsModule } from '@modules/settings/settings.module';
@@ -34,8 +37,20 @@ import { ResendRentalEmailSender } from './infrastructure/resend-rental-email.se
 import { RentalEmailJob } from './infrastructure/jobs/rental-email.job';
 
 @Module({
-  imports: [ClockModule, SettingsModule, CustomersModule, WebAuthModule],
-  controllers: [AdminRentalController, WebRentalController, WebAccountRentalOrdersController],
+  imports: [
+    ClockModule,
+    SettingsModule,
+    CustomersModule,
+    WebAuthModule,
+    PaymentsModule.register(PrismaRentalPaymentRepository),
+  ],
+  controllers: [
+    AdminRentalController,
+    WebRentalController,
+    WebAccountRentalOrdersController,
+    WebPayosController,
+    AdminPayosController,
+  ],
   providers: [
     RentalEmailService,
     RentalEmailJob,

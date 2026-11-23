@@ -120,6 +120,7 @@ export class RentalPaymentResDto {
   @ApiProperty({ type: String, nullable: true }) note!: string | null;
   @ApiProperty() id!: string;
   @ApiProperty() transactionNumber!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) bankReference?: string | null;
   @ApiProperty() direction!: string;
   @ApiProperty() purpose!: string;
   @ApiProperty() paymentMethod!: string;

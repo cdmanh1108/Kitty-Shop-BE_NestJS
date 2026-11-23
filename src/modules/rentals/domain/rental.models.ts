@@ -27,6 +27,7 @@ type RentalPaymentProjection = {
   note: string | null;
   id: string;
   transactionNumber: string;
+  bankReference?: string | null;
   direction: string;
   purpose: string;
   paymentMethod: string;

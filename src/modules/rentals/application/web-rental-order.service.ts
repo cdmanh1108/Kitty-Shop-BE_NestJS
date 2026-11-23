@@ -1,4 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  PAYMENT_GATEWAY,
+  PaymentUnavailableError,
+  type PaymentGateway,
+} from '@modules/payments/public/hosted-payment';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { generateDatedReference } from '@common/utils/reference-number';
 import { CLOCK, type Clock } from '@common/clock/clock';
@@ -93,6 +98,9 @@ export class WebRentalOrderService {
     @Inject(BOOKING_CUSTOMER_RESOLVER)
     private readonly customerRepository: BookingCustomerResolver,
     @Inject(CLOCK) private readonly clock: Clock,
+    @Optional()
+    @Inject(PAYMENT_GATEWAY)
+    private readonly payments?: Pick<PaymentGateway, 'checkout'>,
   ) {}
 
   async createOrder(
@@ -146,6 +154,17 @@ export class WebRentalOrderService {
     }
 
     try {
+      const checkout = this.payments?.checkout;
+      if (req.paymentMethod === 'payos' && !checkout?.enabled)
+        throw new PaymentUnavailableError(
+          'PAYOS_CHECKOUT_DISABLED',
+          'Thanh toán qua payOS đang tạm dừng.',
+        );
+      const now = this.clock.now();
+      const payosExpiresAt =
+        checkout && req.paymentMethod === 'payos'
+          ? new Date(Math.floor((now.getTime() + checkout.ttlMinutes * 60_000) / 1_000) * 1_000)
+          : undefined;
       const policy = await this.policyProvider.getPolicy(shopId);
       const durationDays = calculateRentalDurationDays(from, until);
       assertOnlineRentalDuration(durationDays, policy.rentalPricing);
@@ -254,6 +273,7 @@ export class WebRentalOrderService {
         preferredPaymentMethod: req.paymentMethod,
         storefrontEligibility: true,
         expectedQuote: req.expectedQuote,
+        payosExpiresAt,
         idempotency: {
           scope: WEB_CREATE_IDEMPOTENCY_SCOPE,
           key: idempotencyKey,
