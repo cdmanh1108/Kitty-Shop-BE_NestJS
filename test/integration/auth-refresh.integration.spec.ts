@@ -30,6 +30,7 @@ describe('Auth Refresh Rotation & Concurrent Security Integration', () => {
     });
 
     const testConfig: AppConfiguration = {
+      storefrontCache: null,
       webClientContext: { required: false },
       payos: { checkoutEnabled: false, ttlMinutes: 15 },
       rentalEmail: { enabled: false, webUrl: 'http://localhost:3000' },

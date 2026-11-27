@@ -1,5 +1,6 @@
 import { SettingsModule } from '@modules/settings/settings.module';
 import { ClockModule } from '@common/clock/clock.module';
+import { StorefrontCacheModule } from '@common/storefront-cache/storefront-cache.module';
 import { Module } from '@nestjs/common';
 import { RentalsModule } from '@modules/rentals/rentals.module';
 import { AdminCategoryController } from './api/admin/admin-category.controller';
@@ -27,7 +28,7 @@ import { STOREFRONT_CATALOG_REPOSITORY } from './domain/storefront-catalog.repos
 import { PrismaCatalogRepository } from './infrastructure/prisma-catalog.repository';
 
 @Module({
-  imports: [RentalsModule, SettingsModule, ClockModule],
+  imports: [RentalsModule, SettingsModule, ClockModule, StorefrontCacheModule],
   controllers: [
     AdminCategoryController,
     AdminCatalogReferenceController,

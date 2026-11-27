@@ -1,4 +1,8 @@
 import { parsePayosConfiguration, type PayosConfiguration } from './payos.configuration';
+import {
+  parseStorefrontCacheConfiguration,
+  type StorefrontCacheConfiguration,
+} from './storefront-cache.configuration';
 import { parseWebAuthConfiguration, type WebAuthConfiguration } from './web-auth.configuration';
 import {
   parseAuthCleanupConfiguration,
@@ -19,6 +23,7 @@ import {
 } from './rental-email.configuration';
 export interface AppConfiguration {
   payos: PayosConfiguration;
+  storefrontCache: StorefrontCacheConfiguration | null;
   webClientContext: WebClientContextConfiguration;
   webAuth: WebAuthConfiguration;
   email: EmailConfiguration;
@@ -57,6 +62,7 @@ export default (): AppConfiguration => {
 
   return {
     payos: parsePayosConfiguration(process.env),
+    storefrontCache: parseStorefrontCacheConfiguration(process.env),
     webClientContext: parseWebClientContextConfiguration(process.env),
     webAuth: parseWebAuthConfiguration(process.env),
     email: parseEmailConfiguration(process.env),

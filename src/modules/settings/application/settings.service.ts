@@ -1,4 +1,9 @@
 import type { CurrentUser } from '@common/types/current-user';
+import {
+  noStorefrontCacheInvalidation,
+  STOREFRONT_CACHE_INVALIDATOR,
+  type StorefrontCacheInvalidator,
+} from '@common/storefront-cache/storefront-cache.port';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import {
@@ -24,6 +29,8 @@ export class SettingsService implements RentalPolicyProvider {
   constructor(
     @Inject(SETTINGS_REPOSITORY) private readonly repository: SettingsRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(STOREFRONT_CACHE_INVALIDATOR)
+    private readonly storefrontCache: StorefrontCacheInvalidator = noStorefrontCacheInvalidation,
   ) {}
 
   list(user: CurrentUser) {
@@ -115,6 +122,7 @@ export class SettingsService implements RentalPolicyProvider {
       oldValues: toRentalPolicyAuditSnapshot(current),
       newValues: toRentalPolicyAuditSnapshot(saved.policy),
     });
+    await this.storefrontCache.invalidate('products');
 
     return {
       ...saved.policy,

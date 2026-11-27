@@ -40,6 +40,7 @@ describe('ProductService', () => {
     CatalogProductRepository['deleteProductVariant']
   >;
   let auditLogMock: jest.MockedFunction<AuditPort['log']>;
+  let invalidateCache: jest.Mock;
 
   const mockUser: CurrentUser = {
     userId: '11111111-1111-1111-1111-111111111111',
@@ -81,7 +82,8 @@ describe('ProductService', () => {
     audit = {
       log: auditLogMock,
     };
-    service = new ProductService(repository, audit);
+    invalidateCache = jest.fn().mockResolvedValue(undefined);
+    service = new ProductService(repository, audit, { invalidate: invalidateCache });
   });
 
   describe('createProduct', () => {
@@ -101,6 +103,7 @@ describe('ProductService', () => {
       });
       await expect(promise).rejects.toBeInstanceOf(exceptionType);
       await expect(promise).rejects.toMatchObject({ code });
+      expect(invalidateCache).not.toHaveBeenCalled();
     });
 
     it('creates product with multiple variants (M/Trắng and M/Hồng) atomically', async () => {
@@ -129,7 +132,16 @@ describe('ProductService', () => {
         variants: [],
         media: [],
       };
-      createProductMock.mockResolvedValue(createdProduct);
+      let committed = false;
+      createProductMock.mockImplementation(async () => {
+        await Promise.resolve();
+        committed = true;
+        return createdProduct;
+      });
+      invalidateCache.mockImplementation(async () => {
+        expect(committed).toBe(true);
+        await Promise.resolve();
+      });
 
       const result = await service.createProduct(mockUser, {
         code: 'DRESS-01',
@@ -158,6 +170,8 @@ describe('ProductService', () => {
       });
 
       expect(result).toBe(createdProduct);
+      expect(invalidateCache).toHaveBeenCalledTimes(1);
+      expect(invalidateCache).toHaveBeenCalledWith('products');
       expect(createProductMock).toHaveBeenCalledWith(
         mockUser.shopId,
         expect.objectContaining({

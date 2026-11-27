@@ -1,5 +1,20 @@
 # Release runbook
 
+## Làm mới sản phẩm trên web khách
+
+Đặt cùng một `STOREFRONT_REVALIDATION_SECRET` trong `.env` của API và trong môi
+trường Production của web khách trên Vercel. Dùng 32 byte ngẫu nhiên mã hóa thành
+64 ký tự hex. Đặt `STOREFRONT_REVALIDATION_ORIGIN` chỉ trên API. Dùng origin HTTPS
+chính thức của web khách, ví dụ `https://www.tiemthuedokittycantho.id.vn`, nơi phục vụ
+trực tiếp và không chuyển hướng. Triển khai web khách trước rồi tạo lại container API.
+
+Sau khi Admin lưu sản phẩm, phân loại, ảnh, danh mục hoặc thay đổi liên quan đến
+giá thuê và bộ lọc, API báo cho web khách làm mới các trang có dữ liệu đó. Khách
+đang mở trang có thể tải lại để xem dữ liệu mới. Nếu bỏ trống cả hai biến phía API,
+hoặc khi web khách tạm thời không nhận được thông báo, cache tự làm mới theo mốc
+5 phút cho sản phẩm và 15 phút cho danh mục. Kết quả lưu Admin vẫn được giữ. Khi
+có lỗi gửi, xem log `storefront.cache.invalidation_failed` của API.
+
 ## payOS checkout
 
 Apply `202611230002_payos_rental_payments` before serving the new application version. See [payOS rollout](PAYOS.md) for the disabled deployment, webhook verification and enable steps.

@@ -1,4 +1,9 @@
 import type { CurrentUser } from '@common/types/current-user';
+import {
+  noStorefrontCacheInvalidation,
+  STOREFRONT_CACHE_INVALIDATOR,
+  type StorefrontCacheInvalidator,
+} from '@common/storefront-cache/storefront-cache.port';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import {
@@ -18,6 +23,8 @@ export class CategoryService {
   constructor(
     @Inject(CATALOG_CATEGORY_REPOSITORY) private readonly repository: CatalogCategoryRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(STOREFRONT_CACHE_INVALIDATOR)
+    private readonly storefrontCache: StorefrontCacheInvalidator = noStorefrontCacheInvalidation,
   ) {}
 
   listCategories(user: CurrentUser, query: CategoryListQuery) {
@@ -63,6 +70,7 @@ export class CategoryService {
         sortOrder: input.sortOrder ?? 0,
       },
     });
+    await this.storefrontCache.invalidate('categories');
     return created;
   }
 
@@ -86,6 +94,7 @@ export class CategoryService {
       entityId: id,
       newValues: { ...input, ...(code ? { code } : {}) },
     });
+    await this.storefrontCache.invalidate('categories');
     return updated;
   }
 
@@ -102,6 +111,7 @@ export class CategoryService {
       entityType: 'category',
       entityId: id,
     });
+    await this.storefrontCache.invalidate('categories');
     return { deleted: true as const };
   }
 }

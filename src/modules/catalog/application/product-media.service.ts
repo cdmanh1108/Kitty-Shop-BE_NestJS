@@ -1,4 +1,9 @@
 import type { CurrentUser } from '@common/types/current-user';
+import {
+  noStorefrontCacheInvalidation,
+  STOREFRONT_CACHE_INVALIDATOR,
+  type StorefrontCacheInvalidator,
+} from '@common/storefront-cache/storefront-cache.port';
 import { createHash, randomUUID } from 'node:crypto';
 import { CLOCK, type Clock } from '@common/clock/clock';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
@@ -34,6 +39,8 @@ export class ProductMediaService {
     @Inject(OBJECT_STORAGE_PORT) private readonly storage: ObjectStoragePort,
     @Inject(CLOCK) private readonly clock: Clock,
     @Optional() @Inject(APPLICATION_LOGGER) loggerFactory?: ApplicationLoggerFactory,
+    @Inject(STOREFRONT_CACHE_INVALIDATOR)
+    private readonly storefrontCache: StorefrontCacheInvalidator = noStorefrontCacheInvalidation,
   ) {
     this.logger = loggerFactory?.create(ProductMediaService.name) ?? silentApplicationLog;
   }
@@ -50,6 +57,7 @@ export class ProductMediaService {
       entityId: media.id,
       newValues: { productId, url: input.url },
     });
+    await this.storefrontCache.invalidate('products');
     return media;
   }
 
@@ -65,6 +73,7 @@ export class ProductMediaService {
       entityId: media.id,
       newValues: { productId, isPrimary: true },
     });
+    await this.storefrontCache.invalidate('products');
     return media;
   }
 
@@ -176,6 +185,7 @@ export class ProductMediaService {
         altText: media.altText,
       },
     });
+    await this.storefrontCache.invalidate('products');
     return media;
   }
 
@@ -199,6 +209,7 @@ export class ProductMediaService {
       entityId: mediaId,
       newValues: { productId },
     });
+    await this.storefrontCache.invalidate('products');
     return { success: true as const };
   }
 

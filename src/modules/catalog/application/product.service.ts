@@ -1,4 +1,9 @@
 import type { CurrentUser } from '@common/types/current-user';
+import {
+  noStorefrontCacheInvalidation,
+  STOREFRONT_CACHE_INVALIDATOR,
+  type StorefrontCacheInvalidator,
+} from '@common/storefront-cache/storefront-cache.port';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import { Inject, Injectable } from '@nestjs/common';
 import {
@@ -25,6 +30,8 @@ export class ProductService {
   constructor(
     @Inject(CATALOG_PRODUCT_REPOSITORY) private readonly repository: CatalogProductRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(STOREFRONT_CACHE_INVALIDATOR)
+    private readonly storefrontCache: StorefrontCacheInvalidator = noStorefrontCacheInvalidation,
   ) {}
 
   lookupProducts(user: CurrentUser, query: ProductListQuery & { productId?: string }) {
@@ -81,6 +88,7 @@ export class ProductService {
         rentalPriceOverride: input.rentalPriceOverride ?? null,
       },
     });
+    await this.storefrontCache.invalidate('products');
     return product;
   }
 
@@ -97,6 +105,7 @@ export class ProductService {
       entityId: variant.id,
       newValues: { productId, variantCode: normalizedInput.variantCode },
     });
+    await this.storefrontCache.invalidate('products');
     return variant;
   }
 
@@ -130,6 +139,7 @@ export class ProductService {
         oldValues: variantAuditSnapshot(result.before),
         newValues: variantAuditSnapshot(result.variant),
       });
+      await this.storefrontCache.invalidate('products');
     }
     return result.details;
   }
@@ -158,6 +168,7 @@ export class ProductService {
         oldValues: variantAuditSnapshot(result.before),
         newValues: variantAuditSnapshot(result.variant),
       });
+      await this.storefrontCache.invalidate('products');
     }
     return result.details;
   }
@@ -181,6 +192,7 @@ export class ProductService {
       oldValues: variantAuditSnapshot(result.variant),
       newValues: { productId, deleted: true },
     });
+    await this.storefrontCache.invalidate('products');
     return { success: true as const };
   }
 
@@ -217,6 +229,7 @@ export class ProductService {
       entityId: id,
       newValues: { ...input },
     });
+    await this.storefrontCache.invalidate('products');
     return (await this.repository.findProduct(user.shopId, id)) ?? updated;
   }
 
@@ -231,6 +244,7 @@ export class ProductService {
       entityType: 'product',
       entityId: id,
     });
+    await this.storefrontCache.invalidate('products');
     return { success: true as const };
   }
 }

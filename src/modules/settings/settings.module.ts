@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { StorefrontCacheModule } from '@common/storefront-cache/storefront-cache.module';
 import { SettingsController } from './api/settings.controller';
 import { WebPolicyController } from './api/web/web-policy.controller';
 import { SettingsService } from './application/settings.service';
@@ -7,6 +8,7 @@ import { SETTINGS_REPOSITORY } from './domain/settings.repository';
 import { PrismaSettingsRepository } from './infrastructure/prisma-settings.repository';
 
 @Module({
+  imports: [StorefrontCacheModule],
   controllers: [SettingsController, WebPolicyController],
   providers: [
     SettingsService,

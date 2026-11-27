@@ -1,4 +1,9 @@
 import type { CurrentUser } from '@common/types/current-user';
+import {
+  noStorefrontCacheInvalidation,
+  STOREFRONT_CACHE_INVALIDATOR,
+  type StorefrontCacheInvalidator,
+} from '@common/storefront-cache/storefront-cache.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import {
@@ -30,6 +35,8 @@ export class SizeService {
   constructor(
     @Inject(CATALOG_SIZE_REPOSITORY) private readonly repository: CatalogSizeRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(STOREFRONT_CACHE_INVALIDATOR)
+    private readonly storefrontCache: StorefrontCacheInvalidator = noStorefrontCacheInvalidation,
   ) {}
 
   listSizes(user: CurrentUser, query: SizeListQuery): Promise<SizePage> {
@@ -109,6 +116,7 @@ export class SizeService {
       oldValues: sizeSnapshot(existing),
       newValues: sizeSnapshot(updated),
     });
+    await this.storefrontCache.invalidate('products');
     return updated;
   }
 
@@ -127,6 +135,7 @@ export class SizeService {
         oldValues: { ...newValues, isActive: !isActive },
         newValues,
       });
+      await this.storefrontCache.invalidate('products');
     }
     return result.size;
   }

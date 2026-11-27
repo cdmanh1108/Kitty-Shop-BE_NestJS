@@ -1,4 +1,9 @@
 import type { CurrentUser } from '@common/types/current-user';
+import {
+  noStorefrontCacheInvalidation,
+  STOREFRONT_CACHE_INVALIDATOR,
+  type StorefrontCacheInvalidator,
+} from '@common/storefront-cache/storefront-cache.port';
 import { Inject, Injectable } from '@nestjs/common';
 import { AUDIT_PORT, type AuditPort } from '@modules/audit/public/audit-contracts';
 import {
@@ -30,6 +35,8 @@ export class ColorService {
   constructor(
     @Inject(CATALOG_COLOR_REPOSITORY) private readonly repository: CatalogColorRepository,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(STOREFRONT_CACHE_INVALIDATOR)
+    private readonly storefrontCache: StorefrontCacheInvalidator = noStorefrontCacheInvalidation,
   ) {}
 
   listColors(user: CurrentUser, query: ColorListQuery): Promise<ColorPage> {
@@ -108,6 +115,7 @@ export class ColorService {
       oldValues: colorSnapshot(existing),
       newValues: colorSnapshot(updated),
     });
+    await this.storefrontCache.invalidate('products');
     return updated;
   }
 
@@ -126,6 +134,7 @@ export class ColorService {
         oldValues: { ...newValues, isActive: !isActive },
         newValues,
       });
+      await this.storefrontCache.invalidate('products');
     }
     return result.color;
   }

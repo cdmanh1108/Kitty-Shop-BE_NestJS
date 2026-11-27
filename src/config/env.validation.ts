@@ -5,6 +5,7 @@ import { parseAuthCleanupConfiguration } from './auth-cleanup.configuration';
 import { parseEmailConfiguration } from './email.configuration';
 import { parseRentalEmailConfiguration } from './rental-email.configuration';
 import { parseWebClientContextConfiguration } from './web-client-context.configuration';
+import { parseStorefrontCacheConfiguration } from './storefront-cache.configuration';
 const required = (config: Record<string, unknown>, key: string): string => {
   const value = config[key];
   if (typeof value !== 'string' || value.trim() === '') {
@@ -18,6 +19,7 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
   parsePayosConfiguration(config);
   parseAuthCleanupConfiguration(config);
   parseWebClientContextConfiguration(config);
+  parseStorefrontCacheConfiguration(config);
   if (config.DEFAULT_SHOP_CODE !== undefined || config.SHOP_CODE !== undefined) {
     throw new Error(
       'DEFAULT_SHOP_CODE và SHOP_CODE không còn được hỗ trợ. Mỗi deployment tự resolve cửa hàng duy nhất.',
