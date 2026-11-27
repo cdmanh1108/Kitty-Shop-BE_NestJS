@@ -1279,7 +1279,8 @@
               "type": "string",
               "enum": [
                 "ACTIVE",
-                "INACTIVE"
+                "INACTIVE",
+                "ARCHIVED"
               ]
             }
           }

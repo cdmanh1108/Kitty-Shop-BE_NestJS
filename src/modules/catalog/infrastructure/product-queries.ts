@@ -11,12 +11,12 @@ export async function listProducts(
 ): ReturnType<CatalogProductRepository['listProducts']> {
   const where = {
     shopId: input.shopId,
-    archivedAt: null,
     ...(input.categoryId ? { categoryId: input.categoryId } : {}),
     ...(input.allowFreeAccessory !== undefined
       ? { allowFreeAccessory: input.allowFreeAccessory }
       : {}),
     ...(input.status ? { status: input.status } : {}),
+    ...(input.status && input.status !== 'ARCHIVED' ? { archivedAt: null } : {}),
     ...(input.search
       ? {
           OR: [
@@ -150,7 +150,7 @@ export async function findProduct(
   id: string,
 ): ReturnType<CatalogProductRepository['findProduct']> {
   const product = await prisma.product.findFirst({
-    where: { id, shopId, archivedAt: null },
+    where: { id, shopId },
     select: {
       id: true,
       code: true,

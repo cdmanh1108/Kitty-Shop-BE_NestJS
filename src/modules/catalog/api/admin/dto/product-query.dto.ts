@@ -5,8 +5,10 @@ import { PRODUCT_STATUS } from '@modules/catalog/domain/catalog-status';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsOptional, IsString, IsUUID, Max, ValidateIf } from 'class-validator';
 
-/** Query parameters for the admin product listing and form lookups. */
-export class ProductListQueryDto extends PaginationQueryDto {
+const productStatuses = Object.values(PRODUCT_STATUS);
+const productListStatuses = [...productStatuses, 'ARCHIVED'];
+
+class ProductSearchQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     type: Boolean,
     description: 'Cho phép chọn thuê kèm miễn phí trong hạn mức của đơn.',
@@ -27,14 +29,21 @@ export class ProductListQueryDto extends PaginationQueryDto {
   @IsUUID(undefined, { message: 'Danh mục không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()
   categoryId?: string;
+}
 
-  @ApiPropertyOptional({ enum: Object.values(PRODUCT_STATUS) })
-  @IsIn(Object.values(PRODUCT_STATUS), { message: 'Trạng thái không hợp lệ.' })
+export class ProductListQueryDto extends ProductSearchQueryDto {
+  @ApiPropertyOptional({ enum: productListStatuses })
+  @IsIn(productListStatuses, { message: 'Trạng thái không hợp lệ.' })
   @IsOptional()
   status?: string;
 }
 
-export class ProductLookupQueryDto extends ProductListQueryDto {
+export class ProductLookupQueryDto extends ProductSearchQueryDto {
+  @ApiPropertyOptional({ enum: productStatuses })
+  @IsIn(productStatuses, { message: 'Trạng thái không hợp lệ.' })
+  @IsOptional()
+  status?: string;
+
   @ApiPropertyOptional()
   @IsUUID(undefined, { message: 'Sản phẩm không hợp lệ. Vui lòng chọn lại.' })
   @IsOptional()

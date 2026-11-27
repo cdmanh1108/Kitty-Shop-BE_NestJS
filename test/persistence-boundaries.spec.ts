@@ -127,13 +127,36 @@ describe('repository persistence boundaries', () => {
     expect(product.mock.calls[0]?.[0]?.where).toEqual({
       id: 'missing',
       shopId: 'shop',
-      archivedAt: null,
     });
     expect(order.mock.calls[0]?.[0]?.where).toEqual({ id: 'missing', shopId: 'shop' });
     expect(order.mock.calls[0]?.[0]?.include).toMatchObject({
       charges: { where: { voidedAt: null } },
       payments: { where: { status: 'COMPLETED', voidedAt: null } },
     });
+  });
+
+  it('includes archived products in the admin list while excluding them from product lookup', async () => {
+    const find = jest.spyOn(prisma.product, 'findMany').mockResolvedValue([]);
+    jest.spyOn(prisma.product, 'count').mockResolvedValue(0);
+    jest.spyOn(prisma, '$transaction').mockResolvedValue([[], 0]);
+    const catalog = new PrismaCatalogRepository(
+      prisma,
+      new ConfiguredPublicMediaUrlResolver('https://assets.test.example'),
+      rentalPolicies,
+    );
+    const query = { shopId: 'shop', page: 1, limit: 10 };
+
+    await catalog.listProducts(query);
+    await catalog.listProducts({ ...query, status: 'ARCHIVED' });
+    await catalog.listProducts({ ...query, status: 'INACTIVE' });
+    await catalog.lookupProducts(query);
+
+    expect(find.mock.calls.map(([args]) => args?.where)).toEqual([
+      { shopId: 'shop' },
+      { shopId: 'shop', status: 'ARCHIVED' },
+      { shopId: 'shop', status: 'INACTIVE', archivedAt: null },
+      { shopId: 'shop', archivedAt: null },
+    ]);
   });
 
   it('preserves the catalog detail relation filters and ordering', async () => {
